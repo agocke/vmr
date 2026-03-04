@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "vsw610378",
+    srcs = ["BigFrame.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)

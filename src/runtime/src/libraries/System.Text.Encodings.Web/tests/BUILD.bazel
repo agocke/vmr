@@ -1,0 +1,34 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Text.Encodings.Web.Tests",
+    srcs = glob(["**/*.cs"]) + [
+        # Library source files compiled into tests for internal testing
+        "//src/libraries/System.Text.Encodings.Web:src/System/Text/Encodings/Web/AllowedBmpCodePointsBitmap.cs",
+        "//src/libraries/System.Text.Encodings.Web:src/System/Text/Encodings/Web/AsciiByteMap.cs",
+        "//src/libraries/System.Text.Encodings.Web:src/System/Text/Encodings/Web/OptimizedInboxTextEncoder.Ascii.cs",
+        "//src/libraries/System.Text.Encodings.Web:src/System/Text/Encodings/Web/ScalarEscaperBase.cs",
+        "//src/libraries/System.Text.Encodings.Web:src/System/Text/Unicode/UnicodeHelpers.cs",
+        "//src/libraries/System.Text.Encodings.Web:src/System/Text/Unicode/UnicodeHelpers.generated.cs",
+        # CoreLib shared sources
+        "//src/libraries/System.Private.CoreLib:src/System/Text/UnicodeDebug.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Text/UnicodeUtility.cs",
+        # Common shared sources
+        "//src/libraries/Common:src/System/HexConverter.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Text.Encodings.Web:ref_System.Text.Encodings.Web",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    resources = ["@nuget.system.private.runtime.unicodedata.v10.0.0-beta.25418.1//:contentFiles/any/any/16.0.0/ucd/UnicodeData.txt"],
+    resource_logical_names = {
+        "UnicodeData.txt": "UnicodeData.txt",
+    },
+)

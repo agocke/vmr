@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "default_struct01",
+    srcs = ["default_struct01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "default_class01",
+    srcs = ["default_class01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

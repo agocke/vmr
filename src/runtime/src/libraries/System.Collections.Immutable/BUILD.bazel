@@ -1,0 +1,46 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "src/System/Polyfills.cs",
+    "src/System/Collections/Frozen/String/Hashing.cs",
+    "src/System/Collections/Frozen/String/KeyAnalyzer.cs",
+    "src/Validation/Requires.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Collections.Immutable",
+    srcs = [
+        "ref/System.Collections.Immutable.cs",
+        "ref/System.Collections.Immutable.netcoreapp.cs",
+        # net9 only
+        "ref/System.Collections.Immutable.net9.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Collections.Immutable",
+    srcs = glob([
+        "src/System/**/*.cs",
+        "src/Validation/**/*.cs",
+    ]) + [
+        # CoreLibSharedDir files
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/HashHelpers.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/DebugViewDictionaryItem.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/IDictionaryDebugView.cs",
+        # CommonPath files
+        "//src/libraries/Common:src/System/Runtime/Versioning/NonVersionableAttribute.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)

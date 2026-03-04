@@ -1,0 +1,99 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "hanoi2_r",
+    srcs = ["hanoi2_r.il", "hanoi2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "knight_il_r",
+    srcs = ["knight_r.il", "knight.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "hanoi_il_d",
+    srcs = ["hanoi_d.il", "hanoi.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "han3_il_d",
+    srcs = ["han3_d.il", "han3.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "han3_ref_il_d",
+    srcs = ["han3_ref_d.il", "han3_ref.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "han3_ref_il_r",
+    srcs = ["han3_ref_r.il", "han3_ref.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "han3_il_r",
+    srcs = ["han3_r.il", "han3.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "nested_il_r",
+    srcs = ["nested_r.il", "nested.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "han3_ctor_il_r",
+    srcs = ["han3_ctor_r.il", "han3_ctor.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "nested_il_d",
+    srcs = ["nested_d.il", "nested.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "han3_ctor_il_d",
+    srcs = ["han3_ctor_d.il", "han3_ctor.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "knight_il_d",
+    srcs = ["knight_d.il", "knight.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "hanoi2_d",
+    srcs = ["hanoi2_d.il", "hanoi2.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "hanoi_il_r",
+    srcs = ["hanoi_r.il", "hanoi.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

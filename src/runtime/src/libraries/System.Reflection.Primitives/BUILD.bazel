@@ -1,0 +1,25 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files(["ref/System.Reflection.Primitives.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Reflection.Primitives",
+    srcs = [
+        "ref/System.Reflection.Primitives.cs",
+        "ref/System.Reflection.Primitives.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Reflection.Primitives",
+    srcs = [],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Reflection.Primitives",
+    exclude_sr = True,
+)

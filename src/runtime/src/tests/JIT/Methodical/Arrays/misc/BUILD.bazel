@@ -1,0 +1,161 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "arrres_il_r",
+    srcs = ["arrres.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    env = {"DOTNET_TieredCompilation": "0"},
+)
+
+il_coreclr_test(
+    name = "address_r",
+    srcs = ["address_r.il", "address.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "lengthm2_r",
+    srcs = ["lengthm2_r.il", "lengthm2.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "selfref_il_r",
+    srcs = ["selfref_r.il", "selfref.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "arrres_r",
+    srcs = ["arrres.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+il_coreclr_test(
+    name = "initializearray_enum_d",
+    srcs = ["initializearray_enum_d.il", "initializearray_enum.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "length0_r",
+    srcs = ["length0_r.il", "length0.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ldelem_get_r",
+    srcs = ["ldelem_get_r.il", "ldelem_get.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "initializearray_d",
+    srcs = ["initializearray_d.il", "initializearray.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "gcarr_il_d",
+    srcs = ["gcarr_d.il", "gcarr.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "gcarr_il_r",
+    srcs = ["gcarr_r.il", "gcarr.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "initializearray_r",
+    srcs = ["initializearray_r.il", "initializearray.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "address_d",
+    srcs = ["address_d.il", "address.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "initializearray_enum_r",
+    srcs = ["initializearray_enum_r.il", "initializearray_enum.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ldelem_get_d",
+    srcs = ["ldelem_get_d.il", "ldelem_get.il"],
+    debug_type = "full",
+)
+
+coreclr_test(
+    name = "arrres_ro",
+    srcs = ["arrres.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "arrres_do",
+    srcs = ["arrres.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "arrres_d",
+    srcs = ["arrres.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+il_coreclr_test(
+    name = "length0_d",
+    srcs = ["length0_d.il", "length0.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "selfref_il_d",
+    srcs = ["selfref_d.il", "selfref.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "lengthm2_d",
+    srcs = ["lengthm2_d.il", "lengthm2.il"],
+    debug_type = "full",
+)

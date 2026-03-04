@@ -1,0 +1,27 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "mandelbrot-7",
+    srcs = ["mandelbrot-7.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    # Uses MD5 which requires OpenSSL native lib (not yet in Bazel Core_Root on macOS)
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+    ],
+)
+
+coreclr_test(
+    name = "mandelbrot-2",
+    srcs = ["mandelbrot-2.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    # Uses MD5 which requires OpenSSL native lib (not yet in Bazel Core_Root on macOS)
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+)

@@ -1,0 +1,90 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/System.Formats.Nrbf.cs",
+    "src/System/Formats/Nrbf/BinaryArrayType.cs",
+    "src/System/Formats/Nrbf/BinaryType.cs",
+    "src/System/Formats/Nrbf/PrimitiveType.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Formats.Nrbf",
+    srcs = [
+        "ref/System.Formats.Nrbf.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+    ],
+    cls_compliant = False,
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Formats.Nrbf",
+    srcs = [
+        "src/System/Formats/Nrbf/AllowedRecordType.cs",
+        "src/System/Formats/Nrbf/ArrayInfo.cs",
+        "src/System/Formats/Nrbf/ArrayRecord.cs",
+        "src/System/Formats/Nrbf/ArrayRectangularPrimitiveRecord.cs",
+        "src/System/Formats/Nrbf/ArraySingleObjectRecord.cs",
+        "src/System/Formats/Nrbf/ArraySinglePrimitiveRecord.cs",
+        "src/System/Formats/Nrbf/ArraySingleStringRecord.cs",
+        "src/System/Formats/Nrbf/BinaryArrayType.cs",
+        "src/System/Formats/Nrbf/BinaryLibraryRecord.cs",
+        "src/System/Formats/Nrbf/BinaryObjectStringRecord.cs",
+        "src/System/Formats/Nrbf/BinaryType.cs",
+        "src/System/Formats/Nrbf/ClassInfo.cs",
+        "src/System/Formats/Nrbf/ClassRecord.cs",
+        "src/System/Formats/Nrbf/ClassTypeInfo.cs",
+        "src/System/Formats/Nrbf/ClassWithIdRecord.cs",
+        "src/System/Formats/Nrbf/ClassWithMembersAndTypesRecord.cs",
+        "src/System/Formats/Nrbf/JaggedArrayRecord.cs",
+        "src/System/Formats/Nrbf/MemberPrimitiveTypedRecord.cs",
+        "src/System/Formats/Nrbf/MemberReferenceRecord.cs",
+        "src/System/Formats/Nrbf/MemberTypeInfo.cs",
+        "src/System/Formats/Nrbf/MessageEndRecord.cs",
+        "src/System/Formats/Nrbf/NextInfo.cs",
+        "src/System/Formats/Nrbf/NrbfDecoder.cs",
+        "src/System/Formats/Nrbf/NullsRecord.cs",
+        "src/System/Formats/Nrbf/ObjectNullMultiple256Record.cs",
+        "src/System/Formats/Nrbf/ObjectNullMultipleRecord.cs",
+        "src/System/Formats/Nrbf/ObjectNullRecord.cs",
+        "src/System/Formats/Nrbf/PayloadOptions.cs",
+        "src/System/Formats/Nrbf/PrimitiveType.cs",
+        "src/System/Formats/Nrbf/PrimitiveTypeRecord.cs",
+        "src/System/Formats/Nrbf/PrimitiveTypeRecordOfT.cs",
+        "src/System/Formats/Nrbf/RecordMap.cs",
+        "src/System/Formats/Nrbf/RectangularArrayRecord.cs",
+        "src/System/Formats/Nrbf/SZArrayOfRecords.cs",
+        "src/System/Formats/Nrbf/SZArrayRecord.cs",
+        "src/System/Formats/Nrbf/SerializationRecord.cs",
+        "src/System/Formats/Nrbf/SerializationRecordId.cs",
+        "src/System/Formats/Nrbf/SerializationRecordType.cs",
+        "src/System/Formats/Nrbf/SerializedStreamHeaderRecord.cs",
+        "src/System/Formats/Nrbf/SystemClassWithMembersAndTypesRecord.cs",
+        "src/System/Formats/Nrbf/Utils/BinaryReaderExtensions.cs",
+        "src/System/Formats/Nrbf/Utils/ThrowHelper.cs",
+        "src/System/Formats/Nrbf/Utils/TypeNameHelpers.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    cls_compliant = False,
+)
+
+ref_impl_pair(
+    name = "live_System.Formats.Nrbf",
+    ref = ":ref_System.Formats.Nrbf",
+    lib = ":impl_System.Formats.Nrbf",
+    visibility = ["//visibility:public"],
+)

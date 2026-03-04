@@ -1,0 +1,25 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "deep1_d",
+    srcs = ["deep1_d.il", "deep1.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "deep2_d",
+    srcs = ["deep2_d.il", "deep2.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "deep2_r",
+    srcs = ["deep2_r.il", "deep2.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "deep1_r",
+    srcs = ["deep1_r.il", "deep1.il"],
+    debug_type = "pdbonly",
+)

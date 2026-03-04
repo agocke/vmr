@@ -1,0 +1,14 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Configuration",
+    srcs = [
+        "src/System.Configuration.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/shims/stubs:ref_System.Configuration.ConfigurationManager",
+        "//src/libraries/shims/stubs:ref_System.Security.Permissions",
+    ],
+    exclude_sr = True,
+)

@@ -1,0 +1,24 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Runtime.CompilerServices.VisualC",
+    srcs = [
+        "ref/System.Runtime.CompilerServices.VisualC.cs",
+        "ref/System.Runtime.CompilerServices.VisualC.TypeForwards.cs",
+        "ref/System.Runtime.CompilerServices.VisualC.manual.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Runtime.CompilerServices.VisualC",
+    srcs = [
+        "src/System/Runtime/CompilerServices/Attributes.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    exclude_sr = True,
+)

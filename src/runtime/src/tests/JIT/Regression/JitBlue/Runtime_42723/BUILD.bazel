@@ -1,0 +1,6 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Runtime_42723",
+    srcs = ["Runtime_42723.cs"],
+)

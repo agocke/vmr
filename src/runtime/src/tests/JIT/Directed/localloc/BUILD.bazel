@@ -1,0 +1,34 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "localloc3_cs_r",
+    srcs = ["localloc3.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "localloc3_cs_do",
+    srcs = ["localloc3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "localloc3_cs_d",
+    srcs = ["localloc3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "localloc3_cs_ro",
+    srcs = ["localloc3.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

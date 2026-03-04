@@ -1,0 +1,28 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Resources.Writer",
+    srcs = [
+        "ref/System.Resources.Writer.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Resources.Writer",
+    srcs = [
+        "src/System/Resources/__FastResourceComparer.cs",
+        "src/System/Resources/IResourceWriter.cs",
+        "src/System/Resources/ResourceWriter.core.cs",
+
+        "//src/libraries/Common:src/System/Resources/ResourceWriter.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Resources/ResourceTypeCode.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries:ref_System.Runtime",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)

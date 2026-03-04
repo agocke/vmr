@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b102533",
+    srcs = ["DeadBlock.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

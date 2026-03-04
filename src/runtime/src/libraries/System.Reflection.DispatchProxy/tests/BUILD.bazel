@@ -1,0 +1,37 @@
+load("//src/libraries:defs.bzl", "live_csharp_library")
+load("//src/tests:live_test.bzl", "library_test")
+
+live_csharp_library(
+    name = "System.Reflection.DispatchProxy.TestDependency",
+    srcs = [
+        "TestDependency/InternalsVisibleTo.cs",
+        "TestDependency/TestTypes.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Reflection.DispatchProxy:ref_System.Reflection.DispatchProxy",
+    ],
+)
+
+library_test(
+    name = "System.Reflection.DispatchProxy.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "TestDependency/**",
+            "TrimmingTests/**",
+        ],
+    ),
+    deps = [
+        ":System.Reflection.DispatchProxy.TestDependency",
+        "//src/libraries/System.Reflection.DispatchProxy:ref_System.Reflection.DispatchProxy",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

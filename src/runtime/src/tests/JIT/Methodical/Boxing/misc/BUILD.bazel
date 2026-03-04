@@ -1,0 +1,64 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "concurgc_d",
+    srcs = ["concurgc_d.il", "concurgc.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "nestval_r",
+    srcs = ["nestval_r.il", "nestval.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "typedref_r",
+    srcs = ["typedref_r.il", "typedref.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "enum_d",
+    srcs = ["enum_d.il", "enum.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "tailjump_r",
+    srcs = ["tailjump_r.il", "tailjump.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "nestval_d",
+    srcs = ["nestval_d.il", "nestval.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "concurgc_r",
+    srcs = ["concurgc_r.il", "concurgc.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "enum_r",
+    srcs = ["enum_r.il", "enum.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "typedref_d",
+    srcs = ["typedref_d.il", "typedref.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "tailjump_d",
+    srcs = ["tailjump_d.il", "tailjump.il"],
+    debug_type = "full",
+)

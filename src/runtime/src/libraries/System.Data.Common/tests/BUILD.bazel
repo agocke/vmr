@@ -1,0 +1,54 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+genrule(
+    name = "mono_testdata",
+    srcs = ["System.Data.DataSetExtensions.Tests/Mono/testdataset1.xml"],
+    outs = ["Mono/testdataset1.xml"],
+    cmd = "cp $< $@",
+)
+
+library_test(
+    name = "System.Data.Common.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "TrimmingTests/**",
+            # Requires System.Data.SqlClient NuGet package
+            "System/Data/FacadeTest.cs",
+            "System/Data/Common/DbProviderFactoriesTests.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/Diagnostics/Tracing/TestEventListener.cs",
+        "//src/libraries/Common/tests:System/Runtime/Serialization/Formatters/BinaryFormatterHelpers.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Text.Encoding.CodePages:ref_System.Text.Encoding.CodePages",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    data = [
+        "@paket.main//system.data.common.testdata:content_files",
+        ":mono_testdata",
+    ],
+    nowarn = ["0168", "0169", "0414", "0219", "0649", "SYSLIB0011", "SYSLIB0051"],
+    size = "large",
+)

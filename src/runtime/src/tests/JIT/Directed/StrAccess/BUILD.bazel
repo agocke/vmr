@@ -1,0 +1,88 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "straccess1_cs_d",
+    srcs = ["straccess1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "straccess1_cs_do",
+    srcs = ["straccess1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "straccess1_cs_r",
+    srcs = ["straccess1.cs"],
+    pri = 1,
+    optimize = False,
+)
+
+coreclr_test(
+    name = "straccess1_cs_ro",
+    srcs = ["straccess1.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "straccess2_cs_d",
+    srcs = ["straccess2.cs"],
+    allow_unsafe_blocks = True,
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "straccess2_cs_do",
+    srcs = ["straccess2.cs"],
+    allow_unsafe_blocks = True,
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "straccess2_cs_r",
+    srcs = ["straccess2.cs"],
+    allow_unsafe_blocks = True,
+    pri = 1,
+    optimize = False,
+)
+
+coreclr_test(
+    name = "straccess2_cs_ro",
+    srcs = ["straccess2.cs"],
+    allow_unsafe_blocks = True,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "straccess3_cs_d",
+    srcs = ["straccess3.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "straccess3_cs_do",
+    srcs = ["straccess3.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "straccess3_cs_r",
+    srcs = ["straccess3.cs"],
+    optimize = False,
+)
+
+coreclr_test(
+    name = "straccess3_cs_ro",
+    srcs = ["straccess3.cs"],
+    optimize = True,
+)

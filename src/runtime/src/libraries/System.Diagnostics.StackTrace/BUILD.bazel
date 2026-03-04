@@ -1,0 +1,50 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files(["ref/System.Diagnostics.StackTrace.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Diagnostics.StackTrace",
+    srcs = [
+        "ref/System.Diagnostics.StackTrace.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Diagnostics.StackTrace",
+    srcs = [
+        "src/System/Diagnostics/StackTraceSymbols.cs",
+        "src/System/Diagnostics/SymbolStore/ISymbolBinder.cs",
+        "src/System/Diagnostics/SymbolStore/ISymbolDocument.cs",
+        "src/System/Diagnostics/SymbolStore/ISymbolMethod.cs",
+        "src/System/Diagnostics/SymbolStore/ISymbolNamespace.cs",
+        "src/System/Diagnostics/SymbolStore/ISymbolReader.cs",
+        "src/System/Diagnostics/SymbolStore/ISymbolScope.cs",
+        "src/System/Diagnostics/SymbolStore/ISymbolVariable.cs",
+        "src/System/Diagnostics/SymbolStore/ISymbolWriter.cs",
+        "src/System/Diagnostics/SymbolStore/SymbolToken.cs",
+        "src/System/Diagnostics/SymbolStore/SymAddressKind.cs",
+        "src/System/Diagnostics/SymbolStore/SymDocumentType.cs",
+        "src/System/Diagnostics/SymbolStore/SymLanguageType.cs",
+        "src/System/Diagnostics/SymbolStore/SymLanguageVendor.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/libraries:impl_System.Runtime",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+    ],
+    exclude_sr = True,
+    allow_unsafe_blocks = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Diagnostics.StackTrace",
+)
+
+ref_impl_pair(
+    name = "live_System.Diagnostics.StackTrace",
+    ref = ":ref_System.Diagnostics.StackTrace",
+    lib = ":impl_System.Diagnostics.StackTrace",
+    visibility = ["//visibility:public"],
+)

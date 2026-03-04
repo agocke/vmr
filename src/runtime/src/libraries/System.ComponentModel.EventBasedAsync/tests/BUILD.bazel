@@ -1,0 +1,17 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.ComponentModel.EventBasedAsync.Tests",
+    srcs = glob(["*.cs"]),
+    deps = [
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

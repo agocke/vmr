@@ -1,0 +1,143 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "array_r",
+    srcs = ["array_r.il", "array.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "localloc_boxunbox_r",
+    srcs = ["localloc_r.il", "localloc.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "simple_r",
+    srcs = ["simple_r.il", "simple.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "local_d",
+    srcs = ["local_d.il", "local.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "jump_r",
+    srcs = ["jump_r.il", "jump.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "finally_d",
+    srcs = ["finally_d.il", "finally.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "jump_d",
+    srcs = ["jump_d.il", "jump.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "finally_r",
+    srcs = ["finally_r.il", "finally.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "local_r",
+    srcs = ["local_r.il", "local.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "simple_d",
+    srcs = ["simple_d.il", "simple.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "array_d",
+    srcs = ["array_d.il", "array.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "chain_d",
+    srcs = ["chain_d.il", "chain.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+coreclr_test(
+    name = "KeepAliveBoxOpt",
+    srcs = ["KeepAliveBoxOpt.cs"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "huge_filter_d",
+    srcs = ["huge_filter_d.il", "huge_filter.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "chain_r",
+    srcs = ["chain_r.il", "chain.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "try_boxunbox_r",
+    srcs = ["try_r.il", "try.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "try_boxunbox_d",
+    srcs = ["try_d.il", "try.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "tailcall_boxunbox_r",
+    srcs = ["tailcall_r.il", "tailcall.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "tailcall_boxunbox_d",
+    srcs = ["tailcall_d.il", "tailcall.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "localloc_boxunbox_d",
+    srcs = ["localloc_d.il", "localloc.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "huge_filter_r",
+    srcs = ["huge_filter_r.il", "huge_filter.il"],
+    debug_type = "pdbonly",
+)

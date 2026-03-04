@@ -1,0 +1,29 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Runtime.Serialization.Xml",
+    srcs = [
+        "ref/System.Runtime.Serialization.Xml.cs",
+        "ref/System.Runtime.Serialization.Xml.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Runtime.Serialization.Xml",
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Runtime.Serialization.Xml",
+    exclude_sr = True,
+    deps = [
+        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/libraries:impl_System.Runtime",
+        "//src/libraries/System.Private.DataContractSerialization:impl_System.Private.DataContractSerialization",
+        "//src/libraries/System.Runtime.Serialization.Primitives:impl_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Xml.ReaderWriter:impl_System.Xml.ReaderWriter",
+    ],
+)

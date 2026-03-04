@@ -1,0 +1,55 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Drawing.Primitives",
+    srcs = [
+        "ref/System.Drawing.Primitives.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Numerics.Vectors:ref_System.Numerics.Vectors",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Drawing.Primitives",
+    srcs = [
+        "src/System/Drawing/Color.cs",
+        "src/System/Drawing/ColorTranslator.cs",
+        "src/System/Drawing/KnownColor.cs",
+        "src/System/Drawing/KnownColorNames.cs",
+        "src/System/Drawing/KnownColorTable.cs",
+        "src/System/Drawing/Point.cs",
+        "src/System/Drawing/PointF.cs",
+        "src/System/Drawing/Rectangle.cs",
+        "src/System/Drawing/RectangleF.cs",
+        "src/System/Drawing/Size.cs",
+        "src/System/Drawing/SizeF.cs",
+        "src/System/Drawing/SystemColors.cs",
+
+        "//src/libraries/Common:src/System/Drawing/ColorConverterCommon.cs",
+        "//src/libraries/Common:src/System/Drawing/ColorTable.cs",
+        "//src/libraries/Common:src/System/Experimentals.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Numerics.Vectors:ref_System.Numerics.Vectors",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Drawing.Primitives",
+)
+
+ref_impl_pair(
+    name = "live_System.Drawing.Primitives",
+    ref = ":ref_System.Drawing.Primitives",
+    lib = ":impl_System.Drawing.Primitives",
+    visibility = ["//visibility:public"],
+)

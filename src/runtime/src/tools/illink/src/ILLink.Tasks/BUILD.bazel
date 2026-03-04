@@ -1,0 +1,17 @@
+load("@rules_dotnet//dotnet:defs.bzl", "csharp_library")
+
+csharp_library(
+    name = "ILLink.Tasks",
+    srcs = glob(["*.cs"]),
+    out = "ILLink.Tasks",
+    deps = [
+        "//src/tools/illink/src/linker:illink_lib",
+        "@paket.main//microsoft.dotnet.cecil",
+        "@paket.main//microsoft.build.framework",
+        "@paket.main//microsoft.build.utilities.core",
+    ],
+    nullable = "disable",
+    target_frameworks = ["net10.0"],
+    nowarn = ["CS1701", "CS8500", "CS8969"],
+    visibility = ["//visibility:public"],
+)

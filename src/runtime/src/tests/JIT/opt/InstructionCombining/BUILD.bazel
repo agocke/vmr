@@ -1,0 +1,109 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "UbfizSbfiz",
+    srcs = ["UbfizSbfiz.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Orn",
+    srcs = ["Orn.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Neg",
+    srcs = ["Neg.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BitwiseClearShift",
+    srcs = ["BitwiseClearShift.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Cmn",
+    srcs = ["Cmn.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Eon",
+    srcs = ["Eon.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CompareExtend",
+    srcs = ["CompareExtend.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Mvn",
+    srcs = ["Mvn.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "And",
+    srcs = ["And.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ArrayLengthArithmetic",
+    srcs = ["ArrayLengthArithmetic.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "DivToMul",
+    srcs = ["DivToMul.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "MulToAdd",
+    srcs = ["MulToAdd.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Orr",
+    srcs = ["Orr.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Eor",
+    srcs = ["Eor.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Cmp",
+    srcs = ["Cmp.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Add",
+    srcs = ["Add.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "NegMulOrDivToConst",
+    srcs = ["NegMulOrDivToConst.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Sub",
+    srcs = ["Sub.cs"],
+    optimize = True,
+)

@@ -1,0 +1,164 @@
+# Corehost test targets for linux-x64.
+# Cross-platform tests only; Windows-only tests (comsxs, ijw, typelibs) are excluded.
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_shared_library", "cc_test")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_DEFINES")
+
+COREHOST_TEST_COPTS = [
+    "-Isrc/native/corehost",
+    "-Isrc/native/corehost/fxr",
+    "-Isrc/native/corehost/hostmisc",
+    "-Isrc/native",
+]
+
+COREHOST_TEST_DEFINES = [
+    "RAPIDJSON_HAS_CXX17",
+    "FALLBACK_OS_IS_SAME_AS_TARGET_OS",
+    "TARGET_UNIX",
+    "TARGET_LINUX",
+    "TARGET_AMD64",
+    "TARGET_64BIT",
+]
+
+# --- test_fx_ver (test) ---
+# Tests framework version parsing.
+
+cc_test(
+    name = "test_fx_ver",
+    size = "small",
+    srcs = ["fx_ver/test_fx_ver.cpp"],
+    copts = COREHOST_TEST_COPTS,
+    defines = COREHOST_TEST_DEFINES,
+    local_defines = NATIVE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = [
+        "//src/native/corehost:hostcommon",
+        "//src/native/corehost:hostmisc",
+    ],
+)
+
+# --- mockcoreclr (shared library) ---
+# Mock CoreCLR for hosting tests.
+
+cc_library(
+    name = "mockcoreclr_lib",
+    srcs = [
+        "mockcoreclr/mockcoreclr.cpp",
+        "mockcoreclr/mockcoreclr.h",
+    ],
+    copts = COREHOST_TEST_COPTS,
+    defines = COREHOST_TEST_DEFINES + ["EXPORT_SHARED_API"],
+    local_defines = NATIVE_CONFIG_DEFINES,
+    deps = ["//src/native/corehost:hostmisc"],
+)
+
+cc_shared_library(
+    name = "mockcoreclr",
+    shared_lib_name = "libmockcoreclr.so",
+    deps = [":mockcoreclr_lib"],
+)
+
+# --- mockhostfxr_2_2 / mockhostfxr_5_0 (shared libraries) ---
+# Mock hostfxr for API version compatibility testing.
+
+cc_library(
+    name = "mockhostfxr_2_2_lib",
+    srcs = [
+        "mockhostfxr/mockhostfxr.cpp",
+        "mockhostfxr/test_c_api.c",
+    ],
+    copts = COREHOST_TEST_COPTS,
+    defines = COREHOST_TEST_DEFINES + [
+        "MOCKHOSTFXR_2_2",
+        "EXPORT_SHARED_API",
+    ],
+    local_defines = NATIVE_CONFIG_DEFINES,
+    deps = [
+        "//src/native/corehost:hostcommon",
+        "//src/native/corehost:nethost_lib",
+    ],
+)
+
+cc_shared_library(
+    name = "mockhostfxr_2_2",
+    shared_lib_name = "libmockhostfxr_2_2.so",
+    deps = [":mockhostfxr_2_2_lib"],
+)
+
+cc_library(
+    name = "mockhostfxr_5_0_lib",
+    srcs = [
+        "mockhostfxr/mockhostfxr.cpp",
+        "mockhostfxr/test_c_api.c",
+    ],
+    copts = COREHOST_TEST_COPTS,
+    defines = COREHOST_TEST_DEFINES + [
+        "MOCKHOSTFXR_5_0",
+        "EXPORT_SHARED_API",
+    ],
+    local_defines = NATIVE_CONFIG_DEFINES,
+    deps = [
+        "//src/native/corehost:hostcommon",
+        "//src/native/corehost:nethost_lib",
+    ],
+)
+
+cc_shared_library(
+    name = "mockhostfxr_5_0",
+    shared_lib_name = "libmockhostfxr_5_0.so",
+    deps = [":mockhostfxr_5_0_lib"],
+)
+
+# --- mockhostpolicy (shared library) ---
+# Mock hostpolicy for hosting tests.
+
+cc_library(
+    name = "mockhostpolicy_lib",
+    srcs = ["mockhostpolicy/mockhostpolicy.cpp"],
+    copts = COREHOST_TEST_COPTS,
+    defines = COREHOST_TEST_DEFINES + ["EXPORT_SHARED_API"],
+    local_defines = NATIVE_CONFIG_DEFINES,
+    deps = ["//src/native/corehost:hostmisc"],
+)
+
+cc_shared_library(
+    name = "mockhostpolicy",
+    shared_lib_name = "libmockhostpolicy.so",
+    deps = [":mockhostpolicy_lib"],
+)
+
+# --- nativehost (executable) ---
+# Main test app for native hosting APIs.
+
+cc_binary(
+    name = "nativehost",
+    srcs = [
+        "nativehost/comhost_test.h",
+        "nativehost/error_writer_redirector.cpp",
+        "nativehost/error_writer_redirector.h",
+        "nativehost/get_native_search_directories_test.cpp",
+        "nativehost/get_native_search_directories_test.h",
+        "nativehost/host_context_test.cpp",
+        "nativehost/host_context_test.h",
+        "nativehost/hostfxr_exports.cpp",
+        "nativehost/hostfxr_exports.h",
+        "nativehost/hostpolicy_exports.cpp",
+        "nativehost/hostpolicy_exports.h",
+        "nativehost/nativehost.cpp",
+        "nativehost/resolve_component_dependencies_test.cpp",
+        "nativehost/resolve_component_dependencies_test.h",
+    ],
+    copts = COREHOST_TEST_COPTS + [
+        "-Isrc/native/corehost/nethost",
+    ],
+    defines = COREHOST_TEST_DEFINES,
+    local_defines = NATIVE_CONFIG_DEFINES,
+    linkopts = [
+        "-lpthread",
+        "-Wl,-rpath,$$ORIGIN",
+    ],
+    deps = [
+        "//src/native/corehost:hostmisc",
+        "//src/native/corehost:nethost_lib",
+    ],
+)

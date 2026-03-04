@@ -1,0 +1,14 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Yield_ro",
+    srcs = ["Yield.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "Yield_r",
+    srcs = ["Yield.cs"],
+    allow_unsafe_blocks = True,
+)

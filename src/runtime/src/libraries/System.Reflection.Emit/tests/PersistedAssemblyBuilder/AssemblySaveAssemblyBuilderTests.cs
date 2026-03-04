@@ -44,7 +44,8 @@ namespace System.Reflection.Emit.Tests
 
             Assert.Throws<ArgumentNullException>("assemblyFileName", () => ab.Save(assemblyFileName: null));
             Assert.Throws<ArgumentNullException>("stream", () => ab.Save(stream: null));
-            Assert.Throws<InvalidOperationException>(() => ab.Save(assemblyFileName: "File")); // no module defined
+            string tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Assert.Throws<InvalidOperationException>(() => ab.Save(assemblyFileName: tempFile)); // no module defined
         }
 
         [Fact]

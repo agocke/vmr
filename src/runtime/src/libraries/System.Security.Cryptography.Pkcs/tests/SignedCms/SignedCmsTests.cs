@@ -1530,6 +1530,7 @@ namespace System.Security.Cryptography.Pkcs.Tests
         }
 
         [ConditionalFact(typeof(SignatureSupport), nameof(SignatureSupport.SupportsRsaSha1Signatures))]
+        [Trait("category", "RequiresKeychain")]
         public static void CheckSignedEncrypted_IssuerSerial_FromNetFx()
         {
             CheckSignedEncrypted(
@@ -1538,6 +1539,7 @@ namespace System.Security.Cryptography.Pkcs.Tests
         }
 
         [ConditionalFact(typeof(SignatureSupport), nameof(SignatureSupport.SupportsRsaSha1Signatures))]
+        [Trait("category", "RequiresKeychain")]
         public static void CheckSignedEncrypted_SKID_FromNetFx()
         {
             CheckSignedEncrypted(
@@ -1546,6 +1548,7 @@ namespace System.Security.Cryptography.Pkcs.Tests
         }
 
         [Fact]
+        [Trait("category", "RequiresKeychain")]
         public static void CheckSignedEncrypted_IssuerSerial_FromCoreFx()
         {
             CheckSignedEncrypted(
@@ -1554,6 +1557,7 @@ namespace System.Security.Cryptography.Pkcs.Tests
         }
 
         [Fact]
+        [Trait("category", "RequiresKeychain")]
         public static void CheckSignedEncrypted_SKID_FromCoreFx()
         {
             CheckSignedEncrypted(

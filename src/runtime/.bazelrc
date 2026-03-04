@@ -1,0 +1,210 @@
+# Bazel configuration for dotnet/runtime native builds (linux-x64, osx-arm64)
+#
+# Per-component configuration (matching MSBuild's -rc / -lc flags):
+#
+#   CoreCLR (clr_config):   debug (default), checked, release
+#   Libraries (libs_config): debug (default), release
+#
+# Use --config flags to select:
+#   --config=clr_checked     Checked CLR (debug asserts + release optimization)
+#   --config=clr_release     Release CLR
+#   --config=libs_release    Release libraries
+#   --config=release         Release everything (= clr_release + libs_release)
+#
+# Use --compilation_mode (-c) for optimization:
+#   -c dbg       Debug (matches CMake Debug: -O0, debug symbols)
+#   -c opt       Release (matches CMake Release: -O2, -DNDEBUG)
+#   -c fastbuild Default (fast incremental builds)
+#
+# Examples:
+#   bazel build //...                                          # debug everything
+#   bazel build --config=release //...                         # release everything
+#   bazel build --config=clr_checked --config=libs_release //... # checked CLR + release libs
+#   bazel build -c opt --config=clr_checked //...              # checked CLR + debug libs + -O2
+
+# --- Default compiler: Clang (matching CMake) ---
+# Uses clang/clang++ with lld linker on Linux.
+# On macOS, Apple Clang is the default; lld is not used.
+build --config=clang
+
+# Match CMake configurecompiler.cmake settings (config-independent)
+build --conlyopt=-std=gnu11
+build --cxxopt=-std=gnu++11
+build --copt=-fPIC
+build --copt=-fno-omit-frame-pointer
+build --copt=-fno-strict-overflow
+build --copt=-fno-strict-aliasing
+build --copt=-fstack-protector-strong
+build --copt=-ffp-contract=off
+build --copt=-fsigned-char
+build --copt=-fvisibility=hidden
+build --copt=-ffunction-sections
+build --cxxopt=-fno-rtti
+
+# Platform defines (config-independent)
+# Platform-specific arch/OS defines are in PLATFORM_DEFINES (defs.bzl)
+# and used via select() in BUILD files. Only universal defines go here.
+build --copt=-D_FILE_OFFSET_BITS=64
+build --copt=-D_TIME_BITS=64
+
+# Exec/tool platform defines (for tools like ilasm built with cfg = "exec")
+build --host_conlyopt=-std=gnu11
+build --host_cxxopt=-std=gnu++11
+build --host_copt=-D_FILE_OFFSET_BITS=64
+build --host_copt=-D_TIME_BITS=64
+
+# Warning flags shared between GCC and Clang (configurecompiler.cmake)
+build --copt=-Wall
+build --copt=-Wno-unused-variable
+build --copt=-Wno-unused-value
+build --copt=-Wno-unused-function
+build --copt=-Wno-tautological-compare
+build --copt=-Wno-unknown-pragmas
+build --copt=-Wimplicit-fallthrough
+build --copt=-Wno-unused-but-set-variable
+# Bazel's default C++ toolchain enables -Wunused-but-set-parameter; CMake does not.
+build --copt=-Wno-unused-but-set-parameter
+
+# --- GCC-specific warning flags (default compiler) ---
+# These are in an else() branch in configurecompiler.cmake (not Clang).
+# Silently ignored by Clang when -Wno-unknown-warning-option is set.
+build --copt=-Wno-uninitialized
+build --copt=-Wno-strict-aliasing
+build --copt=-Wno-array-bounds
+build --cxxopt=-Wno-misleading-indentation
+build --cxxopt=-Wno-stringop-overflow
+build --cxxopt=-Wno-restrict
+build --copt=-Wno-stringop-truncation
+build --cxxopt=-Wno-class-memaccess
+
+# --- Clang-specific warning flags (configurecompiler.cmake) ---
+# IMPORTANT: These MUST be plain "build" lines (not "build:clang") because
+# "build --config=clang" on line 27 causes config expansion BEFORE the
+# plain "build" lines above.  If these were under "build:clang", they would
+# appear before -Wall, and -Wall would re-enable the warnings.
+# Unknown -Wno-* flags are silently ignored by GCC, so this is safe.
+build --copt=-Wno-unknown-warning-option
+build --copt=-ferror-limit=4096
+build --copt=-Wno-null-conversion
+build --copt=-Wno-unused-private-field
+build --copt=-Wno-constant-logical-operand
+build --copt=-Wno-pragma-pack
+build --copt=-Wno-incompatible-ms-struct
+build --copt=-Wno-reserved-identifier
+build --copt=-Wno-unsafe-buffer-usage
+build --copt=-Wno-single-bit-bitfield-constant-conversion
+build --copt=-Wno-cast-function-type-strict
+build --copt=-Wno-switch-default
+build --cxxopt=-Wno-nontrivial-memaccess
+
+# Exec/tool warning flags (for tools like ilasm built with cfg = "exec")
+build --host_copt=-Wall
+build --host_copt=-Wno-unused-variable
+build --host_copt=-Wno-unused-value
+build --host_copt=-Wno-unused-function
+build --host_copt=-Wno-tautological-compare
+build --host_copt=-Wno-unknown-pragmas
+build --host_copt=-Wimplicit-fallthrough
+build --host_copt=-Wno-unused-but-set-variable
+build --host_copt=-Wno-unused-but-set-parameter
+build --host_copt=-Wno-uninitialized
+build --host_copt=-Wno-strict-aliasing
+build --host_copt=-Wno-array-bounds
+build --host_cxxopt=-Wno-misleading-indentation
+build --host_cxxopt=-Wno-stringop-overflow
+build --host_cxxopt=-Wno-restrict
+build --host_copt=-Wno-stringop-truncation
+build --host_cxxopt=-Wno-class-memaccess
+build --host_copt=-Wno-unknown-warning-option
+build --host_copt=-ferror-limit=4096
+build --host_copt=-Wno-null-conversion
+build --host_copt=-Wno-unused-private-field
+build --host_copt=-Wno-constant-logical-operand
+build --host_copt=-Wno-pragma-pack
+build --host_copt=-Wno-incompatible-ms-struct
+build --host_copt=-Wno-reserved-identifier
+build --host_copt=-Wno-unsafe-buffer-usage
+build --host_copt=-Wno-single-bit-bitfield-constant-conversion
+build --host_copt=-Wno-cast-function-type-strict
+build --host_copt=-Wno-switch-default
+build --host_cxxopt=-Wno-nontrivial-memaccess
+
+# --- Clang compiler (config:clang) ---
+# Matches CMake default: uses clang/clang++ with lld linker on Linux.
+# On macOS, Apple Clang + default ld are used (no lld).
+# NOTE: Only compiler/linker selection goes here. Warning flags MUST go
+# in plain "build" lines above to avoid config expansion ordering issues.
+build:clang --repo_env=CC=clang
+build:clang --repo_env=CXX=clang++
+build:clang --define compiler=clang
+
+# Disable warnings that CMake also suppresses for vendored code
+build --per_file_copt=src/native/external/.*@-w
+build --host_per_file_copt=src/native/external/.*@-w
+
+# safecrt_input_s.cpp is the non-unicode scanf variant — _UNICODE must not be defined
+build --per_file_copt=.*safecrt_input_s.*@-U_UNICODE,-UUNICODE
+build --host_per_file_copt=.*safecrt_input_s.*@-U_UNICODE,-UUNICODE
+
+# Preserve debug symbols (match CMake behavior of always including -g)
+build --strip=never
+
+# --- Linux-specific settings ---
+# Linker hardening, shared object naming, and lld.
+# These are no-ops or harmful on macOS, so they live behind --config=linux.
+build:linux --linkopt=-Wl,--build-id=sha1
+build:linux --linkopt=-fuse-ld=lld
+
+# macOS deployment target — match CMake's eng/native/configureplatform.cmake
+build:macos --macos_minimum_os=12.0
+
+# Enable automatic platform config selection (applies build:linux on Linux,
+# build:macos on macOS, etc.).
+build --enable_platform_specific_config
+
+# =====================================================================
+# Per-component configuration
+# =====================================================================
+#
+# CoreCLR and libraries have independent debug/release configurations,
+# matching MSBuild's -rc (runtime config) and -lc (libraries config).
+#
+# Debug/checked/release defines are set per-target in BUILD files via
+# select() on //:clr_config and //:libs_config.  See CLR_CONFIG_DEFINES
+# in src/coreclr/coreclr_defs.bzl and NATIVE_CONFIG_DEFINES in
+# src/native/native_defs.bzl.  The --config flags below set the
+# string_flag values that drive those select() expressions.
+
+# --- CoreCLR default: debug ---
+build --//:clr_config=debug
+
+# --- Libraries default: debug ---
+build --//:libs_config=debug
+
+# =====================================================================
+# --config=clr_checked: Checked CoreCLR
+# =====================================================================
+build:clr_checked --//:clr_config=checked
+
+# =====================================================================
+# --config=clr_release: Release CoreCLR
+# =====================================================================
+build:clr_release --//:clr_config=release
+
+# =====================================================================
+# --config=libs_release: Release libraries
+# =====================================================================
+build:libs_release --//:libs_config=release
+
+# =====================================================================
+# --config=release: Release everything (convenience)
+# =====================================================================
+build:release --config=clr_release
+build:release --config=libs_release
+# Enable compiler optimizations.  System.Private.CoreLib uses
+# override_debug to control its own DEBUG/RELEASE defines via
+# select() on //:clr_config, so it is safe to mix CLR and library
+# configurations.  The -c opt here switches the default C# compilation
+# from /define:DEBUG to /define:RELEASE for library targets and enables
+# native optimizations.
+build:release -c opt

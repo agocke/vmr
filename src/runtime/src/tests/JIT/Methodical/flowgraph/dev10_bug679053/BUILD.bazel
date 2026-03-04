@@ -1,0 +1,21 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "regionLive",
+    srcs = ["regionLive.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "cpblkInt32",
+    srcs = ["cpblkInt32.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "flowgraph",
+    srcs = ["flowgraph.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

@@ -1,0 +1,16 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "csharpgenerictypes",
+    srcs = ["csharpgenerictypes.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+coreclr_test(
+    name = "csharptester",
+    srcs = ["csharptester.cs"],
+    debug_type = "pdbonly",
+    deps = [":csharpgenerictypes"],
+)

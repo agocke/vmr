@@ -1,0 +1,27 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.Threading.Thread.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading.Thread",
+    srcs = [
+        "ref/System.Threading.Thread.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Threading.Thread",
+    srcs = [],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Threading.Thread",
+    exclude_sr = True,
+)

@@ -1,0 +1,43 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "volatile_d",
+    srcs = ["volatile_d.il", "volatile.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "accum_il_r",
+    srcs = ["accum_r.il", "accum.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "livecall_d",
+    srcs = ["livecall_d.il", "livecall.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "accum_il_d",
+    srcs = ["accum_d.il", "accum.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "volatile_r",
+    srcs = ["volatile_r.il", "volatile.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "livecall_r",
+    srcs = ["livecall_r.il", "livecall.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

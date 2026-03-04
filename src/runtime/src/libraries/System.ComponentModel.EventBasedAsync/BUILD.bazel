@@ -1,0 +1,44 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ComponentModel.EventBasedAsync",
+    srcs = [
+        "ref/System.ComponentModel.EventBasedAsync.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.ComponentModel.EventBasedAsync",
+    srcs = [
+        "src/System/ComponentModel/AsyncCompletedEvent.cs",
+        "src/System/ComponentModel/AsyncOperation.cs",
+        "src/System/ComponentModel/AsyncOperationManager.cs",
+        "src/System/ComponentModel/BackgroundWorker.cs",
+        "src/System/ComponentModel/DoWorkEvent.cs",
+        "src/System/ComponentModel/ProgressChangedEvent.cs",
+        "src/System/ComponentModel/RunWorkerCompletedEvent.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.ComponentModel.EventBasedAsync",
+)
+
+ref_impl_pair(
+    name = "live_System.ComponentModel.EventBasedAsync",
+    ref = ":ref_System.ComponentModel.EventBasedAsync",
+    lib = ":impl_System.ComponentModel.EventBasedAsync",
+    visibility = ["//visibility:public"],
+)

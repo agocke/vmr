@@ -1,0 +1,14 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "class01_TypeParameters_Jagged",
+    srcs = ["class01.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct01_Jagged",
+    srcs = ["struct01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

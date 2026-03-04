@@ -1,0 +1,55 @@
+# CoreCLR hosts headers and executables.
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "hosts_inc",
+    hdrs = glob(["inc/*.h"]),
+    includes = ["inc"],
+)
+
+# Pre-generated config.h
+cc_library(
+    name = "corerun_config",
+    hdrs = select({
+        "@platforms//os:macos": ["corerun/bazel/darwin-arm64/config.h"],
+        "//conditions:default": ["corerun/bazel/linux-glibc-x64/config.h"],
+    }),
+    strip_include_prefix = select({
+        "@platforms//os:macos": "corerun/bazel/darwin-arm64",
+        "//conditions:default": "corerun/bazel/linux-glibc-x64",
+    }),
+)
+
+cc_binary(
+    name = "corerun",
+    srcs = [
+        "corerun/corerun.cpp",
+        "corerun/corerun.hpp",
+        "corerun/dotenv.cpp",
+        "corerun/dotenv.hpp",
+    ],
+    copts = [
+        "-Isrc/coreclr/hosts/corerun",
+        "-Isrc/native",
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-lpthread",
+        ],
+        "//conditions:default": [
+            "-ldl",
+            "-lpthread",
+            "-rdynamic",
+        ],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        ":corerun_config",
+        ":hosts_inc",
+        "//src/native/corehost:corehost_headers",
+        "//src/native/minipal",
+    ],
+)

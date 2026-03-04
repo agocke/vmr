@@ -1,0 +1,36 @@
+bazel_dep(name = "rules_dotnet")
+git_override(
+    module_name = "rules_dotnet",
+    remote = "https://github.com/agocke/rules_dotnet.git",
+    commit = "84ea36d80c44b7b60970d89155420ccfd3e14fa2",
+)
+
+dotnet = use_extension("@rules_dotnet//dotnet:extensions.bzl", "dotnet")
+dotnet.toolchain(dotnet_version = "10.0.100")
+use_repo(dotnet, "dotnet_toolchains")
+
+register_toolchains("@dotnet_toolchains//:all")
+
+main_extension = use_extension("//paket:paket.main_extension.bzl", "main_extension")
+
+use_repo(
+    main_extension,
+    "paket.main",
+    "nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102",
+    "nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26102.102",
+    "nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102",
+    "nuget.system.private.runtime.unicodedata.v10.0.0-beta.25418.1",
+)
+
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_cc", version = "0.2.14")
+
+# ICU4C headers for System.Globalization.Native (macOS: homebrew, Linux: system)
+icu4c_repository = use_repo_rule("//eng/bazel:icu4c_repository.bzl", "icu4c_repository")
+icu4c_repository(name = "icu4c")
+
+# NativeAOT packs: ILC compiler + native runtime libs from NuGet.
+nativeaot_packs_extension = use_extension("@rules_dotnet//dotnet/private/sdk/nativeaot_packs:dotnet.nativeaot_packs_extension.bzl", "nativeaot_packs_extension")
+use_repo(nativeaot_packs_extension, "dotnet.nativeaot_packs", "nuget.microsoft.net.illink.tasks.v8.0.22", "nuget.microsoft.net.illink.tasks.v9.0.11", "nuget.microsoft.net.illink.tasks.v10.0.0")

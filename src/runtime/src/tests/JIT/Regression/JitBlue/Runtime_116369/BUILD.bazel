@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Runtime_116369",
+    srcs = ["Runtime_116369.cs"],
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)

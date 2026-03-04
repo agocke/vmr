@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b268908",
+    srcs = ["vars2.cs"],
+    pri = 1,
+)

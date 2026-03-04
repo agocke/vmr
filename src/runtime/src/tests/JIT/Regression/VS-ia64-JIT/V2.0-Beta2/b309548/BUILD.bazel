@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b309548",
+    srcs = ["_hngh669.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

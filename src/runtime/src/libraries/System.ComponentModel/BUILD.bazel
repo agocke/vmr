@@ -1,0 +1,26 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ComponentModel",
+    srcs = [
+        "ref/System.ComponentModel.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.ComponentModel",
+    srcs = [
+        "src/System/IServiceProvider.cs",
+        "src/System/ComponentModel/CancelEventArgs.cs",
+        "src/System/ComponentModel/IChangeTracking.cs",
+        "src/System/ComponentModel/IEditableObject.cs",
+        "src/System/ComponentModel/IRevertibleChangeTracking.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    exclude_sr = True,
+)

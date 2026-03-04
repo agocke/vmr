@@ -1,0 +1,92 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "25param3b_d",
+    srcs = ["25param3b_d.il", "25param3b.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "25paramMixed_d",
+    srcs = ["25paramMixed_d.il", "25paramMixed.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "25param3b_r",
+    srcs = ["25param3b_r.il", "25param3b.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "25param1c_r",
+    srcs = ["25param1c_r.il", "25param1c.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "25param2c_d",
+    srcs = ["25param2c_d.il", "25param2c.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "25paramMixed_r",
+    srcs = ["25paramMixed_r.il", "25paramMixed.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "25param1b_d",
+    srcs = ["25param1b_d.il", "25param1b.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "25param3c_d",
+    srcs = ["25param3c_d.il", "25param3c.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "25param3c_r",
+    srcs = ["25param3c_r.il", "25param3c.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "25param1b_r",
+    srcs = ["25param1b_r.il", "25param1b.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "25param2b_r",
+    srcs = ["25param2b_r.il", "25param2b.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "25param2b_d",
+    srcs = ["25param2b_d.il", "25param2b.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "25param2c_r",
+    srcs = ["25param2c_r.il", "25param2c.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "25param1c_d",
+    srcs = ["25param1c_d.il", "25param1c.il"],
+    debug_type = "full",
+)

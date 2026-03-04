@@ -1,0 +1,46 @@
+
+load(
+    "//:defs.bzl",
+    "csharp_library"
+)
+
+exports_files([
+    "ref/System.Private.CoreLib.ExtraApis.cs",
+    "ref/System.Private.CoreLib.ManualShimTypeForwards.cs",
+    "src/Resources/Strings.resx",
+])
+exports_files(glob(["src/**/*.cs"]))
+
+csharp_library(
+    name = "System.Private.CoreLib.Generators",
+    srcs = glob(["gen/*.cs"]) + [
+        "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.Pop.cs",
+    ],
+    target_frameworks = ["netstandard2.0"],
+    langversion = "preview",
+    nullable = "annotations",
+    allow_unsafe_blocks = True,
+    deps = [
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.memory",
+        "@paket.main//system.buffers",
+    ],
+    nowarn = [
+        "CS3001",
+        "CS3003",
+        # MSBuild does not generate XML docs for generator projects
+        "CS1572",
+        "CS1574",
+        "CS1734",
+        # Nullable warnings from IntrinsicsInSystemPrivateCoreLibAnalyzer.cs (#nullable enable)
+        "CS8600",
+        "CS8602",
+        "CS8604",
+    ],
+    defines = [ "MICROSOFT_INTEROP_SOURCEGENERATION", "BAZEL" ],
+    visibility = ["//visibility:public"],
+)

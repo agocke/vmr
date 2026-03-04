@@ -10,6 +10,7 @@ using Test.Cryptography;
 
 namespace System.Security.Cryptography.Pkcs.EnvelopedCmsTests.Tests
 {
+    [Trait("category", "RequiresKeychain")]
     public class DecryptTestsRsaPaddingMode : DecryptTests
     {
         public static bool SupportsDiffieHellman { get; } = KeyAgreeRecipientInfoTests.SupportsDiffieHellman;

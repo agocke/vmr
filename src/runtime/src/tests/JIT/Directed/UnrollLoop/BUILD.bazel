@@ -1,0 +1,107 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "loop3_r",
+    srcs = ["loop3_r.il", "loop3.il"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "loop6_cs_ro",
+    srcs = ["loop6.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "loop1_cs_d",
+    srcs = ["loop1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "loop1_cs_do",
+    srcs = ["loop1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "loop4_cs_do",
+    srcs = ["loop4.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "loop4_cs_ro",
+    srcs = ["loop4.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Dev10_846218",
+    srcs = ["Dev10_846218.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "loop1_cs_ro",
+    srcs = ["loop1.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "loop4_cs_d",
+    srcs = ["loop4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "loop3_d",
+    srcs = ["loop3_d.il", "loop3.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+coreclr_test(
+    name = "loop6_cs_r",
+    srcs = ["loop6.cs"],
+    pri = 1,
+)
+
+coreclr_test(
+    name = "loop6_cs_do",
+    srcs = ["loop6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "loop1_cs_r",
+    srcs = ["loop1.cs"],
+    pri = 1,
+)
+
+coreclr_test(
+    name = "loop6_cs_d",
+    srcs = ["loop6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "loop4_cs_r",
+    srcs = ["loop4.cs"],
+    pri = 1,
+)

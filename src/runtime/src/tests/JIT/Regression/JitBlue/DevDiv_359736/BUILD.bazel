@@ -1,0 +1,26 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "DevDiv_359736_d",
+    srcs = ["DevDiv_359736.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "DevDiv_359736_ro",
+    srcs = ["DevDiv_359736.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "DevDiv_359736_do",
+    srcs = ["DevDiv_359736.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "DevDiv_359736_r",
+    srcs = ["DevDiv_359736.cs"],
+)

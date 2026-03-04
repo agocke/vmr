@@ -1,0 +1,49 @@
+
+load("//:defs.bzl", "csharp_library")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+csharp_library(
+    name = "XUnitWrapperGenerator",
+    srcs = glob(["XUnitWrapperGenerator/*.cs"]) + [
+        "XUnitWrapperLibrary/TestFilter.cs",
+    ],
+    deps = [
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//system.collections.immutable",
+    ],
+    target_frameworks = ["net10.0"],
+    visibility = ["//visibility:public"],
+    nullable = "enable",
+    cls_compliant = False,
+    nowarn = [
+        "CS8600",
+        "CS8765",
+        "CS8767",
+    ],
+)
+
+live_csharp_library(
+    name = "TestLibrary",
+    srcs = glob(
+        ["CoreCLRTestLibrary/*.cs"],
+        exclude = ["CoreCLRTestLibrary/OutOfProcessTest.cs"],
+    ),
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    visibility = ["//visibility:public"],
+    nowarn = [
+        "CS3001",
+        "CS3002",
+        "CS3003",
+        # XML doc warnings from AssertExtensions.cs
+        "CS0419",
+        "CS1572",
+        "CS1574",
+        "CS1710",
+    ],
+)

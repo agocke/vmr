@@ -1,0 +1,115 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.VisualBasic.Core",
+    srcs = ["//src/libraries/shims/bazel:Microsoft.VisualBasic.Core.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Win32.SystemEvents",
+    srcs = ["//src/libraries/shims/bazel:Microsoft.Win32.SystemEvents.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Configuration.ConfigurationManager",
+    srcs = ["//src/libraries/shims/bazel:System.Configuration.ConfigurationManager.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Data.Odbc",
+    srcs = ["//src/libraries/shims/bazel:System.Data.Odbc.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Data.OleDb",
+    srcs = ["//src/libraries/shims/bazel:System.Data.OleDb.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Data.SqlClient",
+    srcs = ["//src/libraries/shims/bazel:System.Data.SqlClient.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Diagnostics.EventLog",
+    srcs = ["//src/libraries/shims/bazel:System.Diagnostics.EventLog.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Diagnostics.PerformanceCounter",
+    srcs = ["//src/libraries/shims/bazel:System.Diagnostics.PerformanceCounter.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Drawing.Common",
+    srcs = ["//src/libraries/shims/bazel:System.Drawing.Common.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Packaging",
+    srcs = ["//src/libraries/shims/bazel:System.IO.Packaging.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Pipes.AccessControl",
+    srcs = ["//src/libraries/shims/bazel:System.IO.Pipes.AccessControl.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Ports",
+    srcs = ["//src/libraries/shims/bazel:System.IO.Ports.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Runtime.Serialization.Schema",
+    srcs = ["//src/libraries/shims/bazel:System.Runtime.Serialization.Schema.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Security.Cryptography.ProtectedData",
+    srcs = ["//src/libraries/shims/bazel:System.Security.Cryptography.ProtectedData.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Security.Permissions",
+    srcs = ["//src/libraries/shims/bazel:System.Security.Permissions.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ServiceModel.Syndication",
+    srcs = ["//src/libraries/shims/bazel:System.ServiceModel.Syndication.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ServiceProcess.ServiceController",
+    srcs = ["//src/libraries/shims/bazel:System.ServiceProcess.ServiceController.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading.AccessControl",
+    srcs = ["//src/libraries/shims/bazel:System.Threading.AccessControl.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Windows.Extensions",
+    srcs = ["//src/libraries/shims/bazel:System.Windows.Extensions.ForwardedTypes.cs"],
+    deps = ["//src/libraries:ref_System.Runtime"],
+)

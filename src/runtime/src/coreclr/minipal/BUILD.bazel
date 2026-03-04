@@ -1,0 +1,31 @@
+# CoreCLR-specific minipal (platform abstraction).
+# Matches CMake: src/coreclr/minipal/CMakeLists.txt + Unix/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "coreclrminipal_headers",
+    hdrs = [
+        "dn-u16.h",
+        "minipal.h",
+    ],
+    includes = ["."],
+)
+
+cc_library(
+    name = "coreclrminipal",
+    srcs = [
+        "Unix/dn-u16.cpp",
+        "Unix/doublemapping.cpp",
+    ],
+    copts = CLR_CONFIG_COPTS,
+    deps = [
+        ":coreclrminipal_headers",
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/native/minipal",
+    ],
+    alwayslink = True,
+)

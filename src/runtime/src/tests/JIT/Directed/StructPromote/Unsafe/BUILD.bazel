@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "ReadStructAsAnotherType",
+    srcs = ["ReadStructAsAnotherType.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ReadDoubleFromIntOffset",
+    srcs = ["ReadDoubleFromIntOffset.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "AccessInvalidFieldOffset",
+    srcs = ["AccessInvalidFieldOffset.cs"],
+    optimize = True,
+)

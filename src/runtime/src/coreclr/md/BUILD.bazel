@@ -1,0 +1,223 @@
+# CoreCLR metadata headers and libraries.
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+# Public metadata headers (inc/ directory + root headers + subdirectory headers).
+cc_library(
+    name = "md_inc",
+    hdrs = glob([
+        "inc/*.h",
+        "inc/*.inc",
+        "*.h",
+        "*.inl",
+        "heaps/*.h",
+        "tables/*.h",
+        "datasource/*.h",
+        "compiler/*.h",
+        "runtime/*.h",
+        "enc/*.h",
+    ]),
+)
+
+_MD_COPTS = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+    "-Isrc/coreclr/md/inc",
+    "-Isrc/coreclr/md",
+]
+
+# Directory-level defines from src/coreclr/md/CMakeLists.txt
+# (non-DAC, non-DBI variant for the VM build)
+_MD_DEFINES = CORECLR_DEFINES + [
+    "FEATURE_METADATA_EMIT",
+    "FEATURE_METADATA_EMIT_ALL",
+    "FEATURE_METADATA_INTERNAL_APIS",
+    "FEATURE_METADATA_IN_VM",
+    "FEATURE_METADATA_VERIFY_LAYOUTS",
+]
+
+# --- mdcompiler_wks (metadata compiler, workstation) ---
+# Matches CMake: src/coreclr/md/compiler/CMakeLists.txt
+cc_library(
+    name = "mdcompiler_wks",
+    srcs = [
+        "compiler/assemblymd.cpp",
+        "compiler/assemblymd_emit.cpp",
+        "compiler/custattr_emit.cpp",
+        "compiler/custattr_import.cpp",
+        "compiler/disp.cpp",
+        "compiler/emit.cpp",
+        "compiler/filtermanager.cpp",
+        "compiler/helper.cpp",
+        "compiler/import.cpp",
+        "compiler/importhelper.cpp",
+        "compiler/mdutil.cpp",
+        "compiler/regmeta.cpp",
+        "compiler/regmeta_compilersupport.cpp",
+        "compiler/regmeta_emit.cpp",
+        "compiler/regmeta_import.cpp",
+        "compiler/regmeta_imetadatatables.cpp",
+        "compiler/regmeta_vm.cpp",
+        "compiler/verifylayouts.cpp",
+        "compiler/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-Isrc/coreclr/md/compiler",
+        "-include", "src/coreclr/md/compiler/stdafx.h",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DEFINES,
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# --- mdcompiler_ppdb (metadata compiler, portable PDB) ---
+# Same sources as base mdcompiler (no verifylayouts.cpp) + FEATURE_METADATA_EMIT_PORTABLE_PDB.
+# Matches CMake: src/coreclr/md/compiler/CMakeLists.txt  mdcompiler_ppdb target.
+cc_library(
+    name = "mdcompiler_ppdb",
+    srcs = [
+        "compiler/assemblymd.cpp",
+        "compiler/assemblymd_emit.cpp",
+        "compiler/custattr_emit.cpp",
+        "compiler/custattr_import.cpp",
+        "compiler/disp.cpp",
+        "compiler/emit.cpp",
+        "compiler/filtermanager.cpp",
+        "compiler/helper.cpp",
+        "compiler/import.cpp",
+        "compiler/importhelper.cpp",
+        "compiler/mdutil.cpp",
+        "compiler/regmeta.cpp",
+        "compiler/regmeta_compilersupport.cpp",
+        "compiler/regmeta_emit.cpp",
+        "compiler/regmeta_import.cpp",
+        "compiler/regmeta_imetadatatables.cpp",
+        "compiler/regmeta_vm.cpp",
+        "compiler/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-Isrc/coreclr/md/compiler",
+        "-include", "src/coreclr/md/compiler/stdafx.h",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DEFINES + [
+        "FEATURE_METADATA_EMIT_PORTABLE_PDB",
+    ],
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# --- mdruntime_wks (metadata runtime, workstation) ---
+# Matches CMake: src/coreclr/md/runtime/CMakeLists.txt
+cc_library(
+    name = "mdruntime_wks",
+    srcs = [
+        "runtime/liteweightstgdb.cpp",
+        "runtime/mdcolumndescriptors.cpp",
+        "runtime/mdfileformat.cpp",
+        "runtime/mdinternaldisp.cpp",
+        "runtime/mdinternalro.cpp",
+        "runtime/metamodel.cpp",
+        "runtime/metamodelro.cpp",
+        "runtime/recordpool.cpp",
+        "runtime/strongnameinternal.cpp",
+        "runtime/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-Isrc/coreclr/md/runtime",
+        "-include", "src/coreclr/md/runtime/stdafx.h",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DEFINES + [
+        "NO_COR",
+    ],
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# --- mdruntime_ppdb (metadata runtime, portable PDB) ---
+# Matches CMake: src/coreclr/md/runtime/CMakeLists.txt  mdruntime_ppdb target.
+cc_library(
+    name = "mdruntime_ppdb",
+    srcs = [
+        "runtime/liteweightstgdb.cpp",
+        "runtime/mdcolumndescriptors.cpp",
+        "runtime/mdfileformat.cpp",
+        "runtime/mdinternaldisp.cpp",
+        "runtime/mdinternalro.cpp",
+        "runtime/metamodel.cpp",
+        "runtime/metamodelro.cpp",
+        "runtime/recordpool.cpp",
+        "runtime/strongnameinternal.cpp",
+        "runtime/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-Isrc/coreclr/md/runtime",
+        "-include", "src/coreclr/md/runtime/stdafx.h",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DEFINES + [
+        "NO_COR",
+        "FEATURE_METADATA_EMIT_PORTABLE_PDB",
+    ],
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# --- mdruntimerw_wks (metadata runtime read-write / ENC, workstation) ---
+# Matches CMake: src/coreclr/md/enc/CMakeLists.txt
+cc_library(
+    name = "mdruntimerw_wks",
+    srcs = [
+        "enc/liteweightstgdbrw.cpp",
+        "enc/mdinternalrw.cpp",
+        "enc/metamodelenc.cpp",
+        "enc/metamodelrw.cpp",
+        "enc/pdbheap.cpp",
+        "enc/peparse.cpp",
+        "enc/rwutil.cpp",
+        "enc/stgio.cpp",
+        "enc/stgtiggerstorage.cpp",
+        "enc/stgtiggerstream.cpp",
+        "enc/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-Isrc/coreclr/md/enc",
+        "-include", "src/coreclr/md/enc/stdafx.h",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DEFINES,
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# --- mdruntimerw_ppdb (metadata runtime read-write / ENC, portable PDB) ---
+# Matches CMake: src/coreclr/md/enc/CMakeLists.txt  mdruntimerw_ppdb target.
+cc_library(
+    name = "mdruntimerw_ppdb",
+    srcs = [
+        "enc/liteweightstgdbrw.cpp",
+        "enc/mdinternalrw.cpp",
+        "enc/metamodelenc.cpp",
+        "enc/metamodelrw.cpp",
+        "enc/pdbheap.cpp",
+        "enc/peparse.cpp",
+        "enc/rwutil.cpp",
+        "enc/stgio.cpp",
+        "enc/stgtiggerstorage.cpp",
+        "enc/stgtiggerstream.cpp",
+        "enc/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-Isrc/coreclr/md/enc",
+        "-include", "src/coreclr/md/enc/stdafx.h",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DEFINES + [
+        "FEATURE_METADATA_EMIT_PORTABLE_PDB",
+    ],
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)

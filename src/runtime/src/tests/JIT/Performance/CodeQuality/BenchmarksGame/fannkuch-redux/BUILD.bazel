@@ -1,0 +1,31 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "fannkuch-redux-5",
+    srcs = ["fannkuch-redux-5.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "fannkuch-redux-9",
+    srcs = ["fannkuch-redux-9.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "fannkuch-redux-2",
+    srcs = ["fannkuch-redux-2.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

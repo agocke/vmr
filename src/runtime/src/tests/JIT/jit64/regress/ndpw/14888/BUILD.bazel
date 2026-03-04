@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "objectusedonlyinhandler",
+    srcs = ["objectusedonlyinhandler.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    deps = [
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)

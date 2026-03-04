@@ -1,0 +1,10 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.FileSystem",
+    srcs = ["src/System.IO.FileSystem.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    exclude_sr = True,
+)

@@ -1,0 +1,62 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.Net.Mail.Mime.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.Mail",
+    srcs = [
+        "ref/System.Net.Mail.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Requests:ref_System.Net.Requests",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.Mail",
+    srcs = glob(
+        ["src/System/**/*.cs"],
+        exclude = [
+            # Browser/WASI only
+            "src/System/Net/Mail/SmtpClient.Wasm.cs",
+            # Not in csproj
+            "src/System/Net/Mime/MultiAsyncResult.cs",
+        ],
+    ) + [
+        # Common sources (TargetPlatformIdentifier != '')
+        "//src/libraries/Common:src/System/Net/ReadWriteAdapter.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/System/Net/Logging/NetEventSource.Common.cs",
+        "//src/libraries/Common:src/System/Net/Logging/NetEventSource.Common.Associate.cs",
+        "//src/libraries/Common:src/System/HexConverter.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        # Non-browser/non-wasi Common sources
+        "//src/libraries/Common:src/System/NotImplemented.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.NetworkInformation:ref_System.Net.NetworkInformation",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Requests:ref_System.Net.Requests",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.Net.Sockets:ref_System.Net.Sockets",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)

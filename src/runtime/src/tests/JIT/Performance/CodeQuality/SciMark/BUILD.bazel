@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "SciMark",
+    srcs = [
+        "CommandLine.cs",
+        "Constants.cs",
+        "FFT.cs",
+        "kernel.cs",
+        "LU.cs",
+        "MonteCarlo.cs",
+        "Random.cs",
+        "SOR.cs",
+        "SparseCompRow.cs",
+        "Stopwatch.cs",
+    ],
+    debug_type = "pdbonly",
+    optimize = True,
+)

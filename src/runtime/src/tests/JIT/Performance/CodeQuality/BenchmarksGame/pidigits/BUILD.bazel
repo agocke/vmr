@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "pidigits-3",
+    srcs = ["pidigits-3.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+    ],
+)

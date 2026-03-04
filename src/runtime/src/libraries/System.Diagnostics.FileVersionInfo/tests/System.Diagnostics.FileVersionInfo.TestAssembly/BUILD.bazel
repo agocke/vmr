@@ -1,0 +1,13 @@
+exports_files(["Assembly1.cs"])
+
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "csharp_binary")
+
+csharp_binary(
+    name = "System.Diagnostics.FileVersionInfo.TestAssembly",
+    srcs = ["Assembly1.cs"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    visibility = ["//src/libraries/System.Diagnostics.FileVersionInfo/tests:__subpackages__"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)

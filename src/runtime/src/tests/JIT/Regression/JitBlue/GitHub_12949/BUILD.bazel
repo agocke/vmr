@@ -1,0 +1,65 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_12949_6",
+    srcs = ["GitHub_12949_6.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "GitHub_12949_8",
+    srcs = ["GitHub_12949_8.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "GitHub_12949_4",
+    srcs = ["GitHub_12949_4.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "GitHub_12949_1",
+    srcs = ["GitHub_12949_1.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "GitHub_12949_2",
+    srcs = ["GitHub_12949_2.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "GitHub_12949_7",
+    srcs = ["GitHub_12949_7.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "GitHub_12949_5",
+    srcs = ["GitHub_12949_5.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "GitHub_12949_3",
+    srcs = ["GitHub_12949_3.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

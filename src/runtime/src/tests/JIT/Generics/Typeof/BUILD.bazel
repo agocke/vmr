@@ -1,0 +1,75 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "struct02_Typeof",
+    srcs = ["Struct02.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "valueTypeBoxing",
+    srcs = ["valueTypeBoxing.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "class02_Typeof",
+    srcs = ["class02.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "dynamicTypes",
+    srcs = ["dynamicTypes.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "class03_Typeof",
+    srcs = ["class03.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct03_Typeof",
+    srcs = ["struct03.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class01_Typeof",
+    srcs = ["class01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct01_Typeof",
+    srcs = ["struct01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "objectBoxing",
+    srcs = ["objectBoxing.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "refTypesdynamic",
+    srcs = ["refTypesdynamic.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)

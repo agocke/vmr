@@ -1,0 +1,79 @@
+# CoreCLR ilasm — IL Assembler.
+# Matches CMake: src/coreclr/ilasm/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+# grammar_before.cpp / grammar_after.cpp are #included by prebuilt/asmparse.cpp
+# (bison-generated parser) — they must be available but not compiled separately.
+cc_library(
+    name = "ilasm_parser_includes",
+    textual_hdrs = [
+        "grammar_before.cpp",
+        "grammar_after.cpp",
+    ],
+)
+
+cc_binary(
+    name = "ilasm",
+    srcs = [
+        "assem.cpp",
+        "assembler.cpp",
+        "asmman.cpp",
+        "main.cpp",
+        "method.cpp",
+        "portable_pdb.cpp",
+        "prebuilt/asmparse.cpp",
+        "writer.cpp",
+    ] + glob(["*.h", "*.hpp"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-Isrc/coreclr/ilasm",
+        "-Isrc/coreclr/ilasm/prebuilt",
+        "-Isrc/coreclr/md/inc",
+        "-Isrc/native/libs/Common",
+        "-Isrc/native/libs/System.Security.Cryptography.Native",
+    ] + select({
+        "@platforms//os:macos": ["-Isrc/native/libs/System.Security.Cryptography.Native/bazel/darwin-arm64"],
+        "//conditions:default": ["-Isrc/native/libs/System.Security.Cryptography.Native/bazel/linux-glibc-x64"],
+    }) + [
+        # Suppress warnings on the prebuilt bison-generated parser.
+        "-Wno-register",
+        "-Wno-array-bounds",
+        "-Wno-unused-label",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES + [
+        "__ILASM__",
+        "_FEATURE_NO_HOST",
+        "FEATURE_METADATA_EMIT_PORTABLE_PDB",
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-lpthread",
+        ],
+        "//conditions:default": [
+            "-Wl,-Bsymbolic",
+            "-Wl,--start-group",
+            "-Wl,--end-group",
+            "-ldl",
+            "-lpthread",
+        ],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ilasm_parser_includes",
+        "//src/coreclr/dlls/mscorpe",
+        "//src/coreclr/dlls/mscorrc:mscorrc",
+        "//src/coreclr/inc:corguids",
+        "//src/coreclr/md:mdcompiler_ppdb",
+        "//src/coreclr/md:mdruntime_ppdb",
+        "//src/coreclr/md:mdruntimerw_ppdb",
+        "//src/coreclr/md/ceefilegen:ceefgen",
+        "//src/coreclr/minipal:coreclrminipal",
+        "//src/coreclr/pal:coreclrpal",
+        "//src/coreclr/utilcode:utilcodestaticnohost",
+    ] + select({
+        "@platforms//os:linux": ["//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl_lib"],
+        "//conditions:default": [],
+    }),
+)

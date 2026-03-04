@@ -1,0 +1,17 @@
+load("//:defs.bzl", "csharp_library")
+
+exports_files(["PEReaderExtensions.cs"])
+
+csharp_library(
+    name = "ILCompiler.Reflection.ReadyToRun",
+    srcs = glob(["**/*.cs"]) + [
+        "//src/coreclr/tools/Common:Internal/Runtime/CorConstants.cs",
+        "//src/coreclr/tools/Common:Internal/Runtime/ModuleHeaders.cs",
+        "//src/coreclr/tools/Common:Internal/Runtime/ReadyToRunConstants.cs",
+        "//src/coreclr/tools/Common:Internal/Runtime/ReadyToRunInstructionSet.cs",
+        "//src/coreclr/tools/Common:Pgo/PgoFormat.cs",
+    ],
+    compiler_options = ["/unsafe"],
+    target_frameworks = ["net10.0"],
+    visibility = ["//visibility:public"],
+)

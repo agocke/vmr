@@ -1,0 +1,32 @@
+# Interop library for linux-x64.
+# Matches CMake: src/coreclr/interop/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "interop",
+    srcs = [
+        "comwrappers.cpp",
+        "comwrappers.hpp",
+        "interoplib.cpp",
+        "referencetrackertypes.hpp",
+        "trackerobjectmanager.cpp",
+    ],
+    hdrs = glob([
+        "inc/*.h",
+        "*.h",
+    ]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-Isrc/coreclr/interop/inc",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    includes = [
+        ".",
+        "inc",
+    ],
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)

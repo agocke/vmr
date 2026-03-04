@@ -1,0 +1,61 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "isinst_catch_r",
+    srcs = ["isinst_catch_r.il", "isinst_catch.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "filter_SEH_casts_r",
+    srcs = ["filter_r.il", "filter.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "castclass_catch_neg_d",
+    srcs = ["castclass_catch_neg_d.il", "castclass_catch_neg.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "isinst_catch_neg_d",
+    srcs = ["isinst_catch_neg_d.il", "isinst_catch_neg.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "filter_SEH_casts_d",
+    srcs = ["filter_d.il", "filter.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "castclass_catch_r",
+    srcs = ["castclass_catch_r.il", "castclass_catch.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "castclass_catch_neg_r",
+    srcs = ["castclass_catch_neg_r.il", "castclass_catch_neg.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "isinst_catch_neg_r",
+    srcs = ["isinst_catch_neg_r.il", "isinst_catch_neg.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "isinst_catch_d",
+    srcs = ["isinst_catch_d.il", "isinst_catch.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "castclass_catch_d",
+    srcs = ["castclass_catch_d.il", "castclass_catch.il"],
+    debug_type = "full",
+)

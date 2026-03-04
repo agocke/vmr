@@ -1,0 +1,27 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files(["ref/System.Reflection.Emit.ILGeneration.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Reflection.Emit.ILGeneration",
+    srcs = [
+        "ref/System.Reflection.Emit.ILGeneration.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/System.Diagnostics.StackTrace:ref_System.Diagnostics.StackTrace",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Reflection.Emit.ILGeneration",
+    srcs = [],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Reflection.Emit.ILGeneration",
+    exclude_sr = True,
+)

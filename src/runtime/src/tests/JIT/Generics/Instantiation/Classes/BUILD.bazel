@@ -1,0 +1,51 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "baseclass04",
+    srcs = ["Baseclass04.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "baseclass01",
+    srcs = ["BaseClass01.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "baseclass03",
+    srcs = ["BaseClass03.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "baseclass02",
+    srcs = ["BaseClass02.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class02_Classes",
+    srcs = ["class02.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class01_Classes",
+    srcs = ["class01.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "baseclass05",
+    srcs = ["Baseclass05.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class03_Classes",
+    srcs = ["class03.cs"],
+    debug_type = "pdbonly",
+)

@@ -1,6 +1,7 @@
 # Description:
 #   Brotli is a generic-purpose lossless compression algorithm.
 
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load(":compiler_config_setting.bzl", "create_msvc_config")
 
 package(
@@ -118,6 +119,7 @@ cc_library(
     srcs = [":common_sources"],
     hdrs = [":common_headers"],
     copts = STRICT_C_OPTIONS,
+    local_defines = ["BROTLI_SHARED_COMPILATION"],
     deps = [":brotli_inc"],
 )
 
@@ -126,6 +128,7 @@ cc_library(
     srcs = [":dec_sources"],
     hdrs = [":dec_headers"],
     copts = STRICT_C_OPTIONS,
+    local_defines = ["BROTLI_SHARED_COMPILATION"],
     deps = [":brotlicommon"],
 )
 
@@ -134,6 +137,7 @@ cc_library(
     srcs = [":enc_sources"],
     hdrs = [":enc_headers"],
     copts = STRICT_C_OPTIONS,
+    local_defines = ["BROTLI_SHARED_COMPILATION"],
     linkopts = select({
         ":clang-cl": [],
         ":msvc": [],
@@ -153,7 +157,8 @@ cc_binary(
     ],
 )
 
+
 filegroup(
     name = "dictionary",
-    srcs = ["c/common/dictionary.bin"],
+    srcs = glob(["c/common/dictionary.bin"], allow_empty = True),
 )

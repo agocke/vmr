@@ -1,0 +1,13 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Web",
+    srcs = [
+        "src/System.Web.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Web.HttpUtility:ref_System.Web.HttpUtility",
+    ],
+    exclude_sr = True,
+)

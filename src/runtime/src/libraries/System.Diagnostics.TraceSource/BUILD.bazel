@@ -1,0 +1,73 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Diagnostics.TraceSource",
+    srcs = [
+        "ref/System.Diagnostics.TraceSource.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+    ],
+)
+
+# Match the SDK's ImplicitUsings (global using System.Linq) needed for array Contains
+genrule(
+    name = "global_usings",
+    outs = ["GlobalUsings.g.cs"],
+    cmd = "echo 'global using System.Linq;' > $@",
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Diagnostics.TraceSource",
+    srcs = [
+        ":global_usings",
+        "src/System/Diagnostics/BooleanSwitch.cs",
+        "src/System/Diagnostics/InitializingSwitchEventArgs.cs",
+        "src/System/Diagnostics/InitializingTraceSourceEventArgs.cs",
+        "src/System/Diagnostics/CorrelationManager.cs",
+        "src/System/Diagnostics/DefaultTraceListener.cs",
+        "src/System/Diagnostics/DiagnosticsConfiguration.cs",
+        "src/System/Diagnostics/SeverityFilter.cs",
+        "src/System/Diagnostics/SourceFilter.cs",
+        "src/System/Diagnostics/SourceLevels.cs",
+        "src/System/Diagnostics/SourceSwitch.cs",
+        "src/System/Diagnostics/Switch.cs",
+        "src/System/Diagnostics/Trace.cs",
+        "src/System/Diagnostics/TraceEventCache.cs",
+        "src/System/Diagnostics/TraceEventType.cs",
+        "src/System/Diagnostics/TraceFilter.cs",
+        "src/System/Diagnostics/TraceInternal.cs",
+        "src/System/Diagnostics/TraceLevel.cs",
+        "src/System/Diagnostics/TraceListener.cs",
+        "src/System/Diagnostics/TraceListeners.cs",
+        "src/System/Diagnostics/TraceOptions.cs",
+        "src/System/Diagnostics/TraceSource.cs",
+        "src/System/Diagnostics/TraceSwitch.cs",
+        "src/System/Diagnostics/TraceUtils.cs",
+        "src/System/Diagnostics/SwitchAttribute.cs",
+        "src/System/Diagnostics/SwitchLevelAttribute.cs",
+    ],
+    defines = ["TRACE"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Diagnostics.StackTrace:ref_System.Diagnostics.StackTrace",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Diagnostics.TraceSource",
+)
+
+ref_impl_pair(
+    name = "live_System.Diagnostics.TraceSource",
+    ref = ":ref_System.Diagnostics.TraceSource",
+    lib = ":impl_System.Diagnostics.TraceSource",
+    visibility = ["//visibility:public"],
+)

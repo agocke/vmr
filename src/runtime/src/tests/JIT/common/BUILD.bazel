@@ -1,0 +1,7 @@
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "eh_common",
+    srcs = ["eh_common.cs"],
+    visibility = ["//visibility:public"],
+)

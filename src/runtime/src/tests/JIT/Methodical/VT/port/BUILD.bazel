@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "huge_gcref_d",
+    srcs = ["huge_gcref_d.il", "huge_gcref.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "huge_gcref_r",
+    srcs = ["huge_gcref_r.il", "huge_gcref.il"],
+    debug_type = "pdbonly",
+)

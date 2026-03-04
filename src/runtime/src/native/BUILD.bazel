@@ -1,0 +1,10 @@
+# Package for src/native (enables subpackage references)
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "native_inc",
+    hdrs = glob(["inc/*.h"]),
+    includes = ["inc"],
+    visibility = ["//src/coreclr:__subpackages__"],
+)

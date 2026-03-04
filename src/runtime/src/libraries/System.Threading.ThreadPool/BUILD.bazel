@@ -1,0 +1,28 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.Threading.ThreadPool.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading.ThreadPool",
+    srcs = [
+        "ref/System.Threading.ThreadPool.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Threading.Overlapped:ref_System.Threading.Overlapped",
+    ],
+    allow_unsafe_blocks = True,
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Threading.ThreadPool",
+    srcs = [],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Threading.ThreadPool",
+    exclude_sr = True,
+)

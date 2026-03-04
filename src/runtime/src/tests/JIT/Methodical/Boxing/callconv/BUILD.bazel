@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "instance_r",
+    srcs = ["instance_r.il", "instance.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "instance_d",
+    srcs = ["instance_d.il", "instance.il"],
+    debug_type = "full",
+)

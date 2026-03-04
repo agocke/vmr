@@ -1,0 +1,92 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "FldSeqsInPromotedCpBlk",
+    srcs = ["FldSeqsInPromotedCpBlk.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP1",
+    srcs = ["SP1.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP1a",
+    srcs = ["SP1a.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP1a2",
+    srcs = ["SP1a2.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP1b",
+    srcs = ["SP1b.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP1c",
+    srcs = ["SP1c.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP1d",
+    srcs = ["SP1d.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP2",
+    srcs = ["SP2.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP2a",
+    srcs = ["SP2a.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP2b",
+    srcs = ["SP2b.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SP2c",
+    srcs = ["SP2c.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SpAddr",
+    srcs = ["SpAddr.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SpAddrAT",
+    srcs = ["SpAddrAT.cs"],
+    pri = 1,
+    optimize = True,
+)

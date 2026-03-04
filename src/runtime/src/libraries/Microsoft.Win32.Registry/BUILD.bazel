@@ -1,0 +1,72 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Win32.Registry",
+    srcs = [
+        "ref/Microsoft.Win32.Registry.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_Microsoft.Win32.Registry",
+    srcs = [
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/Interop/Windows/Interop.Errors.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.FormatMessage.cs",
+        "//src/libraries/Common:src/Interop/Windows/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegCloseKey.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegConnectRegistry.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegCreateKeyEx.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegDeleteKeyEx.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegDeleteTree.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegDeleteValue.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegEnumKeyEx.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegEnumValue.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegFlushKey.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegOpenKeyEx.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegQueryInfoKey.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegQueryValueEx.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegSetValueEx.cs",
+        "//src/libraries/Common:src/Interop/Windows/Advapi32/Interop.RegistryConstants.cs",
+        "//src/libraries/Common:src/Interop/Windows/Interop.BOOL.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.SECURITY_ATTRIBUTES.cs",
+
+        "//src/libraries/System.Private.CoreLib:src/Microsoft/Win32/SafeHandles/SafeRegistryHandle.cs",
+
+        "src/Microsoft/Win32/Registry.cs",
+        "src/Microsoft/Win32/RegistryHive.cs",
+        "src/Microsoft/Win32/RegistryValueKind.cs",
+        "src/Microsoft/Win32/RegistryKey.cs",
+        "src/Microsoft/Win32/RegistryKeyPermissionCheck.cs",
+        "src/Microsoft/Win32/RegistryOptions.cs",
+        "src/Microsoft/Win32/RegistryValueOptions.cs",
+        "src/Microsoft/Win32/RegistryView.cs",
+        "src/System/Security/AccessControl/RegistryRights.cs",
+        "src/System/Security/AccessControl/RegistrySecurity.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+    ],
+    allow_unsafe_blocks = True,
+    nowarn = [
+        "SYSLIB1092",
+    ],
+    defines = [
+        "REGISTRY_ASSEMBLY",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)

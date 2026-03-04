@@ -1,0 +1,41 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "castclass_ldlen_r",
+    srcs = ["castclass_ldlen_r.il", "castclass_ldlen.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "castclass_ldlen_d",
+    srcs = ["castclass_ldlen_d.il", "castclass_ldlen.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "isinst_ldlen_d",
+    srcs = ["isinst_ldlen_d.il", "isinst_ldlen.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "arrays_d",
+    srcs = ["arrays_d.il", "arrays.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "arrays_r",
+    srcs = ["arrays_r.il", "arrays.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "isinst_ldlen_r",
+    srcs = ["isinst_ldlen_r.il", "isinst_ldlen.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

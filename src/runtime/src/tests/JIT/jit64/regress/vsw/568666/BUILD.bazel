@@ -1,0 +1,25 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "library1",
+    srcs = ["dll.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "library2",
+    srcs = ["dll.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+coreclr_test(
+    name = "test_568666",
+    srcs = ["use.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    tags = ["manual"],  # Requires extern alias support
+    deps = [":library1", ":library2"],
+)

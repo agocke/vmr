@@ -1,0 +1,34 @@
+load("//:defs.bzl", "csharp_binary")
+
+genrule(
+    name = "AssemblyInfo",
+    outs = ["AssemblyInfo.g.cs"],
+    cmd = """cat > $@ << 'EOF'
+[assembly: System.Reflection.AssemblyFileVersion("10.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersion("10.0.0-dev+bazel")]
+EOF""",
+)
+
+csharp_binary(
+    name = "ilc",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = ["repro/**"],
+    ) + [
+        "//src/coreclr/tools/Common:CommandLineHelpers.cs",
+        "//src/coreclr/tools/Common:InstructionSetHelpers.cs",
+        "//src/coreclr/tools/Common:TypeSystem/IL/HelperExtensions.cs",
+        ":AssemblyInfo",
+    ],
+    compiler_options = ["/unsafe"],
+    deps = [
+        "//src/coreclr/tools/aot/ILCompiler.Compiler",
+        "//src/coreclr/tools/aot/ILCompiler.DependencyAnalysisFramework",
+        "//src/coreclr/tools/aot/ILCompiler.MetadataTransform",
+        "//src/coreclr/tools/aot/ILCompiler.RyuJit",
+        "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//system.commandline",
+    ],
+    target_frameworks = ["net10.0"],
+    visibility = ["//visibility:public"],
+)

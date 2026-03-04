@@ -1,0 +1,15 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Xml",
+    srcs = [
+        "src/System.Xml.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+        "//src/libraries/System.Xml.XPath:ref_System.Xml.XPath",
+    ],
+    exclude_sr = True,
+)

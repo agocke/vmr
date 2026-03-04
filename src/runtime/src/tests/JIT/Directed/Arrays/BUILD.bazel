@@ -1,0 +1,47 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Complex1",
+    srcs = ["complex1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "Complex2",
+    srcs = ["complex2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "LoopCloning",
+    srcs = ["LoopCloning.cs"],
+    allow_unsafe_blocks = True,
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "Simple1",
+    srcs = ["simple1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "Simple2",
+    srcs = ["simple2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "nintindexoutofrange",
+    srcs = ["nintindexoutofrange.cs"],
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

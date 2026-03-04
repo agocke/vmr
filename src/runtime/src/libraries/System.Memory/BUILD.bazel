@@ -1,0 +1,49 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.Memory.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Memory",
+    srcs = [
+        "ref/System.Memory.cs",
+        "ref/System.Memory.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ]
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Memory",
+    srcs = [
+        "src/System/SequencePosition.cs",
+
+        "src/System/ThrowHelper.cs",
+        "src/System/Buffers/ArrayMemoryPool.cs",
+        "src/System/Buffers/ArrayMemoryPool.ArrayMemoryPoolBuffer.cs",
+        "src/System/Buffers/BuffersExtensions.cs",
+        "src/System/Buffers/IBufferWriter.cs",
+        "src/System/Buffers/MemoryPool.cs",
+        "src/System/Buffers/ReadOnlySequence.cs",
+        "src/System/Buffers/ReadOnlySequenceDebugView.cs",
+        "src/System/Buffers/ReadOnlySequenceSegment.cs",
+        "src/System/Buffers/ReadOnlySequence.Helpers.cs",
+        "src/System/Buffers/SequenceReader.cs",
+        "src/System/Buffers/SequenceReader.Search.cs",
+        "src/System/Buffers/SequenceReaderExtensions.Binary.cs",
+        "src/System/Runtime/InteropServices/SequenceMarshal.cs",
+        "src/System/Text/EncodingExtensions.cs",
+
+        "//src/libraries/Common:src/System/Buffers/ArrayBufferWriter.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Private.CoreLib",
+    ],
+    allow_unsafe_blocks = True,
+    resx_file = "src/Resources/Strings.resx",
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Memory",
+    defines = [ "MAKE_ABW_PUBLIC" ],
+)

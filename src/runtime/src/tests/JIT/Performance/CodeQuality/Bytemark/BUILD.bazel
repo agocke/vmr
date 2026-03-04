@@ -1,0 +1,26 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Bytemark",
+    srcs = [
+        "ByteMark.cs",
+        "Huffman.cs",
+        "StringSort.cs",
+        "assign_jagged.cs",
+        "assign_rect.cs",
+        "bitops.cs",
+        "emfloat.cs",
+        "emfloatclass.cs",
+        "fourier.cs",
+        "idea.cs",
+        "ludecomp.cs",
+        "neural.cs",
+        "neuraljagged.cs",
+        "neural-dat.cs",
+        "numericsort.cs",
+        "utility.cs",
+    ],
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "large",
+)

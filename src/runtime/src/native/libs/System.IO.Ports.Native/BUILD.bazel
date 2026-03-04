@@ -1,0 +1,43 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_DEFINES")
+
+# System.IO.Ports.Native for linux-x64
+# Produces libSystem.IO.Ports.Native.so (shared) and libSystem.IO.Ports.Native.a (static)
+
+cc_library(
+    name = "System.IO.Ports.Native_lib",
+    srcs = [
+        "pal_serial.c",
+        "pal_termios.c",
+    ] + select({
+        "@platforms//os:linux": ["pal_termios2.c"],
+        "//conditions:default": [],
+    }) + glob(["*.h"]),
+    copts = [
+        "-Isrc/native",
+        "-Isrc/native/libs/Common",
+        "-Isrc/native/libs/bazel",
+        "-Isrc/native/libs/System.IO.Ports.Native",
+    ],
+    local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/native/libs:common",
+        "//src/native/minipal",
+    ],
+)
+
+cc_shared_library(
+    name = "System.IO.Ports.Native",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libSystem.IO.Ports.Native.dylib",
+        "//conditions:default": "libSystem.IO.Ports.Native.so",
+    }),
+    user_link_flags = select({
+        "@platforms//os:macos": ["-Wl,-install_name,@rpath/libSystem.IO.Ports.Native.dylib"],
+        "//conditions:default": ["-Wl,-soname,libSystem.IO.Ports.Native.so"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":System.IO.Ports.Native_lib"],
+)

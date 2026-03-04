@@ -1,0 +1,14 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Serialize_r",
+    srcs = ["Serialize.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "Serialize_ro",
+    srcs = ["Serialize.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

@@ -424,7 +424,7 @@ namespace System.Threading
         /// Max value to be passed into <see cref="SpinWait(int)"/> for optimal delaying. This value is normalized to be
         /// appropriate for the processor.
         /// </summary>
-        internal static int OptimalMaxSpinWaitsPerSpinIteration
+        internal static extern int OptimalMaxSpinWaitsPerSpinIteration
         {
             [MethodImpl(MethodImplOptions.InternalCall)]
             get;

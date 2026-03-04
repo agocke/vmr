@@ -1,0 +1,15 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_WindowsBase",
+    srcs = [
+        "src/WindowsBase.cs",
+    ],
+    deps = [
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/shims/stubs:ref_System.IO.Packaging",
+        "//src/libraries/shims/stubs:ref_System.Security.Permissions",
+    ],
+    exclude_sr = True,
+)

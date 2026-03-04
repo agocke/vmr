@@ -1,0 +1,14 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_23438_r",
+    srcs = ["GitHub_23438.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "GitHub_23438_ro",
+    srcs = ["GitHub_23438.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

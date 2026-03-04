@@ -1,0 +1,30 @@
+load("//src/libraries:defs.bzl", "live_csharp_library", "netcoreapp_ref_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Hashing",
+    srcs = [
+        "ref/System.IO.Hashing.cs",
+        "ref/System.IO.Hashing.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    nowarn = ["CS0809"],
+)
+
+live_csharp_library(
+    name = "live_System.IO.Hashing",
+    srcs = glob(
+        ["src/**/*.cs"],
+        exclude = [
+            # BitOperations.cs is only for non-.NETCoreApp targets
+            "src/System/IO/Hashing/BitOperations.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/System/SR.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    nullable = "annotations",
+    visibility = ["//visibility:public"],
+)

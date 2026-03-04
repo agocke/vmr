@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "iface2_r",
+    srcs = ["iface2_r.il", "iface2.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "iface2_d",
+    srcs = ["iface2_d.il", "iface2.il"],
+    debug_type = "full",
+)

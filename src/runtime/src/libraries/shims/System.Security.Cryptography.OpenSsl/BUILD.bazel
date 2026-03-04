@@ -1,0 +1,11 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Security.Cryptography.OpenSsl",
+    srcs = ["src/System.Security.Cryptography.OpenSsl.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+    exclude_sr = True,
+)

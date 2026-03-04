@@ -1,0 +1,483 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ldc_i4_n",
+    srcs = ["ldc_i4_n.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "initblk",
+    srcs = ["initblk.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "mul",
+    srcs = ["mul.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ret",
+    srcs = ["ret.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "bne",
+    srcs = ["bne.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "brfalse_s",
+    srcs = ["brfalse_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "add",
+    srcs = ["add.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "br_s",
+    srcs = ["br_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "bgt",
+    srcs = ["bgt.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "mul_ovf",
+    srcs = ["mul_ovf.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "and",
+    srcs = ["and.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldloca",
+    srcs = ["ldloca.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldc",
+    srcs = ["ldc.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "sub_ovf",
+    srcs = ["sub_ovf.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "sub",
+    srcs = ["sub.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "shr",
+    srcs = ["shr.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldarg_starg",
+    srcs = ["ldarg_starg.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "clt",
+    srcs = ["clt.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "call",
+    srcs = ["call.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "conv_ovf",
+    srcs = ["conv_ovf.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "bge_s",
+    srcs = ["bge_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldnull",
+    srcs = ["ldnull.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ble_s",
+    srcs = ["ble_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "beq_s",
+    srcs = ["beq_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "beq",
+    srcs = ["beq.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldind_stind",
+    srcs = ["ldind_stind.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "jmp",
+    srcs = ["jmp.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldarg_n",
+    srcs = ["ldarg_n.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "or",
+    srcs = ["or.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "rem",
+    srcs = ["rem.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "brfalse",
+    srcs = ["brfalse.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "brtrue",
+    srcs = ["brtrue.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "xor",
+    srcs = ["xor.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldargs_stargs",
+    srcs = ["ldargs_stargs.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "cgt",
+    srcs = ["cgt.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "bge",
+    srcs = ["bge.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldftn_calli",
+    srcs = ["ldftn_calli.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "shl",
+    srcs = ["shl.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "cpblk",
+    srcs = ["cpblk.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "tailcall",
+    srcs = ["tailcall.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "nop",
+    srcs = ["nop.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "br",
+    srcs = ["br.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "not",
+    srcs = ["not.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "bgt_s",
+    srcs = ["bgt_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "bne_s",
+    srcs = ["bne_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ceq",
+    srcs = ["ceq.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "pop",
+    srcs = ["pop.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "neg",
+    srcs = ["neg.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "dup",
+    srcs = ["dup.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldloc_stloc",
+    srcs = ["ldloc_stloc.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "blt_s",
+    srcs = ["blt_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ckfinite",
+    srcs = ["ckfinite.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "add_ovf",
+    srcs = ["add_ovf.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "brtrue_s",
+    srcs = ["brtrue_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ble",
+    srcs = ["ble.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "div",
+    srcs = ["div.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "conv",
+    srcs = ["conv.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "blt",
+    srcs = ["blt.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "unaligned",
+    srcs = ["unaligned.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "volatile",
+    srcs = ["volatile.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "switch",
+    srcs = ["switch.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)

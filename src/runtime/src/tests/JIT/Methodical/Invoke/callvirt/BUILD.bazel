@@ -1,0 +1,43 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "test1_il_d",
+    srcs = ["test1_d.il", "test1.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "test3_r",
+    srcs = ["test3_r.il", "test3.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "test3_d",
+    srcs = ["test3_d.il", "test3.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "test2_r",
+    srcs = ["test2_r.il", "test2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "test2_d",
+    srcs = ["test2_d.il", "test2.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "test1_il_r",
+    srcs = ["test1_r.il", "test1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

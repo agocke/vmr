@@ -1,0 +1,50 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "resgen")
+
+resgen(
+    name = "TestResx",
+    out = "TestResx.resources",
+    resx_file = "Resources/TestResx.resx",
+)
+
+library_test(
+    name = "System.ComponentModel.TypeConverter.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "TrimmingTests/**",
+            # These files require Moq which is not available in Bazel
+            "CustomTypeDescriptorTests.cs",
+            "TypeDescriptorTests.cs",
+            "TypeDescriptionProviderTests.cs",
+            # References TypeDescriptorTests which is excluded
+            "RegisteredTypesTests.cs",
+            # Requires System.Net.Security.ExtendedProtectionPolicy
+            "Security/**",
+            # Requires System.Xml.Linq (XElement)
+            "XTypeDescriptionProviderTests.cs",
+        ],
+    ),
+    deps = [
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    defines = ["FUNCTIONAL_TESTS"],
+    resources = [":TestResx"],
+    resource_logical_names = {"TestResx.resources": "Resources.TestResx.resources"},
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    nowarn = ["SYSLIB0011"],
+    size = "large",
+)

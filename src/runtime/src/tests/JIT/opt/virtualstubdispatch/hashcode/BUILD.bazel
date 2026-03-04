@@ -1,0 +1,258 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "cderived12",
+    srcs = ["cderived12.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived6",
+    srcs = ["cderived6.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived4",
+    srcs = ["cderived4.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived9",
+    srcs = ["cderived9.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived19",
+    srcs = ["cderived19.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived5",
+    srcs = ["cderived5.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived13",
+    srcs = ["cderived13.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived16",
+    srcs = ["cderived16.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived11",
+    srcs = ["cderived11.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived10",
+    srcs = ["cderived10.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived1",
+    srcs = ["cderived1.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived14",
+    srcs = ["cderived14.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived17",
+    srcs = ["cderived17.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived7",
+    srcs = ["cderived7.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived8",
+    srcs = ["cderived8.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived20",
+    srcs = ["cderived20.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived3",
+    srcs = ["cderived3.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived15",
+    srcs = ["cderived15.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived2",
+    srcs = ["cderived2.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "cderived18",
+    srcs = ["cderived18.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+coreclr_test(
+    name = "ctest1_cs_ro",
+    srcs = ["ctest1.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [
+        ":cderived1",
+        ":cderived2",
+        ":cderived3",
+        ":cderived4",
+        ":cderived5",
+        ":cderived6",
+        ":cderived7",
+        ":cderived8",
+        ":cderived9",
+        ":cderived10",
+        ":cderived11",
+        ":cderived12",
+        ":cderived13",
+        ":cderived14",
+        ":cderived15",
+        ":cderived16",
+        ":cderived17",
+        ":cderived18",
+        ":cderived19",
+        ":cderived20",
+    ],
+)
+
+coreclr_test(
+    name = "ctest1_cs_r",
+    srcs = ["ctest1.cs"],
+    pri = 1,
+    deps = [
+        ":cderived1",
+        ":cderived2",
+        ":cderived3",
+        ":cderived4",
+        ":cderived5",
+        ":cderived6",
+        ":cderived7",
+        ":cderived8",
+        ":cderived9",
+        ":cderived10",
+        ":cderived11",
+        ":cderived12",
+        ":cderived13",
+        ":cderived14",
+        ":cderived15",
+        ":cderived16",
+        ":cderived17",
+        ":cderived18",
+        ":cderived19",
+        ":cderived20",
+    ],
+)
+
+coreclr_test(
+    name = "ctest1_cs_d",
+    srcs = ["ctest1.cs"],
+    pri = 1,
+    debug_type = "full",
+    deps = [
+        ":cderived1",
+        ":cderived2",
+        ":cderived3",
+        ":cderived4",
+        ":cderived5",
+        ":cderived6",
+        ":cderived7",
+        ":cderived8",
+        ":cderived9",
+        ":cderived10",
+        ":cderived11",
+        ":cderived12",
+        ":cderived13",
+        ":cderived14",
+        ":cderived15",
+        ":cderived16",
+        ":cderived17",
+        ":cderived18",
+        ":cderived19",
+        ":cderived20",
+    ],
+)
+
+coreclr_test(
+    name = "ctest1_cs_do",
+    srcs = ["ctest1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    deps = [
+        ":cderived1",
+        ":cderived2",
+        ":cderived3",
+        ":cderived4",
+        ":cderived5",
+        ":cderived6",
+        ":cderived7",
+        ":cderived8",
+        ":cderived9",
+        ":cderived10",
+        ":cderived11",
+        ":cderived12",
+        ":cderived13",
+        ":cderived14",
+        ":cderived15",
+        ":cderived16",
+        ":cderived17",
+        ":cderived18",
+        ":cderived19",
+        ":cderived20",
+    ],
+)

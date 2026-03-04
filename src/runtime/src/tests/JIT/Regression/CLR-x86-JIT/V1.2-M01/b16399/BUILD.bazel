@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b16399",
+    srcs = ["gtIsValid64RsltMul.cs"],
+    debug_type = "pdbonly",
+)

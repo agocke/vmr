@@ -1,0 +1,30 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Formats.Cbor.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "PropertyTests/**",
+            "CborDocument/**",
+            "CborTestHelpers.netstandard.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/Security/Cryptography/ByteUtils.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Formats.Cbor:ref_System.Formats.Cbor",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    nullable = "enable",
+)

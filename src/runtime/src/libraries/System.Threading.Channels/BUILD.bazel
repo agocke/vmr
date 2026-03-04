@@ -1,0 +1,70 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/System.Threading.Channels.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading.Channels",
+    srcs = [
+        "ref/System.Threading.Channels.cs",
+        "ref/System.Threading.Channels.netcoreapp.cs",
+        "ref/System.Threading.Channels.netstandard21.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Threading.Channels",
+    srcs = [
+        "src/System/VoidResult.cs",
+        "src/System/Threading/Channels/AsyncOperation.cs",
+        "src/System/Threading/Channels/AsyncOperation.netcoreapp.cs",
+        "src/System/Threading/Channels/BoundedChannel.cs",
+        "src/System/Threading/Channels/BoundedChannelFullMode.cs",
+        "src/System/Threading/Channels/Channel.cs",
+        "src/System/Threading/Channels/Channel.netcoreapp.cs",
+        "src/System/Threading/Channels/ChannelClosedException.cs",
+        "src/System/Threading/Channels/ChannelClosedException.netstandard21.cs",
+        "src/System/Threading/Channels/ChannelOptions.cs",
+        "src/System/Threading/Channels/ChannelOptions.netcoreapp.cs",
+        "src/System/Threading/Channels/ChannelReader.cs",
+        "src/System/Threading/Channels/ChannelUtilities.cs",
+        "src/System/Threading/Channels/ChannelUtilities.netcoreapp.cs",
+        "src/System/Threading/Channels/ChannelWriter.cs",
+        "src/System/Threading/Channels/Channel_1.cs",
+        "src/System/Threading/Channels/Channel_2.cs",
+        "src/System/Threading/Channels/IDebugEnumerator.cs",
+        "src/System/Threading/Channels/RendezvousChannel.cs",
+        "src/System/Threading/Channels/SingleConsumerUnboundedChannel.cs",
+        "src/System/Threading/Channels/UnboundedChannel.cs",
+        "src/System/Threading/Channels/UnboundedPriorityChannel.cs",
+
+        "//src/libraries/Common:src/Internal/Padding.cs",
+        "//src/libraries/Common:src/System/Collections/Concurrent/IProducerConsumerQueue.cs",
+        "//src/libraries/Common:src/System/Collections/Concurrent/MultiProducerMultiConsumerQueue.cs",
+        "//src/libraries/Common:src/System/Collections/Concurrent/SingleProducerSingleConsumerQueue.cs",
+        "//src/libraries/Common:src/System/Collections/Generic/Deque.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Threading.Channels",
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.Threading.Channels",
+    ref = ":ref_System.Threading.Channels",
+    lib = ":impl_System.Threading.Channels",
+    visibility = ["//visibility:public"],
+)

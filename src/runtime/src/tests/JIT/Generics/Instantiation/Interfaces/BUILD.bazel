@@ -1,0 +1,61 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "class04_Interfaces",
+    srcs = ["Class04.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct05_Interfaces",
+    srcs = ["Struct05.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct01_Interfaces",
+    srcs = ["Struct01.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class05_Interfaces",
+    srcs = ["Class05.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct03_Interfaces",
+    srcs = ["Struct03.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class03_Interfaces",
+    srcs = ["Class03.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct02_Interfaces",
+    srcs = ["Struct02.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct04_Interfaces",
+    srcs = ["Struct04.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class02_Interfaces",
+    srcs = ["Class02.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class01_Interfaces",
+    srcs = ["Class01.cs"],
+    debug_type = "pdbonly",
+)

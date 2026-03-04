@@ -1,0 +1,47 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+namespace System.Diagnostics { public static class EntryWrittenEventArgs { } }
+namespace System.Diagnostics { public static class EntryWrittenEventHandler { } }
+namespace System.Diagnostics { public static class EventInstance { } }
+namespace System.Diagnostics { public static class EventLog { } }
+namespace System.Diagnostics { public static class EventLogEntry { } }
+namespace System.Diagnostics { public static class EventLogEntryCollection { } }
+namespace System.Diagnostics { public static class EventLogEntryType { } }
+namespace System.Diagnostics { public static class EventLogTraceListener { } }
+namespace System.Diagnostics { public static class EventSourceCreationData { } }
+namespace System.Diagnostics { public static class OverflowAction { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventBookmark { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventKeyword { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLevel { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogConfiguration { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogException { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogInformation { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogInvalidDataException { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogIsolation { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogLink { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogMode { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogNotFoundException { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogPropertySelector { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogProviderDisabledException { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogQuery { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogReader { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogReadingException { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogRecord { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogSession { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogStatus { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogType { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventLogWatcher { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventMetadata { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventOpcode { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventProperty { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventRecord { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventRecordWrittenEventArgs { } }
+namespace System.Diagnostics.Eventing.Reader { public static class EventTask { } }
+namespace System.Diagnostics.Eventing.Reader { public static class PathType { } }
+namespace System.Diagnostics.Eventing.Reader { public static class ProviderMetadata { } }
+namespace System.Diagnostics.Eventing.Reader { public static class SessionAuthentication { } }
+namespace System.Diagnostics.Eventing.Reader { public static class StandardEventKeywords { } }
+namespace System.Diagnostics.Eventing.Reader { public static class StandardEventLevel { } }
+namespace System.Diagnostics.Eventing.Reader { public static class StandardEventOpcode { } }
+namespace System.Diagnostics.Eventing.Reader { public static class StandardEventTask { } }

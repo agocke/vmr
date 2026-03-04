@@ -1,0 +1,16 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Runtime.Serialization",
+    srcs = [
+        "src/System.Runtime.Serialization.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Json:ref_System.Runtime.Serialization.Json",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Xml:ref_System.Runtime.Serialization.Xml",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/shims/stubs:ref_System.Runtime.Serialization.Schema",
+    ],
+    exclude_sr = True,
+)

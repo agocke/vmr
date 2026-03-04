@@ -1,0 +1,43 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "prefldinit1_r",
+    srcs = ["prefldinit1_r.il", "prefldinit1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "prefldinit2_d",
+    srcs = ["prefldinit2_d.il", "prefldinit2.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "prefldinit4_r",
+    srcs = ["prefldinit4_r.il", "prefldinit4.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "prefldinit2_r",
+    srcs = ["prefldinit2_r.il", "prefldinit2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "prefldinit4_d",
+    srcs = ["prefldinit4_d.il", "prefldinit4.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "prefldinit1_d",
+    srcs = ["prefldinit1_d.il", "prefldinit1.il"],
+    pri = 1,
+    debug_type = "full",
+)

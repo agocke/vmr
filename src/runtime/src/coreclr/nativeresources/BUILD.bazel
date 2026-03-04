@@ -1,0 +1,18 @@
+# CoreCLR native resource string library.
+# Matches CMake: src/coreclr/nativeresources/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "nativeresourcestring",
+    srcs = ["resourcestring.cpp"],
+    hdrs = ["resourcestring.h"],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    local_defines = CLR_CONFIG_DEFINES,
+    includes = ["."],
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)

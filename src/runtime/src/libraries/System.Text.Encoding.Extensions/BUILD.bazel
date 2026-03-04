@@ -1,0 +1,27 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files(
+    ["ref/System.Text.Encoding.Extensions.cs"]
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Text.Encoding.Extensions",
+    srcs = [
+        "ref/System.Text.Encoding.Extensions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    allow_unsafe_blocks = True,
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Text.Encoding.Extensions",
+    srcs = [],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Text.Encoding.Extensions",
+    exclude_sr = True,
+)

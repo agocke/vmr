@@ -1,0 +1,81 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Fields",
+    srcs = ["Fields.cs"],
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+)
+
+coreclr_test(
+    name = "Runtime_122879",
+    srcs = ["Runtime_122879.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_115831",
+    srcs = ["Runtime_115831.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_116214",
+    srcs = ["Runtime_116214.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_115832",
+    srcs = ["Runtime_115832.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_121736",
+    srcs = ["Runtime_121736.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_115979",
+    srcs = ["Runtime_115979.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ConnectionCycles",
+    srcs = ["ConnectionCycles.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_111922",
+    srcs = ["Runtime_111922.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_111922v2",
+    srcs = ["Runtime_111922v2.cs"],
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "Delegates",
+    srcs = ["Delegates.cs"],
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+)

@@ -1,0 +1,63 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
+
+# dn-containers for linux-x64 and darwin-arm64
+# Utility container library (allocator, list, queue, vector, umap, simdhash)
+# Used by eventpipe and other native code.
+
+_SOURCES = [
+    "dn-allocator.c",
+    "dn-fwd-list.c",
+    "dn-list.c",
+    "dn-queue.c",
+    "dn-umap.c",
+    "dn-vector.c",
+    "dn-simdhash.c",
+    "dn-simdhash-string-ptr.c",
+    "dn-simdhash-u32-ptr.c",
+    "dn-simdhash-ptr-ptr.c",
+    "dn-simdhash-ght-compatible.c",
+    "dn-simdhash-ptrpair-ptr.c",
+    "dn-simdhash-utils.c",
+]
+
+_HEADERS = glob(["*.h"]) + [
+    "dn-sort-frag.inc",
+]
+
+_CONFIG_HDR = select({
+    "@platforms//os:macos": ["bazel/darwin-arm64/dn-config.h"],
+    "//conditions:default": ["bazel/linux-glibc-x64/dn-config.h"],
+})
+
+_CONFIG_COPTS = select({
+    "@platforms//os:macos": ["-Isrc/native/containers/bazel/darwin-arm64"],
+    "//conditions:default": ["-Isrc/native/containers/bazel/linux-glibc-x64"],
+})
+
+cc_library(
+    name = "dn-containers",
+    srcs = _SOURCES + _CONFIG_HDR + _HEADERS,
+    copts = CLR_CONFIG_COPTS + [
+        "-Isrc/native",
+    ] + _CONFIG_COPTS,
+    includes = ["."],
+    visibility = ["//src/native:__subpackages__"],
+    deps = [
+        "//src/native/minipal",
+    ],
+)
+
+cc_library(
+    name = "dn-containers-no-lto",
+    srcs = _SOURCES + _CONFIG_HDR + _HEADERS,
+    copts = CLR_CONFIG_COPTS + [
+        "-Isrc/native",
+        "-fno-lto",
+    ] + _CONFIG_COPTS,
+    includes = ["."],
+    visibility = ["//src/native:__subpackages__"],
+    deps = [
+        "//src/native/minipal",
+    ],
+)

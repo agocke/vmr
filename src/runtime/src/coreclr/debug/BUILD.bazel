@@ -1,0 +1,151 @@
+# CoreCLR debug headers and libraries.
+# Matches CMake: src/coreclr/debug/*/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "debug_inc",
+    hdrs = glob(
+        [
+            "inc/*.h",
+            "inc/*.inl",
+            "inc/amd64/*.h",
+            "inc/arm64/*.h",
+            "inc/dump/*.h",
+            # Headers from debug subdirectories used by other coreclr components
+            "ee/*.h",
+            "ee/*.inl",
+            "ee/amd64/*.h",
+            "ee/arm64/*.h",
+            "daccess/*.h",
+            "dbgutil/*.h",
+            "di/*.hpp",
+            "di/*.inl",
+        ],
+        allow_empty = True,
+    ),
+)
+
+# --- cDAC data descriptor shared infrastructure ---
+# Used by GC (and later VM) data descriptor stubs.
+
+# Header-only target for contract-descriptor.h
+cc_library(
+    name = "datadescriptor_shared_inc",
+    hdrs = ["datadescriptor-shared/inc/contract-descriptor.h"],
+    strip_include_prefix = "datadescriptor-shared/inc",
+)
+
+# Stub contract descriptor source (exported as a filegroup so multiple
+# cc_library targets can each compile their own copy with different defines).
+exports_files(
+    ["datadescriptor-shared/contractdescriptorstub.c"],
+)
+
+# --- debug-pal (debug platform abstraction layer) ---
+# Matches CMake: src/coreclr/debug/debug-pal/CMakeLists.txt
+cc_library(
+    name = "debug-pal",
+    srcs = [
+        "debug-pal/unix/processdescriptor.cpp",
+        "debug-pal/unix/twowaypipe.cpp",
+    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-Isrc/coreclr/debug/inc",
+    ],
+    local_defines = CLR_CONFIG_DEFINES + select({
+        "//:clr_debug": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//:clr_checked": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//conditions:default": [],
+    }),
+    defines = CORECLR_DEFINES + [
+        "FEATURE_PERFTRACING_STANDALONE_PAL",
+        "PAL_IMPLEMENTATION",
+        "_POSIX_C_SOURCE=200809L",
+    ],
+    alwayslink = True,
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/native/eventpipe:eventpipe-headers",
+    ],
+)
+
+# --- cordbee_wks (debugger execution engine, workstation) ---
+# Matches CMake: src/coreclr/debug/ee/wks/CMakeLists.txt
+cc_library(
+    name = "cordbee_wks",
+    srcs = [
+        "ee/canary.cpp",
+        "ee/controller.cpp",
+        "ee/dactable.cpp",
+        "ee/debugger.cpp",
+        "ee/debuggermessagebox.cpp",
+        "ee/debuggermodule.cpp",
+        "ee/frameinfo.cpp",
+        "ee/funceval.cpp",
+        "ee/functioninfo.cpp",
+        "ee/rcthread.cpp",
+        "ee/shared.cpp",
+        "ee/stdafx.h",
+    ] + select({
+        "@platforms//cpu:arm64": [
+            "ee/arm64/primitives.cpp",
+            "ee/arm64/walker.cpp",
+            "ee/arm64/dbghelpers.S",
+        ],
+        "//conditions:default": [
+            "ee/amd64/debuggerregdisplayhelper.cpp",
+            "ee/amd64/primitives.cpp",
+            "ee/amd64/walker.cpp",
+            "ee/amd64/dbghelpers.S",
+        ],
+    }),
+    textual_hdrs = select({
+        "@platforms//cpu:arm64": [
+            "shared/arm64/primitives.cpp",
+        ],
+        "//conditions:default": [
+            "shared/amd64/primitives.cpp",
+        ],
+    }) + [
+        "shared/dbgtransportsession.cpp",
+        "shared/utils.cpp",
+    ],
+    copts = [
+        "-Isrc/coreclr/vm",
+        "-Isrc/coreclr/debug/ee",
+        "-Isrc/coreclr/debug",
+    ] + select({
+        "@platforms//cpu:arm64": [
+            "-Isrc/coreclr/vm/arm64",
+            "-Isrc/coreclr/debug/ee/arm64",
+        ],
+        "//conditions:default": [
+            "-Isrc/coreclr/vm/amd64",
+            "-Isrc/coreclr/debug/ee/amd64",
+        ],
+    }) + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-DFEATURE_NO_HOST",
+    ] + select({
+        "@platforms//cpu:arm64": [],
+        "//conditions:default": ["-mcx16"],
+    }),
+    local_defines = CLR_CONFIG_DEFINES + select({
+        "//:clr_debug": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//:clr_checked": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//conditions:default": [],
+    }),
+    defines = CORECLR_DEFINES + [
+        "FEATURE_VIRTUAL_STUB_DISPATCH",
+    ],
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+    ],
+    alwayslink = True,
+    linkstatic = True,
+)

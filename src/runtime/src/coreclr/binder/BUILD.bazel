@@ -1,0 +1,53 @@
+# CoreCLR assembly binder — headers and v3binder OBJECT library.
+# Matches CMake: src/coreclr/binder/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "binder_headers",
+    hdrs = glob(
+        [
+            "inc/*.h",
+            "inc/*.hpp",
+            "inc/*.inl",
+        ],
+        allow_empty = True,
+    ),
+)
+
+cc_library(
+    name = "v3binder",
+    srcs = [
+        "activitytracker.cpp",
+        "applicationcontext.cpp",
+        "assembly.cpp",
+        "assemblybindercommon.cpp",
+        "assemblyname.cpp",
+        "bindertracing.cpp",
+        "customassemblybinder.cpp",
+        "defaultassemblybinder.cpp",
+        "failurecache.cpp",
+        "textualidentityparser.cpp",
+        "utils.cpp",
+    ],
+    copts = [
+        "-Isrc/coreclr/vm",
+    ] + select({
+        "@platforms//cpu:arm64": ["-Isrc/coreclr/vm/arm64"],
+        "//conditions:default": ["-Isrc/coreclr/vm/amd64"],
+    }) + [
+        "-Isrc/coreclr/binder",
+        "-Isrc/coreclr/binder/inc",
+    ] + CORECLR_COPTS + CLR_CONFIG_COPTS,
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+    ],
+    alwayslink = True,
+)

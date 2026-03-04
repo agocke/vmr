@@ -1,0 +1,105 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "cpblk_unaligned_2",
+    srcs = ["cpblk.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "field_tests_unaligned_2",
+    srcs = ["field_tests.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "localloc_unaligned_2",
+    srcs = ["localloc.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "initblk_unaligned_2",
+    srcs = ["initblk.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldobj_unaligned_2",
+    srcs = ["ldobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "Box_Unbox_unaligned_2",
+    srcs = ["Box_Unbox.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldind_stind_unaligned_2",
+    srcs = ["ldind_stind.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "add_unaligned_2",
+    srcs = ["add.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "fielda_tests_unaligned_2",
+    srcs = ["fielda_tests.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "array_tests_unaligned_2",
+    srcs = ["array_tests.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "cpobj_unaligned_2",
+    srcs = ["cpobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "initobj_unaligned_2",
+    srcs = ["initobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ldloca_unaligned_2",
+    srcs = ["ldloca.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)

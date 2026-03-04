@@ -1,0 +1,32 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Security.Claims",
+    srcs = [
+        "ref/System.Security.Claims.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Security.Claims",
+    srcs = [
+        "src/System/Security/Claims/Claim.cs",
+        "src/System/Security/Claims/ClaimsIdentity.cs",
+        "src/System/Security/Claims/ClaimsPrincipal.cs",
+        "src/System/Security/Claims/ClaimTypes.cs",
+        "src/System/Security/Claims/ClaimValueTypes.cs",
+        "src/System/Security/Claims/GenericIdentity.cs",
+        "src/System/Security/Claims/GenericPrincipal.cs",
+
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)

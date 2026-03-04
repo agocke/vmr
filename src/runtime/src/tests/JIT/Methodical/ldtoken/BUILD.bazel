@@ -1,0 +1,55 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ptr_types_r",
+    srcs = ["ptr_types_r.il", "ptr_types.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ptr_types_d",
+    srcs = ["ptr_types_d.il", "ptr_types.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "ldtoken_d",
+    srcs = ["ldtoken_d.il", "ldtoken.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "types_d",
+    srcs = ["types_d.il", "types.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "ldtokena_d",
+    srcs = ["ldtokena_d.il", "ldtokena.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "ldtoken_r",
+    srcs = ["ldtoken_r.il", "ldtoken.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "types_r",
+    srcs = ["types_r.il", "types.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ldtokena_r",
+    srcs = ["ldtokena_r.il", "ldtokena.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

@@ -1,0 +1,123 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "stfldstatic1_importer_r",
+    srcs = ["stfldstatic1_r.il", "stfldstatic1.il"],
+    pri = 1,
+)
+
+il_coreclr_test(
+    name = "stfldstatic1_importer_d",
+    srcs = ["stfldstatic1_d.il", "stfldstatic1.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "byrefsubbyref1",
+    srcs = ["byrefsubbyref1.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "volatilstind",
+    srcs = ["volatilstind.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "subovfun1_d",
+    srcs = ["subovfun1_d.il", "subovfun1.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "badtailcall",
+    srcs = ["badtailcall.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "refanytype1",
+    srcs = ["refanytype1.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "badendfinally",
+    srcs = ["badendfinally.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "ldvirtftnsideeffect",
+    srcs = ["ldvirtftnsideeffect.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "ldfldunboxedvt",
+    srcs = ["ldfldunboxedvt.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "ceeillegal",
+    srcs = ["ceeillegal.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "calli2",
+    srcs = ["calli2.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "nullsdarr",
+    srcs = ["nullsdarr.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "subovfun1_r",
+    srcs = ["subovfun1_r.il", "subovfun1.il"],
+    pri = 1,
+)
+
+il_coreclr_test(
+    name = "volatilldind",
+    srcs = ["volatilldind.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "ldelemnullarr2",
+    srcs = ["ldelemnullarr2.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "ldfldstatic1_importer_r",
+    srcs = ["ldfldstatic1.il"],
+    pri = 1,
+)

@@ -1,0 +1,15 @@
+# Header-only JSON library used by corehost.
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "rapidjson",
+    hdrs = glob([
+        "*.h",
+        "error/*.h",
+        "internal/*.h",
+    ]),
+    strip_include_prefix = ".",
+    include_prefix = "rapidjson",
+    visibility = ["//src/native:__subpackages__"],
+)

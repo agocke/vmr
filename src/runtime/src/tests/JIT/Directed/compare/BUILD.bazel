@@ -1,0 +1,30 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "cmp_int32_do",
+    srcs = ["cmp_int32.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "cmp_int32_d",
+    srcs = ["cmp_int32.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "cmp_int32_r",
+    srcs = ["cmp_int32.cs"],
+    pri = 1,
+)
+
+coreclr_test(
+    name = "cmp_int32_ro",
+    srcs = ["cmp_int32.cs"],
+    pri = 1,
+    optimize = True,
+)

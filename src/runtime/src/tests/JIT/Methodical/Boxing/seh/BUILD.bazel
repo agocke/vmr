@@ -1,0 +1,46 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "filter_seh_Boxing_r",
+    srcs = ["filter_r.il", "filter.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "filter_seh_Boxing_d",
+    srcs = ["filter_d.il", "filter.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "fault_r",
+    srcs = ["fault_r.il", "fault.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "fault_d",
+    srcs = ["fault_d.il", "fault.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "try_seh_d",
+    srcs = ["try_d.il", "try.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "try_seh_r",
+    srcs = ["try_r.il", "try.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)

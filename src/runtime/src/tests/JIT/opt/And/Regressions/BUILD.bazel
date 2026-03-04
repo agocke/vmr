@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Regression1_And",
+    srcs = ["Regression1_And.cs"],
+    optimize = True,
+)

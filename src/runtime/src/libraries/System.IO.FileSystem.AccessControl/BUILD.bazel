@@ -1,0 +1,27 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.FileSystem.AccessControl",
+    srcs = [
+        "ref/System.IO.FileSystem.AccessControl.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.FileSystem.AccessControl",
+    resx_file = "src/Resources/Strings.resx",
+    srcs = [
+        "System.IO.FileSystem.AccessControl.notsupported.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+    nullable = "annotations",
+)

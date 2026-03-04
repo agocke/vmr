@@ -1,0 +1,12 @@
+--- a/dotnet/private/tools/compiler_worker/BUILD.bazel
++++ b/dotnet/private/tools/compiler_worker/BUILD.bazel
+@@ -8,4 +8,8 @@
+     srcs = ["worker_protocol.proto"],
+     outs = ["WorkerProtocol.g.cs"],
+-    cmd = "PROTOC=$$(echo '$(locations @paket.rules_dotnet_nuget_packages//grpc.tools:files)' | tr ' ' '\\n' | grep 'tools/linux_x64/protoc$$') && " +
++    cmd = "UNAME_S=$$(uname -s) && UNAME_M=$$(uname -m) && " +
++          "if [ \"$$UNAME_S\" = \"Darwin\" ]; then PLAT=macosx_x64; " +
++          "elif [ \"$$UNAME_M\" = \"aarch64\" ]; then PLAT=linux_arm64; " +
++          "else PLAT=linux_x64; fi && " +
++          "PROTOC=$$(echo '$(locations @paket.rules_dotnet_nuget_packages//grpc.tools:files)' | tr ' ' '\\n' | grep \"tools/$${PLAT}/protoc\\$$\") && " +
+           "$$PROTOC" +

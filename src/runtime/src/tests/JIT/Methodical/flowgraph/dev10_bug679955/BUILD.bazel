@@ -1,0 +1,20 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "volatileLocal2",
+    srcs = ["volatileLocal2.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "indexMinusOne",
+    srcs = ["indexMinusOne.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "volatileLocal1",
+    srcs = ["volatileLocal1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

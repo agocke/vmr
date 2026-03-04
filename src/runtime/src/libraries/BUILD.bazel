@@ -1,0 +1,662 @@
+load(
+    "@rules_dotnet//dotnet:defs.bzl",
+    "csharp_library",
+    "import_library",
+)
+
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("defs.bzl",
+    "netcoreapp_ref_assembly",
+    "netcoreapp_impl_assembly",
+    "ref_impl_pair",
+    "LIVE_REFPACK_DEPS",
+    "CORE_ROOT_IMPL_DEPS")
+
+nowarn = [ "CS8500", "CS8969" ]
+
+exports_files([])
+
+# ── Minimal impl assemblies for JIT tests ─────────────────────────────
+# This subset is used by Core_Root to reduce cache invalidation.
+# The list is defined in CORE_ROOT_LIBS (defs.bzl) to ensure compile-time
+# refs and runtime impls stay in sync.
+filegroup(
+    name = "impl_netcoreapp_minimal",
+    srcs = CORE_ROOT_IMPL_DEPS + [
+        # Core runtime assemblies not in CORE_ROOT_LIBS (internal/shims)
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+        ":impl_System.Private.Uri",
+        "//src/libraries/shims/mscorlib:impl_mscorlib",
+
+        # Facade shims (type forwarders needed at runtime)
+        "//src/libraries/shims/System.AppContext:impl_System.AppContext",
+        "//src/libraries/shims/System.Buffers:impl_System.Buffers",
+        "//src/libraries/shims/System.Diagnostics.Debug:impl_System.Diagnostics.Debug",
+        "//src/libraries/shims/System.Diagnostics.Tools:impl_System.Diagnostics.Tools",
+        "//src/libraries/shims/System.Globalization:impl_System.Globalization",
+        "//src/libraries/shims/System.Globalization.Calendars:impl_System.Globalization.Calendars",
+        "//src/libraries/shims/System.IO:impl_System.IO",
+        "//src/libraries/shims/System.IO.FileSystem:impl_System.IO.FileSystem",
+        "//src/libraries/shims/System.IO.FileSystem.Primitives:impl_System.IO.FileSystem.Primitives",
+        "//src/libraries/shims/System.Reflection:impl_System.Reflection",
+        "//src/libraries/shims/System.Reflection.Extensions:impl_System.Reflection.Extensions",
+        "//src/libraries/shims/System.Resources.Reader:impl_System.Resources.Reader",
+        "//src/libraries/shims/System.Resources.ResourceManager:impl_System.Resources.ResourceManager",
+        "//src/libraries/shims/System.Runtime.CompilerServices.Unsafe:impl_System.Runtime.CompilerServices.Unsafe",
+        "//src/libraries/shims/System.Runtime.Extensions:impl_System.Runtime.Extensions",
+        "//src/libraries/shims/System.Runtime.Handles:impl_System.Runtime.Handles",
+        "//src/libraries/shims/System.Runtime.InteropServices.RuntimeInformation:impl_System.Runtime.InteropServices.RuntimeInformation",
+        "//src/libraries/shims/System.Text.Encoding:impl_System.Text.Encoding",
+        "//src/libraries/shims/System.Threading.Tasks:impl_System.Threading.Tasks",
+        "//src/libraries/shims/System.Threading.Tasks.Extensions:impl_System.Threading.Tasks.Extensions",
+        "//src/libraries/shims/System.Threading.Timer:impl_System.Threading.Timer",
+        "//src/libraries/shims/System.ValueTuple:impl_System.ValueTuple",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ref_assembly_nowarns = [
+    # Ref assemblies use 'throw null'
+    "CS8597",
+    # Fields are unused
+    "CS0169", "CS0649", "CS8618",
+    # Fields are not assigned in ctors
+    "CS8618",
+    # Call base constructors with null literals
+    "CS8625"
+]
+
+filegroup(
+    name = "impl_netcoreapp",
+    srcs = [
+        # ── Core ──
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+        ":impl_System.Runtime",
+        ":impl_System.Private.Uri",
+        "//src/libraries/shims/mscorlib:impl_mscorlib",
+        ":impl_Microsoft.Win32.Primitives",
+
+        # ── Facade shims (type forwarders only, in shims/) ──
+        "//src/libraries/shims/System.AppContext:impl_System.AppContext",
+        "//src/libraries/shims/System.Buffers:impl_System.Buffers",
+        "//src/libraries/shims/System.Diagnostics.Debug:impl_System.Diagnostics.Debug",
+        "//src/libraries/shims/System.Diagnostics.Tools:impl_System.Diagnostics.Tools",
+        "//src/libraries/shims/System.Dynamic.Runtime:impl_System.Dynamic.Runtime",
+        "//src/libraries/shims/System.Globalization:impl_System.Globalization",
+        "//src/libraries/shims/System.Globalization.Calendars:impl_System.Globalization.Calendars",
+        "//src/libraries/shims/System.Globalization.Extensions:impl_System.Globalization.Extensions",
+        "//src/libraries/shims/System.IO:impl_System.IO",
+        "//src/libraries/shims/System.IO.FileSystem:impl_System.IO.FileSystem",
+        "//src/libraries/shims/System.IO.FileSystem.Primitives:impl_System.IO.FileSystem.Primitives",
+        "//src/libraries/shims/System.IO.UnmanagedMemoryStream:impl_System.IO.UnmanagedMemoryStream",
+        "//src/libraries/shims/System.Reflection:impl_System.Reflection",
+        "//src/libraries/shims/System.Reflection.Extensions:impl_System.Reflection.Extensions",
+        "//src/libraries/shims/System.Resources.Reader:impl_System.Resources.Reader",
+        "//src/libraries/shims/System.Resources.ResourceManager:impl_System.Resources.ResourceManager",
+        "//src/libraries/shims/System.Runtime.CompilerServices.Unsafe:impl_System.Runtime.CompilerServices.Unsafe",
+        "//src/libraries/shims/System.Runtime.Extensions:impl_System.Runtime.Extensions",
+        "//src/libraries/shims/System.Runtime.Handles:impl_System.Runtime.Handles",
+        "//src/libraries/shims/System.Runtime.InteropServices.RuntimeInformation:impl_System.Runtime.InteropServices.RuntimeInformation",
+        "//src/libraries/shims/System.Security.Cryptography.Algorithms:impl_System.Security.Cryptography.Algorithms",
+        "//src/libraries/shims/System.Security.Cryptography.Cng:impl_System.Security.Cryptography.Cng",
+        "//src/libraries/shims/System.Security.Cryptography.Csp:impl_System.Security.Cryptography.Csp",
+        "//src/libraries/shims/System.Security.Cryptography.Encoding:impl_System.Security.Cryptography.Encoding",
+        "//src/libraries/shims/System.Security.Cryptography.OpenSsl:impl_System.Security.Cryptography.OpenSsl",
+        "//src/libraries/shims/System.Security.Cryptography.Primitives:impl_System.Security.Cryptography.Primitives",
+        "//src/libraries/shims/System.Security.Cryptography.X509Certificates:impl_System.Security.Cryptography.X509Certificates",
+        "//src/libraries/shims/System.Security.Principal:impl_System.Security.Principal",
+        "//src/libraries/shims/System.Text.Encoding:impl_System.Text.Encoding",
+        "//src/libraries/shims/System.Threading.Tasks:impl_System.Threading.Tasks",
+        "//src/libraries/shims/System.Threading.Tasks.Extensions:impl_System.Threading.Tasks.Extensions",
+        "//src/libraries/shims/System.Threading.Timer:impl_System.Threading.Timer",
+        "//src/libraries/shims/System.ValueTuple:impl_System.ValueTuple",
+
+        # ── Per-library impl assemblies ──
+        "//src/libraries/Microsoft.CSharp:impl_Microsoft.CSharp",
+        "//src/libraries/Microsoft.Extensions.Primitives:impl_Microsoft.Extensions.Primitives",
+        "//src/libraries/Microsoft.Win32.Registry:impl_Microsoft.Win32.Registry",
+        ":impl_System.ComponentModel.Primitives",
+        "//src/libraries/System.CodeDom:impl_System.CodeDom",
+        "//src/libraries/System.Collections:impl_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:impl_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.NonGeneric:impl_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:impl_System.Collections.Specialized",
+        "//src/libraries/System.ComponentModel:impl_System.ComponentModel",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:impl_System.ComponentModel.EventBasedAsync",
+        "//src/libraries/System.Console:impl_System.Console",
+        "//src/libraries/System.Diagnostics.Contracts:impl_System.Diagnostics.Contracts",
+        ":impl_System.Diagnostics.Process",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:impl_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Diagnostics.FileVersionInfo:impl_System.Diagnostics.FileVersionInfo",
+        "//src/libraries/System.Diagnostics.StackTrace:impl_System.Diagnostics.StackTrace",
+        "//src/libraries/System.Diagnostics.TextWriterTraceListener:impl_System.Diagnostics.TextWriterTraceListener",
+        "//src/libraries/System.Diagnostics.TraceSource:impl_System.Diagnostics.TraceSource",
+        "//src/libraries/System.Drawing.Primitives:impl_System.Drawing.Primitives",
+        "//src/libraries/System.Formats.Cbor:impl_System.Formats.Cbor",
+        "//src/libraries/System.Formats.Nrbf:impl_System.Formats.Nrbf",
+        "//src/libraries/System.Formats.Tar:impl_System.Formats.Tar",
+        "//src/libraries/System.IO.Compression:impl_System.IO.Compression",
+        "//src/libraries/System.IO.Compression.Brotli:impl_System.IO.Compression.Brotli",
+        "//src/libraries/System.IO.Compression.ZipFile:impl_System.IO.Compression.ZipFile",
+        "//src/libraries/System.IO.FileSystem.AccessControl:impl_System.IO.FileSystem.AccessControl",
+        "//src/libraries/System.IO.FileSystem.DriveInfo:impl_System.IO.FileSystem.DriveInfo",
+        "//src/libraries/System.IO.FileSystem.Watcher:impl_System.IO.FileSystem.Watcher",
+        "//src/libraries/System.IO.IsolatedStorage:impl_System.IO.IsolatedStorage",
+        "//src/libraries/System.IO.Pipelines:impl_System.IO.Pipelines",
+        "//src/libraries/System.IO.Pipes:impl_System.IO.Pipes",
+        "//src/libraries/System.Linq:impl_System.Linq",
+        "//src/libraries/System.Linq.AsyncEnumerable:impl_System.Linq.AsyncEnumerable",
+        "//src/libraries/System.Linq.Expressions:impl_System.Linq.Expressions",
+        "//src/libraries/System.Linq.Parallel:impl_System.Linq.Parallel",
+        "//src/libraries/System.Linq.Queryable:impl_System.Linq.Queryable",
+        "//src/libraries/System.Memory:impl_System.Memory",
+        "//src/libraries/System.Net.ServerSentEvents:impl_System.Net.ServerSentEvents",
+        "//src/libraries/System.Net.WebHeaderCollection:impl_System.Net.WebHeaderCollection",
+        "//src/libraries/System.Numerics.Vectors:impl_System.Numerics.Vectors",
+        "//src/libraries/System.ObjectModel:impl_System.ObjectModel",
+        "//src/libraries/System.Private.Xml:impl_System.Private.Xml",
+        "//src/libraries/System.Reflection.DispatchProxy:impl_System.Reflection.DispatchProxy",
+        "//src/libraries/System.Resources.Extensions:impl_System.Resources.Extensions",
+        "//src/libraries/System.Resources.Writer:impl_System.Resources.Writer",
+        "//src/libraries/System.Runtime.CompilerServices.VisualC:impl_System.Runtime.CompilerServices.VisualC",
+        "//src/libraries/System.Runtime.InteropServices:impl_System.Runtime.InteropServices",
+        "//src/libraries/System.Runtime.Intrinsics:impl_System.Runtime.Intrinsics",
+        "//src/libraries/System.Runtime.Loader:impl_System.Runtime.Loader",
+        "//src/libraries/System.Runtime.Numerics:impl_System.Runtime.Numerics",
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Runtime.Serialization.Primitives:impl_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Security.AccessControl:impl_System.Security.AccessControl",
+        "//src/libraries/System.Security.Claims:impl_System.Security.Claims",
+        "//src/libraries/System.Security.Cryptography:impl_System.Security.Cryptography",
+        "//src/libraries/System.Security.Cryptography.Pkcs:impl_System.Security.Cryptography.Pkcs",
+        "//src/libraries/System.Security.Cryptography.Xml:impl_System.Security.Cryptography.Xml",
+        "//src/libraries/System.Security.Principal.Windows:impl_System.Security.Principal.Windows",
+        "//src/libraries/System.Text.Encoding.CodePages:impl_System.Text.Encoding.CodePages",
+        "//src/libraries/System.Text.Encodings.Web:impl_System.Text.Encodings.Web",
+        "//src/libraries/System.Text.Json:impl_System.Text.Json",
+        "//src/libraries/System.Text.RegularExpressions:impl_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:impl_System.Threading",
+        "//src/libraries/System.Threading.Channels:impl_System.Threading.Channels",
+        "//src/libraries/System.Threading.RateLimiting:impl_System.Threading.RateLimiting",
+        "//src/libraries/System.Threading.Tasks.Dataflow:impl_System.Threading.Tasks.Dataflow",
+        "//src/libraries/System.Threading.Tasks.Parallel:impl_System.Threading.Tasks.Parallel",
+        "//src/libraries/System.Web.HttpUtility:impl_System.Web.HttpUtility",
+
+        # ── Facade assemblies (type forwarders, no real source) ──
+        "//src/libraries/System.Diagnostics.Tracing:impl_System.Diagnostics.Tracing",
+        "//src/libraries/System.Reflection.Primitives:impl_System.Reflection.Primitives",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:impl_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Emit.Lightweight:impl_System.Reflection.Emit.Lightweight",
+        "//src/libraries/System.Reflection.TypeExtensions:impl_System.Reflection.TypeExtensions",
+        "//src/libraries/System.Text.Encoding.Extensions:impl_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading.Overlapped:impl_System.Threading.Overlapped",
+        "//src/libraries/System.Threading.Thread:impl_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:impl_System.Threading.ThreadPool",
+        "//src/libraries/System.Xml.ReaderWriter:impl_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XPath:impl_System.Xml.XPath",
+        "//src/libraries/System.Xml.XmlSerializer:impl_System.Xml.XmlSerializer",
+
+        # ── Shim assemblies (hand-written type forwarders) ──
+        "//src/libraries/shims/System.Security.SecureString:impl_System.Security.SecureString",
+        "//src/libraries/shims/System.Xml.XmlDocument:impl_System.Xml.XmlDocument",
+
+        # ── Real libraries ──
+        "//src/libraries/System.Collections.Immutable:impl_System.Collections.Immutable",
+        "//src/libraries/System.Formats.Asn1:impl_System.Formats.Asn1",
+        "//src/libraries/System.IO.MemoryMappedFiles:impl_System.IO.MemoryMappedFiles",
+        "//src/libraries/System.Net.Primitives:impl_System.Net.Primitives",
+        "//src/libraries/System.Private.DataContractSerialization:impl_System.Private.DataContractSerialization",
+        "//src/libraries/System.Private.Xml.Linq:impl_System.Private.Xml.Linq",
+
+        # ── Additional facades ──
+        "//src/libraries/System.Runtime.Serialization.Json:impl_System.Runtime.Serialization.Json",
+        "//src/libraries/System.Runtime.Serialization.Xml:impl_System.Runtime.Serialization.Xml",
+        "//src/libraries/System.Xml.XDocument:impl_System.Xml.XDocument",
+        "//src/libraries/System.Xml.XPath.XDocument:impl_System.Xml.XPath.XDocument",
+
+        # ── Layer 1+ real libraries ──
+        "//src/libraries/System.ComponentModel.TypeConverter:impl_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Data.Common:impl_System.Data.Common",
+        "//src/libraries/System.Net.Http:impl_System.Net.Http",
+        "//src/libraries/System.Net.NameResolution:impl_System.Net.NameResolution",
+        "//src/libraries/System.Net.NetworkInformation:impl_System.Net.NetworkInformation",
+        "//src/libraries/System.Net.Security:impl_System.Net.Security",
+        "//src/libraries/System.Net.Sockets:impl_System.Net.Sockets",
+        "//src/libraries/System.Net.WebSockets:impl_System.Net.WebSockets",
+        "//src/libraries/System.Reflection.Emit:impl_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Metadata:impl_System.Reflection.Metadata",
+        "//src/libraries/System.Transactions.Local:impl_System.Transactions.Local",
+
+        # ── Layer 2+ real libraries ──
+        "//src/libraries/System.ComponentModel.Annotations:impl_System.ComponentModel.Annotations",
+        "//src/libraries/System.Net.Http.Json:impl_System.Net.Http.Json",
+        "//src/libraries/System.Net.HttpListener:impl_System.Net.HttpListener",
+        "//src/libraries/System.Net.Mail:impl_System.Net.Mail",
+        "//src/libraries/System.Net.Ping:impl_System.Net.Ping",
+        "//src/libraries/System.Net.Requests:impl_System.Net.Requests",
+        "//src/libraries/System.Net.WebClient:impl_System.Net.WebClient",
+        "//src/libraries/System.Net.WebProxy:impl_System.Net.WebProxy",
+        "//src/libraries/System.Net.WebSockets.Client:impl_System.Net.WebSockets.Client",
+
+        # ── Additional shims ──
+        "//src/libraries/shims/System.Data.DataSetExtensions:impl_System.Data.DataSetExtensions",
+        "//src/libraries/shims/System.Net.ServicePoint:impl_System.Net.ServicePoint",
+        "//src/libraries/shims/netstandard:impl_netstandard",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ref_impl_pair(
+    name = "live_System.Runtime",
+    ref = ":ref_System.Runtime",
+    lib = ":impl_System.Runtime",
+    visibility = ["//visibility:public"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Private.CoreLib",
+    srcs = [
+        "Microsoft.Win32.Primitives/ref/Microsoft.Win32.Primitives.cs",
+        "//src/libraries/System.Diagnostics.Contracts:ref/System.Diagnostics.Contracts.cs",
+        "//src/libraries/System.Diagnostics.Tracing:ref/System.Diagnostics.Tracing.cs",
+        "//src/libraries/System.Diagnostics.Tracing:ref/System.Diagnostics.Tracing.Counters.cs",
+        "//src/libraries/System.Numerics.Vectors:ref/System.Numerics.Vectors.cs",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref/System.Reflection.Emit.ILGeneration.cs",
+        "//src/libraries/System.Reflection.Emit.Lightweight:ref/System.Reflection.Emit.Lightweight.cs",
+        "//src/libraries/System.Reflection.Emit:ref/System.Reflection.Emit.cs",
+        "//src/libraries/System.Reflection.Primitives:ref/System.Reflection.Primitives.cs",
+        "//src/libraries/System.Runtime.Intrinsics:ref/System.Runtime.Intrinsics.cs",
+        "//src/libraries/System.Runtime.Loader:ref/System.Runtime.Loader.cs",
+        "System.Runtime/ref/System.Runtime.cs",
+        "//src/libraries/System.Text.Encoding.Extensions:ref/System.Text.Encoding.Extensions.cs",
+        "//src/libraries/System.Threading.Overlapped:ref/System.Threading.Overlapped.cs",
+        "//src/libraries/System.Threading.ThreadPool:ref/System.Threading.ThreadPool.cs",
+        "//src/libraries/System.Threading.Thread:ref/System.Threading.Thread.cs",
+
+        # contracts where types were partially moved to CoreLib, these are used both here and in the contract assemblies and are generated -->
+        "//src/libraries/System.Collections.Concurrent:ref/System.Collections.Concurrent.cs",
+        "//src/libraries/System.Collections:ref/System.Collections.cs",
+        "//src/libraries/System.Diagnostics.StackTrace:ref/System.Diagnostics.StackTrace.cs",
+        "//src/libraries/System.Memory:ref/System.Memory.cs",
+        "//src/libraries/System.Runtime.InteropServices:ref/System.Runtime.InteropServices.cs",
+        "//src/libraries/System.Threading:ref/System.Threading.cs",
+
+        # types only exposed through CoreLib, this is manually maintained -->
+        "//src/libraries/System.Private.CoreLib:ref/System.Private.CoreLib.ExtraApis.cs",
+
+        # types not exposed in contracts but forwarded from the mscorlib shim, this is manually maintained -->
+        "//src/libraries/System.Private.CoreLib:ref/System.Private.CoreLib.ManualShimTypeForwards.cs",
+    ],
+    allow_unsafe_blocks = True,
+    defines = ["BUILDING_CORELIB_REFERENCE"],
+    compiler_options = [
+        "/runtimemetadataversion:v4.0.30319",
+        "/checksumalgorithm:SHA256",
+        "/publicsign+",
+    ],
+    nowarn = nowarn + ref_assembly_nowarns + [
+        # disable warnings about obsolete APIs,
+        # Remove warning disable when nullable attributes are respected,
+        # Type has no accessible constructors which use only CLS-compliant types
+        "CS0809", "CS0618", "CS8614", "CS3015"
+    ],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Runtime",
+    srcs = [
+        "System.Runtime/ref/System.Runtime.cs",
+        # ExtraApis needed so impl_System.Runtime generates type forwarders
+        # for DebugProvider (used by System.Diagnostics.TraceSource at runtime)
+        "//src/libraries/System.Private.CoreLib:ref/System.Private.CoreLib.ExtraApis.cs",
+    ],
+    compiler_options = [
+        "/runtimemetadataversion:v4.0.30319",
+    ],
+    allow_unsafe_blocks = True,
+    nowarn = [ "CS0169", "CS0809", "CS0618", "CS3015" ]
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Win32.Primitives",
+    srcs = [
+        "Microsoft.Win32.Primitives/ref/Microsoft.Win32.Primitives.cs",
+    ],
+    deps = [
+        ":ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_Microsoft.Win32.Primitives",
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_Microsoft.Win32.Primitives",
+    exclude_sr = True,
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Win32.Primitives",
+    ref = ":ref_Microsoft.Win32.Primitives",
+    lib = ":impl_Microsoft.Win32.Primitives",
+    visibility = [ "//visibility:public" ],
+)
+
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ComponentModel.Primitives",
+    srcs = [
+        "System.ComponentModel.Primitives/ref/System.ComponentModel.Primitives.cs",
+    ],
+    deps = [
+        ":ref_System.Runtime",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+    ],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Diagnostics.Process",
+    srcs = [
+        "System.Diagnostics.Process/ref/System.Diagnostics.Process.cs",
+    ],
+    deps = [
+        ":ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Diagnostics.FileVersionInfo:ref_System.Diagnostics.FileVersionInfo",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Private.Uri",
+    srcs = [
+        "//src/libraries/Common:src/System/Collections/Generic/ArrayBuilder.cs",
+        "//src/libraries/Common:src/System/HexConverter.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/Common:src/System/Net/IPv4AddressHelper.Common.cs",
+        "//src/libraries/Common:src/System/Net/IPv6AddressHelper.Common.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.Pop.cs",
+
+        "System.Private.Uri/src/System/DomainNameHelper.cs",
+        "System.Private.Uri/src/System/GenericUriParser.cs",
+        "System.Private.Uri/src/System/IPv4AddressHelper.cs",
+        "System.Private.Uri/src/System/IPv6AddressHelper.cs",
+        "System.Private.Uri/src/System/IriHelper.cs",
+        "System.Private.Uri/src/System/PercentEncodingHelper.cs",
+        "System.Private.Uri/src/System/UncNameHelper.cs",
+        "System.Private.Uri/src/System/Uri.cs",
+        "System.Private.Uri/src/System/UriBuilder.cs",
+        "System.Private.Uri/src/System/UriCreationOptions.cs",
+        "System.Private.Uri/src/System/UriEnumTypes.cs",
+        "System.Private.Uri/src/System/UriExt.cs",
+        "System.Private.Uri/src/System/UriFormatException.cs",
+        "System.Private.Uri/src/System/UriHelper.cs",
+        "System.Private.Uri/src/System/UriHostNameType.cs",
+        "System.Private.Uri/src/System/UriParserTemplates.cs",
+        "System.Private.Uri/src/System/UriPartial.cs",
+        "System.Private.Uri/src/System/UriScheme.cs",
+        "System.Private.Uri/src/System/UriSyntax.cs",
+        "System.Private.Uri/src/System/ValueStringBuilderExtensions.cs",
+
+        "System.Private.Uri/System.SR.cs",
+    ],
+    deps = [
+        ":ref_System.Private.CoreLib",
+    ],
+    allow_unsafe_blocks = True,
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Runtime",
+    srcs = [
+        "System.Runtime/src/System.Runtime.Typeforwards.cs",
+    ],
+    deps = [
+        ":ref_System.Private.CoreLib",
+        ":impl_System.Private.Uri",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Runtime",
+    facade_omit_types = [
+        "System.Void",
+    ],
+    exclude_sr = True,
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Diagnostics.Process",
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+    ],
+    srcs = [
+        "System.Diagnostics.Process/src/Microsoft/Win32/SafeHandles/SafeProcessHandle.cs",
+        "System.Diagnostics.Process/src/System/Collections/Specialized/DictionaryWrapper.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/AsyncStreamReader.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/DataReceivedEventArgs.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/Process.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ProcessInfo.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ProcessManager.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ProcessModule.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ProcessModuleCollection.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ProcessPriorityClass.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ProcessStartInfo.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ProcessThread.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ProcessThreadCollection.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ProcessWindowStyle.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ThreadInfo.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ThreadPriorityLevel.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ThreadState.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/ThreadWaitReason.cs",
+        "System.Diagnostics.Process/src/System/Diagnostics/MonitoringDescriptionAttribute.cs",
+        "System.Diagnostics.Process/src/System/Collections/Specialized/StringDictionaryWrapper.cs",
+
+        "//src/libraries/System.Private.CoreLib:src/System/PasteArguments.cs",
+
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/System/Runtime/Serialization/SerializationGuard.cs",
+        "//src/libraries/Common:src/Interop/Windows/Interop.Errors.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        "//src/libraries/Common:src/System/Collections/Generic/ArrayBuilder.cs",
+    ] + selects.with_or({
+        # Common Unix files shared between Linux and macOS
+        ("@platforms//os:linux", "@platforms//os:macos"): [
+            "System.Diagnostics.Process/src/Microsoft/Win32/SafeHandles/SafeProcessHandle.Unix.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/Process.Unix.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessManager.Unix.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessThread.Unix.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessStartInfo.Unix.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessWaitHandle.Unix.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessWaitState.Unix.cs",
+
+            "//src/libraries/Common:src/System/IO/StringParser.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Close.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.DefaultPathBufferSize.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetHostName.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SysConf.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.ForkAndExecProcess.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetGroupList.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPwUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetSetPriority.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetSid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.InitializeTerminalAndSignalHandling.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Kill.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.ReadLink.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.RegisterForSigChld.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SetDelayedSigChildConsoleConfigurationHandler.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.ResourceLimits.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.PathConf.cs",
+            "//src/libraries/Common:src/System/Text/ValueUtf8Converter.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.WaitId.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.WaitPid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Access.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetEUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.IsMemberOfGroup.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.ConfigureTerminalForChildProcess.cs",
+
+            "System.Diagnostics.Process/src/System/Diagnostics/Process.ConfigureTerminalForChildProcesses.Unix.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/Process.NonUap.cs",
+        ],
+    }) + select({
+        # Linux-specific files
+        "@platforms//os:linux": [
+            "System.Diagnostics.Process/src/System/Diagnostics/Process.Linux.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessManager.Linux.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessThread.Linux.cs",
+
+            "//src/libraries/Common:src/Interop/Linux/cgroups/Interop.cgroups.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.MountPoints.FormatInfo.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.RealPath.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.UnixFileSystemTypes.cs",
+            "//src/libraries/Common:src/Interop/Linux/procfs/Interop.ProcFsStat.cs",
+            "//src/libraries/Common:src/Interop/Linux/procfs/Interop.ProcFsStat.ParseMapModules.cs",
+            "//src/libraries/Common:src/Interop/Linux/procfs/Interop.ProcFsStat.TryReadStatusFile.cs",
+            "//src/libraries/Common:src/Interop/Linux/procfs/Interop.ProcMountInfo.cs",
+            "//src/libraries/Common:src/Interop/Linux/procfs/Interop.ProcMountInfo.TryParseMountInfoLine.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetBootTimeTicks.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SchedGetSetAffinity.cs",
+        ],
+        # macOS-specific files (BSD + OSX)
+        "@platforms//os:macos": [
+            "System.Diagnostics.Process/src/System/Diagnostics/Process.BSD.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/Process.OSX.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessManager.BSD.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessManager.OSX.cs",
+            "System.Diagnostics.Process/src/System/Diagnostics/ProcessThread.OSX.cs",
+
+            "//src/libraries/Common:src/Interop/OSX/Interop.libproc.cs",
+            "//src/libraries/Common:src/Interop/OSX/Interop.libproc.GetProcessInfoById.cs",
+            "//src/libraries/Common:src/Interop/OSX/Interop.libSystem.cs",
+            "//src/libraries/Common:src/Interop/OSX/Interop.Libraries.cs",
+        ],
+        "//conditions:default": [],
+    }),
+    resx_file = "System.Diagnostics.Process/src/Resources/Strings.resx",
+    deps = [
+        ":ref_Microsoft.Win32.Primitives",
+#        ":ref_Microsoft.Win32.Registry",
+        "//src/libraries/System.Collections:ref_System.Collections",
+#        ":ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Diagnostics.FileVersionInfo:ref_System.Diagnostics.FileVersionInfo",
+        "//src/libraries/System.IO.FileSystem.DriveInfo:ref_System.IO.FileSystem.DriveInfo",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        ":ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+#        ":ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+#        ":ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+    ],
+    allow_unsafe_blocks = True,
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.ComponentModel.Primitives",
+    srcs = [
+        "System.ComponentModel.Primitives/src/System/ComponentModel/ISynchronizeInvoke.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/BrowsableAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/CategoryAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/Component.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/ComponentCollection.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/DescriptionAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/DesignerAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/DesignerCategoryAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/DesignerSerializationVisibility.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/DesignerSerializationVisibilityAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/DesignOnlyAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/Design/Serialization/DesignerSerializerAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/DisplayNameAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/EditorAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/EventHandlerList.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/IComponent.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/IContainer.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/ImmutableObjectAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/InitializationEventAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/InvalidAsynchronousStateException.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/InvalidEnumArgumentException.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/ISite.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/ISupportInitialize.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/LocalizableAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/MergablePropertyAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/NotifyParentPropertyAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/ParenthesizePropertyNameAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/ReadOnlyAttribute.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/RefreshProperties.cs",
+        "System.ComponentModel.Primitives/src/System/ComponentModel/RefreshPropertiesAttribute.cs",
+
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        ":ref_System.Runtime",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "System.ComponentModel.Primitives/src/Resources/Strings.resx",
+)
+
+# ── Ref assemblies for TestUtilities dependencies ────────────────────
+alias(
+    name = "ref_System.Linq.Expressions",
+    actual = "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "ref_System.Text.RegularExpressions",
+    actual = "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+    visibility = ["//visibility:public"],
+)
+
+# Minimal ref assembly with just the System.Net.Mime namespace (MediaTypeNames etc.)
+# The full System.Net.Mail ref has too many transitive deps for our needs.
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.Mime",
+    srcs = [
+        "//src/libraries/System.Net.Mail:ref/System.Net.Mail.Mime.cs",
+    ],
+    deps = [
+        ":ref_System.Runtime",
+    ],
+)
+
+# Type-forwarder shim: xunit references Task from this assembly name.
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading.Tasks",
+    srcs = [
+        "//src/libraries/shims/System.Threading.Tasks:src/System.Threading.Tasks.cs",
+    ],
+    deps = [
+        ":ref_System.Runtime",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+# Import pre-built Microsoft.CSharp.dll — needed for tests that use 'dynamic'.
+# Uses the MSBuild-built impl so the runtime Binder works; a Bazel-compiled
+# ref-only assembly would overwrite the SDK's working copy in the testhost
+# framework dir with throw-null stubs.
+import_library(
+    name = "ref_Microsoft.CSharp",
+    library_name = "Microsoft.CSharp",
+    refs = [
+        "//src/libraries/Microsoft.CSharp:ref/Microsoft.CSharp.dll",
+    ],
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "mixed3",
+    srcs = ["mixed3.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

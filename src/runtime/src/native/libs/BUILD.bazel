@@ -1,0 +1,17 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+# Common headers shared across native libraries
+
+cc_library(
+    name = "common",
+    srcs = [],
+    hdrs = glob(["Common/*.h"]) + select({
+        "@platforms//os:macos": ["//src/native/libs/bazel:darwin-arm64/pal_config.h"],
+        "//conditions:default": ["//src/native/libs/bazel:linux-glibc-x64/pal_config.h"],
+    }),
+    includes = ["Common"] + select({
+        "@platforms//os:macos": ["bazel/darwin-arm64"],
+        "//conditions:default": ["bazel/linux-glibc-x64"],
+    }),
+    visibility = ["//src/native:__subpackages__"],
+)

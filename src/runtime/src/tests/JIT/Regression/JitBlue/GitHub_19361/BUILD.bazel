@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_19361",
+    srcs = ["GitHub_19361.cs"],
+    pri = 1,
+    deps = [
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)

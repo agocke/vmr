@@ -1,0 +1,45 @@
+# cDAC and GC data descriptor stubs for coreclr.
+# Matches CMake: src/coreclr/vm/datadescriptor/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+_DESCRIPTOR_STUB_SRC = "//src/coreclr/debug:datadescriptor-shared/contractdescriptorstub.c"
+
+# cDAC contract descriptor (DotNetRuntimeContractDescriptor)
+cc_library(
+    name = "cdac_contract_descriptor",
+    srcs = [
+        _DESCRIPTOR_STUB_SRC,
+        "bazel/cdac/contractconfiguration.h",
+    ],
+    copts = CLR_CONFIG_COPTS + ["-Isrc/coreclr/vm/datadescriptor/bazel/cdac"],
+    alwayslink = True,
+    deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
+)
+
+# GC workstation descriptor (GCContractDescriptorWKS)
+cc_library(
+    name = "gc_wks_descriptor",
+    srcs = [
+        _DESCRIPTOR_STUB_SRC,
+        "bazel/gc_wks/contractconfiguration.h",
+    ],
+    copts = CLR_CONFIG_COPTS + ["-Isrc/coreclr/vm/datadescriptor/bazel/gc_wks"],
+    alwayslink = True,
+    deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
+)
+
+# GC server descriptor (GCContractDescriptorSVR)
+cc_library(
+    name = "gc_svr_descriptor",
+    srcs = [
+        _DESCRIPTOR_STUB_SRC,
+        "bazel/gc_svr/contractconfiguration.h",
+    ],
+    copts = CLR_CONFIG_COPTS + ["-Isrc/coreclr/vm/datadescriptor/bazel/gc_svr"],
+    alwayslink = True,
+    deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
+)

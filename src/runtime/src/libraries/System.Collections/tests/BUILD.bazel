@@ -1,0 +1,53 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Collections.Tests",
+    srcs = glob([
+        "**/*.cs",
+    ]) + [
+        # Common collection test infrastructure
+        "//src/libraries/Common/tests:System/Collections/CollectionAsserts.cs",
+        "//src/libraries/Common/tests:System/Collections/ICollection.NonGeneric.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/ICollection.Generic.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IDictionary.NonGeneric.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IDictionary.Generic.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IDictionary.Generic.Tests.netcoreapp.cs",
+        "//src/libraries/Common/tests:System/Collections/IDictionary.NonGeneric.Tests.netcoreapp.cs",
+        "//src/libraries/Common/tests:System/Collections/IEnumerable.NonGeneric.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IEnumerable.Generic.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IEnumerable.NonGeneric.Serialization.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IEnumerable.Generic.Serialization.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IList.NonGeneric.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IList.Generic.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IGenericSharedAPI.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/ISet.Generic.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/TestBase.NonGeneric.cs",
+        "//src/libraries/Common/tests:System/Collections/TestBase.Generic.cs",
+        "//src/libraries/Common/tests:System/Collections/DebugView.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/DictionaryEntry.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/TestingTypes.cs",
+        "//src/libraries/Common/tests:System/EnumTypes.cs",
+        "//src/libraries/Common/tests:System/ObjectCloner.cs",
+        "//src/libraries/Common/tests:System/Runtime/Serialization/Formatters/BinaryFormatterHelpers.cs",
+        "//src/libraries/Common/tests:System/Diagnostics/DebuggerAttributes.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    nowarn = [
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+    ],
+    size = "large",
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

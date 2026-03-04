@@ -1,0 +1,105 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/System.Formats.Tar.cs",
+    "src/Resources/Strings.resx",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Formats.Tar",
+    srcs = [
+        "ref/System.Formats.Tar.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Formats.Tar",
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+    ],
+    srcs = [
+        "src/System/Formats/Tar/FieldLengths.cs",
+        "src/System/Formats/Tar/FieldLocations.cs",
+        "src/System/Formats/Tar/GnuTarEntry.cs",
+        "src/System/Formats/Tar/PaxGlobalExtendedAttributesTarEntry.cs",
+        "src/System/Formats/Tar/PaxTarEntry.cs",
+        "src/System/Formats/Tar/PosixTarEntry.cs",
+        "src/System/Formats/Tar/SeekableSubReadStream.cs",
+        "src/System/Formats/Tar/SubReadStream.cs",
+        "src/System/Formats/Tar/TarEntry.cs",
+        "src/System/Formats/Tar/TarEntryFormat.cs",
+        "src/System/Formats/Tar/TarEntryType.cs",
+        "src/System/Formats/Tar/TarFile.cs",
+        "src/System/Formats/Tar/TarHeader.cs",
+        "src/System/Formats/Tar/TarHeader.Read.cs",
+        "src/System/Formats/Tar/TarHeader.Write.cs",
+        "src/System/Formats/Tar/TarHelpers.cs",
+        "src/System/Formats/Tar/TarReader.cs",
+        "src/System/Formats/Tar/TarWriter.cs",
+        "src/System/Formats/Tar/UstarTarEntry.cs",
+        "src/System/Formats/Tar/V7TarEntry.cs",
+
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/System/IO/Archiving.Utils.cs",
+        "//src/libraries/Common:src/System/IO/PathInternal.cs",
+        "//src/libraries/Common:src/System/IO/PathInternal.CaseSensitivity.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+    ] + select({
+        "@platforms//os:linux": [
+            "src/System/Formats/Tar/TarEntry.Unix.cs",
+            "src/System/Formats/Tar/TarHelpers.Unix.cs",
+            "src/System/Formats/Tar/TarWriter.Unix.cs",
+
+            "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.DeviceFiles.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetEUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPwUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetGroupName.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Link.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.MkFifo.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+            "//src/libraries/Common:src/System/IO/Archiving.Utils.Unix.cs",
+            "//src/libraries/Common:src/System/IO/PathInternal.Unix.cs",
+        ],
+        "@platforms//os:macos": [
+            "src/System/Formats/Tar/TarEntry.Unix.cs",
+            "src/System/Formats/Tar/TarHelpers.Unix.cs",
+            "src/System/Formats/Tar/TarWriter.Unix.cs",
+
+            "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.DeviceFiles.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetEUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPwUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetGroupName.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Link.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.MkFifo.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+            "//src/libraries/Common:src/System/IO/Archiving.Utils.Unix.cs",
+            "//src/libraries/Common:src/System/IO/PathInternal.Unix.cs",
+        ],
+    }),
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+)
+
+ref_impl_pair(
+    name = "live_System.Formats.Tar",
+    ref = ":ref_System.Formats.Tar",
+    lib = ":impl_System.Formats.Tar",
+    visibility = ["//visibility:public"],
+)

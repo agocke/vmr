@@ -1,0 +1,24 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Security.Principal.Windows",
+    srcs = [
+        "ref/System.Security.Principal.Windows.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.Claims:ref_System.Security.Claims",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Security.Principal.Windows",
+    srcs = [
+        "System.Security.Principal.Windows.notsupported.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.Claims:ref_System.Security.Claims",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)

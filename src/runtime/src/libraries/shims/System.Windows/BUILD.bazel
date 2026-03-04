@@ -1,0 +1,13 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Windows",
+    srcs = ["src/System.Windows.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+    ],
+    exclude_sr = True,
+)

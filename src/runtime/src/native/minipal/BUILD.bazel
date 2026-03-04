@@ -1,0 +1,43 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
+
+exports_files(
+    ["xoshiro128pp.c"],
+    visibility = ["//src/coreclr:__subpackages__"],
+)
+
+cc_library(
+    name = "minipal",
+    srcs = [
+        "cpufeatures.c",
+        "debugger.c",
+        "guid.c",
+        "log.c",
+        "mutex.c",
+        "random.c",
+        "strings.c",
+        "time.c",
+        "unicodedata.c",
+        "utf8.c",
+        "xoshiro128pp.c",
+    ] + select({
+        "@platforms//os:macos": ["bazel/darwin-arm64/minipalconfig.h"],
+        "//conditions:default": ["bazel/linux-glibc-x64/minipalconfig.h"],
+    }) + glob(
+        ["*.h", "**/*.h"],
+        exclude = ["bazel/**"],
+    ),
+    copts = CLR_CONFIG_COPTS + [
+        "-Isrc/native",
+    ] + select({
+        "@platforms//os:macos": ["-Isrc/native/minipal/bazel/darwin-arm64"],
+        "//conditions:default": ["-Isrc/native/minipal/bazel/linux-glibc-x64"],
+    }),
+    local_defines = PLATFORM_DEFINES,
+    includes = [".."],
+    visibility = [
+        "//src/coreclr:__subpackages__",
+        "//src/native:__subpackages__",
+    ],
+)

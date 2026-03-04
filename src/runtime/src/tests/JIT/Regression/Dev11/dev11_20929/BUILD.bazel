@@ -1,0 +1,30 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "dev11_20929_d",
+    srcs = ["dev11_20929.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "dev11_20929_ro",
+    srcs = ["dev11_20929.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "dev11_20929_r",
+    srcs = ["dev11_20929.cs"],
+    pri = 1,
+)
+
+coreclr_test(
+    name = "dev11_20929_do",
+    srcs = ["dev11_20929.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)

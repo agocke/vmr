@@ -1,0 +1,14 @@
+load("@rules_dotnet//dotnet:defs.bzl", "csharp_library")
+
+csharp_library(
+    name = "Mono.Linker.Tests.Cases.Expectations",
+    srcs = glob(["**/*.cs"]) + [
+        "//src/tools/illink/src/ILLink.Shared:DynamicallyAccessedMemberTypesEx.cs",
+        "//src/tools/illink/src/ILLink.Shared:RequiresDynamicCodeAttribute.cs",
+        "//src/tools/illink/src/ILLink.Shared:RequiresUnreferencedCodeAttribute.cs",
+    ],
+    out = "Mono.Linker.Tests.Cases.Expectations",
+    target_frameworks = ["net10.0"],
+    nowarn = ["CS0436"],
+    visibility = ["//src/tools/illink:__subpackages__"],
+)

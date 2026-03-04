@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.IO.Hashing.Tests",
+    srcs = glob(["*.cs"]) + [
+        "//src/libraries/Common/tests:System/IO/PositionValueStream.cs",
+    ],
+    deps = [
+        "//src/libraries/System.IO.Hashing:live_System.IO.Hashing",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    size = "large",
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

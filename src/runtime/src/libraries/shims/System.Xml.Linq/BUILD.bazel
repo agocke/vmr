@@ -1,0 +1,14 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Xml.Linq",
+    srcs = [
+        "src/System.Xml.Linq.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
+        "//src/libraries/System.Xml.XPath.XDocument:ref_System.Xml.XPath.XDocument",
+    ],
+    exclude_sr = True,
+)

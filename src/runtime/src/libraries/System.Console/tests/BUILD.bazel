@@ -1,0 +1,85 @@
+load("//:defs.bzl", "gen_resx_source")
+load("//src/tests:live_test.bzl", "library_test")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Console",
+    resx_file = "//src/libraries/System.Console:src/Resources/Strings.resx",
+)
+
+# TestData files need to be placed without the TestData/ prefix
+# because the csproj uses Link="%(RecursiveDir)%(Filename)%(Extension)"
+genrule(
+    name = "ncurses_xterm",
+    srcs = ["TestData/ncursesFormats/x/xterm"],
+    outs = ["ncursesFormats/x/xterm"],
+    cmd = "cp $< $@",
+)
+
+genrule(
+    name = "ncurses_screen256color",
+    srcs = ["TestData/ncursesFormats/s/screen-256color"],
+    outs = ["ncursesFormats/s/screen-256color"],
+    cmd = "cp $< $@",
+)
+
+library_test(
+    name = "System.Console.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Windows-only
+            "ConsoleEncoding.Windows.cs",
+        ],
+    ) + [
+        "//src/libraries/System.Console:src/System/TermInfo.WellKnownStrings.cs",
+        "//src/libraries/System.Console:src/System/TermInfo.WellKnownNumbers.cs",
+        "//src/libraries/System.Console:src/System/TermInfo.Database.cs",
+        "//src/libraries/System.Console:src/System/TermInfo.cs",
+        "//src/libraries/System.Console:src/System/TermInfo.DatabaseFactory.cs",
+        "//src/libraries/System.Console:src/System/TerminalFormatStrings.cs",
+        "//src/libraries/System.Console:src/System/IO/KeyParser.cs",
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/System/Text/ConsoleEncoding.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.AppendSpanFormattable.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Open.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.OpenFlags.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Fcntl.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SNPrintF.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetEUid.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPwUid.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/IO/PersistedFiles.Unix.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/IO/PersistedFiles.Names.Unix.cs",
+        "//src/libraries/Common/tests:System/IO/InterceptStreamWriter.cs",
+        "//src/libraries/Common/tests:System/ShouldNotBeInvokedException.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelization.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
+    ],
+    deps = [
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+    ],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    data = [":ncurses_xterm", ":ncurses_screen256color"],
+    size = "large",
+)

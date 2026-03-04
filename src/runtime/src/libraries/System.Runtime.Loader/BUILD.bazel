@@ -1,0 +1,30 @@
+load("//src/libraries:defs.bzl",
+    "netcoreapp_ref_assembly",
+    "netcoreapp_impl_assembly",
+)
+
+exports_files([
+    "ref/System.Runtime.Loader.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Runtime.Loader",
+    srcs = [
+        "ref/System.Runtime.Loader.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    allow_unsafe_blocks = True,
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Runtime.Loader",
+    deps = [
+        "//src/libraries:ref_System.Private.CoreLib",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Runtime.Loader",
+    exclude_sr = True,
+    allow_unsafe_blocks = True,
+)

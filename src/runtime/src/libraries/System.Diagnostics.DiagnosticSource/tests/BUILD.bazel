@@ -1,0 +1,62 @@
+load("//:defs.bzl", "gen_resx_source")
+load("//src/tests:live_test.bzl", "library_test")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Diagnostics.DiagnosticSource",
+    resx_file = "//src/libraries/System.Diagnostics.DiagnosticSource:src/Resources/Strings.resx",
+)
+
+library_test(
+    name = "System.Diagnostics.DiagnosticSource.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "TrimmingTests/**",
+            "MetricOuterLoopTests/**",
+            "TestWithConfigSwitches/**",
+            # .NET Framework only
+            "HttpHandlerDiagnosticListenerTests.cs",
+            "ActivityDateTimeTests.cs",
+        ],
+    ) + [
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/DsesSamplerBuilder.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/RateLimiter.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Helpers.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/Aggregator.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/AggregatorStore.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/Base2ExponentialHistogramAggregator.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/CircularBufferBuckets.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/ExponentialHistogramAggregator.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/LastValueAggregator.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/ObjectSequence.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/ObjectSequence.netcore.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/StringSequence.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/StringSequence.netcore.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
+    ],
+    deps = [
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries:ref_System.Threading.Tasks",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    defines = [
+        "MEMORYMARSHAL_SUPPORT",
+        "OS_ISBROWSER_SUPPORT",
+    ],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    size = "large",
+)

@@ -1,0 +1,72 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/System.IO.Pipelines.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Pipelines",
+    srcs = [
+        "ref/System.IO.Pipelines.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.Pipelines",
+    srcs = [
+        "src/Properties/InternalsVisibleTo.cs",
+        "src/System/IO/Pipelines/BufferSegment.cs",
+        "src/System/IO/Pipelines/BufferSegmentStack.cs",
+        "src/System/IO/Pipelines/CompletionData.cs",
+        "src/System/IO/Pipelines/FlushResult.cs",
+        "src/System/IO/Pipelines/IDuplexPipe.cs",
+        "src/System/IO/Pipelines/InlineScheduler.cs",
+        "src/System/IO/Pipelines/Pipe.DefaultPipeReader.cs",
+        "src/System/IO/Pipelines/Pipe.DefaultPipeWriter.cs",
+        "src/System/IO/Pipelines/Pipe.cs",
+        "src/System/IO/Pipelines/PipeAwaitable.cs",
+        "src/System/IO/Pipelines/PipeCompletion.cs",
+        "src/System/IO/Pipelines/PipeCompletionCallback.cs",
+        "src/System/IO/Pipelines/PipeCompletionCallbacks.cs",
+        "src/System/IO/Pipelines/PipeOperationState.cs",
+        "src/System/IO/Pipelines/PipeOptions.cs",
+        "src/System/IO/Pipelines/PipeReader.cs",
+        "src/System/IO/Pipelines/PipeReaderStream.cs",
+        "src/System/IO/Pipelines/PipeScheduler.cs",
+        "src/System/IO/Pipelines/PipeWriter.cs",
+        "src/System/IO/Pipelines/PipeWriterStream.cs",
+        "src/System/IO/Pipelines/ReadResult.cs",
+        "src/System/IO/Pipelines/ResultFlags.cs",
+        "src/System/IO/Pipelines/SequencePipeReader.cs",
+        "src/System/IO/Pipelines/StreamPipeExtensions.cs",
+        "src/System/IO/Pipelines/StreamPipeReader.cs",
+        "src/System/IO/Pipelines/StreamPipeReaderOptions.cs",
+        "src/System/IO/Pipelines/StreamPipeWriter.cs",
+        "src/System/IO/Pipelines/StreamPipeWriterOptions.cs",
+        "src/System/IO/Pipelines/ThrowHelper.cs",
+        "src/System/IO/Pipelines/ThreadPoolScheduler.netcoreapp.cs",
+
+        "//src/libraries/Common:src/System/IO/StreamHelpers.CopyValidation.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.IO.Pipelines",
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.IO.Pipelines",
+    ref = ":ref_System.IO.Pipelines",
+    lib = ":impl_System.IO.Pipelines",
+    visibility = ["//visibility:public"],
+)

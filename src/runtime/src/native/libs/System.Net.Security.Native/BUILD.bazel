@@ -1,0 +1,52 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_DEFINES")
+
+# System.Net.Security.Native for linux-x64
+# Produces libSystem.Net.Security.Native.so (shared) and libSystem.Net.Security.Native.a (static)
+# On Linux, GSS_SHIM is defined so libgssapi_krb5 is loaded via dlopen at runtime.
+
+cc_library(
+    name = "System.Net.Security.Native_lib",
+    srcs = [
+        "entrypoints.c",
+        "pal_gssapi.c",
+    ] + glob(["*.h"]),
+    copts = [
+        "-Isrc/native",
+        "-Isrc/native/libs/Common",
+        "-Isrc/native/libs/bazel",
+        "-Isrc/native/libs/System.Net.Security.Native",
+    ],
+    defines = select({
+        "@platforms//os:linux": ["GSS_SHIM"],
+        "//conditions:default": [],
+    }),
+    local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
+    linkopts = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["-ldl"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/native/libs:common",
+        "//src/native/minipal",
+    ],
+)
+
+cc_shared_library(
+    name = "System.Net.Security.Native",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libSystem.Net.Security.Native.dylib",
+        "//conditions:default": "libSystem.Net.Security.Native.so",
+    }),
+    user_link_flags = select({
+        "@platforms//os:macos": [
+            "-Wl,-install_name,@rpath/libSystem.Net.Security.Native.dylib",
+            "-framework", "GSS",
+        ],
+        "//conditions:default": ["-Wl,-soname,libSystem.Net.Security.Native.so"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":System.Net.Security.Native_lib"],
+)

@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b610750_32vs64",
+    srcs = ["32vs64.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "b610750",
+    srcs = ["b610750.cs"],
+    pri = 1,
+    optimize = True,
+)

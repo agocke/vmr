@@ -1,0 +1,173 @@
+# CoreCLR eventing — generated event headers and eventpipe sources.
+# Matches CMake: src/coreclr/vm/eventing/CMakeLists.txt
+#
+# Generated from ClrEtwAll.man by scripts/genEventing.py and scripts/genEventPipe.py.
+# Currently uses pre-generated files; a Bazel genrule can replace this later.
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+# --- Generated eventing headers ---
+# Output of: genEventing.py --man ClrEtwAll.man --incdir <out> --dummy <out>/etmdummy.h
+
+cc_library(
+    name = "eventing_headers",
+    hdrs = select({
+        "@platforms//os:macos": [
+            "bazel/darwin-arm64/clretwallmain.h",
+            "bazel/darwin-arm64/clreventpipewriteevents.h",
+            "bazel/darwin-arm64/clrproviders.h",
+            "bazel/darwin-arm64/clrxplatevents.h",
+            "bazel/darwin-arm64/etmdummy.h",
+        ],
+        "//conditions:default": [
+            "bazel/linux-glibc-x64/clretwallmain.h",
+            "bazel/linux-glibc-x64/clreventpipewriteevents.h",
+            "bazel/linux-glibc-x64/clrproviders.h",
+            "bazel/linux-glibc-x64/clrxplatevents.h",
+            "bazel/linux-glibc-x64/etmdummy.h",
+        ],
+    }),
+    strip_include_prefix = select({
+        "@platforms//os:macos": "bazel/darwin-arm64",
+        "//conditions:default": "bazel/linux-glibc-x64",
+    }),
+)
+
+# --- User events shim header ---
+cc_library(
+    name = "userevents_headers",
+    hdrs = ["userevents/user_events.h"],
+    strip_include_prefix = "userevents",
+)
+
+# Bazel stub for user_events (disabled — full impl requires genUserEvents.py)
+cc_library(
+    name = "userevents",
+    srcs = ["userevents/bazel/user_events_stub.cpp"],
+    copts = [
+        "-Isrc/coreclr/vm",
+        "-Isrc/coreclr",
+        "-Isrc/coreclr/gc",
+        "-Isrc/coreclr/gc/env",
+        "-Isrc/coreclr/runtime",
+        "-Isrc/coreclr/vm/eventing/eventpipe",
+        "-Isrc/native/corehost",
+    ] + select({
+        "@platforms//cpu:arm64": ["-Isrc/coreclr/vm/arm64"],
+        "//conditions:default": ["-Isrc/coreclr/vm/amd64"],
+    }) + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-include", "src/coreclr/vm/common.h",
+        "-Wno-error",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    alwayslink = True,
+    deps = [
+        ":userevents_headers",
+        ":eventing_headers",
+        ":eventpipe_shim_headers",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/gc:gc_headers",
+        "//src/coreclr/runtime:runtime_headers",
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/native/eventpipe:eventpipe-headers",
+        "//src/native/corehost:corehost_headers",
+    ],
+)
+
+# --- EventPipe CoreCLR shim headers ---
+# Runtime-specific shim headers for EventPipe/DiagnosticServer.
+cc_library(
+    name = "eventpipe_shim_headers",
+    hdrs = [
+        "eventpipe/ds-rt-coreclr.h",
+        "eventpipe/ds-rt-types-coreclr.h",
+        "eventpipe/ep-rt-config-coreclr.h",
+        "eventpipe/ep-rt-coreclr.h",
+        "eventpipe/ep-rt-types-coreclr.h",
+    ],
+)
+
+# --- Generated eventpipe sources ---
+# Output of: genEventPipe.py --man ClrEtwAll.man --exc ClrEtwAllMeta.lst --intermediate <out>
+
+filegroup(
+    name = "eventpipe_gen_srcs",
+    srcs = select({
+        "@platforms//os:macos": [
+            "bazel/darwin-arm64/eventpipe/dotnetruntime.cpp",
+            "bazel/darwin-arm64/eventpipe/dotnetruntimeprivate.cpp",
+            "bazel/darwin-arm64/eventpipe/dotnetruntimerundown.cpp",
+            "bazel/darwin-arm64/eventpipe/dotnetruntimestress.cpp",
+            "bazel/darwin-arm64/eventpipe/eventpipehelpers.cpp",
+        ],
+        "//conditions:default": [
+            "bazel/linux-glibc-x64/eventpipe/dotnetruntime.cpp",
+            "bazel/linux-glibc-x64/eventpipe/dotnetruntimeprivate.cpp",
+            "bazel/linux-glibc-x64/eventpipe/dotnetruntimerundown.cpp",
+            "bazel/linux-glibc-x64/eventpipe/dotnetruntimestress.cpp",
+            "bazel/linux-glibc-x64/eventpipe/eventpipehelpers.cpp",
+        ],
+    }),
+)
+
+# --- EventPipe CoreCLR OBJECT library ---
+# Matches CMake: src/coreclr/vm/eventing/eventpipe/CMakeLists.txt
+# Native EventPipe/DiagnosticServer .c files are compiled as C++ via a unity wrapper
+# (CMake uses set_source_files_properties(... PROPERTIES LANGUAGE CXX) + UNITY_BUILD).
+
+_EP_COPTS = [
+    "-Isrc/coreclr/vm",
+    "-Isrc/coreclr",
+    "-Isrc/coreclr/gc",
+    "-Isrc/coreclr/gc/env",
+    "-Isrc/coreclr/runtime",
+    "-Isrc/coreclr/vm/eventing/eventpipe",
+    "-Isrc/native/eventpipe",
+    "-Isrc/native/corehost",
+] + select({
+    "@platforms//cpu:arm64": ["-Isrc/coreclr/vm/arm64"],
+    "//conditions:default": ["-Isrc/coreclr/vm/amd64"],
+}) + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+    "-include", "src/coreclr/vm/common.h",
+    "-Wno-error",
+]
+
+_EP_DEFINES = CORECLR_DEFINES + [
+    "FEATURE_VIRTUAL_STUB_DISPATCH",
+    "FEATURE_SIMD",
+    "FEATURE_HW_INTRINSICS",
+    "FEATURE_MASKED_HW_INTRINSICS",
+]
+
+cc_library(
+    name = "eventpipe",
+    srcs = [
+        "eventpipe/ep-rt-coreclr.cpp",
+        "eventpipe/bazel/eventpipe_native.cpp",
+        ":eventpipe_gen_srcs",
+    ],
+    textual_hdrs = [
+        "//src/native/eventpipe:dn-eventpipe-srcs",
+        "//src/native/eventpipe:dn-diagnosticserver-srcs",
+        "//src/native/eventpipe:dn-diagnosticserver-pal-srcs",
+    ],
+    copts = _EP_COPTS,
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _EP_DEFINES,
+    alwayslink = True,
+    linkstatic = True,
+    deps = [
+        ":eventpipe_shim_headers",
+        ":eventing_headers",
+        "//src/coreclr/gc:gc_headers",
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/interop",
+        "//src/coreclr/runtime:runtime_headers",
+        "//src/native/corehost:corehost_headers",
+        "//src/native/eventpipe:eventpipe-headers",
+    ],
+)

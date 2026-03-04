@@ -1,0 +1,60 @@
+load("//:defs.bzl", "csharp_binary")
+load("//:defs.bzl", "gen_resx_source", "resgen")
+load("@rules_dotnet//dotnet:defs.bzl", "publish_binary")
+
+genrule(
+    name = "AssemblyInfo",
+    outs = ["AssemblyInfo.g.cs"],
+    cmd = "echo '[assembly: System.Reflection.AssemblyFileVersion(\"10.0.0.0\")]' > $@",
+)
+
+gen_resx_source(
+    name = "SR",
+    out = "SR.g.cs",
+    assembly_name = "crossgen2",
+    resource_name = "System.SR",
+    resx_file = "Properties/Resources.resx",
+)
+
+resgen(
+    name = "Resources",
+    out = "crossgen2.Properties.Resources.resources",
+    resx_file = "Properties/Resources.resx",
+)
+
+csharp_binary(
+    name = "crossgen2",
+    srcs = glob(["*.cs"]) + [
+        "//src/coreclr/tools/Common:CommandLineHelpers.cs",
+        "//src/coreclr/tools/Common:InstructionSetHelpers.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+        ":SR",
+        ":AssemblyInfo",
+    ],
+    resources = [":Resources"],
+    defines = ["READYTORUN"],
+    compiler_options = ["/unsafe"],
+    deps = [
+        "//src/coreclr/tools/aot/ILCompiler.DependencyAnalysisFramework",
+        "//src/coreclr/tools/aot/ILCompiler.ReadyToRun",
+        "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//system.commandline",
+    ],
+    target_frameworks = ["net10.0"],
+    is_aot_compatible = True,
+    visibility = ["//visibility:public"],
+)
+
+publish_binary(
+    name = "crossgen2-publish",
+    binary = ":crossgen2",
+    target_framework = "net10.0",
+    self_contained = True,
+    aot = True,
+    optimization_mode = "speed",
+    invariant_globalization = True,
+    # TODO: crossgen2 needs libjitinterface and libclrjit linked in.
+    # This requires adding a native_deps label_list attribute to publish_binary
+    # in rules_dotnet to support additional native library inputs during linking.
+    visibility = ["//visibility:public"],
+)

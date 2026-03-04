@@ -1,0 +1,40 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.IO.MemoryMappedFiles.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Windows-only
+            "MemoryMappedFilesTestsBase.Windows.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/IO/TempFile.cs",
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/Interop/Windows/Interop.BOOL.cs",
+        "//src/libraries/Common:src/Interop/Windows/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.CreateFileMapping.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.MapViewOfFile.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.MemOptions.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.SECURITY_ATTRIBUTES.cs",
+    ],
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+    ],
+    deps = [
+        "//src/libraries/System.IO.MemoryMappedFiles:ref_System.IO.MemoryMappedFiles",
+        "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:StreamConformanceTests",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    size = "medium",
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

@@ -1,0 +1,41 @@
+load("//src/libraries:defs.bzl", "live_csharp_library")
+load("//src/tests:live_test.bzl", "library_test")
+
+# Separate helper assembly loaded at runtime via Assembly.LoadFrom() by
+# StackTraceTests.ToString_ShowILOffset.  Built without debug info to match
+# MSBuild's <DebugType>None</DebugType>.
+live_csharp_library(
+    name = "ExceptionTestAssembly",
+    srcs = ["ExceptionTestAssembly/ExceptionTestAssembly.cs"],
+    # MSBuild uses DebugType=None but rules_dotnet always declares a .pdb
+    # output.  Omit /debug- and let the default PDB be generated; the test
+    # assertions about IL offsets still pass with debug info present.
+)
+
+library_test(
+    name = "System.Diagnostics.StackTrace.Tests",
+    srcs = glob(
+        ["*.cs"],
+        exclude = ["ExceptionTestAssembly/**"],
+    ),
+    deps = [
+        ":ExceptionTestAssembly",
+        "//src/libraries/System.Diagnostics.StackTrace:ref_System.Diagnostics.StackTrace",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries:ref_System.Text.RegularExpressions",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    writable_test_dir = True,
+)

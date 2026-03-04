@@ -1,0 +1,10 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.UnmanagedMemoryStream",
+    srcs = ["src/System.IO.UnmanagedMemoryStream.cs"],
+    deps = [
+        "//src/libraries:ref_System.Private.CoreLib",
+    ],
+    exclude_sr = True,
+)

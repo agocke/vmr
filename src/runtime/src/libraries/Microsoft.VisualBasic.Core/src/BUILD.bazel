@@ -1,0 +1,12 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+# PNSE/stub assembly — placeholder for the runtime pack.
+# On Linux, this library is either PlatformNotSupported or platform-specific.
+netcoreapp_impl_assembly(
+    name = "impl_Microsoft.VisualBasic.Core",
+    srcs = ["//src/libraries/shims:System.Void.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    exclude_sr = True,
+)

@@ -1,0 +1,31 @@
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet10-transport/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet10/nuget/v3/index.json
+
+storage: none
+framework: net10.0
+
+nuget Microsoft.CodeAnalysis.Common 4.11.0
+nuget Microsoft.CodeAnalysis.CSharp 4.11.0
+nuget Microsoft.CodeAnalysis.CSharp.Workspaces 4.11.0
+nuget System.Memory 4.5.5
+nuget microsoft.dotnet.arcade.sdk 10.0.0-beta.26102.102
+nuget System.Buffers 4.5.1
+nuget microsoft.dotnet.genfacades 10.0.0-beta.26102.102
+nuget Microsoft.Build.Framework 17.8.3
+nuget Microsoft.Build.Utilities.Core 17.8.3
+nuget System.Resources.Extensions 8.0.0
+nuget Microsoft.DotNet.XUnitAssert 2.9.3-beta.26102.102
+nuget XUnit.Abstractions 2.0.3
+nuget XUnit.Extensibility.Core 2.9.3
+nuget Microsoft.DotNet.XUnitExtensions 10.0.0-beta.26102.102
+nuget Microsoft.DotNet.Cecil 0.11.5-alpha.26108.2
+nuget System.Runtime.CompilerServices.Unsafe 6.0.0
+nuget System.Security.Cryptography.X509Certificates.TestData 10.0.0-beta.25418.1
+nuget System.Private.Runtime.UnicodeData 10.0.0-beta.25418.1
+nuget System.IO.Compression.TestData 10.0.0-beta.25418.1
+nuget System.Formats.Tar.TestData 10.0.0-beta.25418.1
+nuget System.Data.Common.TestData 10.0.0-beta.25418.1
+nuget System.Net.TestData 10.0.0-beta.25418.1
+nuget System.Text.RegularExpressions.TestData 10.0.0-beta.25418.1

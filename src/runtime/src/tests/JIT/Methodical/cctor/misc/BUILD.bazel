@@ -1,0 +1,158 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "testlib_misc",
+    srcs = ["testlib.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "threads2_cs_ro",
+    srcs = ["threads2.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [":testlib_misc",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "threads2_cs_r",
+    srcs = ["threads2.cs"],
+    pri = 1,
+    deps = [":testlib_misc",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "threads1_cs_d",
+    srcs = ["threads1.cs"],
+    pri = 1,
+    debug_type = "full",
+    deps = [":testlib_misc",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+il_coreclr_test(
+    name = "deadlock_r",
+    srcs = ["deadlock_r.il", "deadlock.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "threads2_cs_d",
+    srcs = ["threads2.cs"],
+    pri = 1,
+    debug_type = "full",
+    deps = [":testlib_misc",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "threads2_cs_do",
+    srcs = ["threads2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    deps = [":testlib_misc",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+il_coreclr_test(
+    name = "deadlock_d",
+    srcs = ["deadlock_d.il", "deadlock.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+# global_d is disabled (DisableProjectBuild=true, rva_statics support #2451)
+
+coreclr_test(
+    name = "threads1_cs_do",
+    srcs = ["threads1.cs"],
+    debug_type = "full",
+    optimize = True,
+    deps = [":testlib_misc",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+# global_r is disabled (DisableProjectBuild=true, rva_statics support #2451)
+
+coreclr_test(
+    name = "threads1_cs_r",
+    srcs = ["threads1.cs"],
+    pri = 1,
+    deps = [":testlib_misc",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "threads1_cs_ro",
+    srcs = ["threads1.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [":testlib_misc",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    
+        "//src/libraries/System.Threading:ref_System.Threading",
+    
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

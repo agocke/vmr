@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_23199_Target_32Bit",
+    srcs = ["GitHub_23199_Target_32Bit.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "GitHub_23199_Target_64Bit",
+    srcs = ["GitHub_23199_Target_64Bit.cs"],
+    pri = 1,
+    optimize = True,
+)

@@ -1,0 +1,22 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "JitTailcall2",
+    srcs = ["Jittailcall2.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "ExplicitTailCallNoSO",
+    srcs = ["ExplicitTailCallNoSO.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "jitTailcall1",
+    srcs = ["JitTailcall1.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

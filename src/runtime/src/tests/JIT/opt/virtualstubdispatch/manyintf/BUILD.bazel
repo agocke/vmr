@@ -1,0 +1,139 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "itest1",
+    srcs = ["itest1.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "itest2",
+    srcs = ["itest2.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "itest6",
+    srcs = ["itest6.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "itest8",
+    srcs = ["itest8.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "itest7",
+    srcs = ["itest7.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "itest9",
+    srcs = ["itest9.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "itest10",
+    srcs = ["itest10.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "itest5",
+    srcs = ["itest5.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "itest3",
+    srcs = ["itest3.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "itest4",
+    srcs = ["itest4.cs"],
+    visibility = ["//visibility:public"],
+)
+
+coreclr_test(
+    name = "ctest_cs_ro",
+    srcs = ["ctest.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [
+        ":itest1",
+        ":itest2",
+        ":itest3",
+        ":itest4",
+        ":itest5",
+        ":itest6",
+        ":itest7",
+        ":itest8",
+        ":itest9",
+        ":itest10",
+    ],
+)
+
+coreclr_test(
+    name = "ctest_cs_d",
+    srcs = ["ctest.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    deps = [
+        ":itest1",
+        ":itest2",
+        ":itest3",
+        ":itest4",
+        ":itest5",
+        ":itest6",
+        ":itest7",
+        ":itest8",
+        ":itest9",
+        ":itest10",
+    ],
+)
+
+coreclr_test(
+    name = "ctest_cs_r",
+    srcs = ["ctest.cs"],
+    pri = 1,
+    deps = [
+        ":itest1",
+        ":itest2",
+        ":itest3",
+        ":itest4",
+        ":itest5",
+        ":itest6",
+        ":itest7",
+        ":itest8",
+        ":itest9",
+        ":itest10",
+    ],
+)
+
+coreclr_test(
+    name = "ctest_cs_do",
+    srcs = ["ctest.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    deps = [
+        ":itest1",
+        ":itest2",
+        ":itest3",
+        ":itest4",
+        ":itest5",
+        ":itest6",
+        ":itest7",
+        ":itest8",
+        ":itest9",
+        ":itest10",
+    ],
+)

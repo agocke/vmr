@@ -1,0 +1,50 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "testgenstr",
+    srcs = ["testgenstr.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "teststr",
+    srcs = ["teststr.cs"],
+    visibility = ["//visibility:public"],
+)
+
+coreclr_test(
+    name = "test1-xassem",
+    srcs = ["test1.cs"],
+    pri = 1,
+    defines = ["XASSEM"],
+    deps = [":teststr", ":testgenstr",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "test4-xassem",
+    srcs = ["test4.cs"],
+    pri = 1,
+    defines = ["XASSEM"],
+    deps = [":teststr", ":testgenstr",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "test2-xassem",
+    srcs = ["test2.cs"],
+    pri = 1,
+    defines = ["XASSEM"],
+    deps = [":teststr", ":testgenstr",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

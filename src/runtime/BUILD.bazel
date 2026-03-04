@@ -1,0 +1,283 @@
+load("@rules_dotnet//dotnet:defs.bzl", "import_library")
+load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
+load("@aspect_bazel_lib//lib:tar.bzl", "tar")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("//eng/bazel:runtime_archive.bzl", "runtime_staging")
+load("//eng/bazel:runtime_layout.bzl", "runtime_layout")
+load("//eng/bazel:version.bzl", "PRODUCT_VERSION", "PRODUCT_VERSION_FULL")
+
+exports_files([
+    "artifacts/obj/coreclr/System.Private.CoreLib/linux.x64.Debug/System.Private.CoreLib.Strings.resources",
+    "artifacts/obj/coreclr/System.Private.CoreLib/osx.arm64.Debug/System.Private.CoreLib.Strings.resources",
+    "LICENSE.TXT",
+    "THIRD-PARTY-NOTICES.TXT",
+])
+
+# ── Per-component build configuration flags ──────────────────────────
+# These replace the legacy --define runtime_debug=1 mechanism with modern
+# Bazel string_flag build settings.
+#
+# Set via command line:  --//:clr_config=release  --//:libs_config=release
+# Or via .bazelrc:       --config=clr_release     --config=libs_release
+#
+# CoreCLR configuration: debug (default), checked, or release.
+#   debug   = assertions + debug defines + no optimization
+#   checked = assertions + debug defines + release optimization (-O2)
+#   release = no assertions + NDEBUG + release optimization
+string_flag(
+    name = "clr_config",
+    build_setting_default = "debug",
+    visibility = ["//visibility:public"],
+)
+
+# Libraries configuration: debug (default) or release.
+string_flag(
+    name = "libs_config",
+    build_setting_default = "debug",
+    visibility = ["//visibility:public"],
+)
+
+# ── CoreCLR config_settings ──────────────────────────────────────────
+config_setting(
+    name = "clr_debug",
+    flag_values = {"//:clr_config": "debug"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "clr_checked",
+    flag_values = {"//:clr_config": "checked"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "clr_release",
+    flag_values = {"//:clr_config": "release"},
+    visibility = ["//visibility:public"],
+)
+
+# ── Libraries config_settings ────────────────────────────────────────
+config_setting(
+    name = "libs_debug",
+    flag_values = {"//:libs_config": "debug"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "libs_release",
+    flag_values = {"//:libs_config": "release"},
+    visibility = ["//visibility:public"],
+)
+
+# Compiler detection: set --define compiler=clang in .bazelrc config:clang.
+config_setting(
+    name = "compiler_clang",
+    define_values = {"compiler": "clang"},
+    visibility = ["//visibility:public"],
+)
+
+# Debug mode detection: matches -c dbg (--compilation_mode=dbg).
+config_setting(
+    name = "debug_mode",
+    values = {"compilation_mode": "dbg"},
+    visibility = ["//visibility:public"],
+)
+
+# Legacy runtime_debug config_setting — kept for backward compatibility.
+# Prefer //:clr_debug or //:clr_checked for new code.
+config_setting(
+    name = "runtime_debug",
+    flag_values = {"//:clr_config": "debug"},
+    visibility = ["//visibility:public"],
+)
+
+# ── Assembled native runtime layout ──────────────────────────────────
+runtime_layout(
+    name = "runtime_native",
+    version = PRODUCT_VERSION,
+    root_files = [
+        "//src/native/corehost:dotnet",
+    ],
+    fxr_files = [
+        "//src/native/corehost:hostfxr",
+    ],
+    framework_files = select({
+        "@platforms//os:macos": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr_dylib"],
+        "//conditions:default": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr.so"],
+    }) + [
+        "//src/native/corehost:hostpolicy",
+        "//src/native/libs/System.Globalization.Native:System.Globalization.Native",
+        "//src/native/libs/System.IO.Compression.Native:System.IO.Compression.Native",
+        "//src/native/libs/System.IO.Ports.Native:System.IO.Ports.Native",
+        "//src/native/libs/System.Native:System.Native",
+        "//src/native/libs/System.Net.Security.Native:System.Net.Security.Native",
+    ] + select({
+        "@platforms//os:linux": ["//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl"],
+        "//conditions:default": [],
+    }),
+)
+
+# ── Runtime archive (tar.gz) matching MSBuild packs output ───────────
+# Produces dotnet-runtime-{version}-{rid}.tar.gz with the same file
+# layout as:  ./build.sh packs -rc Release -lc Release
+#
+# Compare against MSBuild output with:
+#   ./compare-runtime-packs.sh \
+#     artifacts/packages/Debug/Shipping/dotnet-runtime-*-linux-x64.tar.gz \
+#     bazel-bin/dotnet-runtime-*-linux-x64.tar.gz
+runtime_staging(
+    name = "runtime_staging",
+    version = PRODUCT_VERSION_FULL,
+    root_files = [
+        "//src/native/corehost:dotnet",
+    ],
+    license_files = {
+        "//:LICENSE.TXT": "LICENSE.txt",
+        "//:THIRD-PARTY-NOTICES.TXT": "ThirdPartyNotices.txt",
+    },
+    fxr_files = [
+        "//src/native/corehost:hostfxr",
+    ],
+    framework_native_files = select({
+        "@platforms//os:macos": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr_dylib"],
+        "//conditions:default": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr.so"],
+    }) + [
+        "//src/native/corehost:hostpolicy",
+        "//src/coreclr/jit:libclrjit.so",
+        "//src/coreclr/gc:clrgc",
+        "//src/coreclr/gc:clrgcexp",
+        "//src/native/libs/System.Globalization.Native:System.Globalization.Native",
+        "//src/native/libs/System.IO.Compression.Native:System.IO.Compression.Native",
+        "//src/native/libs/System.Native:System.Native",
+        "//src/native/libs/System.Net.Security.Native:System.Net.Security.Native",
+    ] + select({
+        "@platforms//os:linux": ["//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl"],
+        "//conditions:default": [],
+    }),
+    # TODO: add these once Bazel BUILD files exist for them:
+    #   createdump, libmscordaccore.so, libmscordbi.so,
+    #   libcoreclrtraceptprovider.so
+    framework_managed_files = [
+        "//src/libraries:impl_netcoreapp",
+        # ── Shim assemblies (type-forwarding facades) ──
+        "//src/libraries/shims/Microsoft.VisualBasic:impl_Microsoft.VisualBasic",
+        "//src/libraries/shims/System:impl_System",
+        "//src/libraries/shims/System.ComponentModel.DataAnnotations:impl_System.ComponentModel.DataAnnotations",
+        "//src/libraries/shims/System.Configuration:impl_System.Configuration",
+        "//src/libraries/shims/System.Core:impl_System.Core",
+        "//src/libraries/shims/System.Data:impl_System.Data",
+        "//src/libraries/shims/System.Drawing:impl_System.Drawing",
+        "//src/libraries/shims/System.IO.Compression.FileSystem:impl_System.IO.Compression.FileSystem",
+        "//src/libraries/shims/System.Net:impl_System.Net",
+        "//src/libraries/shims/System.Numerics:impl_System.Numerics",
+        "//src/libraries/shims/System.Runtime.Serialization:impl_System.Runtime.Serialization",
+        "//src/libraries/shims/System.Security:impl_System.Security",
+        "//src/libraries/shims/System.ServiceModel.Web:impl_System.ServiceModel.Web",
+        "//src/libraries/shims/System.ServiceProcess:impl_System.ServiceProcess",
+        "//src/libraries/shims/System.Transactions:impl_System.Transactions",
+        "//src/libraries/shims/System.Web:impl_System.Web",
+        "//src/libraries/shims/System.Windows:impl_System.Windows",
+        "//src/libraries/shims/System.Xml:impl_System.Xml",
+        "//src/libraries/shims/System.Xml.Linq:impl_System.Xml.Linq",
+        "//src/libraries/shims/System.Xml.Serialization:impl_System.Xml.Serialization",
+        "//src/libraries/shims/WindowsBase:impl_WindowsBase",
+        # ── Platform-specific libraries (PNSE stubs on Linux) ──
+        "//src/libraries/Microsoft.VisualBasic.Core/src:impl_Microsoft.VisualBasic.Core",
+        "//src/libraries/System.IO.Pipes.AccessControl/src:impl_System.IO.Pipes.AccessControl",
+        "//src/libraries/System.Net.Quic:impl_System.Net.Quic",
+        "//src/libraries/System.Runtime.InteropServices.JavaScript/src:impl_System.Runtime.InteropServices.JavaScript",
+        "//src/libraries/System.Threading.AccessControl/src:impl_System.Threading.AccessControl",
+    ] + select({
+        "@platforms//os:linux": [
+            "//src/coreclr/System.Private.CoreLib:crossgen_System.Private.CoreLib",
+        ],
+        "//conditions:default": [],
+    }),
+    # Assemblies in impl_netcoreapp that are NOT part of the runtime pack.
+    exclude_managed_files = [
+        "Microsoft.Extensions.Primitives.dll",
+        "System.CodeDom.dll",
+        "System.Formats.Cbor.dll",
+        "System.Formats.Nrbf.dll",
+        "System.Resources.Extensions.dll",
+        "System.Security.Cryptography.Pkcs.dll",
+        "System.Security.Cryptography.Xml.dll",
+        "System.Threading.RateLimiting.dll",
+    ],
+    # The R2R CoreLib overwrites the IL version from impl_netcoreapp.
+    rename_files = {
+        "System.Private.CoreLib.r2r.dll": "System.Private.CoreLib.dll",
+    },
+    framework_data_files = [
+        "//eng/bazel/data:Microsoft.NETCore.App.deps.json",
+        "//eng/bazel/data:Microsoft.NETCore.App.runtimeconfig.json",
+    ],
+)
+
+LINUX_RID = "linux-x64"
+MACOS_RID = "osx-arm64"
+
+tar(
+    name = "runtime_archive_linux",
+    out = "dotnet-runtime-" + PRODUCT_VERSION_FULL + "-" + LINUX_RID + ".tar.gz",
+    srcs = [":runtime_staging"],
+    compress = "gzip",
+)
+
+tar(
+    name = "runtime_archive_macos",
+    out = "dotnet-runtime-" + PRODUCT_VERSION_FULL + "-" + MACOS_RID + ".tar.gz",
+    srcs = [":runtime_staging"],
+    compress = "gzip",
+)
+
+alias(
+    name = "runtime_archive",
+    actual = select({
+        "@platforms//os:macos": ":runtime_archive_macos",
+        "//conditions:default": ":runtime_archive_linux",
+    }),
+)
+
+# ── Core_Root: minimal runtime for JIT/coreclr tests ─────────────────
+# Uses impl_netcoreapp_minimal (~30 assemblies) instead of impl_netcoreapp
+# (~145 assemblies). This reduces cache invalidation: changes to libraries
+# like System.Net.Sockets, System.Xml, etc. won't invalidate JIT test cache.
+# Library tests use shared_testhost which references impl_netcoreapp directly.
+copy_to_directory(
+    name = "Core_Root",
+    out = "Core_Root",
+    srcs = [
+        "//src/coreclr/hosts:corerun",
+        "//src/native/libs/System.Native:System.Native",
+        "//src/native/libs/System.Globalization.Native:System.Globalization.Native",
+        "//src/libraries:impl_netcoreapp_minimal",
+    ] + select({
+        "@platforms//os:macos": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr_dylib"],
+        "//conditions:default": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr.so"],
+    }) + select({
+        "@platforms//os:linux": [
+            "//src/coreclr/System.Private.CoreLib:crossgen_System.Private.CoreLib",
+            "//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl",
+        ],
+        "@platforms//os:macos": [],
+    }),
+    allow_overwrites = True,
+    replace_prefixes = {
+        "System.Private.CoreLib.r2r.dll": "System.Private.CoreLib.dll",
+    },
+    root_paths = [ "**" ],
+    visibility = ["//visibility:public"],
+)
+
+import_library(
+    name = "TargetingPack",
+    library_name = "xunit.abstractions",
+    refs = [
+        "artifacts/TargetingPack/xunit.assert.dll",
+        "artifacts/TargetingPack/xunit.abstractions.dll",
+        "artifacts/TargetingPack/xunit.core.dll",
+        "artifacts/TargetingPack/Microsoft.DotNet.XUnitExtensions.dll",
+    ],
+    visibility = ["//visibility:public"]
+)

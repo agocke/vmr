@@ -1,0 +1,28 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Memory.Tests",
+    srcs = glob([
+        "**/*.cs",
+    ]) + [
+        "//src/libraries/Common/tests:System/Buffers/NativeMemoryManager.cs",
+        "//src/libraries/Common/tests:System/RealFormatterTestsBase.cs",
+        "//src/libraries/Common/tests:System/RealParserTestsBase.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    size = "large",
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

@@ -1,0 +1,27 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Formats.Nrbf.Tests",
+    srcs = glob(["**/*.cs"]) + [
+        "//src/libraries/System.Formats.Nrbf:src/System/Formats/Nrbf/BinaryArrayType.cs",
+        "//src/libraries/System.Formats.Nrbf:src/System/Formats/Nrbf/BinaryType.cs",
+        "//src/libraries/System.Formats.Nrbf:src/System/Formats/Nrbf/PrimitiveType.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Formats.Nrbf:impl_System.Formats.Nrbf",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    nowarn = ["SYSLIB0011", "SYSLIB0050"],
+    size = "large",
+)

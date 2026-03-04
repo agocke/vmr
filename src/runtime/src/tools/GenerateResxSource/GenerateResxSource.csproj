@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);SYSLIB1045;CA1845;CA1861;CA1834;IDE0200;CA1859;CA1852</NoWarn>
+    <Nullable>annotations</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.Arcade.Sdk" Version="9.0.0-beta.24423.2" />
+    <Reference Include="$(ArcadeSdkBuildTasksAssembly)" />
+  </ItemGroup>
+
+</Project>

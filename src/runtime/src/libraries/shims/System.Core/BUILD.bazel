@@ -1,0 +1,25 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Core",
+    srcs = [
+        "src/System.Core.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.IO.MemoryMappedFiles:ref_System.IO.MemoryMappedFiles",
+        "//src/libraries/shims/stubs:ref_System.IO.Pipes.AccessControl",
+        "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Linq.Parallel:ref_System.Linq.Parallel",
+        "//src/libraries/System.Linq.Queryable:ref_System.Linq.Queryable",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/shims/stubs:ref_System.Diagnostics.EventLog",
+        "//src/libraries/shims/stubs:ref_System.Diagnostics.PerformanceCounter",
+    ],
+    exclude_sr = True,
+)

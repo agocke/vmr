@@ -1,0 +1,67 @@
+# AOT JIT interface — shared library used by ILC/crossgen2 for AOT compilation.
+# Matches CMake: src/coreclr/tools/aot/jitinterface/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_binary(
+    name = "libjitinterface_x64.so",
+    srcs = [
+        "corinfoexception.cpp",
+        "corinfoexception.h",
+        "dllexport.h",
+        "jithost.cpp",
+        "jitinterface.cpp",
+        "jitinterface_generated.h",
+        "jitwrapper.cpp",
+    ],
+    linkshared = True,
+    linkstatic = True,
+    copts = [
+        "-Isrc/coreclr/tools/aot/jitinterface",
+        "-fvisibility=default",
+    ],
+    local_defines = PLATFORM_DEFINES,
+    deps = [
+        "//src/coreclr/inc:coreclr_inc_headers_only",
+        "//src/native/minipal",
+    ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+)
+
+cc_binary(
+    name = "libjitinterface_arm64.so",
+    srcs = [
+        "corinfoexception.cpp",
+        "corinfoexception.h",
+        "dllexport.h",
+        "jithost.cpp",
+        "jitinterface.cpp",
+        "jitinterface_generated.h",
+        "jitwrapper.cpp",
+    ],
+    linkshared = True,
+    linkstatic = True,
+    copts = [
+        "-Isrc/coreclr/tools/aot/jitinterface",
+        "-fvisibility=default",
+    ],
+    local_defines = PLATFORM_DEFINES,
+    deps = [
+        "//src/coreclr/inc:coreclr_inc_headers_only",
+        "//src/native/minipal",
+    ],
+    target_compatible_with = ["@platforms//cpu:arm64"],
+)
+
+# macOS needs .dylib extension for dlopen to find the library.
+# crossgen2 loads jitinterface by name via NativeLibrary.Load.
+genrule(
+    name = "libjitinterface_arm64_dylib",
+    srcs = [":libjitinterface_arm64.so"],
+    outs = ["libjitinterface_arm64.dylib"],
+    cmd = "cp $< $@",
+    target_compatible_with = ["@platforms//cpu:arm64"],
+)

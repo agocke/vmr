@@ -1,0 +1,75 @@
+load("@rules_dotnet//dotnet:defs.bzl", "csharp_binary", "csharp_library")
+load("//:defs.bzl", "resgen")
+
+# Generate compiled resource from Strings.resx.
+# The source accessor is already provided by Resources/Strings.Designer.cs.
+resgen(
+    name = "resgen_illink",
+    out = "Mono.Linker.Resources.Strings.resources",
+    resx_file = "Resources/Strings.resx",
+)
+
+_COMMON_SRCS = glob(
+    ["**/*.cs"],
+    exclude = ["ref/**"],
+) + [
+    "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+    # ILLink.Shared sources (shared project, compiled inline)
+    "//src/tools/illink/src/ILLink.Shared:srcs",
+    "//src/tools/illink/src/ILLink.Shared:resx_shared_strings",
+]
+
+_COMMON_RESOURCES = [
+    ":resgen_illink",
+    "//src/tools/illink/src/ILLink.Shared:resgen_shared_strings",
+]
+
+_COMMON_RESOURCE_LOGICAL_NAMES = {
+    "Mono.Linker.Resources.Strings.resources": "Mono.Linker.Resources.Strings.resources",
+    "SharedStrings.resources": "ILLink.Shared.SharedStrings.resources",
+}
+
+_COMMON_NOWARN = [
+    "CS1701",
+    "CS8500",
+    "CS8969",
+    "CA1866",
+    "CS0436",
+]
+
+csharp_binary(
+    name = "illink",
+    srcs = _COMMON_SRCS,
+    out = "illink",
+    deps = [
+        "@paket.main//microsoft.dotnet.cecil",
+    ],
+    resources = _COMMON_RESOURCES,
+    resource_logical_names = _COMMON_RESOURCE_LOGICAL_NAMES,
+    defines = ["ILLINK"],
+    allow_unsafe_blocks = True,
+    cls_compliant = False,
+    nullable = "enable",
+    target_frameworks = ["net10.0"],
+    nowarn = _COMMON_NOWARN,
+    visibility = ["//visibility:public"],
+)
+
+# Library target for use as a dependency by tests and ILLink.Tasks.
+csharp_library(
+    name = "illink_lib",
+    srcs = _COMMON_SRCS,
+    out = "illink",
+    deps = [
+        "@paket.main//microsoft.dotnet.cecil",
+    ],
+    resources = _COMMON_RESOURCES,
+    resource_logical_names = _COMMON_RESOURCE_LOGICAL_NAMES,
+    defines = ["ILLINK"],
+    allow_unsafe_blocks = True,
+    cls_compliant = False,
+    nullable = "enable",
+    target_frameworks = ["net10.0"],
+    nowarn = _COMMON_NOWARN,
+    visibility = ["//src/tools/illink:__subpackages__"],
+)

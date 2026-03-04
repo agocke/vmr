@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_8220",
+    srcs = ["GitHub_8220.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

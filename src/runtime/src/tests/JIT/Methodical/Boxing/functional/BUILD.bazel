@@ -1,0 +1,27 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "fibo_d",
+    srcs = ["fibo_d.il", "fibo.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "sin_d",
+    srcs = ["sin_d.il", "sin.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "sin_r",
+    srcs = ["sin_r.il", "sin.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "fibo_r",
+    srcs = ["fibo_r.il", "fibo.il"],
+    debug_type = "pdbonly",
+)

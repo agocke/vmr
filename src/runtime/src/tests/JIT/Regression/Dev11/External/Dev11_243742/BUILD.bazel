@@ -1,0 +1,17 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "dll",
+    srcs = ["dll.cs"],
+    visibility = ["//visibility:public"],
+)
+
+coreclr_test(
+    name = "app",
+    srcs = ["app.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    deps = [":dll"],
+)

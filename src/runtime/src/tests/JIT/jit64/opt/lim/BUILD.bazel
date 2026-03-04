@@ -1,0 +1,16 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "lim_001",
+    srcs = ["lim_001.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "lim_002",
+    srcs = ["lim_002.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

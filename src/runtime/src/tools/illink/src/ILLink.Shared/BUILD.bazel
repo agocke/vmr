@@ -1,0 +1,31 @@
+load("//:defs.bzl", "resgen", "gen_resx_source")
+
+# ILLink.Shared is a shared project: its source files are compiled
+# as part of the consuming project (linker, Roslyn analyzer), not standalone.
+# Expose files via filegroup and exports_files for inclusion.
+
+exports_files(glob(["**/*.cs"]) + ["SharedStrings.resx"])
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["**/*.cs"]),
+    visibility = ["//src/tools/illink:__subpackages__"],
+)
+
+# Resource generation for SharedStrings.resx — each consumer includes these targets.
+resgen(
+    name = "resgen_shared_strings",
+    out = "SharedStrings.resources",
+    resx_file = "SharedStrings.resx",
+    visibility = ["//src/tools/illink:__subpackages__"],
+)
+
+gen_resx_source(
+    name = "resx_shared_strings",
+    out = "ILLink.Shared.SharedStrings.cs",
+    assembly_name = "ILLink.Shared",
+    resource_name = "ILLink.Shared.SharedStrings",
+    resource_class_name = "ILLink.Shared.SharedStrings",
+    resx_file = "SharedStrings.resx",
+    visibility = ["//src/tools/illink:__subpackages__"],
+)

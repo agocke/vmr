@@ -1,0 +1,15 @@
+load("//:defs.bzl", "csharp_library")
+
+csharp_library(
+    name = "ILCompiler.DependencyAnalysisFramework",
+    srcs = glob(["*.cs"]) + [
+        "//src/coreclr/tools/Common:Sorting/ArrayAccessor.cs",
+        "//src/coreclr/tools/Common:Sorting/ICompareAsEqualAction.cs",
+        "//src/coreclr/tools/Common:Sorting/ISortableDataStructureAccessor.cs",
+        "//src/coreclr/tools/Common:Sorting/ListAccessor.cs",
+        "//src/coreclr/tools/Common:Sorting/MergeSort.cs",
+        "//src/coreclr/tools/Common:Sorting/MergeSortCore.cs",
+    ],
+    target_frameworks = ["net10.0"],
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,23 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "b518440",
+    srcs = ["b518440.il"],
+    pri = 1,
+)
+
+il_coreclr_test(
+    name = "copy_prop_byref_to_native_int",
+    srcs = ["copy_prop_byref_to_native_int.il"],
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "hole",
+    srcs = ["hole.il"],
+)
+
+il_coreclr_test(
+    name = "b39946",
+    srcs = ["b39946.il"],
+)

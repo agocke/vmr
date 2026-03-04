@@ -1,0 +1,65 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Runtime.InteropServices.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Windows-specific tests
+            "System/Runtime/InteropServices/ComAwareEventInfoTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/ChangeWrapperHandleStrengthTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/CreateWrapperOfTypeTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/FinalReleaseComObjectTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GenerateGuidForTypeTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GenerateProgIdForTypeTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GetComObjectDataTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GetIDispatchForObjectTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GetNativeVariantForObjectTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GetObjectForIUnknownTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GetObjectForNativeVariantTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GetStartComSlotTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GetTypedObjectForIUnknownTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GetUniqueObjectForIUnknownTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/IsComObjectTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/IsTypeVisibleFromComTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/QueryInterfaceTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/ReleaseComObjectTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/SetComObjectDataTests.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/Common/CommonTypes.Windows.cs",
+            "System/Runtime/InteropServices/Marshal/GetEndComSlotTests.Windows.cs",
+            "System/Runtime/InteropServices/PosixSignalRegistrationTests.Windows.cs",
+            # Not included in the MSBuild project file
+            "System/Runtime/InteropServices/Marshalling/ComObjectTests.cs",
+            # Needs System.Drawing.Primitives (not yet in Bazel)
+            "System/Runtime/InteropServices/Marshal/GetNativeVariantForObjectTests.cs",
+            "System/Runtime/InteropServices/Marshal/GetObjectForNativeVariantTests.cs",
+            "System/Runtime/InteropServices/Marshal/GetObjectsForNativeVariantsTests.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/GenericMathHelpers.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+    ],
+    allow_unsafe_blocks = True,
+    size = "large",
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

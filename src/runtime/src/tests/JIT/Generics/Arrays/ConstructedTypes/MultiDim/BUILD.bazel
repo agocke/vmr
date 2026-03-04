@@ -1,0 +1,43 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "struct01_static_MultiDim",
+    srcs = ["struct01_static.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class01_ConstructedTypes_MultiDim",
+    srcs = ["class01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class01_instance_MultiDim",
+    srcs = ["class01_Instance.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class01_static_MultiDim",
+    srcs = ["class01_static.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct01_ConstructedTypes",
+    srcs = ["struct01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "struct01_instance_MultiDim",
+    srcs = ["struct01_Instance.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

@@ -1,0 +1,204 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "testlib_xassem",
+    srcs = ["testlib.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+coreclr_test(
+    name = "xprecise1b_cs_d",
+    srcs = ["xprecise1b.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise2_cs_do",
+    srcs = ["xprecise2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise2_cs_d",
+    srcs = ["xprecise2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise4_cs_do",
+    srcs = ["xprecise4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise2_cs_ro",
+    srcs = ["xprecise2.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise4_cs_r",
+    srcs = ["xprecise4.cs"],
+    pri = 1,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise1_cs_d",
+    srcs = ["xprecise1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise1_cs_ro",
+    srcs = ["xprecise1.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise1b_cs_do",
+    srcs = ["xprecise1b.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise4_cs_d",
+    srcs = ["xprecise4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise2_cs_r",
+    srcs = ["xprecise2.cs"],
+    pri = 1,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise1b_cs_r",
+    srcs = ["xprecise1b.cs"],
+    pri = 1,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise1_cs_do",
+    srcs = ["xprecise1.cs"],
+    debug_type = "full",
+    optimize = True,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise4_cs_ro",
+    srcs = ["xprecise4.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise1b_cs_ro",
+    srcs = ["xprecise1b.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "xprecise1_cs_r",
+    srcs = ["xprecise1.cs"],
+    pri = 1,
+    deps = [":testlib_xassem",
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

@@ -1,0 +1,253 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "class2_d",
+    srcs = ["class2_d.il", "class2.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+coreclr_test(
+    name = "class1_cs_d",
+    srcs = ["class1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "vt4_cs_d",
+    srcs = ["vt4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "class1_cs_r",
+    srcs = ["class1.cs"],
+    pri = 1,
+)
+
+il_coreclr_test(
+    name = "vt4_r",
+    srcs = ["vt4_r.il", "vt4.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "vt3_cs_d",
+    srcs = ["vt3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "class1_cs_do",
+    srcs = ["class1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "vt1_cs_d",
+    srcs = ["vt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "class2_cs_do",
+    srcs = ["class2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "vt3_cs_r",
+    srcs = ["vt3.cs"],
+    pri = 1,
+)
+
+coreclr_test(
+    name = "class2_cs_d",
+    srcs = ["class2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "vt1_cs_ro",
+    srcs = ["vt1.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "class1_r",
+    srcs = ["class1_r.il", "class1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "class2_cs_ro",
+    srcs = ["class2.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "vt2_r",
+    srcs = ["vt2_r.il", "vt2.il"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "vt2_cs_ro",
+    srcs = ["vt2.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "vt2_cs_d",
+    srcs = ["vt2.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "vt2_d",
+    srcs = ["vt2_d.il", "vt2.il"],
+    debug_type = "full",
+)
+
+coreclr_test(
+    name = "vt3_cs_do",
+    srcs = ["vt3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "vt2_cs_do",
+    srcs = ["vt2.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "vt2_cs_r",
+    srcs = ["vt2.cs"],
+)
+
+coreclr_test(
+    name = "vt1_cs_do",
+    srcs = ["vt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "class2_r",
+    srcs = ["class2_r.il", "class2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "vt4_cs_r",
+    srcs = ["vt4.cs"],
+    pri = 1,
+)
+
+il_coreclr_test(
+    name = "vt1_d",
+    srcs = ["vt1_d.il", "vt1.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "class1_d",
+    srcs = ["class1_d.il", "class1.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+coreclr_test(
+    name = "vt4_cs_do",
+    srcs = ["vt4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "vt3_r",
+    srcs = ["vt3_r.il", "vt3.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "vt1_r",
+    srcs = ["vt1_r.il", "vt1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "vt4_cs_ro",
+    srcs = ["vt4.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "vt1_cs_r",
+    srcs = ["vt1.cs"],
+    pri = 1,
+)
+
+coreclr_test(
+    name = "class1_cs_ro",
+    srcs = ["class1.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "vt4_d",
+    srcs = ["vt4_d.il", "vt4.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+coreclr_test(
+    name = "class2_cs_r",
+    srcs = ["class2.cs"],
+    pri = 1,
+)
+
+il_coreclr_test(
+    name = "vt3_d",
+    srcs = ["vt3_d.il", "vt3.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+coreclr_test(
+    name = "vt3_cs_ro",
+    srcs = ["vt3.cs"],
+    pri = 1,
+    optimize = True,
+)

@@ -1,0 +1,108 @@
+# libcoreclr — the main CoreCLR runtime shared library.
+# Matches CMake: src/coreclr/dlls/mscoree/coreclr/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_binary(
+    name = "libcoreclr.so",
+    srcs = [
+        "//src/coreclr/dlls:mscoree/mscoree.cpp",
+        "//src/coreclr/dlls:mscoree/exports.cpp",
+    ],
+    linkshared = True,
+    linkstatic = True,
+    copts = [
+        "-Isrc/coreclr/vm",
+        "-Isrc/coreclr",
+        "-Isrc/coreclr/gc",
+        "-Isrc/coreclr/gc/env",
+        "-Isrc/coreclr/runtime",
+        "-Isrc/coreclr/vm/eventing/eventpipe",
+        "-Isrc/native/corehost",
+    ] + select({
+        "@platforms//cpu:arm64": ["-Isrc/coreclr/vm/arm64"],
+        "//conditions:default": ["-Isrc/coreclr/vm/amd64"],
+    }) + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-include", "src/coreclr/vm/common.h",
+        "-Wno-error",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES + [
+        "FX_VER_INTERNALNAME_STR=CoreCLR.dll",
+        "FEATURE_VIRTUAL_STUB_DISPATCH",
+        "FEATURE_SIMD",
+        "FEATURE_HW_INTRINSICS",
+        "FEATURE_MASKED_HW_INTRINSICS",
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-Wl,-install_name,@rpath/libcoreclr.dylib",
+            "-Wl,-exported_symbols_list,$(location bazel/coreclr.exports.mac)",
+            "-framework", "CoreFoundation",
+            "-framework", "Security",
+        ],
+        "//conditions:default": [
+            "-Wl,-Bsymbolic",
+            "-Wl,-soname,libcoreclr.so",
+            "-Wl,--version-script=$(location bazel/coreclr.exports)",
+        ],
+    }),
+    additional_linker_inputs = select({
+        "@platforms//os:macos": ["bazel/coreclr.exports.mac"],
+        "//conditions:default": ["bazel/coreclr.exports"],
+    }),
+    deps = [
+        # CORECLR_LIBRARIES (order matters for static linking)
+        "//src/coreclr/dlls/mscorrc",
+        "//src/coreclr/utilcode",
+        "//src/coreclr/debug:cordbee_wks",
+        "//src/coreclr/debug:debug-pal",
+        "//src/coreclr/unwinder:unwinder_wks",
+        "//src/coreclr/binder:v3binder",
+        "//src/coreclr/md:mdcompiler_wks",
+        "//src/coreclr/md:mdruntime_wks",
+        "//src/coreclr/md:mdruntimerw_wks",
+        "//src/coreclr/md/ceefilegen:ceefgen",
+        "//src/coreclr/classlibnative:bcltype",
+        "//src/coreclr/classlibnative:comfloat_wks",
+        "//src/coreclr/inc:corguids",
+        "//src/native/libs/System.Globalization.Native:System.Globalization.Native_lib",
+        "//src/coreclr/interop",
+        "//src/coreclr/minipal:coreclrminipal",
+        "//src/coreclr/gc:gc_pal",
+        "//src/coreclr/vm/datadescriptor:cdac_contract_descriptor",
+        "//src/coreclr/vm/datadescriptor:gc_wks_descriptor",
+        "//src/coreclr/vm/datadescriptor:gc_svr_descriptor",
+        "//src/coreclr/gc:gc_vxsort",
+        "//src/coreclr/pal:tracepointprovider",
+        "//src/coreclr/vm/eventing:eventpipe",
+        "//src/coreclr/vm/eventing:userevents",
+        "//src/coreclr/pal:eventprovider",
+        "//src/coreclr/pal:coreclrpal",
+        # CLRJIT_STATIC (FEATURE_STATICALLY_LINKED + FEATURE_JIT)
+        "//src/coreclr/jit:clrjit_static",
+        "//src/coreclr/gcinfo",
+        # VM
+        "//src/coreclr/vm:cee_wks_core",
+        "//src/coreclr/vm:cee_wks",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventpipe_shim_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+        "//src/coreclr/gc:gc_headers",
+        "//src/coreclr/runtime:runtime_headers",
+        "//src/native/corehost:corehost_headers",
+        "//src/native/eventpipe:eventpipe-headers",
+        "//src/coreclr/nativeresources:nativeresourcestring",
+    ],
+)
+
+# On macOS, produce libcoreclr.dylib from libcoreclr.so
+genrule(
+    name = "libcoreclr_dylib",
+    srcs = [":libcoreclr.so"],
+    outs = ["libcoreclr.dylib"],
+    cmd = "cp $< $@",
+)

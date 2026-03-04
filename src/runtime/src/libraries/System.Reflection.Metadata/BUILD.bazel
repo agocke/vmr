@@ -1,0 +1,59 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "src/System/Reflection/Metadata/AssemblyNameInfo.cs",
+    "src/System/Reflection/Metadata/TypeName.cs",
+    "src/System/Reflection/Metadata/TypeNameParseOptions.cs",
+    "src/System/Reflection/Metadata/TypeNameParser.cs",
+    "src/System/Reflection/Metadata/TypeNameParserHelpers.cs",
+    "src/Resources/Strings.resx",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Reflection.Metadata",
+    srcs = [
+        "ref/System.Reflection.Metadata.cs",
+        "ref/System.Reflection.Metadata.Manual.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+    ],
+    cls_compliant = False,
+    allow_unsafe_blocks = True,
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Reflection.Metadata",
+    srcs = glob(
+        ["src/System/**/*.cs"],
+        exclude = [
+            # Not for NETCoreApp
+            "src/System/Reflection/Internal/Utilities/EncodingHelper.cs",
+            "src/System/Reflection/Internal/Utilities/StreamExtensions.netstandard2.0.cs",
+        ],
+    ) + [
+        "src/Properties/InternalsVisibleTo.cs",
+        "//src/libraries/Common:src/System/HexConverter.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/Common:src/System/Reflection/AssemblyNameFormatter.cs",
+        "//src/libraries/Common:src/System/Reflection/AssemblyNameParser.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.AppendSpanFormattable.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    cls_compliant = False,
+    defines = ["SYSTEM_REFLECTION_METADATA"],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.IO.Compression:ref_System.IO.Compression",
+        "//src/libraries/System.IO.MemoryMappedFiles:ref_System.IO.MemoryMappedFiles",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)

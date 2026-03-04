@@ -1,0 +1,113 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "overflow01_sub",
+    srcs = ["overflow01.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_SUB"],
+)
+
+coreclr_test(
+    name = "overflow02_sub",
+    srcs = ["overflow02.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_SUB"],
+)
+
+coreclr_test(
+    name = "overflow02_add",
+    srcs = ["overflow02.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_ADD"],
+)
+
+coreclr_test(
+    name = "overflow02_div",
+    srcs = ["overflow02.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_DIV"],
+)
+
+coreclr_test(
+    name = "overflow02_mul",
+    srcs = ["overflow02.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_MUL"],
+)
+
+coreclr_test(
+    name = "overflow04_mul",
+    srcs = ["overflow04.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_MUL"],
+)
+
+coreclr_test(
+    name = "overflow01_mul",
+    srcs = ["overflow01.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_MUL"],
+)
+
+coreclr_test(
+    name = "overflow04_sub",
+    srcs = ["overflow04.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_SUB"],
+)
+
+coreclr_test(
+    name = "overflow04_div",
+    srcs = ["overflow04.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_DIV"],
+)
+
+coreclr_test(
+    name = "overflow03_add",
+    srcs = ["overflow03.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_ADD"],
+)
+
+coreclr_test(
+    name = "overflow01_add",
+    srcs = ["overflow01.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_ADD"],
+)
+
+coreclr_test(
+    name = "overflow03_div",
+    srcs = ["overflow03.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_DIV"],
+)
+
+coreclr_test(
+    name = "overflow04_add",
+    srcs = ["overflow04.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_ADD"],
+)
+
+coreclr_test(
+    name = "overflow01_div",
+    srcs = ["overflow01.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_DIV"],
+)
+
+coreclr_test(
+    name = "overflow03_sub",
+    srcs = ["overflow03.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_SUB"],
+)
+
+coreclr_test(
+    name = "overflow03_mul",
+    srcs = ["overflow03.cs"],
+    debug_type = "pdbonly",
+    defines = ["OP_MUL"],
+)

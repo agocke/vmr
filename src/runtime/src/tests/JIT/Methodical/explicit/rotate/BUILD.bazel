@@ -1,0 +1,77 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "rotarg_objref_il_d",
+    srcs = ["rotarg_objref_d.il", "rotarg_objref.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "rotate_i4_d",
+    srcs = ["rotate_i4_d.il", "rotate_i4.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "rotarg_objref_il_r",
+    srcs = ["rotarg_objref_r.il", "rotarg_objref.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "rotarg_float_il_r",
+    srcs = ["rotarg_float_r.il", "rotarg_float.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "rotarg_double_il_r",
+    srcs = ["rotarg_double_r.il", "rotarg_double.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "rotate_i4_r",
+    srcs = ["rotate_i4_r.il", "rotate_i4.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "rotarg_valref_il_r",
+    srcs = ["rotarg_valref_r.il", "rotarg_valref.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "rotarg_valref_il_d",
+    srcs = ["rotarg_valref_d.il", "rotarg_valref.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "rotate_u2_r",
+    srcs = ["rotate_u2_r.il", "rotate_u2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "rotarg_float_il_d",
+    srcs = ["rotarg_float_d.il", "rotarg_float.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "rotarg_double_il_d",
+    srcs = ["rotarg_double_d.il", "rotarg_double.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "rotate_u2_d",
+    srcs = ["rotate_u2_d.il", "rotate_u2.il"],
+    pri = 1,
+    debug_type = "full",
+)

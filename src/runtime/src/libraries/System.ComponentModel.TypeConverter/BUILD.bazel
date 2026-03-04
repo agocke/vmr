@@ -1,0 +1,58 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.ComponentModel.TypeConverter.cs",
+    "ref/System.ComponentModel.TypeConverter.Forwards.cs",
+    "ref/System.ComponentModel.manual.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ComponentModel.TypeConverter",
+    srcs = [
+        "ref/System.ComponentModel.manual.cs",
+        "ref/System.ComponentModel.TypeConverter.cs",
+        "ref/System.ComponentModel.TypeConverter.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Resources.Writer:ref_System.Resources.Writer",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.ComponentModel.TypeConverter",
+    analyzers = [
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    srcs = glob(["src/System/**/*.cs"]) + [
+        "//src/libraries/Common:src/System/Drawing/ColorConverterCommon.cs",
+        "//src/libraries/Common:src/System/Drawing/ColorTable.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Resources.Writer:ref_System.Resources.Writer",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Runtime.Loader:ref_System.Runtime.Loader",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
+    ],
+)

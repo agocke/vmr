@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Simple",
+    srcs = ["simple.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)

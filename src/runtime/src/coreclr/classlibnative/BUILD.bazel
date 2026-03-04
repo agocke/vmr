@@ -1,0 +1,82 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "classlibnative_headers",
+    hdrs = glob([
+        "bcltype/*.h",
+        "bcltype/*.inl",
+        "inc/*.h",
+    ]),
+    includes = ["bcltype", "inc"],
+)
+
+# Shared copts for classlibnative targets — mirrors the VM build's _VM_COPTS
+# since bcltype/comfloat compile with the VM's common.h precompiled header.
+_CLN_COPTS = [
+    "-Isrc/coreclr/vm",
+] + select({
+    "@platforms//cpu:arm64": ["-Isrc/coreclr/vm/arm64"],
+    "//conditions:default": ["-Isrc/coreclr/vm/amd64"],
+}) + [
+    "-Isrc/coreclr",
+    "-Isrc/coreclr/gc",
+    "-Isrc/coreclr/gc/env",
+    "-Isrc/coreclr/runtime",
+    "-Isrc/coreclr/vm/eventing/eventpipe",
+    "-Isrc/native/corehost",
+] + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+    "-include", "src/coreclr/vm/common.h",
+    "-Wno-error",
+]
+
+_CLN_DEPS = [
+    ":classlibnative_headers",
+    "//src/coreclr/vm:vm_headers",
+    "//src/coreclr/vm/eventing:eventing_headers",
+    "//src/coreclr/vm/eventing:eventpipe_shim_headers",
+    "//src/coreclr/gc:gc_headers",
+    "//src/coreclr/runtime:runtime_headers",
+    "//src/coreclr/inc:coreclr_inc",
+    "//src/native/eventpipe:eventpipe-headers",
+    "//src/native/corehost:corehost_headers",
+]
+
+# bcltype — OBJECT library (arraynative, objectnative, system, varargs, variant)
+cc_library(
+    name = "bcltype",
+    srcs = [
+        "bcltype/arraynative.cpp",
+        "bcltype/objectnative.cpp",
+        "bcltype/system.cpp",
+        "bcltype/varargsnative.cpp",
+        "bcltype/variant.cpp",
+    ],
+    copts = _CLN_COPTS + [
+        "-Isrc/coreclr/classlibnative/bcltype",
+        "-Isrc/coreclr/classlibnative/inc",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    alwayslink = True,
+    deps = _CLN_DEPS,
+)
+
+# comfloat_wks — OBJECT library (float/double/divmod helpers)
+cc_library(
+    name = "comfloat_wks",
+    srcs = [
+        "float/floatdouble.cpp",
+        "float/floatsingle.cpp",
+        "float/divmodint.cpp",
+    ],
+    copts = _CLN_COPTS + [
+        "-Isrc/coreclr/classlibnative/inc",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    alwayslink = True,
+    deps = _CLN_DEPS,
+)

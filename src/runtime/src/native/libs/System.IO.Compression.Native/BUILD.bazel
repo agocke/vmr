@@ -1,0 +1,46 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_DEFINES")
+
+# System.IO.Compression.Native for linux-x64
+# Produces libSystem.IO.Compression.Native.so (shared)
+
+cc_library(
+    name = "System.IO.Compression.Native_lib",
+    srcs = [
+        "entrypoints.c",
+        "pal_zlib.c",
+    ] + glob(["*.h"]),
+    copts = [
+        "-Wno-declaration-after-statement",
+        "-Wno-implicit-fallthrough",
+        "-Isrc/native",
+        "-Isrc/native/libs/Common",
+        "-Isrc/native/libs/bazel",
+    ],
+    defines = ["BROTLI_SHARED_COMPILATION"],
+    local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/native/external/brotli:brotlidec",
+        "//src/native/external/brotli:brotlienc",
+        "//src/native/external/zlib-ng:zlib",
+        "//src/native/external/zstd",
+        "//src/native/libs:common",
+        "//src/native/minipal",
+    ],
+)
+
+cc_shared_library(
+    name = "System.IO.Compression.Native",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libSystem.IO.Compression.Native.dylib",
+        "//conditions:default": "libSystem.IO.Compression.Native.so",
+    }),
+    user_link_flags = select({
+        "@platforms//os:macos": ["-Wl,-install_name,@rpath/libSystem.IO.Compression.Native.dylib"],
+        "//conditions:default": ["-Wl,-soname,libSystem.IO.Compression.Native.so"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":System.IO.Compression.Native_lib"],
+)

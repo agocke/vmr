@@ -1,0 +1,7 @@
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "attribute",
+    srcs = ["attribute.cs"],
+    visibility = ["//visibility:public"],
+)

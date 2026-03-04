@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <arcadeGitCommitHash>4bf37ce670528cf2aef4d9b1cd892554b1b02d9d</arcadeGitCommitHash>
+    <aspnetcoreGitCommitHash>376b0362a67178f5e64cafd928e158edd6e324da</aspnetcoreGitCommitHash>
+    <cecilGitCommitHash>27abc57253a0d3010418e877fdfb35f9fa6806b9</cecilGitCommitHash>
+    <commandlineapiGitCommitHash>c7b5e07cfed85e88c162dc1c916efaff03742e6e</commandlineapiGitCommitHash>
+    <deploymenttoolsGitCommitHash>6ebef72019b85958ae78d0da73ea49a161c7a28a</deploymenttoolsGitCommitHash>
+    <diagnosticsGitCommitHash>73f1fdca8d9fb191297a7e687790b804f4e78ef5</diagnosticsGitCommitHash>
+    <efcoreGitCommitHash>0d5f4795c82658e821ef622f470d5935df2fb188</efcoreGitCommitHash>
+    <emsdkGitCommitHash>769f1f04904e2b24cd9f879e6a1e3d4bf2160fa8</emsdkGitCommitHash>
+    <fsharpGitCommitHash>c4ccf58cd107213374237e3910288d4b6b183abb</fsharpGitCommitHash>
+    <msbuildGitCommitHash>b21f3b4fccedcf2f2905b77354765987cf02271d</msbuildGitCommitHash>
+    <nugetclientGitCommitHash>fa2dec964199e620ce7acf82a70ba4060862767d</nugetclientGitCommitHash>
+    <razorGitCommitHash>10df92a966e2ce16aca870e81d85912d1629108c</razorGitCommitHash>
+    <roslynGitCommitHash>39f5221215f520f7e6b7117c3abfa83c94eb7af4</roslynGitCommitHash>
+    <runtimeGitCommitHash>f8a3a45536d3b0c70abf579d9e78f771cec13535</runtimeGitCommitHash>
+    <scenariotestsGitCommitHash>64f9f4bc3a23634a0d80d9b8dcaec1126e7d4891</scenariotestsGitCommitHash>
+    <sdkGitCommitHash>23179aa0b46b26f889cad46199b863ccdefa0c8e</sdkGitCommitHash>
+    <sourcebuildreferencepackagesGitCommitHash>83baa8561d6f00b5c12714745fc93ca6dd305d1f</sourcebuildreferencepackagesGitCommitHash>
+    <sourcelinkGitCommitHash>87111bcd96317b807505e1e68e88b0b33059bbce</sourcelinkGitCommitHash>
+    <symreaderGitCommitHash>1536a1ca256a4e9f804b2073464ca8e4f4794702</symreaderGitCommitHash>
+    <templatingGitCommitHash>8f46f06fc5132007d96de26d832efc8231542493</templatingGitCommitHash>
+    <vstestGitCommitHash>697c1270eebc92c531f27265dd0ff60211b088bb</vstestGitCommitHash>
+    <windowsdesktopGitCommitHash>16400fd8bd584ff9612826bc3f2a2190917dfa3a</windowsdesktopGitCommitHash>
+    <winformsGitCommitHash>3c055945ea64c2634824d1224153efb2ac9b307b</winformsGitCommitHash>
+    <wpfGitCommitHash>41784a3ec5f721e18a7799f8399fa4e7fb48d129</wpfGitCommitHash>
+    <xdtGitCommitHash>84f52c3606bf07301b49baa1696cd039bf46b8a9</xdtGitCommitHash>
+  </PropertyGroup>
+</Project>

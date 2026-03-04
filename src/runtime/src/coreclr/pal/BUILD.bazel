@@ -1,0 +1,332 @@
+# CoreCLR Platform Abstraction Layer (PAL) — headers and compiled library.
+# Matches CMake: src/coreclr/pal/src/CMakeLists.txt (for the library)
+# and global include_directories in src/coreclr/CMakeLists.txt (for headers).
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+exports_files(glob(["prebuilt/idl/*.cpp"]))
+
+# --- PAL headers (Windows API shims for Unix) ---
+# On Unix, coreclr uses the PAL to provide <windows.h>, <objbase.h>, etc.
+# These are header-only targets needed by nearly all coreclr components.
+
+cc_library(
+    name = "pal_inc",
+    hdrs = glob([
+        "inc/*.h",
+        "inc/*.inc",
+        "inc/rt/*.h",
+    ]),
+    includes = [
+        "inc",
+        "inc/rt",
+    ],
+    deps = [
+        "//src/native/minipal",
+    ],
+)
+
+cc_library(
+    name = "pal_prebuilt_inc",
+    hdrs = glob(["prebuilt/inc/*.h"]),
+    includes = ["prebuilt/inc"],
+)
+
+# Just the inc/rt/ headers (sal.h etc.) without inc/ (which has
+# unixasmmacros.inc that conflicts with NativeAOT's versions).
+cc_library(
+    name = "pal_rt_inc",
+    hdrs = glob(["inc/rt/*.h"]),
+    includes = ["inc/rt"],
+)
+
+cc_library(
+    name = "pal_safecrt",
+    hdrs = glob(["src/safecrt/*.h"]),
+    includes = ["src/safecrt"],
+)
+
+# Combined PAL headers target
+cc_library(
+    name = "pal_headers",
+    deps = [
+        ":pal_inc",
+        ":pal_prebuilt_inc",
+        ":pal_safecrt",
+    ],
+)
+
+# Generated PAL config header (from configure.cmake → config.h.in)
+cc_library(
+    name = "pal_config",
+    hdrs = select({
+        "@platforms//os:macos": ["src/bazel/darwin-arm64/config.h"],
+        "//conditions:default": ["src/bazel/linux-glibc-x64/config.h"],
+    }),
+    strip_include_prefix = select({
+        "@platforms//os:macos": "src/bazel/darwin-arm64",
+        "//conditions:default": "src/bazel/linux-glibc-x64",
+    }),
+)
+
+# --- Compiled PAL library (coreclrpal) ---
+# Static library implementing the PAL for linux-x64 glibc.
+
+_PAL_SOURCES = [
+    "src/com/guid.cpp",
+    "src/cruntime/wchar.cpp",
+    "src/debug/debug.cpp",
+    "src/exception/seh.cpp",
+    "src/exception/signal.cpp",
+    "src/file/directory.cpp",
+    "src/file/file.cpp",
+    "src/file/filetime.cpp",
+    "src/file/path.cpp",
+    "src/handlemgr/handleapi.cpp",
+    "src/handlemgr/handlemgr.cpp",
+    "src/init/pal.cpp",
+    "src/init/sxs.cpp",
+    "src/loader/module.cpp",
+    "src/locale/unicode.cpp",
+    "src/map/common.cpp",
+    "src/map/map.cpp",
+    "src/map/virtual.cpp",
+    "src/misc/cgroup.cpp",
+    "src/misc/dbgmsg.cpp",
+    "src/misc/environ.cpp",
+    "src/misc/error.cpp",
+    "src/misc/errorstrings.cpp",
+    "src/misc/fmtmessage.cpp",
+    "src/misc/perfjitdump.cpp",
+    "src/misc/strutil.cpp",
+    "src/misc/sysinfo.cpp",
+    "src/misc/time.cpp",
+    "src/misc/utils.cpp",
+    "src/objmgr/palobjbase.cpp",
+    "src/objmgr/listedobject.cpp",
+    "src/objmgr/listedobjectmanager.cpp",
+    "src/safecrt/memcpy_s.cpp",
+    "src/safecrt/memmove_s.cpp",
+    "src/safecrt/mbusafecrt.cpp",
+    "src/safecrt/safecrt_input_s.cpp",
+    "src/safecrt/safecrt_winput_s.cpp",
+    "src/safecrt/sprintf_s.cpp",
+    "src/safecrt/sscanf_s.cpp",
+    "src/safecrt/strcat_s.cpp",
+    "src/safecrt/strcpy_s.cpp",
+    "src/safecrt/strncat_s.cpp",
+    "src/safecrt/strncpy_s.cpp",
+    "src/safecrt/vsprintf.cpp",
+    "src/safecrt/wcscat_s.cpp",
+    "src/safecrt/wcscpy_s.cpp",
+    "src/safecrt/wcslen_s.cpp",
+    "src/safecrt/wcslwr_s.cpp",
+    "src/safecrt/wcsncat_s.cpp",
+    "src/safecrt/wcsncpy_s.cpp",
+    "src/safecrt/wmakepath_s.cpp",
+    "src/safecrt/makepath_s.cpp",
+    "src/safecrt/splitpath_s.cpp",
+    "src/sharedmemory/sharedmemory.cpp",
+    "src/synchobj/event.cpp",
+    "src/synchobj/mutex.cpp",
+    "src/synchobj/semaphore.cpp",
+    "src/synchmgr/synchcontrollers.cpp",
+    "src/synchmgr/synchmanager.cpp",
+    "src/synchmgr/wait.cpp",
+    "src/thread/context.cpp",
+    "src/thread/process.cpp",
+    "src/thread/thread.cpp",
+    "src/thread/threadsusp.cpp",
+]
+
+_PAL_ASM_SOURCES = select({
+    "@platforms//os:macos": [
+        "src/arch/arm64/context.S",
+        "src/arch/arm64/context2.S",
+        "src/arch/arm64/debugbreak.S",
+        "src/arch/arm64/dispatchexceptionwrapper.S",
+        "src/arch/arm64/exceptionhelper.S",
+    ],
+    "//conditions:default": [
+        "src/arch/amd64/context2.S",
+        "src/arch/amd64/debugbreak.S",
+        "src/arch/amd64/exceptionhelper.S",
+        "src/arch/amd64/callsignalhandlerwrapper.S",
+    ],
+})
+
+_PAL_PLATFORM_SOURCES = select({
+    "@platforms//os:macos": [
+        "src/exception/machexception.cpp",
+        "src/exception/machmessage.cpp",
+    ],
+    "//conditions:default": [
+        "src/arch/amd64/signalhandlerhelper.cpp",
+    ],
+})
+
+cc_library(
+    name = "coreclrpal",
+    srcs = _PAL_SOURCES + _PAL_ASM_SOURCES + _PAL_PLATFORM_SOURCES + select({
+        "@platforms//os:macos": ["src/bazel/darwin-arm64/config.h"],
+        "//conditions:default": ["src/bazel/linux-glibc-x64/config.h"],
+    }) + glob(
+        [
+            "src/include/**/*.h",
+            "src/include/**/*.hpp",
+            "src/include/**/*.inl",
+            "src/exception/*.h",
+            "src/map/*.h",
+            "src/misc/*.h",
+            "src/safecrt/*.inl",
+            "src/synchmgr/*.hpp",
+            "src/thread/*.hpp",
+            "src/objmgr/*.hpp",
+        ],
+        allow_empty = True,
+    ) + select({
+        "@platforms//os:macos": glob(["src/arch/arm64/*.h"], allow_empty = True),
+        "//conditions:default": glob(["src/arch/amd64/*.h"], allow_empty = True),
+    }),
+    textual_hdrs = [
+        "src/exception/seh-unwind.cpp",
+    ],
+    hdrs = glob([
+        "inc/*.h",
+        "inc/*.inc",
+        "inc/rt/*.h",
+    ]),
+    copts = CLR_CONFIG_COPTS + [
+        # Warning suppression (matching configurecompiler.cmake for GCC C++)
+        "-Wno-invalid-offsetof",
+        "-Wno-class-memaccess",
+        "-Wno-conversion-null",
+        "-Wno-pointer-arith",
+        "-Wno-misleading-indentation",
+        "-Wno-stringop-overflow",
+        "-Wno-restrict",
+        # PAL needs a few headers from coreclr/inc (volatile.h, etc.)
+        "-Isrc/coreclr/inc",
+        # PAL-specific include paths
+        "-Isrc/coreclr/pal/src/include",
+        "-Isrc/coreclr/pal/inc",
+        "-Isrc/coreclr/pal/inc/rt",
+        "-Isrc/coreclr/pal/src/safecrt",
+        "-Isrc/native",
+        "-Isrc/native/inc",
+    ] + select({
+        "@platforms//os:macos": [
+            "-Isrc/coreclr/pal/src/arch/arm64",
+        ],
+        "//conditions:default": [
+            "-Isrc/coreclr/pal/src/arch/amd64",
+        ],
+    }) + select({
+        "//:compiler_clang": [],
+        "//conditions:default": ["-Wa,--divide"],
+    }),
+    defines = PLATFORM_DEFINES + [
+        # PAL-specific
+        "LP64COMPATIBLE",
+        "CORECLR",
+        "PIC",
+        "UNICODE",
+        "_UNICODE",
+        "FEATURE_PAL_ANSI",
+    ] + select({
+        "@platforms//os:macos": [
+            # configurecompiler.cmake — macOS platform defines
+            "_XOPEN_SOURCE",
+            "_DARWIN_C_SOURCE",
+            "__DARWIN_NON_CANCELABLE=1",
+        ],
+        "//conditions:default": ["XSTATE_SUPPORTED"],
+    }),
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-lpthread",
+            "-framework", "CoreFoundation",
+            "-framework", "Security",
+        ],
+        "//conditions:default": [
+            "-lgcc_s",
+            "-lpthread",
+            "-lrt",
+            "-ldl",
+        ],
+    }),
+    deps = [
+        ":pal_config",
+        ":pal_headers",
+        "//src/coreclr/inc:coreclr_inc_headers_only",
+        "//src/native:native_inc",
+        "//src/native/external/libunwind",
+        "//src/native/minipal",
+    ],
+    alwayslink = True,
+)
+
+# tracepointprovider — Linux-specific (single source)
+cc_library(
+    name = "tracepointprovider",
+    srcs = ["src/misc/tracepointprovider.cpp"] + glob(
+        [
+            "src/include/**/*.h",
+            "src/include/**/*.hpp",
+            "src/include/**/*.inl",
+        ],
+        allow_empty = True,
+    ) + select({
+        "@platforms//os:macos": ["src/bazel/darwin-arm64/config.h"],
+        "//conditions:default": ["src/bazel/linux-glibc-x64/config.h"],
+    }),
+    copts = CLR_CONFIG_COPTS + [
+        "-Wno-invalid-offsetof",
+        "-Isrc/coreclr/pal/src/include",
+        "-Isrc/coreclr/pal/inc",
+        "-Isrc/coreclr/pal/inc/rt",
+        "-Isrc/coreclr/pal/src/safecrt",
+        "-Isrc/coreclr/inc",
+        "-Isrc/native",
+        "-Isrc/native/inc",
+    ] + select({
+        "@platforms//os:macos": ["-Isrc/coreclr/pal/src/bazel/darwin-arm64"],
+        "//conditions:default": ["-Isrc/coreclr/pal/src/bazel/linux-glibc-x64"],
+    }),
+    defines = PLATFORM_DEFINES + [
+        "CORECLR",
+    ],
+    deps = [
+        ":pal_headers",
+        "//src/coreclr/inc:coreclr_inc_headers_only",
+        "//src/native/minipal",
+    ],
+    alwayslink = True,
+)
+
+# --- eventprovider (dummy LTTng stubs) ---
+# Pre-generated by genDummyProvider.py from ClrEtwAll.man.
+# On linux without LTTng, this provides no-op event stubs.
+cc_library(
+    name = "eventprovider",
+    srcs = glob(["src/eventprovider/bazel/dummy/*.cpp"]) + glob([
+        "src/include/**/*.h",
+        "src/include/**/*.hpp",
+        "src/include/**/*.inl",
+    ]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-Isrc/coreclr/pal/src/include",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    alwayslink = True,
+    linkstatic = True,
+    deps = [
+        ":pal_headers",
+        "//src/coreclr/inc:coreclr_inc",
+    ],
+)

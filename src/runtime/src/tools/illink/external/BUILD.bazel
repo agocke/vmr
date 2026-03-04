@@ -1,0 +1,4 @@
+exports_files(
+    ["Mono.Options/Options.cs"],
+    visibility = ["//src/tools/illink:__subpackages__"],
+)

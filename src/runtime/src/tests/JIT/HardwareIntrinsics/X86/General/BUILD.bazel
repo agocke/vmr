@@ -1,0 +1,40 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "General_ro",
+    srcs = [
+        "General.cs",
+        "IsSupported.cs",
+        "VectorArgs.cs",
+        "VectorArray.cs",
+        "VectorHelpers.cs",
+        "VectorRet.cs",
+        "VectorUnused.cs",
+    ],
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "General_r",
+    srcs = [
+        "General.cs",
+        "IsSupported.cs",
+        "VectorArgs.cs",
+        "VectorArray.cs",
+        "VectorHelpers.cs",
+        "VectorRet.cs",
+        "VectorUnused.cs",
+    ],
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

@@ -1,0 +1,13 @@
+load("//:defs.bzl", "csharp_library")
+
+csharp_library(
+    name = "ILCompiler.Diagnostics",
+    srcs = glob(["*.cs"]),
+    defines = ["READYTORUN"],
+    compiler_options = ["/unsafe"],
+    deps = [
+        "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+    ],
+    target_frameworks = ["net10.0"],
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,21 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.IO.FileSystem.DriveInfo.Tests",
+    srcs = [
+        "DriveInfo.Unix.Tests.cs",
+    ] + [
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelizationPerAssembly.cs",
+    ],
+    deps = [
+        "//src/libraries/System.IO.FileSystem.DriveInfo:impl_System.IO.FileSystem.DriveInfo",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

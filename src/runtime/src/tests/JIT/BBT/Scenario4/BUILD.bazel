@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Not-Int32",
+    srcs = ["Not-Int32.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)

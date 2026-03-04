@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_67102",
+    srcs = ["GitHub_67102.cs"],
+    debug_type = "pdbonly",
+)

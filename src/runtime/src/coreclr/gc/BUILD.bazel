@@ -1,0 +1,316 @@
+# GC subsystem — Bazel build.
+# Matches CMake: src/coreclr/gc/CMakeLists.txt
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+# GC source files used by the VM (cee_wks_core links GC sources directly).
+exports_files(glob(["*.cpp", "unix/*.cpp", "unix/bazel/**/*.h", "vxsort/*.cpp", "vxsort/*.h", "vxsort/smallsort/*.cpp", "vxsort/smallsort/*.h"]))
+
+# --- Headers ---
+
+cc_library(
+    name = "gc_headers",
+    hdrs = glob(
+        [
+            "*.h",
+            "*.inl",
+            "*.def",
+            "env/*.h",
+            "env/*.inl",
+            "vxsort/*.h",
+            "vxsort/smallsort/*.h",
+            "unix/*.h",
+        ],
+        allow_empty = True,
+    ),
+)
+
+# --- Standalone GC defines (shared by all GC compiled targets) ---
+# The standalone GC is self-contained and does NOT use CoreCLR PAL or inc headers.
+# It uses its own env/ headers instead.
+
+_GC_STANDALONE_DEFINES = [
+    "FEATURE_SVR_GC",
+    "FEATURE_EVENT_TRACE=1",
+    "FEATURE_PERFTRACING=1",
+    "FEATURE_STANDALONE_GC=1",
+    "BUILD_AS_STANDALONE",
+    "FEATURE_CONSERVATIVE_GC",
+    "VERIFY_HEAP",
+    "GC_CONFIG_DRIVEN",
+    "GC_DESCRIPTOR",
+    "FX_VER_INTERNALNAME_STR=clrgc.dll",
+    "UNICODE",
+    "_UNICODE",
+    "_SECURE_SCL=0",
+    "NDEBUG",
+    "DISABLE_CONTRACTS",
+    "URTBLDENV_FRIENDLY=Retail",
+    "_FILE_OFFSET_BITS=64",
+] + select({
+    "@platforms//os:macos": [
+        "HOST_64BIT",
+        "HOST_ARM64",
+        "HOST_UNIX",
+        "HOST_APPLE",
+        "HOST_OSX",
+        "TARGET_64BIT",
+        "TARGET_ARM64",
+        "TARGET_UNIX",
+        "TARGET_APPLE",
+        "TARGET_OSX",
+    ],
+    "//conditions:default": [
+        "HOST_64BIT",
+        "HOST_AMD64",
+        "HOST_UNIX",
+        "TARGET_64BIT",
+        "TARGET_AMD64",
+        "TARGET_UNIX",
+        "TARGET_LINUX",
+        "_TIME_BITS=64",
+    ],
+})
+
+_GC_COPTS = [
+    "-Wno-invalid-offsetof",
+    "-Wno-unused-but-set-parameter",
+    # -iquote ensures GC's own env/ headers (e.g. volatile.h) are found
+    # before coreclr/inc/ headers for #include "..." directives.
+    "-iquote", "src/coreclr/gc/env",
+    "-Isrc/coreclr/gc",
+    "-Isrc/coreclr/gc/env",
+    "-Isrc/native",
+] + select({
+    "@platforms//os:macos": ["-Isrc/coreclr/gc/unix/bazel/darwin-arm64"],
+    "//conditions:default": ["-Isrc/coreclr/gc/unix/bazel/linux-glibc-x64"],
+})
+
+# The standalone GC always builds as retail, even in debug builds.
+# These copts override --config=debug globals (copts come after --copt)
+# and per_file_copt (rule copts come last in the command line).
+_GC_STANDALONE_COPTS = _GC_COPTS + CLR_CONFIG_COPTS + [
+    "-UNDEBUG", "-UDEBUG", "-U_DEBUG", "-U_DBG",
+    "-UDISABLE_CONTRACTS", "-UURTBLDENV_FRIENDLY",
+    "-UWRITE_BARRIER_CHECK",
+    "-DNDEBUG",
+    "-DDISABLE_CONTRACTS",
+    "-DURTBLDENV_FRIENDLY=Retail",
+]
+
+# --- gc_pal (OBJECT library) — Unix platform abstraction ---
+
+cc_library(
+    name = "gc_pal",
+    srcs = [
+        "unix/gcenv.unix.cpp",
+        "unix/numasupport.cpp",
+        "unix/events.cpp",
+        "unix/cgroup.cpp",
+    ] + select({
+        "@platforms//os:macos": ["unix/bazel/darwin-arm64/config.gc.h"],
+        "//conditions:default": ["unix/bazel/linux-glibc-x64/config.gc.h"],
+    }),
+    copts = _GC_COPTS + CLR_CONFIG_COPTS + [
+        "-Isrc/coreclr/gc/unix",
+    ],
+    local_defines = _GC_STANDALONE_DEFINES,
+    alwayslink = True,
+    deps = [
+        ":gc_headers",
+        "//src/coreclr/inc:coreclr_inc_headers_only",
+        "//src/native/minipal",
+    ],
+)
+
+# --- gc_vxsort (OBJECT library) — Vectorized sorting (AMD64-only) ---
+# All AMD64 vxsort sources require -mavx2.
+# On arm64, use the dummy vxsort stub instead.
+
+_VXSORT_AVX2_SRCS = [
+    "vxsort/isa_detection.cpp",
+    "vxsort/do_vxsort_avx2.cpp",
+    "vxsort/do_vxsort_avx512.cpp",
+    "vxsort/machine_traits.avx2.cpp",
+    "vxsort/smallsort/bitonic_sort.AVX2.int64_t.generated.cpp",
+    "vxsort/smallsort/bitonic_sort.AVX2.int32_t.generated.cpp",
+    "vxsort/smallsort/bitonic_sort.AVX512.int64_t.generated.cpp",
+    "vxsort/smallsort/bitonic_sort.AVX512.int32_t.generated.cpp",
+    "vxsort/smallsort/avx2_load_mask_tables.cpp",
+]
+
+cc_library(
+    name = "gc_vxsort",
+    srcs = select({
+        "@platforms//cpu:arm64": ["vxsort/dummy.cpp"],
+        "//conditions:default": _VXSORT_AVX2_SRCS,
+    }) + glob([
+        "vxsort/*.h",
+        "vxsort/smallsort/*.h",
+    ]),
+    copts = _GC_COPTS + CLR_CONFIG_COPTS + [
+        "-Isrc/coreclr/gc/vxsort",
+        "-Isrc/coreclr/gc/vxsort/smallsort",
+        "-Wno-unused-but-set-parameter",
+    ] + select({
+        "@platforms//cpu:arm64": [],
+        "//conditions:default": ["-mavx2"],
+    }),
+    local_defines = _GC_STANDALONE_DEFINES,
+    alwayslink = True,
+    deps = [
+        ":gc_headers",
+        "//src/native/minipal",
+    ],
+)
+
+# --- Data descriptor stubs ---
+# Uses the stub contract descriptor (no cdac-build-tool).
+# Each variant gets a pre-generated contractconfiguration.h.
+
+_DESCRIPTOR_STUB_SRC = "//src/coreclr/debug:datadescriptor-shared/contractdescriptorstub.c"
+
+cc_library(
+    name = "gc_dll_wks_descriptor",
+    srcs = [
+        _DESCRIPTOR_STUB_SRC,
+        "datadescriptor/bazel/gc_dll_wks/contractconfiguration.h",
+    ],
+    copts = ["-Isrc/coreclr/gc/datadescriptor/bazel/gc_dll_wks"],
+    alwayslink = True,
+    deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
+)
+
+cc_library(
+    name = "gc_dll_svr_descriptor",
+    srcs = [
+        _DESCRIPTOR_STUB_SRC,
+        "datadescriptor/bazel/gc_dll_svr/contractconfiguration.h",
+    ],
+    copts = ["-Isrc/coreclr/gc/datadescriptor/bazel/gc_dll_svr"],
+    defines = ["SERVER_GC"],
+    alwayslink = True,
+    deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
+)
+
+cc_library(
+    name = "gcexp_dll_wks_descriptor",
+    srcs = [
+        _DESCRIPTOR_STUB_SRC,
+        "datadescriptor/bazel/gcexp_dll_wks/contractconfiguration.h",
+    ],
+    copts = ["-Isrc/coreclr/gc/datadescriptor/bazel/gcexp_dll_wks"],
+    defines = ["USE_REGIONS"],
+    alwayslink = True,
+    deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
+)
+
+cc_library(
+    name = "gcexp_dll_svr_descriptor",
+    srcs = [
+        _DESCRIPTOR_STUB_SRC,
+        "datadescriptor/bazel/gcexp_dll_svr/contractconfiguration.h",
+    ],
+    copts = ["-Isrc/coreclr/gc/datadescriptor/bazel/gcexp_dll_svr"],
+    defines = ["USE_REGIONS", "SERVER_GC"],
+    alwayslink = True,
+    deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
+)
+
+# --- Core GC sources (shared by clrgc and clrgcexp) ---
+
+_GC_SOURCES = [
+    "gceventstatus.cpp",
+    "gcconfig.cpp",
+    "gccommon.cpp",
+    "gcscan.cpp",
+    "gcsvr.cpp",
+    "gcwks.cpp",
+    "handletable.cpp",
+    "handletablecore.cpp",
+    "handletablescan.cpp",
+    "objecthandle.cpp",
+    "softwarewritewatch.cpp",
+    "gchandletable.cpp",
+    "gceesvr.cpp",
+    "gceewks.cpp",
+    "gcload.cpp",
+    "gcbridge.cpp",
+    "handletablecache.cpp",
+]
+
+# Textual includes: gc.cpp and gcee.cpp are #included by gcsvr/gcwks and gceesvr/gceewks.
+_GC_TEXTUAL_HDRS = [
+    "gc.cpp",
+    "gcee.cpp",
+]
+
+# clrgc — standalone GC with segments
+cc_library(
+    name = "clrgc_lib",
+    srcs = _GC_SOURCES,
+    textual_hdrs = _GC_TEXTUAL_HDRS,
+    copts = _GC_STANDALONE_COPTS,
+    defines = _GC_STANDALONE_DEFINES,
+    alwayslink = True,
+    deps = [
+        ":gc_headers",
+        ":gc_pal",
+        ":gc_vxsort",
+        ":gc_dll_wks_descriptor",
+        ":gc_dll_svr_descriptor",
+        "//src/coreclr/inc:coreclr_inc_headers_only",
+        "//src/native/minipal",
+    ],
+)
+
+cc_shared_library(
+    name = "clrgc",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libclrgc.dylib",
+        "//conditions:default": "libclrgc.so",
+    }),
+    user_link_flags = select({
+        "@platforms//os:macos": ["-Wl,-install_name,@rpath/libclrgc.dylib"],
+        "//conditions:default": ["-Wl,-soname,libclrgc.so"],
+    }),
+    deps = [":clrgc_lib"],
+    dynamic_deps = [],
+    visibility = ["//visibility:public"],
+)
+
+# clrgcexp — standalone GC with regions (experimental)
+cc_library(
+    name = "clrgcexp_lib",
+    srcs = _GC_SOURCES,
+    textual_hdrs = _GC_TEXTUAL_HDRS,
+    copts = _GC_STANDALONE_COPTS,
+    defines = _GC_STANDALONE_DEFINES + ["USE_REGIONS"],
+    alwayslink = True,
+    deps = [
+        ":gc_headers",
+        ":gc_pal",
+        ":gc_vxsort",
+        ":gcexp_dll_wks_descriptor",
+        ":gcexp_dll_svr_descriptor",
+        "//src/coreclr/inc:coreclr_inc_headers_only",
+        "//src/native/minipal",
+    ],
+)
+
+cc_shared_library(
+    name = "clrgcexp",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libclrgcexp.dylib",
+        "//conditions:default": "libclrgcexp.so",
+    }),
+    user_link_flags = select({
+        "@platforms//os:macos": ["-Wl,-install_name,@rpath/libclrgcexp.dylib"],
+        "//conditions:default": ["-Wl,-soname,libclrgcexp.so"],
+    }),
+    deps = [":clrgcexp_lib"],
+    dynamic_deps = [],
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Reflection.TypeExtensions.Tests",
+    srcs = glob(["**/*.cs"]),
+    data = [
+        "//src/libraries/Common/tests:Data/TinyAssembly.dll",
+    ],
+    deps = [
+        "//src/libraries/System.Reflection.TypeExtensions:ref_System.Reflection.TypeExtensions",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

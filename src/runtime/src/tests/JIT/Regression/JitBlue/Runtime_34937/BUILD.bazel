@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Runtime_34937",
+    srcs = ["Runtime_34937.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+)

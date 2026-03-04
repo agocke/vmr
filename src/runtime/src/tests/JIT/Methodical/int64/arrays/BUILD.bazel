@@ -1,0 +1,40 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "hugedim_d",
+    srcs = ["hugedim_d.il", "hugedim.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "lcs_long_il_r",
+    srcs = ["lcs_long_r.il", "lcs_long.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "lcs_ulong_il_r",
+    srcs = ["lcs_ulong_r.il", "lcs_ulong.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "lcs_long_il_d",
+    srcs = ["lcs_long_d.il", "lcs_long.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "hugedim_r",
+    srcs = ["hugedim_r.il", "hugedim.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "lcs_ulong_il_d",
+    srcs = ["lcs_ulong_d.il", "lcs_ulong.il"],
+    pri = 1,
+    debug_type = "full",
+)

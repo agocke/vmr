@@ -1,0 +1,14 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.ServiceModel.Web",
+    srcs = [
+        "src/System.ServiceModel.Web.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Json:ref_System.Runtime.Serialization.Json",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/shims/stubs:ref_System.ServiceModel.Syndication",
+    ],
+    exclude_sr = True,
+)

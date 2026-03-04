@@ -1,0 +1,47 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "CpuId_r",
+    srcs = ["CpuId.cs"],
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "Pause_r",
+    srcs = ["Pause.cs"],
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "Pause_ro",
+    srcs = ["Pause.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "CpuId_ro",
+    srcs = ["CpuId.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

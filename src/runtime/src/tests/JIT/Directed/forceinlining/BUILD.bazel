@@ -1,0 +1,44 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "NoMetaData",
+    srcs = ["NoMetaData.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "NegativeCases",
+    srcs = ["NegativeCases.il"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "Recursion",
+    srcs = ["Recursion.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "LargeNumberOfArgs",
+    srcs = ["LargeNumberOfArgs.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "AttributeConflict",
+    srcs = ["AttributeConflict.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    env = {"DOTNET_TieredCompilation": "0"},
+)
+
+il_coreclr_test(
+    name = "PositiveCases",
+    srcs = ["PositiveCases.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    env = {"DOTNET_TieredCompilation": "0"},
+)

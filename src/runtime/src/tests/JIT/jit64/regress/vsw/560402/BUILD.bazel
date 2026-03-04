@@ -1,0 +1,25 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "opadd",
+    srcs = ["opadd.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "opsub",
+    srcs = ["opsub.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "opmul",
+    srcs = ["opmul.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+)

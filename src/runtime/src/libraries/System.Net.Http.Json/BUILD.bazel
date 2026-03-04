@@ -1,0 +1,45 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.Http.Json",
+    srcs = [
+        "ref/System.Net.Http.Json.cs",
+        "ref/System.Net.Http.Json.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.Http.Json",
+    srcs = [
+        "src/System/Net/Http/Json/HttpClientJsonExtensions.Get.AsyncEnumerable.cs",
+        "src/System/Net/Http/Json/HttpClientJsonExtensions.cs",
+        "src/System/Net/Http/Json/HttpContentJsonExtensions.AsyncEnumerable.cs",
+        "src/System/Net/Http/Json/JsonHelpers.cs",
+        "src/System/Net/Http/Json/HttpClientJsonExtensions.Delete.cs",
+        "src/System/Net/Http/Json/HttpClientJsonExtensions.Get.cs",
+        "src/System/Net/Http/Json/HttpClientJsonExtensions.Post.cs",
+        "src/System/Net/Http/Json/HttpClientJsonExtensions.Put.cs",
+        "src/System/Net/Http/Json/HttpClientJsonExtensions.Patch.cs",
+        "src/System/Net/Http/Json/HttpContentJsonExtensions.cs",
+        "src/System/Net/Http/Json/JsonContent.cs",
+        "src/System/Net/Http/Json/LengthLimitReadStream.cs",
+        # NetCoreApp-specific
+        "src/System/Net/Http/Json/HttpContentJsonExtensions.netcoreapp.cs",
+        "src/System/Net/Http/Json/JsonContent.netcoreapp.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.IO.Pipelines:ref_System.IO.Pipelines",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+    ],
+)

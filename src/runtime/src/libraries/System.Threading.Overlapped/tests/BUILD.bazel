@@ -1,0 +1,23 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Threading.Overlapped.Tests",
+    srcs = glob(["*.cs"]) + [
+        "//src/libraries/Common/tests:System/Threading/ThreadTestHelpers.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Threading.Overlapped:ref_System.Threading.Overlapped",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

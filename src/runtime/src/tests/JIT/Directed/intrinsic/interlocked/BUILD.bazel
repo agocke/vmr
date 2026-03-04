@@ -1,0 +1,69 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+# rva_rvastatic1-4 are disabled (DisableProjectBuild=true, rva_statics support #2451)
+
+coreclr_test(
+    name = "regalloc1",
+    srcs = ["regalloc1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "IntrinsicTest_Overflow",
+    srcs = ["IntrinsicTest_Overflow.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "nullchecksuppress",
+    srcs = ["nullchecksuppress.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "cse_cmpxchg",
+    srcs = ["cse_cmpxchg.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "regalloc2",
+    srcs = ["regalloc2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "cmpxchg",
+    srcs = ["cmpxchg.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)

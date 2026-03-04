@@ -1,0 +1,20 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Runtime_105944",
+    srcs = [
+        "Runtime_105944.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/Buffers/BoundedMemory.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/Buffers/BoundedMemory.Creation.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/Buffers/BoundedMemory.Unix.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/Buffers/BoundedMemory.Windows.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/Buffers/BoundedMemory.Default.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/Buffers/PoisonPagePlacement.cs",
+    ],
+    optimize = True,
+    allow_unsafe_blocks = True,
+    compiler_options = ["/nowarn:SYSLIB5003"],
+    deps = [
+        "//src/libraries/System.IO.MemoryMappedFiles:ref_System.IO.MemoryMappedFiles",
+    ],
+)

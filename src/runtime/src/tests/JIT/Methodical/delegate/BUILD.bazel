@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "_simpleoddpower_d",
+    srcs = ["_simpleoddpower_d.il", "_simpleoddpower.il"],
+    pri = 1,
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "_simpleoddpower_r",
+    srcs = ["_simpleoddpower_r.il", "_simpleoddpower.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+)

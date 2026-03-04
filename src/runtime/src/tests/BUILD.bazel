@@ -1,0 +1,29 @@
+load("//src/tests:live_test.bzl", "shared_testhost")
+
+# Runtime binaries needed by shared_testhost.
+# This filegroup uses select() to pick platform-specific binaries,
+# which can't be done in rule attr defaults.
+filegroup(
+    name = "testhost_runtime_binaries",
+    srcs = [
+        "//src/native/corehost:hostpolicy",
+    ] + select({
+        "@platforms//os:macos": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr_dylib"],
+        "//conditions:default": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr.so"],
+    }) + select({
+        "@platforms//os:linux": [
+            "//src/coreclr/System.Private.CoreLib:crossgen_System.Private.CoreLib",
+            "//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl",
+        ],
+        "@platforms//os:macos": [],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+# Shared testhost directory containing SDK + runtime assemblies.
+# Built once and referenced by all library tests to avoid redundant
+# ~90MB file copies per test (48 tests × 90MB = ~4.3GB eliminated).
+shared_testhost(
+    name = "shared_testhost",
+    visibility = ["//visibility:public"],
+)

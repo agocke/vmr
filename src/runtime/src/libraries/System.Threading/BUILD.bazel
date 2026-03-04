@@ -1,0 +1,38 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.Threading.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading",
+    srcs = [
+        "ref/System.Threading.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Threading",
+    srcs = [
+        "src/System/Threading/Barrier.cs",
+        "src/System/Threading/CDSsyncETWBCLProvider.cs",
+        "src/System/Threading/CountdownEvent.cs",
+        "src/System/Threading/HostExecutionContext.cs",
+        "src/System/Threading/HostExecutionContextManager.cs",
+        "src/System/Threading/LockCookie.cs",
+        "src/System/Threading/ReaderWriterLock.cs",
+
+        "//src/libraries/Common:src/System/HResults.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Private.CoreLib",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Threading",
+)

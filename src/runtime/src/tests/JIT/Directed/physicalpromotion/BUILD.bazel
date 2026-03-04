@@ -1,0 +1,47 @@
+
+load("//:defs.bzl", "NETCOREAPP_TOOL_CURRENT")
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "addressinterference",
+    srcs = [
+        "addressinterference.cs",
+    ],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "fuzzlyn1",
+    srcs = [
+        "fuzzlyn1.cs",
+    ],
+)
+
+coreclr_test(
+    name = "fuzzlyn2",
+    srcs = [
+        "fuzzlyn2.cs",
+    ],
+)
+
+coreclr_test(
+    name = "mixedpromotion",
+    srcs = [
+        "mixedpromotion.cs",
+    ],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "physicalpromotion",
+    srcs = [
+        "physicalpromotion.cs",
+    ],
+)
+
+coreclr_test(
+    name = "readbackbeforeqmark",
+    srcs = [
+        "readbackbeforeqmark.cs",
+    ],
+)

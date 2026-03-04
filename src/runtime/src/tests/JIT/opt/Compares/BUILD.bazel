@@ -1,0 +1,51 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "conditionalInverts",
+    srcs = ["conditionalInverts.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "conditionalSimpleOps",
+    srcs = ["conditionalSimpleOps.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "compareAnd3Chains",
+    srcs = ["compareAnd3Chains.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "conditionalIncrements",
+    srcs = ["conditionalIncrements.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "compareAnd2Chains",
+    srcs = ["compareAnd2Chains.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "conditionalNegates",
+    srcs = ["conditionalNegates.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "compareAndTestChains",
+    srcs = ["compareAndTestChains.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "compares",
+    srcs = ["compares.cs"],
+    optimize = True,
+)

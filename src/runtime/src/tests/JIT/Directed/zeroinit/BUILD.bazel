@@ -1,0 +1,62 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "init_uint32",
+    srcs = ["init_uint32.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "Dev10_863995",
+    srcs = ["Dev10_863995.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "init_int32",
+    srcs = ["init_int32.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "init_uint64",
+    srcs = ["init_uint64.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "init_byte",
+    srcs = ["init_byte.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "init_struct",
+    srcs = ["init_struct.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "init_int64",
+    srcs = ["init_int64.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "tail_zeroinit",
+    srcs = ["tail.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

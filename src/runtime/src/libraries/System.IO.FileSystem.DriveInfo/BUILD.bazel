@@ -1,0 +1,54 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.FileSystem.DriveInfo",
+    srcs = [
+        "ref/System.IO.FileSystem.DriveInfo.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.FileSystem.DriveInfo",
+    srcs = [
+        "src/System/IO/DriveInfo.cs",
+        "src/System/IO/DriveNotFoundException.cs",
+        "src/System/IO/DriveType.cs",
+
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/System/HResults.cs",
+        "//src/libraries/Common:src/System/IO/PathInternal.CaseSensitivity.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+
+        "src/System/IO/DriveInfo.UnixOrDefault.cs",
+        "src/System/IO/DriveInfo.Unix.cs",
+
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.UnixFileSystemTypes.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.PathConf.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.MountPoints.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.MountPoints.FormatInfo.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.RealPath.cs",
+        "//src/libraries/Common:src/Interop/Linux/procfs/Interop.ProcMountInfo.cs",
+        "//src/libraries/Common:src/Interop/Linux/procfs/Interop.ProcMountInfo.TryParseMountInfoLine.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+    ],
+    allow_unsafe_blocks = True,
+    resx_file = "src/Resources/Strings.resx",
+    nowarn = [
+        "CS8500", # Address of a pointer to a managed type
+    ]
+)

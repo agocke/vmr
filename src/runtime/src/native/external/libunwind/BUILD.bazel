@@ -1,0 +1,240 @@
+# Bundled GNU libunwind for linux-x64.
+# Used by CoreCLR PAL for stack unwinding on Linux.
+# On macOS, the system libunwind is used instead — this target provides an
+# empty library so that deps can reference it unconditionally.
+# Matches CMake: src/native/external/libunwind_extras/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+# --- Generated config headers (linux-glibc-x64) ---
+
+cc_library(
+    name = "libunwind_config",
+    hdrs = ["bazel/linux-glibc-x64/include/libunwind-common.h",
+        "bazel/linux-glibc-x64/include/libunwind.h",
+        "bazel/linux-glibc-x64/include/tdep/libunwind_i.h",
+    ],
+    strip_include_prefix = "bazel/linux-glibc-x64/include",
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Internal config.h — not exposed to dependents to avoid name collisions.
+cc_library(
+    name = "libunwind_internal_config",
+    hdrs = ["bazel/linux-glibc-x64/include/config.h"],
+    strip_include_prefix = "bazel/linux-glibc-x64/include",
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# --- Shared copts and defines ---
+
+LIBUNWIND_COPTS = [
+    "-Isrc/native/external/libunwind/include/tdep",
+    "-Isrc/native/external/libunwind/include",
+    "-Isrc/native/external/libunwind/src",
+    "-Wno-format",
+    "-Wno-format-security",
+    "-Wno-implicit-fallthrough",
+    "-Wno-unused-value",
+    "-Wno-unused-result",
+    "-Wno-implicit-function-declaration",
+    "-Wno-incompatible-pointer-types",
+]
+
+LIBUNWIND_DEFINES = [
+    "_GNU_SOURCE",
+    "HAVE___THREAD=0",
+    "PACKAGE_STRING=\\\"\\\"",
+    "PACKAGE_BUGREPORT=\\\"\\\"",
+    "HAVE_DL_ITERATE_PHDR=1",
+    "HAVE_CONFIG_H=1",
+]
+
+LIBUNWIND_INTERNAL_HDRS = glob(
+    [
+        "src/*.h",
+        "src/x86_64/*.h",
+    ],
+    allow_empty = True,
+)
+
+# --- Combined libunwind (generic + local) ---
+# All sources are in a single cc_library because libunwind uses HIDDEN
+# symbols extensively, which cannot cross shared-library boundaries.
+# G*.c files are compiled directly AND exposed as textual_hdrs so that
+# L*.c files (which define UNW_LOCAL_ONLY) can #include them.
+
+# On macOS, the system libunwind is used; provide an empty stub.
+cc_library(
+    name = "libunwind_empty",
+    visibility = ["//src/coreclr:__subpackages__"],
+)
+
+cc_library(
+    name = "libunwind_linux",
+    srcs = [
+        # --- libunwind_la_SOURCES_common ---
+        "src/os-linux.c",
+        "src/mi/init.c",
+        "src/mi/flush_cache.c",
+        "src/mi/mempool.c",
+        "src/mi/strerror.c",
+        # --- x86_64 common ---
+        "src/x86_64/is_fpreg.c",
+        "src/x86_64/regname.c",
+        # --- x86_64 os generic (Linux) ---
+        "src/x86_64/Gos-linux.c",
+        # --- libunwind_la_SOURCES_generic (mi/G*) ---
+        "src/mi/Gdyn-extract.c",
+        "src/mi/Gdyn-remote.c",
+        "src/mi/Gfind_dynamic_proc_info.c",
+        "src/mi/Gget_proc_info_by_ip.c",
+        "src/mi/Gget_proc_name.c",
+        "src/mi/Gput_dynamic_unwind_info.c",
+        "src/mi/Gdestroy_addr_space.c",
+        "src/mi/Gget_reg.c",
+        "src/mi/Gset_reg.c",
+        "src/mi/Gget_fpreg.c",
+        "src/mi/Gset_fpreg.c",
+        "src/mi/Gset_caching_policy.c",
+        "src/mi/Gset_cache_size.c",
+        # --- x86_64 generic arch-specific (x86_64/G*) ---
+        "src/x86_64/Gapply_reg_state.c",
+        "src/x86_64/Greg_states_iterate.c",
+        "src/x86_64/Gcreate_addr_space.c",
+        "src/x86_64/Gget_save_loc.c",
+        "src/x86_64/Gglobal.c",
+        "src/x86_64/Ginit.c",
+        "src/x86_64/Ginit_local.c",
+        "src/x86_64/Ginit_remote.c",
+        "src/x86_64/Gget_proc_info.c",
+        "src/x86_64/Gregs.c",
+        "src/x86_64/Gresume.c",
+        "src/x86_64/Gstash_frame.c",
+        "src/x86_64/Gstep.c",
+        "src/x86_64/Gtrace.c",
+        # --- dwarf generic (dwarf/G*) ---
+        "src/dwarf/Gexpr.c",
+        "src/dwarf/Gfde.c",
+        "src/dwarf/Gparser.c",
+        "src/dwarf/Gpe.c",
+        "src/dwarf/Gfind_proc_info-lsb.c",
+        "src/dwarf/Gfind_unwind_table.c",
+        "src/dwarf/Gget_proc_info_in_range.c",
+        # --- libunwind_dwarf_common_la_SOURCES ---
+        "src/dwarf/global.c",
+        # --- libunwind_elf64_la_SOURCES ---
+        "src/elf64.c",
+        # --- x86_64 os local (Linux) ---
+        "src/x86_64/Los-linux.c",
+        # --- libunwind_la_SOURCES_local (mi/L*) ---
+        "src/mi/backtrace.c",
+        "src/mi/dyn-cancel.c",
+        "src/mi/dyn-info-list.c",
+        "src/mi/dyn-register.c",
+        "src/mi/Ldyn-extract.c",
+        "src/mi/Lfind_dynamic_proc_info.c",
+        "src/mi/Lget_accessors.c",
+        "src/mi/Lget_proc_info_by_ip.c",
+        "src/mi/Lget_proc_name.c",
+        "src/mi/Lput_dynamic_unwind_info.c",
+        "src/mi/Ldestroy_addr_space.c",
+        "src/mi/Lget_reg.c",
+        "src/mi/Lset_reg.c",
+        "src/mi/Lget_fpreg.c",
+        "src/mi/Lset_fpreg.c",
+        "src/mi/Lset_caching_policy.c",
+        "src/mi/Lset_cache_size.c",
+        "src/mi/Laddress_validator.c",
+        # --- x86_64 local arch-specific (x86_64/L*) ---
+        "src/x86_64/setcontext.S",
+        "src/x86_64/Lapply_reg_state.c",
+        "src/x86_64/Lreg_states_iterate.c",
+        "src/x86_64/Lcreate_addr_space.c",
+        "src/x86_64/Lget_save_loc.c",
+        "src/x86_64/Lglobal.c",
+        "src/x86_64/Linit.c",
+        "src/x86_64/Linit_local.c",
+        "src/x86_64/Linit_remote.c",
+        "src/x86_64/Lget_proc_info.c",
+        "src/x86_64/Lregs.c",
+        "src/x86_64/Lresume.c",
+        "src/x86_64/Lstash_frame.c",
+        "src/x86_64/Lstep.c",
+        "src/x86_64/Ltrace.c",
+        "src/x86_64/getcontext.S",
+        # --- dwarf local (dwarf/L*) ---
+        "src/dwarf/Lexpr.c",
+        "src/dwarf/Lfde.c",
+        "src/dwarf/Lparser.c",
+        "src/dwarf/Lpe.c",
+        "src/dwarf/Lfind_proc_info-lsb.c",
+        "src/dwarf/Lfind_unwind_table.c",
+        "src/dwarf/Lget_proc_info_in_range.c",
+    ] + LIBUNWIND_INTERNAL_HDRS,
+    # Expose G*.c files as textual headers so L*.c files can #include them
+    textual_hdrs = glob(
+        [
+            "src/mi/G*.c",
+            "src/dwarf/G*.c",
+            "src/x86_64/G*.c",
+        ],
+        allow_empty = True,
+    ) + [
+        # elf64.c includes elfxx.c
+        "src/elfxx.c",
+    ],
+    copts = LIBUNWIND_COPTS + CLR_CONFIG_COPTS,
+    defines = LIBUNWIND_DEFINES,
+    hdrs = glob([
+        "include/*.h",
+        "include/tdep/*.h",
+        "include/tdep-x86_64/*.h",
+    ]),
+    includes = [
+        "include",
+        "include/tdep",
+        "src",
+    ],
+    deps = [
+        ":libunwind_config",
+        ":libunwind_internal_config",
+    ],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+# Platform-selecting alias: GNU libunwind on Linux, empty stub on macOS.
+alias(
+    name = "libunwind",
+    actual = select({
+        "@platforms//os:macos": ":libunwind_empty",
+        "//conditions:default": ":libunwind_linux",
+    }),
+)
+
+# --- Tests ---
+
+_LIBUNWIND_TEST_COPTS = [
+    "-Isrc/native/external/libunwind/include",
+    "-Isrc/native/external/libunwind/tests",
+    "-w",
+]
+
+_LIBUNWIND_TEST_DEFINES = [
+    "HAVE_CONFIG_H=1",
+    "HAVE_DL_ITERATE_PHDR=1",
+]
+
+cc_test(
+    name = "test_flush_cache",
+    size = "small",
+    srcs = ["tests/test-flush-cache.c"],
+    copts = _LIBUNWIND_TEST_COPTS,
+    defines = _LIBUNWIND_TEST_DEFINES,
+    linkstatic = True,
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [":libunwind_linux"],
+)

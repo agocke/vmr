@@ -1,0 +1,20 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "NonVoidThrowHelper",
+    srcs = ["NonVoidThrowHelper.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "ThrowHelper",
+    srcs = ["ThrowHelper.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ThrowHelperAtTryEntry",
+    srcs = ["ThrowHelperAtTryEntry.cs"],
+    optimize = True,
+)

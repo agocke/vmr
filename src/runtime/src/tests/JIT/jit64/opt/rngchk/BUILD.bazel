@@ -1,0 +1,83 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "RngchkStress2_o",
+    srcs = ["RngchkStress2.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ArrayWithThread_o",
+    srcs = ["ArrayWithThread.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+)
+
+coreclr_test(
+    name = "ArrayBound_o",
+    srcs = ["ArrayBound.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ArrayWithFunc_o",
+    srcs = ["ArrayWithFunc.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BadMatrixMul_o",
+    srcs = ["BadMatrixMul.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SimpleArray_01_o",
+    srcs = ["SimpleArray_01.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "RngchkStress3",
+    srcs = ["RngchkStress3.cs"],
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "MatrixMul_o",
+    srcs = ["MatrixMul.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "RngchkStress1_o",
+    srcs = ["RngchkStress1.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "JaggedArray_o",
+    srcs = ["JaggedArray.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ArrayWith2Loops_o",
+    srcs = ["ArrayWith2Loops.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

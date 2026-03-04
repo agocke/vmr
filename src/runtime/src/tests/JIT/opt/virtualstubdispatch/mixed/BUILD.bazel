@@ -1,0 +1,30 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "mixed_cs_ro",
+    srcs = ["mixed.cs"],
+    pri = 1,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "mixed_cs_do",
+    srcs = ["mixed.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "mixed_cs_d",
+    srcs = ["mixed.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "mixed_cs_r",
+    srcs = ["mixed.cs"],
+    pri = 1,
+)

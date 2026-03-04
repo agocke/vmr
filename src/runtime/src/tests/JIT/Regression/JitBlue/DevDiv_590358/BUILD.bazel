@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "DevDiv_590358",
+    srcs = ["DevDiv_590358.cs"],
+    optimize = True,
+)

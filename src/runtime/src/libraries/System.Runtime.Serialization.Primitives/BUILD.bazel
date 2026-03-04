@@ -1,0 +1,44 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Runtime.Serialization.Primitives",
+    srcs = [
+        "ref/System.Runtime.Serialization.Primitives.cs",
+        "ref/System.Runtime.Serialization.Primitives.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Runtime.Serialization.Primitives",
+    compiler_options = ["/unsafe"],
+    srcs = [
+        "src/System.Runtime.Serialization.Primitives.TypeForwards.cs",
+        "src/System/Runtime/Serialization/CollectionDataContractAttribute.cs",
+        "src/System/Runtime/Serialization/ContractNamespaceAttribute.cs",
+        "src/System/Runtime/Serialization/DataContractAttribute.cs",
+        "src/System/Runtime/Serialization/DataMemberAttribute.cs",
+        "src/System/Runtime/Serialization/EnumMemberAttribute.cs",
+        "src/System/Runtime/Serialization/IgnoreDataMemberAttribute.cs",
+        "src/System/Runtime/Serialization/InvalidDataContractException.cs",
+        "src/System/Runtime/Serialization/ISerializationSurrogateProvider.cs",
+        "src/System/Runtime/Serialization/ISerializationSurrogateProvider2.cs",
+        "src/System/Runtime/Serialization/KnownTypeAttribute.cs",
+
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.Runtime.Serialization.Primitives",
+    ref = ":ref_System.Runtime.Serialization.Primitives",
+    lib = ":impl_System.Runtime.Serialization.Primitives",
+    visibility = ["//visibility:public"],
+)

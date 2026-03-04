@@ -1,0 +1,753 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "seq_int_1_r",
+    srcs = ["seq_int_1.cs", "body_int.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_double_1_r",
+    srcs = ["seq_gc_double_1.cs", "body_safe_double.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_long_1_r",
+    srcs = ["seq_gc_long_1.cs", "body_safe_long.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_long_1_r",
+    srcs = ["expl_gc_long_1.cs", "body_safe_long.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_val_1_r",
+    srcs = ["seq_val_1.cs", "body_val.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_obj_1_d",
+    srcs = ["seq_obj_1.cs", "body_obj.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_obj_1_d",
+    srcs = ["expl_obj_1.cs", "body_obj.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_int_1_d",
+    srcs = ["seq_gc_int_1.cs", "body_safe_int.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_byte_1_r",
+    srcs = ["expl_byte_1.cs", "body_byte.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "seq_val_1_d",
+    srcs = ["seq_val_1.cs", "body_val.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_int_1_r",
+    srcs = ["expl_int_1.cs", "body_int.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_double_1_d",
+    srcs = ["seq_double_1.cs", "body_double.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_val_1_r",
+    srcs = ["expl_val_1.cs", "body_val.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_short_1_d",
+    srcs = ["seq_gc_short_1.cs", "body_safe_short.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_double_1_r",
+    srcs = ["expl_gc_double_1.cs", "body_safe_double.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_int_1_d",
+    srcs = ["expl_int_1.cs", "body_int.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_obj_1_r",
+    srcs = ["seq_obj_1.cs", "body_obj.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_val_1_d",
+    srcs = ["expl_gc_val_1.cs", "body_safe_val.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_double_1_d",
+    srcs = ["expl_double_1.cs", "body_double.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_long_1_r",
+    srcs = ["expl_long_1.cs", "body_long.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_byte_1_d",
+    srcs = ["expl_gc_byte_1.cs", "body_safe_byte.cs"],
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "seq_gc_long_1_d",
+    srcs = ["seq_gc_long_1.cs", "body_safe_long.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_long_1_r",
+    srcs = ["seq_long_1.cs", "body_long.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_byte_1_d",
+    srcs = ["seq_gc_byte_1.cs", "body_safe_byte.cs"],
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "expl_gc_int_1_d",
+    srcs = ["expl_gc_int_1.cs", "body_safe_int.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_float_1_r",
+    srcs = ["seq_float_1.cs", "body_float.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_val_1_d",
+    srcs = ["seq_gc_val_1.cs", "body_safe_val.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_short_1_r",
+    srcs = ["seq_gc_short_1.cs", "body_safe_short.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_obj_1_d",
+    srcs = ["expl_gc_obj_1.cs", "body_safe_obj.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_long_1_d",
+    srcs = ["expl_long_1.cs", "body_long.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_short_1_r",
+    srcs = ["expl_gc_short_1.cs", "body_safe_short.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_float_1_d",
+    srcs = ["seq_gc_float_1.cs", "body_safe_float.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_float_1_d",
+    srcs = ["seq_float_1.cs", "body_float.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_byte_1_d",
+    srcs = ["seq_byte_1.cs", "body_byte.cs"],
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "expl_double_1_r",
+    srcs = ["expl_double_1.cs", "body_double.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_long_1_d",
+    srcs = ["seq_long_1.cs", "body_long.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_int_1_d",
+    srcs = ["seq_int_1.cs", "body_int.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_float_1_r",
+    srcs = ["seq_gc_float_1.cs", "body_safe_float.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_val_1_d",
+    srcs = ["expl_val_1.cs", "body_val.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_double_1_d",
+    srcs = ["seq_gc_double_1.cs", "body_safe_double.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_short_1_d",
+    srcs = ["seq_short_1.cs", "body_short.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_double_1_r",
+    srcs = ["seq_double_1.cs", "body_double.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_byte_1_r",
+    srcs = ["seq_byte_1.cs", "body_byte.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "seq_short_1_r",
+    srcs = ["seq_short_1.cs", "body_short.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_byte_1_r",
+    srcs = ["seq_gc_byte_1.cs", "body_safe_byte.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "expl_gc_float_1_d",
+    srcs = ["expl_gc_float_1.cs", "body_safe_float.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_val_1_r",
+    srcs = ["seq_gc_val_1.cs", "body_safe_val.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_obj_1_r",
+    srcs = ["expl_gc_obj_1.cs", "body_safe_obj.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_short_1_r",
+    srcs = ["expl_short_1.cs", "body_short.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_short_1_d",
+    srcs = ["expl_gc_short_1.cs", "body_safe_short.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_float_1_d",
+    srcs = ["expl_float_1.cs", "body_float.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_double_1_d",
+    srcs = ["expl_gc_double_1.cs", "body_safe_double.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_byte_1_r",
+    srcs = ["expl_gc_byte_1.cs", "body_safe_byte.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "expl_obj_1_r",
+    srcs = ["expl_obj_1.cs", "body_obj.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_long_1_d",
+    srcs = ["expl_gc_long_1.cs", "body_safe_long.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_val_1_r",
+    srcs = ["expl_gc_val_1.cs", "body_safe_val.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_short_1_d",
+    srcs = ["expl_short_1.cs", "body_short.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_int_1_r",
+    srcs = ["seq_gc_int_1.cs", "body_safe_int.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_gc_float_1_r",
+    srcs = ["expl_gc_float_1.cs", "body_safe_float.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_obj_1_d",
+    srcs = ["seq_gc_obj_1.cs", "body_safe_obj.cs"],
+    pri = 1,
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "seq_gc_obj_1_r",
+    srcs = ["seq_gc_obj_1.cs", "body_safe_obj.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_float_1_r",
+    srcs = ["expl_float_1.cs", "body_float.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "expl_byte_1_d",
+    srcs = ["expl_byte_1.cs", "body_byte.cs"],
+    debug_type = "full",
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "expl_gc_int_1_r",
+    srcs = ["expl_gc_int_1.cs", "body_safe_int.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

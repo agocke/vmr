@@ -1,0 +1,16 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Runtime.Serialization.Primitives.Tests",
+    srcs = glob(["**/*.cs"]),
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

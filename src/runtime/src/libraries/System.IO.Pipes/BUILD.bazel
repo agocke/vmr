@@ -1,0 +1,118 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Pipes",
+    srcs = [
+        "ref/System.IO.Pipes.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.Pipes",
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+    ],
+    srcs = [
+        "src/Microsoft/Win32/SafeHandles/SafePipeHandle.cs",
+        "src/System/IO/Error.cs",
+        "src/System/IO/Pipes/AnonymousPipeClientStream.cs",
+        "src/System/IO/Pipes/AnonymousPipeServerStream.cs",
+        "src/System/IO/Pipes/NamedPipeClientStream.cs",
+        "src/System/IO/Pipes/NamedPipeServerStream.cs",
+        "src/System/IO/Pipes/PipeAccessRights.cs",
+        "src/System/IO/Pipes/PipeDirection.cs",
+        "src/System/IO/Pipes/PipeOptions.cs",
+        "src/System/IO/Pipes/PipeState.cs",
+        "src/System/IO/Pipes/PipeStream.cs",
+        "src/System/IO/Pipes/PipeTransmissionMode.cs",
+
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+    ] + select({
+        "@platforms//os:linux": [
+            # Unix-specific implementation files
+            "src/Microsoft/Win32/SafeHandles/SafePipeHandle.Unix.cs",
+            "src/System/IO/Pipes/AnonymousPipeServerStream.Unix.cs",
+            "src/System/IO/Pipes/NamedPipeClientStream.Unix.cs",
+            "src/System/IO/Pipes/NamedPipeServerStream.Unix.cs",
+            "src/System/IO/Pipes/PipeStream.Unix.cs",
+
+            # Unix interop files
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Close.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Fcntl.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Fcntl.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.FLock.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetHostName.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Open.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.OpenFlags.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPwUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Read.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Unlink.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Write.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPeerID.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetEUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SetEUid.cs",
+        ],
+        "@platforms//os:macos": [
+            # Unix-specific implementation files (shared with Linux)
+            "src/Microsoft/Win32/SafeHandles/SafePipeHandle.Unix.cs",
+            "src/System/IO/Pipes/AnonymousPipeServerStream.Unix.cs",
+            "src/System/IO/Pipes/NamedPipeClientStream.Unix.cs",
+            "src/System/IO/Pipes/NamedPipeServerStream.Unix.cs",
+            "src/System/IO/Pipes/PipeStream.Unix.cs",
+
+            # Unix interop files
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Close.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Fcntl.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Fcntl.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.FLock.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetHostName.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Open.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.OpenFlags.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPwUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Read.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Unlink.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Write.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.Pipe.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPeerID.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetEUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SetEUid.cs",
+        ],
+    }),
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Overlapped:ref_System.Threading.Overlapped",
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Sockets:ref_System.Net.Sockets",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+)
+
+ref_impl_pair(
+    name = "live_System.IO.Pipes",
+    ref = ":ref_System.IO.Pipes",
+    lib = ":impl_System.IO.Pipes",
+    visibility = ["//visibility:public"],
+)

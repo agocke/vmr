@@ -1,0 +1,20 @@
+# Package for eng/ (enables subpackage references)
+
+exports_files([
+    "run_binary.sh.tpl",
+    "run_test.sh.tpl",
+    "run_library_test.sh.tpl",
+    "testing/xunit/xunit.runner.json",
+])
+
+filegroup(
+    name = "xunit_console_runner",
+    srcs = [
+        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.console.dll",
+        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.console.runtimeconfig.json",
+        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.console.deps.json",
+        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.runner.reporters.netcoreapp10.dll",
+        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.runner.utility.netcoreapp10.dll",
+    ],
+    visibility = ["//visibility:public"],
+)

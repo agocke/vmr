@@ -1,0 +1,29 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.ComponentModel.Annotations.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Uses Newtonsoft.Json which is not available in Bazel
+            "System/ComponentModel/DataAnnotations/ValidatorTests.cs",
+        ],
+    ),
+    deps = [
+        "//src/libraries/System.ComponentModel.Annotations:ref_System.ComponentModel.Annotations",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    nullable = "disable",
+    nowarn = ["nullable"],
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)

@@ -1,0 +1,11 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.ServicePoint",
+    srcs = ["src/System.Net.ServicePoint.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Net.Requests:ref_System.Net.Requests",
+    ],
+    exclude_sr = True,
+)

@@ -1,0 +1,25 @@
+load("//src/tests:live_test.bzl", "library_test")
+
+library_test(
+    name = "System.Threading.Channels.Tests",
+    srcs = glob(["*.cs"]) + [
+        "//src/libraries/Common/tests:System/Diagnostics/DebuggerAttributes.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Threading.Channels:ref_System.Threading.Channels",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries/System.IO.FileSystem.DriveInfo:ref_System.IO.FileSystem.DriveInfo",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    nowarn = [
+        "SYSLIB0011",
+    ],
+    size = "large",
+    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+)
