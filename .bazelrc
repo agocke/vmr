@@ -1,0 +1,2 @@
+# Import runtime build configuration
+import %workspace%/src/runtime/.bazelrc
