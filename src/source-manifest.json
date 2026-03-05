@@ -81,7 +81,7 @@
     {
       "packageVersion": null,
       "path": "runtime",
-      "remoteUri": "https://github.com/dotnet/runtime",
+      "remoteUri": "https://github.com/agocke/runtime",
       "commitSha": "f8a3a45536d3b0c70abf579d9e78f771cec13535"
     },
     {
