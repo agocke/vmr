@@ -77,10 +77,9 @@ cc_library(
         "executableallocator.cpp",
     ] + _UTILCODE_HDRS,
     copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/utilcode",
-        # Replicate CMake's target_precompile_headers(utilcode PRIVATE [["stdafx.h"]])
         "-include", "src/coreclr/utilcode/stdafx.h",
     ],
+    includes = ["."],
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES,
     alwayslink = True,
@@ -98,9 +97,9 @@ cc_library(
         "hostimpl.cpp",
     ] + _UTILCODE_HDRS,
     copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/utilcode",
         "-include", "src/coreclr/utilcode/stdafx.h",
     ],
+    includes = ["."],
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES + [
         "SELF_NO_HOST",

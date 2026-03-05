@@ -80,12 +80,14 @@ _GC_COPTS = [
     # -iquote ensures GC's own env/ headers (e.g. volatile.h) are found
     # before coreclr/inc/ headers for #include "..." directives.
     "-iquote", "src/coreclr/gc/env",
-    "-Isrc/coreclr/gc",
-    "-Isrc/coreclr/gc/env",
-    "-Isrc/native",
+]
+
+_GC_INCLUDES = [
+    ".",
+    "env",
 ] + select({
-    "@platforms//os:macos": ["-Isrc/coreclr/gc/unix/bazel/darwin-arm64"],
-    "//conditions:default": ["-Isrc/coreclr/gc/unix/bazel/linux-glibc-x64"],
+    "@platforms//os:macos": ["unix/bazel/darwin-arm64"],
+    "//conditions:default": ["unix/bazel/linux-glibc-x64"],
 })
 
 # The standalone GC always builds as retail, even in debug builds.
@@ -113,9 +115,8 @@ cc_library(
         "@platforms//os:macos": ["unix/bazel/darwin-arm64/config.gc.h"],
         "//conditions:default": ["unix/bazel/linux-glibc-x64/config.gc.h"],
     }),
-    copts = _GC_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/gc/unix",
-    ],
+    copts = _GC_COPTS + CLR_CONFIG_COPTS,
+    includes = _GC_INCLUDES + ["unix"],
     local_defines = _GC_STANDALONE_DEFINES,
     alwayslink = True,
     deps = [
@@ -151,17 +152,17 @@ cc_library(
         "vxsort/smallsort/*.h",
     ]),
     copts = _GC_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/gc/vxsort",
-        "-Isrc/coreclr/gc/vxsort/smallsort",
         "-Wno-unused-but-set-parameter",
     ] + select({
         "@platforms//cpu:arm64": [],
         "//conditions:default": ["-mavx2"],
     }),
+    includes = _GC_INCLUDES + ["vxsort", "vxsort/smallsort"],
     local_defines = _GC_STANDALONE_DEFINES,
     alwayslink = True,
     deps = [
         ":gc_headers",
+        "//src/native:native_inc",
         "//src/native/minipal",
     ],
 )
@@ -178,7 +179,8 @@ cc_library(
         _DESCRIPTOR_STUB_SRC,
         "datadescriptor/bazel/gc_dll_wks/contractconfiguration.h",
     ],
-    copts = ["-Isrc/coreclr/gc/datadescriptor/bazel/gc_dll_wks"],
+    copts = [],
+    includes = ["datadescriptor/bazel/gc_dll_wks"],
     alwayslink = True,
     deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
 )
@@ -189,7 +191,8 @@ cc_library(
         _DESCRIPTOR_STUB_SRC,
         "datadescriptor/bazel/gc_dll_svr/contractconfiguration.h",
     ],
-    copts = ["-Isrc/coreclr/gc/datadescriptor/bazel/gc_dll_svr"],
+    copts = [],
+    includes = ["datadescriptor/bazel/gc_dll_svr"],
     defines = ["SERVER_GC"],
     alwayslink = True,
     deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
@@ -201,7 +204,8 @@ cc_library(
         _DESCRIPTOR_STUB_SRC,
         "datadescriptor/bazel/gcexp_dll_wks/contractconfiguration.h",
     ],
-    copts = ["-Isrc/coreclr/gc/datadescriptor/bazel/gcexp_dll_wks"],
+    copts = [],
+    includes = ["datadescriptor/bazel/gcexp_dll_wks"],
     defines = ["USE_REGIONS"],
     alwayslink = True,
     deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
@@ -213,7 +217,8 @@ cc_library(
         _DESCRIPTOR_STUB_SRC,
         "datadescriptor/bazel/gcexp_dll_svr/contractconfiguration.h",
     ],
-    copts = ["-Isrc/coreclr/gc/datadescriptor/bazel/gcexp_dll_svr"],
+    copts = [],
+    includes = ["datadescriptor/bazel/gcexp_dll_svr"],
     defines = ["USE_REGIONS", "SERVER_GC"],
     alwayslink = True,
     deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
@@ -253,6 +258,7 @@ cc_library(
     srcs = _GC_SOURCES,
     textual_hdrs = _GC_TEXTUAL_HDRS,
     copts = _GC_STANDALONE_COPTS,
+    includes = _GC_INCLUDES,
     defines = _GC_STANDALONE_DEFINES,
     alwayslink = True,
     deps = [
@@ -262,6 +268,7 @@ cc_library(
         ":gc_dll_wks_descriptor",
         ":gc_dll_svr_descriptor",
         "//src/coreclr/inc:coreclr_inc_headers_only",
+        "//src/native:native_inc",
         "//src/native/minipal",
     ],
 )
@@ -287,6 +294,7 @@ cc_library(
     srcs = _GC_SOURCES,
     textual_hdrs = _GC_TEXTUAL_HDRS,
     copts = _GC_STANDALONE_COPTS,
+    includes = _GC_INCLUDES,
     defines = _GC_STANDALONE_DEFINES + ["USE_REGIONS"],
     alwayslink = True,
     deps = [
@@ -296,6 +304,7 @@ cc_library(
         ":gcexp_dll_wks_descriptor",
         ":gcexp_dll_svr_descriptor",
         "//src/coreclr/inc:coreclr_inc_headers_only",
+        "//src/native:native_inc",
         "//src/native/minipal",
     ],
 )

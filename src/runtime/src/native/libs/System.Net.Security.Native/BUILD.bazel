@@ -12,11 +12,12 @@ cc_library(
         "entrypoints.c",
         "pal_gssapi.c",
     ] + glob(["*.h"]),
-    copts = [
-        "-Isrc/native",
-        "-Isrc/native/libs/Common",
-        "-Isrc/native/libs/bazel",
-        "-Isrc/native/libs/System.Net.Security.Native",
+    copts = [],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
+        ".",
     ],
     defines = select({
         "@platforms//os:linux": ["GSS_SHIM"],

@@ -22,9 +22,11 @@ cc_library(
     ]),
 )
 
-_MD_COPTS = CORECLR_COPTS + CLR_CONFIG_COPTS + [
-    "-Isrc/coreclr/md/inc",
-    "-Isrc/coreclr/md",
+_MD_COPTS = CORECLR_COPTS + CLR_CONFIG_COPTS
+
+_MD_INCLUDES = [
+    "inc",
+    ".",
 ]
 
 # Directory-level defines from src/coreclr/md/CMakeLists.txt
@@ -63,9 +65,9 @@ cc_library(
         "compiler/stdafx.h",
     ],
     copts = _MD_COPTS + [
-        "-Isrc/coreclr/md/compiler",
         "-include", "src/coreclr/md/compiler/stdafx.h",
     ],
+    includes = _MD_INCLUDES + ["compiler"],
     local_defines = CLR_CONFIG_DEFINES,
     defines = _MD_DEFINES,
     alwayslink = True,
@@ -98,9 +100,9 @@ cc_library(
         "compiler/stdafx.h",
     ],
     copts = _MD_COPTS + [
-        "-Isrc/coreclr/md/compiler",
         "-include", "src/coreclr/md/compiler/stdafx.h",
     ],
+    includes = _MD_INCLUDES + ["compiler"],
     local_defines = CLR_CONFIG_DEFINES,
     defines = _MD_DEFINES + [
         "FEATURE_METADATA_EMIT_PORTABLE_PDB",
@@ -126,9 +128,9 @@ cc_library(
         "runtime/stdafx.h",
     ],
     copts = _MD_COPTS + [
-        "-Isrc/coreclr/md/runtime",
         "-include", "src/coreclr/md/runtime/stdafx.h",
     ],
+    includes = _MD_INCLUDES + ["runtime"],
     local_defines = CLR_CONFIG_DEFINES,
     defines = _MD_DEFINES + [
         "NO_COR",
@@ -154,9 +156,9 @@ cc_library(
         "runtime/stdafx.h",
     ],
     copts = _MD_COPTS + [
-        "-Isrc/coreclr/md/runtime",
         "-include", "src/coreclr/md/runtime/stdafx.h",
     ],
+    includes = _MD_INCLUDES + ["runtime"],
     local_defines = CLR_CONFIG_DEFINES,
     defines = _MD_DEFINES + [
         "NO_COR",
@@ -184,9 +186,9 @@ cc_library(
         "enc/stdafx.h",
     ],
     copts = _MD_COPTS + [
-        "-Isrc/coreclr/md/enc",
         "-include", "src/coreclr/md/enc/stdafx.h",
     ],
+    includes = _MD_INCLUDES + ["enc"],
     local_defines = CLR_CONFIG_DEFINES,
     defines = _MD_DEFINES,
     alwayslink = True,
@@ -211,9 +213,9 @@ cc_library(
         "enc/stdafx.h",
     ],
     copts = _MD_COPTS + [
-        "-Isrc/coreclr/md/enc",
         "-include", "src/coreclr/md/enc/stdafx.h",
     ],
+    includes = _MD_INCLUDES + ["enc"],
     local_defines = CLR_CONFIG_DEFINES,
     defines = _MD_DEFINES + [
         "FEATURE_METADATA_EMIT_PORTABLE_PDB",

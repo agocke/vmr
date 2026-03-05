@@ -17,10 +17,9 @@ cc_library(
         "stdafx.h",
     ],
     copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/md/ceefilegen",
-        "-Isrc/coreclr/md/inc",
         "-include", "src/coreclr/md/ceefilegen/stdafx.h",
     ],
+    includes = [".", "../inc"],
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES,
     alwayslink = True,

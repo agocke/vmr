@@ -14,21 +14,20 @@ cc_binary(
     ],
     linkshared = True,
     linkstatic = True,
-    copts = [
-        "-Isrc/coreclr/vm",
-        "-Isrc/coreclr",
-        "-Isrc/coreclr/gc",
-        "-Isrc/coreclr/gc/env",
-        "-Isrc/coreclr/runtime",
-        "-Isrc/coreclr/vm/eventing/eventpipe",
-        "-Isrc/native/corehost",
-    ] + select({
-        "@platforms//cpu:arm64": ["-Isrc/coreclr/vm/arm64"],
-        "//conditions:default": ["-Isrc/coreclr/vm/amd64"],
-    }) + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
         "-include", "src/coreclr/vm/common.h",
         "-Wno-error",
     ],
+    includes = [
+        "../../../vm",
+        "../../..",
+        "../../../gc",
+        "../../../runtime",
+        "../../../vm/eventing/eventpipe",
+    ] + select({
+        "@platforms//cpu:arm64": ["../../../vm/arm64"],
+        "//conditions:default": ["../../../vm/amd64"],
+    }),
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES + [
         "FX_VER_INTERNALNAME_STR=CoreCLR.dll",

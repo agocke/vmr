@@ -94,7 +94,7 @@ COMMON_ATTRS = {
     ),
     "cls_compliant": attr.bool(
         doc = "Whether the assembly is CLS compliant.",
-        default = True,
+        default = False,
     ),
     "keyfile": attr.label(
         doc = "The key file used to sign the assembly with a strong name.",

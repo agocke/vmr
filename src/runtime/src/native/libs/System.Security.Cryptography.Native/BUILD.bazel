@@ -52,11 +52,14 @@ cc_library(
         "-Wno-documentation",
         "-Wno-used-but-marked-unused",
         "-pthread",
-        "-Isrc/native",
-        "-Isrc/native/libs/Common",
-        "-Isrc/native/libs/bazel",
-        "-Isrc/native/libs/System.Security.Cryptography.Native",
-        "-Isrc/native/libs/System.Security.Cryptography.Native/bazel/linux-glibc-x64",
+
+    ],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
+        ".",
+        "bazel/linux-glibc-x64",
     ],
     defines = [
         "OPENSSL_API_COMPAT=0x10100000L",

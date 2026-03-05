@@ -47,21 +47,20 @@ cc_library(
 cc_library(
     name = "userevents",
     srcs = ["userevents/bazel/user_events_stub.cpp"],
-    copts = [
-        "-Isrc/coreclr/vm",
-        "-Isrc/coreclr",
-        "-Isrc/coreclr/gc",
-        "-Isrc/coreclr/gc/env",
-        "-Isrc/coreclr/runtime",
-        "-Isrc/coreclr/vm/eventing/eventpipe",
-        "-Isrc/native/corehost",
-    ] + select({
-        "@platforms//cpu:arm64": ["-Isrc/coreclr/vm/arm64"],
-        "//conditions:default": ["-Isrc/coreclr/vm/amd64"],
-    }) + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
         "-include", "src/coreclr/vm/common.h",
         "-Wno-error",
     ],
+    includes = [
+        "..",
+        "../..",
+        "../../gc",
+        "../../runtime",
+        "eventpipe",
+    ] + select({
+        "@platforms//cpu:arm64": ["../arm64"],
+        "//conditions:default": ["../amd64"],
+    }),
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES,
     alwayslink = True,
@@ -119,19 +118,18 @@ filegroup(
 # Native EventPipe/DiagnosticServer .c files are compiled as C++ via a unity wrapper
 # (CMake uses set_source_files_properties(... PROPERTIES LANGUAGE CXX) + UNITY_BUILD).
 
-_EP_COPTS = [
-    "-Isrc/coreclr/vm",
-    "-Isrc/coreclr",
-    "-Isrc/coreclr/gc",
-    "-Isrc/coreclr/gc/env",
-    "-Isrc/coreclr/runtime",
-    "-Isrc/coreclr/vm/eventing/eventpipe",
-    "-Isrc/native/eventpipe",
-    "-Isrc/native/corehost",
+_EP_INCLUDES = [
+    "..",
+    "../..",
+    "../../gc",
+    "../../runtime",
+    "eventpipe",
 ] + select({
-    "@platforms//cpu:arm64": ["-Isrc/coreclr/vm/arm64"],
-    "//conditions:default": ["-Isrc/coreclr/vm/amd64"],
-}) + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+    "@platforms//cpu:arm64": ["../arm64"],
+    "//conditions:default": ["../amd64"],
+})
+
+_EP_COPTS = CORECLR_COPTS + CLR_CONFIG_COPTS + [
     "-include", "src/coreclr/vm/common.h",
     "-Wno-error",
 ]
@@ -156,6 +154,7 @@ cc_library(
         "//src/native/eventpipe:dn-diagnosticserver-pal-srcs",
     ],
     copts = _EP_COPTS,
+    includes = _EP_INCLUDES,
     local_defines = CLR_CONFIG_DEFINES,
     defines = _EP_DEFINES,
     alwayslink = True,

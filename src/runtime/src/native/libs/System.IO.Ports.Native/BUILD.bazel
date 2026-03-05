@@ -14,11 +14,12 @@ cc_library(
         "@platforms//os:linux": ["pal_termios2.c"],
         "//conditions:default": [],
     }) + glob(["*.h"]),
-    copts = [
-        "-Isrc/native",
-        "-Isrc/native/libs/Common",
-        "-Isrc/native/libs/bazel",
-        "-Isrc/native/libs/System.IO.Ports.Native",
+    copts = [],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
+        ".",
     ],
     local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
     visibility = ["//visibility:public"],

@@ -83,6 +83,9 @@ def live_csharp_test(
         size = size,
         use_shared_compilation = use_shared_compilation,
         shared_compilation_worker = _SHARED_COMPILATION_WORKER if use_shared_compilation else None,
+        # Match MSBuild: GenerateAssemblyInfo=false (no CLSCompliant attribute),
+        # GenerateDocumentationFile=false, Nullable=annotations.
+        generate_documentation_file = False,
         **kwargs
     )
 
@@ -605,6 +608,9 @@ def library_test(
         nullable = nullable,
         use_shared_compilation = use_shared_compilation,
         shared_compilation_worker = _SHARED_COMPILATION_WORKER if use_shared_compilation else None,
+        # Match MSBuild: GenerateAssemblyInfo=false (no CLSCompliant attribute),
+        # GenerateDocumentationFile=false.
+        generate_documentation_file = False,
         **kwargs
     )
 
@@ -618,6 +624,7 @@ def coreclr_test(
     optimize = False, # TODO: plum through to compiler
     compiler_options = [],
     use_shared_compilation = True,
+    nullable = "annotations",
     **kwargs
 ):
     # Build complete deps list for JIT tests:
@@ -654,6 +661,8 @@ def coreclr_test(
         disable_implicit_framework_refs = True,
         target_frameworks = [NETCOREAPP_CURRENT],
         use_shared_compilation = use_shared_compilation,
+        nullable = nullable,
+        generate_documentation_file = False,
         **kwargs
     )
 
@@ -669,6 +678,8 @@ def coreclr_test(
         nowarn = ["CS1701"] + _TEST_NOWARN,
         use_shared_compilation = use_shared_compilation,
         shared_compilation_worker = _SHARED_COMPILATION_WORKER if use_shared_compilation else None,
+        nullable = nullable,
+        generate_documentation_file = False,
         **kwargs
     )
 

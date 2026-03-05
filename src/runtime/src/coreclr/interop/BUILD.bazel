@@ -19,9 +19,7 @@ cc_library(
         "inc/*.h",
         "*.h",
     ]),
-    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/interop/inc",
-    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
     local_defines = CLR_CONFIG_DEFINES,
     includes = [
         ".",

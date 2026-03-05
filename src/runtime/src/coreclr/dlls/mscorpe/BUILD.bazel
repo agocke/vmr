@@ -19,10 +19,9 @@ cc_library(
         "stdafx.h",
     ],
     copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/dlls/mscorpe",
-        "-Isrc/coreclr/md/inc",
         "-include", "src/coreclr/dlls/mscorpe/stdafx.h",
     ],
+    includes = [".", "../../md/inc"],
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES + [
         "FEATURE_CORECLR",

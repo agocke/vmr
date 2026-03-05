@@ -44,9 +44,12 @@ cc_library(
 # --- Shared copts and defines for all corehost targets ---
 
 COREHOST_COPTS = [
-    "-Isrc/native/corehost",
-    "-Isrc/native",
     "-fno-use-cxa-atexit",
+]
+
+COREHOST_INCLUDES = [
+    ".",
+    "..",
 ]
 
 COREHOST_DEFINES = PLATFORM_DEFINES + [
@@ -91,6 +94,7 @@ cc_library(
         "fxr/sdk_resolver.h",
     ],
     copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES,
     defines = COREHOST_DEFINES,
     visibility = [
         "//src/coreclr:__subpackages__",
@@ -114,9 +118,8 @@ cc_library(
         "hostmisc/trace.h",
         "hostmisc/utils.h",
     ],
-    copts = COREHOST_COPTS + [
-        "-Isrc/native/corehost/hostmisc",
-    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["hostmisc"],
     defines = COREHOST_DEFINES,
     local_defines = NATIVE_CONFIG_DEFINES,
     linkopts = select({
@@ -143,10 +146,8 @@ cc_library(
 cc_library(
     name = "fxr_resolver",
     srcs = ["fxr_resolver.cpp"],
-    copts = COREHOST_COPTS + [
-        "-Isrc/native/corehost/fxr",
-        "-Isrc/native/corehost/hostmisc",
-    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc"],
     defines = COREHOST_DEFINES,
     local_defines = NATIVE_CONFIG_DEFINES,
     deps = [":hostmisc"],
@@ -178,10 +179,8 @@ cc_library(
         "version_compatibility_range.h",
         "runtime_config.h",
     ],
-    copts = COREHOST_COPTS + [
-        "-Isrc/native/corehost/fxr",
-        "-Isrc/native/corehost/hostmisc",
-    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc"],
     defines = COREHOST_DEFINES + ["EXPORT_SHARED_API"],
     local_defines = NATIVE_CONFIG_DEFINES,
     deps = [
@@ -227,10 +226,8 @@ cc_library(
         "fxr/sdk_resolver.cpp",
         "fxr/standalone/hostpolicy_resolver.cpp",
     ],
-    copts = COREHOST_COPTS + [
-        "-Isrc/native/corehost/fxr",
-        "-Isrc/native/corehost/hostmisc",
-    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc"],
     defines = COREHOST_DEFINES + ["EXPORT_SHARED_API"],
     local_defines = NATIVE_CONFIG_DEFINES,
     deps = [":hostcommon"],
@@ -297,11 +294,8 @@ cc_library(
         "hostpolicy/shared_store.h",
         "hostpolicy/version.h",
     ],
-    copts = COREHOST_COPTS + [
-        "-Isrc/native/corehost/fxr",
-        "-Isrc/native/corehost/hostmisc",
-        "-Isrc/native/corehost/hostpolicy",
-    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc", "hostpolicy"],
     defines = COREHOST_DEFINES + ["EXPORT_SHARED_API"],
     local_defines = NATIVE_CONFIG_DEFINES,
     deps = [":hostcommon"],
@@ -342,11 +336,8 @@ cc_binary(
         "apphost/standalone/hostfxr_resolver.cpp",
         "hostfxr_resolver.h",
     ],
-    copts = COREHOST_COPTS + [
-        "-Isrc/native/corehost/fxr",
-        "-Isrc/native/corehost/hostmisc",
-        "-Isrc/native/corehost/apphost",
-    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc", "apphost"],
     defines = COREHOST_DEFINES,
     local_defines = NATIVE_CONFIG_DEFINES,
     linkopts = select({
@@ -372,11 +363,8 @@ cc_binary(
         "apphost/standalone/hostfxr_resolver.cpp",
         "hostfxr_resolver.h",
     ],
-    copts = COREHOST_COPTS + [
-        "-Isrc/native/corehost/fxr",
-        "-Isrc/native/corehost/hostmisc",
-        "-Isrc/native/corehost/apphost",
-    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc", "apphost"],
     defines = COREHOST_DEFINES + ["FEATURE_APPHOST"],
     local_defines = NATIVE_CONFIG_DEFINES,
     linkopts = select({
@@ -397,10 +385,8 @@ cc_library(
     name = "nethost_lib",
     srcs = ["nethost/nethost.cpp"],
     hdrs = ["nethost/nethost.h"],
-    copts = COREHOST_COPTS + [
-        "-Isrc/native/corehost/fxr",
-        "-Isrc/native/corehost/hostmisc",
-    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc"],
     defines = COREHOST_DEFINES + [
         "EXPORT_SHARED_API",
         "FEATURE_LIBHOST",

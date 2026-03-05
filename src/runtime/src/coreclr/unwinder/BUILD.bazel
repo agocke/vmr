@@ -25,28 +25,21 @@ cc_library(
         ["*.h"],
         allow_empty = True,
     ),
-    copts = [
-        # Must come before CORECLR_COPTS so that <common.h> resolves to vm/common.h
-        "-Isrc/coreclr/vm",
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    # vm/ must be before coreclr_inc includes so that <common.h> resolves to vm/common.h
+    includes = [
+        "../vm",
+        ".",
+        "../debug/ee",
+        "../gc",
+        "../gcdump",
+        "../debug/daccess",
+        "../interop/inc",
     ] + select({
-        "@platforms//cpu:arm64": [
-            "-Isrc/coreclr/vm/arm64",
-            "-Isrc/coreclr/unwinder/arm64",
-        ],
-        "//conditions:default": [
-            "-Isrc/coreclr/vm/amd64",
-            "-Isrc/coreclr/unwinder/amd64",
-        ],
-    }) + CORECLR_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/unwinder",
-        "-Isrc/coreclr/debug/ee",
-        "-Isrc/coreclr/gc",
-        "-Isrc/coreclr/gcdump",
-        "-Isrc/coreclr/debug/daccess",
-        "-Isrc/coreclr/interop/inc",
-    ],
+        "@platforms//cpu:arm64": ["../vm/arm64", "arm64"],
+        "//conditions:default": ["../vm/amd64", "amd64"],
+    }),
     local_defines = CLR_CONFIG_DEFINES,
-    includes = ["."],
     alwayslink = True,
     deps = ["//src/coreclr/inc:coreclr_inc"],
 )

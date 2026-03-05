@@ -14,9 +14,11 @@ cc_library(
     copts = [
         "-Wno-declaration-after-statement",
         "-Wno-implicit-fallthrough",
-        "-Isrc/native",
-        "-Isrc/native/libs/Common",
-        "-Isrc/native/libs/bazel",
+    ],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
     ],
     defines = ["BROTLI_SHARED_COMPILATION"],
     local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,

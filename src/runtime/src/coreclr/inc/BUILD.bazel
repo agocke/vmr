@@ -24,6 +24,7 @@ cc_library(
     defines = CORECLR_DEFINES,
     includes = ["."],
     deps = [
+        "//src/coreclr:coreclr_inc",
         "//src/coreclr/binder:binder_headers",
         "//src/coreclr/debug:debug_inc",
         "//src/coreclr/dlls:dlls_headers",
@@ -82,6 +83,7 @@ cc_library(
     textual_hdrs = glob(["*.cpp"]),
     includes = ["."],
     deps = [
+        "//src/coreclr:coreclr_inc",
         "//src/coreclr/minipal:coreclrminipal_headers",
         "//src/coreclr/pal:pal_headers",
         "//src/native:native_inc",

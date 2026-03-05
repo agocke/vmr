@@ -130,6 +130,7 @@ def netcoreapp_ref_assembly(
     nowarn = [],
     compiler_options = [],
     keyfile = None,
+    cls_compliant = True,
     **kwargs
 ):
     compiler_options = compiler_options + [
@@ -151,6 +152,7 @@ def netcoreapp_ref_assembly(
         out = base_name,
         srcs = srcs,
         deps = deps,
+        cls_compliant = cls_compliant,
         assembly_version = "10.0.0.0",
         visibility = [ "//visibility:public" ],
         nullable = "annotations",

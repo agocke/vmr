@@ -15,7 +15,6 @@ csharp_library(
     target_frameworks = ["net10.0"],
     visibility = ["//visibility:public"],
     nullable = "enable",
-    cls_compliant = False,
     nowarn = [
         "CS8600",
         "CS8765",

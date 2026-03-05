@@ -15,7 +15,8 @@ cc_library(
         _DESCRIPTOR_STUB_SRC,
         "bazel/cdac/contractconfiguration.h",
     ],
-    copts = CLR_CONFIG_COPTS + ["-Isrc/coreclr/vm/datadescriptor/bazel/cdac"],
+    copts = CLR_CONFIG_COPTS,
+    includes = ["bazel/cdac"],
     alwayslink = True,
     deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
 )
@@ -27,7 +28,8 @@ cc_library(
         _DESCRIPTOR_STUB_SRC,
         "bazel/gc_wks/contractconfiguration.h",
     ],
-    copts = CLR_CONFIG_COPTS + ["-Isrc/coreclr/vm/datadescriptor/bazel/gc_wks"],
+    copts = CLR_CONFIG_COPTS,
+    includes = ["bazel/gc_wks"],
     alwayslink = True,
     deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
 )
@@ -39,7 +41,8 @@ cc_library(
         _DESCRIPTOR_STUB_SRC,
         "bazel/gc_svr/contractconfiguration.h",
     ],
-    copts = CLR_CONFIG_COPTS + ["-Isrc/coreclr/vm/datadescriptor/bazel/gc_svr"],
+    copts = CLR_CONFIG_COPTS,
+    includes = ["bazel/gc_svr"],
     alwayslink = True,
     deps = ["//src/coreclr/debug:datadescriptor_shared_inc"],
 )

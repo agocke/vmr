@@ -61,24 +61,11 @@ _NATIVEAOT_COMMON_COPTS = [
     "-Wno-stringop-overflow",
     "-Wno-restrict",
     "-Wno-unused-but-set-parameter",
-    "-Isrc/coreclr/nativeaot/Runtime",
-    "-Isrc/coreclr/nativeaot/Runtime/inc",
-    "-Isrc/coreclr/nativeaot/Runtime/unix",
-    "-Isrc/coreclr/gc",
-    "-Isrc/coreclr/gc/env",
-    "-Isrc/coreclr/runtime",
-    "-Isrc/coreclr/pal/inc/rt",
-    "-Isrc/native",
-    "-Isrc/native/inc",
-    "-Isrc/native/external/llvm-libunwind/include",
+    # Include paths are provided by //src/coreclr/nativeaot:nativeaot_inc
+    # and //src/native:native_inc (propagated via deps).
 ]
 
 NATIVEAOT_COPTS = _NATIVEAOT_COMMON_COPTS + select({
-    "@platforms//os:macos": [
-        "-Isrc/coreclr/nativeaot/Runtime/arm64",
-    ],
-    "@platforms//os:linux": [
-        "-Isrc/coreclr/nativeaot/Runtime/amd64",
-        "-mcx16",
-    ],
+    "@platforms//os:macos": [],
+    "@platforms//os:linux": ["-mcx16"],
 })

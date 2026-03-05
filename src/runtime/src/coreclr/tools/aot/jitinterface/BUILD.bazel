@@ -20,9 +20,9 @@ cc_binary(
     linkshared = True,
     linkstatic = True,
     copts = [
-        "-Isrc/coreclr/tools/aot/jitinterface",
         "-fvisibility=default",
     ],
+    includes = ["."],
     local_defines = PLATFORM_DEFINES,
     deps = [
         "//src/coreclr/inc:coreclr_inc_headers_only",
@@ -45,9 +45,9 @@ cc_binary(
     linkshared = True,
     linkstatic = True,
     copts = [
-        "-Isrc/coreclr/tools/aot/jitinterface",
         "-fvisibility=default",
     ],
+    includes = ["."],
     local_defines = PLATFORM_DEFINES,
     deps = [
         "//src/coreclr/inc:coreclr_inc_headers_only",

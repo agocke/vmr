@@ -53,9 +53,8 @@ cc_library(
         "debug-pal/unix/processdescriptor.cpp",
         "debug-pal/unix/twowaypipe.cpp",
     ],
-    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/debug/inc",
-    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    includes = ["inc"],
     local_defines = CLR_CONFIG_DEFINES + select({
         "//:clr_debug": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
         "//:clr_checked": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
@@ -114,24 +113,19 @@ cc_library(
         "shared/dbgtransportsession.cpp",
         "shared/utils.cpp",
     ],
-    copts = [
-        "-Isrc/coreclr/vm",
-        "-Isrc/coreclr/debug/ee",
-        "-Isrc/coreclr/debug",
-    ] + select({
-        "@platforms//cpu:arm64": [
-            "-Isrc/coreclr/vm/arm64",
-            "-Isrc/coreclr/debug/ee/arm64",
-        ],
-        "//conditions:default": [
-            "-Isrc/coreclr/vm/amd64",
-            "-Isrc/coreclr/debug/ee/amd64",
-        ],
-    }) + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
         "-DFEATURE_NO_HOST",
     ] + select({
         "@platforms//cpu:arm64": [],
         "//conditions:default": ["-mcx16"],
+    }),
+    includes = [
+        "../vm",
+        "ee",
+        ".",
+    ] + select({
+        "@platforms//cpu:arm64": ["../vm/arm64", "ee/arm64"],
+        "//conditions:default": ["../vm/amd64", "ee/amd64"],
     }),
     local_defines = CLR_CONFIG_DEFINES + select({
         "//:clr_debug": ["FEATURE_CACHED_INTERFACE_DISPATCH"],

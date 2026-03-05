@@ -27,20 +27,21 @@ cc_binary(
         "writer.cpp",
     ] + glob(["*.h", "*.hpp"]),
     copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/ilasm",
-        "-Isrc/coreclr/ilasm/prebuilt",
-        "-Isrc/coreclr/md/inc",
-        "-Isrc/native/libs/Common",
-        "-Isrc/native/libs/System.Security.Cryptography.Native",
-    ] + select({
-        "@platforms//os:macos": ["-Isrc/native/libs/System.Security.Cryptography.Native/bazel/darwin-arm64"],
-        "//conditions:default": ["-Isrc/native/libs/System.Security.Cryptography.Native/bazel/linux-glibc-x64"],
-    }) + [
         # Suppress warnings on the prebuilt bison-generated parser.
         "-Wno-register",
         "-Wno-array-bounds",
         "-Wno-unused-label",
     ],
+    includes = [
+        ".",
+        "prebuilt",
+        "../md/inc",
+        "../../native/libs/Common",
+        "../../native/libs/System.Security.Cryptography.Native",
+    ] + select({
+        "@platforms//os:macos": ["../../native/libs/System.Security.Cryptography.Native/bazel/darwin-arm64"],
+        "//conditions:default": ["../../native/libs/System.Security.Cryptography.Native/bazel/linux-glibc-x64"],
+    }),
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES + [
         "__ILASM__",

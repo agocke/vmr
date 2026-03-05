@@ -31,10 +31,8 @@ cc_binary(
         "corerun/dotenv.cpp",
         "corerun/dotenv.hpp",
     ],
-    copts = [
-        "-Isrc/coreclr/hosts/corerun",
-        "-Isrc/native",
-    ],
+    copts = [],
+    includes = ["corerun"],
     linkopts = select({
         "@platforms//os:macos": [
             "-lpthread",

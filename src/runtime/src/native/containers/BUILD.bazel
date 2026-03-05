@@ -30,18 +30,16 @@ _CONFIG_HDR = select({
     "//conditions:default": ["bazel/linux-glibc-x64/dn-config.h"],
 })
 
-_CONFIG_COPTS = select({
-    "@platforms//os:macos": ["-Isrc/native/containers/bazel/darwin-arm64"],
-    "//conditions:default": ["-Isrc/native/containers/bazel/linux-glibc-x64"],
+_CONFIG_INCLUDES = select({
+    "@platforms//os:macos": ["bazel/darwin-arm64"],
+    "//conditions:default": ["bazel/linux-glibc-x64"],
 })
 
 cc_library(
     name = "dn-containers",
     srcs = _SOURCES + _CONFIG_HDR + _HEADERS,
-    copts = CLR_CONFIG_COPTS + [
-        "-Isrc/native",
-    ] + _CONFIG_COPTS,
-    includes = ["."],
+    copts = CLR_CONFIG_COPTS,
+    includes = [".", ".."] + _CONFIG_INCLUDES,
     visibility = ["//src/native:__subpackages__"],
     deps = [
         "//src/native/minipal",
@@ -52,10 +50,9 @@ cc_library(
     name = "dn-containers-no-lto",
     srcs = _SOURCES + _CONFIG_HDR + _HEADERS,
     copts = CLR_CONFIG_COPTS + [
-        "-Isrc/native",
         "-fno-lto",
-    ] + _CONFIG_COPTS,
-    includes = ["."],
+    ],
+    includes = [".", ".."] + _CONFIG_INCLUDES,
     visibility = ["//src/native:__subpackages__"],
     deps = [
         "//src/native/minipal",

@@ -4,11 +4,13 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_shared_library", "cc_test")
 load("//src/native:native_defs.bzl", "NATIVE_CONFIG_DEFINES")
 
-COREHOST_TEST_COPTS = [
-    "-Isrc/native/corehost",
-    "-Isrc/native/corehost/fxr",
-    "-Isrc/native/corehost/hostmisc",
-    "-Isrc/native",
+COREHOST_TEST_COPTS = []
+
+COREHOST_TEST_INCLUDES = [
+    "../",
+    "../fxr",
+    "../hostmisc",
+    "../../",
 ]
 
 COREHOST_TEST_DEFINES = [
@@ -28,6 +30,7 @@ cc_test(
     size = "small",
     srcs = ["fx_ver/test_fx_ver.cpp"],
     copts = COREHOST_TEST_COPTS,
+    includes = COREHOST_TEST_INCLUDES,
     defines = COREHOST_TEST_DEFINES,
     local_defines = NATIVE_CONFIG_DEFINES,
     linkstatic = True,
@@ -47,6 +50,7 @@ cc_library(
         "mockcoreclr/mockcoreclr.h",
     ],
     copts = COREHOST_TEST_COPTS,
+    includes = COREHOST_TEST_INCLUDES,
     defines = COREHOST_TEST_DEFINES + ["EXPORT_SHARED_API"],
     local_defines = NATIVE_CONFIG_DEFINES,
     deps = ["//src/native/corehost:hostmisc"],
@@ -68,6 +72,7 @@ cc_library(
         "mockhostfxr/test_c_api.c",
     ],
     copts = COREHOST_TEST_COPTS,
+    includes = COREHOST_TEST_INCLUDES,
     defines = COREHOST_TEST_DEFINES + [
         "MOCKHOSTFXR_2_2",
         "EXPORT_SHARED_API",
@@ -92,6 +97,7 @@ cc_library(
         "mockhostfxr/test_c_api.c",
     ],
     copts = COREHOST_TEST_COPTS,
+    includes = COREHOST_TEST_INCLUDES,
     defines = COREHOST_TEST_DEFINES + [
         "MOCKHOSTFXR_5_0",
         "EXPORT_SHARED_API",
@@ -116,6 +122,7 @@ cc_library(
     name = "mockhostpolicy_lib",
     srcs = ["mockhostpolicy/mockhostpolicy.cpp"],
     copts = COREHOST_TEST_COPTS,
+    includes = COREHOST_TEST_INCLUDES,
     defines = COREHOST_TEST_DEFINES + ["EXPORT_SHARED_API"],
     local_defines = NATIVE_CONFIG_DEFINES,
     deps = ["//src/native/corehost:hostmisc"],
@@ -148,9 +155,8 @@ cc_binary(
         "nativehost/resolve_component_dependencies_test.cpp",
         "nativehost/resolve_component_dependencies_test.h",
     ],
-    copts = COREHOST_TEST_COPTS + [
-        "-Isrc/native/corehost/nethost",
-    ],
+    copts = COREHOST_TEST_COPTS,
+    includes = COREHOST_TEST_INCLUDES + ["../nethost"],
     defines = COREHOST_TEST_DEFINES,
     local_defines = NATIVE_CONFIG_DEFINES,
     linkopts = [

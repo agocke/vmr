@@ -28,14 +28,13 @@ cc_library(
         ["*.h", "**/*.h"],
         exclude = ["bazel/**"],
     ),
-    copts = CLR_CONFIG_COPTS + [
-        "-Isrc/native",
-    ] + select({
-        "@platforms//os:macos": ["-Isrc/native/minipal/bazel/darwin-arm64"],
-        "//conditions:default": ["-Isrc/native/minipal/bazel/linux-glibc-x64"],
+    copts = CLR_CONFIG_COPTS,
+    # includes = [".."] is already set below; add platform-specific config headers
+    includes = [".."] + select({
+        "@platforms//os:macos": ["bazel/darwin-arm64"],
+        "//conditions:default": ["bazel/linux-glibc-x64"],
     }),
     local_defines = PLATFORM_DEFINES,
-    includes = [".."],
     visibility = [
         "//src/coreclr:__subpackages__",
         "//src/native:__subpackages__",

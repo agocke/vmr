@@ -36,9 +36,11 @@ cc_library(
     ] + glob(["*.h"]),
     copts = [
         "-Wno-declaration-after-statement",
-        "-Isrc/native",
-        "-Isrc/native/libs/Common",
-        "-Isrc/native/libs/bazel",
+    ],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
     ],
     defines = [
         "HAS_CONSOLE_SIGNALS",
@@ -86,13 +88,16 @@ cc_library(
         "-x", "objective-c",
         "-fno-objc-arc",
         "-Wno-declaration-after-statement",
-        "-Isrc/native",
-        "-Isrc/native/libs/Common",
-        "-Isrc/native/libs/bazel",
-        "-Isrc/native/libs/System.Native",
+
     ],
     defines = [
         "HAS_CONSOLE_SIGNALS",
+    ],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
+        ".",
     ],
     local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
     target_compatible_with = ["@platforms//os:macos"],

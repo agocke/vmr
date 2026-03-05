@@ -14,7 +14,7 @@
     <nugetclientGitCommitHash>fa2dec964199e620ce7acf82a70ba4060862767d</nugetclientGitCommitHash>
     <razorGitCommitHash>10df92a966e2ce16aca870e81d85912d1629108c</razorGitCommitHash>
     <roslynGitCommitHash>39f5221215f520f7e6b7117c3abfa83c94eb7af4</roslynGitCommitHash>
-    <runtimeGitCommitHash>f8a3a45536d3b0c70abf579d9e78f771cec13535</runtimeGitCommitHash>
+    <runtimeGitCommitHash>8d877b2e7ca21f7d1666eb022f209244b2ea841a</runtimeGitCommitHash>
     <scenariotestsGitCommitHash>64f9f4bc3a23634a0d80d9b8dcaec1126e7d4891</scenariotestsGitCommitHash>
     <sdkGitCommitHash>23179aa0b46b26f889cad46199b863ccdefa0c8e</sdkGitCommitHash>
     <sourcebuildreferencepackagesGitCommitHash>83baa8561d6f00b5c12714745fc93ca6dd305d1f</sourcebuildreferencepackagesGitCommitHash>

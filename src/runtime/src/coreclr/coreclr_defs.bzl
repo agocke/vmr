@@ -107,26 +107,9 @@ CORECLR_COPTS = [
     "-Wno-misleading-indentation",
     "-Wno-stringop-overflow",
     "-Wno-restrict",
-    # Include paths (matching include_directories from src/coreclr/CMakeLists.txt)
-    "-Isrc/coreclr/inc",
-    "-Isrc/coreclr/pal/inc",
-    "-Isrc/coreclr/pal/inc/rt",
-    "-Isrc/coreclr/pal/src/safecrt",
-    "-Isrc/coreclr/pal/prebuilt/inc",
-    "-Isrc/coreclr/debug/inc",
-    "-Isrc/coreclr/debug/inc/dump",
-    "-Isrc/coreclr/md/inc",
-    "-Isrc/coreclr/hosts/inc",
-    "-Isrc/coreclr/interpreter",
-    "-Isrc/coreclr/classlibnative/bcltype",
-    "-Isrc/coreclr/classlibnative/inc",
-    "-Isrc/coreclr/minipal",
-    "-Isrc/native",
-    "-Isrc/native/inc",
-] + select({
-    "@platforms//cpu:arm64": ["-Isrc/coreclr/debug/inc/arm64"],
-    "@platforms//cpu:x86_64": ["-Isrc/coreclr/debug/inc/amd64"],
-})
+    # Include paths are provided by //src/coreclr:coreclr_inc and
+    # //src/native:native_inc (propagated via deps).
+]
 
 # --- Debug/checked/release defines ---
 # Matches CMake's per-config compile_definitions from configurecompiler.cmake.

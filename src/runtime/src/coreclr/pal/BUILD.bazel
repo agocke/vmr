@@ -209,25 +209,19 @@ cc_library(
         "-Wno-misleading-indentation",
         "-Wno-stringop-overflow",
         "-Wno-restrict",
-        # PAL needs a few headers from coreclr/inc (volatile.h, etc.)
-        "-Isrc/coreclr/inc",
-        # PAL-specific include paths
-        "-Isrc/coreclr/pal/src/include",
-        "-Isrc/coreclr/pal/inc",
-        "-Isrc/coreclr/pal/inc/rt",
-        "-Isrc/coreclr/pal/src/safecrt",
-        "-Isrc/native",
-        "-Isrc/native/inc",
     ] + select({
-        "@platforms//os:macos": [
-            "-Isrc/coreclr/pal/src/arch/arm64",
-        ],
-        "//conditions:default": [
-            "-Isrc/coreclr/pal/src/arch/amd64",
-        ],
-    }) + select({
         "//:compiler_clang": [],
         "//conditions:default": ["-Wa,--divide"],
+    }),
+    includes = [
+        "../inc",
+        "src/include",
+        "inc",
+        "inc/rt",
+        "src/safecrt",
+    ] + select({
+        "@platforms//os:macos": ["src/arch/arm64"],
+        "//conditions:default": ["src/arch/amd64"],
     }),
     defines = PLATFORM_DEFINES + [
         # PAL-specific
@@ -286,16 +280,16 @@ cc_library(
     }),
     copts = CLR_CONFIG_COPTS + [
         "-Wno-invalid-offsetof",
-        "-Isrc/coreclr/pal/src/include",
-        "-Isrc/coreclr/pal/inc",
-        "-Isrc/coreclr/pal/inc/rt",
-        "-Isrc/coreclr/pal/src/safecrt",
-        "-Isrc/coreclr/inc",
-        "-Isrc/native",
-        "-Isrc/native/inc",
+    ],
+    includes = [
+        "src/include",
+        "inc",
+        "inc/rt",
+        "src/safecrt",
+        "../inc",
     ] + select({
-        "@platforms//os:macos": ["-Isrc/coreclr/pal/src/bazel/darwin-arm64"],
-        "//conditions:default": ["-Isrc/coreclr/pal/src/bazel/linux-glibc-x64"],
+        "@platforms//os:macos": ["src/bazel/darwin-arm64"],
+        "//conditions:default": ["src/bazel/linux-glibc-x64"],
     }),
     defines = PLATFORM_DEFINES + [
         "CORECLR",
@@ -318,9 +312,8 @@ cc_library(
         "src/include/**/*.hpp",
         "src/include/**/*.inl",
     ]),
-    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/pal/src/include",
-    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    includes = ["src/include"],
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES,
     alwayslink = True,

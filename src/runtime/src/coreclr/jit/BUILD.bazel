@@ -199,10 +199,7 @@ _JIT_WASM_SOURCES = [
 # Common copts and defines
 # -------------------------------------------------------------------------
 
-_JIT_COPTS = [
-    "-Isrc/coreclr/jit",
-    "-Isrc/coreclr/jit/jitstd",
-] + CORECLR_COPTS + CLR_CONFIG_COPTS + [
+_JIT_COPTS = CORECLR_COPTS + CLR_CONFIG_COPTS + [
     "-include", "src/coreclr/jit/jitpch.h",
     "-Wno-error",
     "-Wno-endif-labels",
@@ -210,6 +207,11 @@ _JIT_COPTS = [
     "-Wno-sizeof-pointer-div",
     # emitarm64.h uses static_assert without message (C++17) in a C++11 build.
     "-Wno-c++17-extensions",
+]
+
+_JIT_INCLUDES = [
+    ".",
+    "jitstd",
 ]
 
 _JIT_DEFINES_BASE = [
@@ -234,6 +236,7 @@ cc_library(
     }),
     textual_hdrs = ["smcommon.cpp"],
     copts = _JIT_COPTS,
+    includes = _JIT_INCLUDES,
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES + _JIT_DEFINES_BASE + _JIT_SIMD_DEFINES,
     deps = [
@@ -264,6 +267,7 @@ cc_binary(
     linkshared = True,
     linkstatic = True,
     copts = _JIT_COPTS + CLR_CONFIG_COPTS,
+    includes = _JIT_INCLUDES,
     local_defines = CLR_CONFIG_DEFINES,
     defines = CORECLR_DEFINES + _JIT_DEFINES_BASE + _JIT_SIMD_DEFINES + [
         "FEATURE_NO_HOST",
@@ -347,6 +351,7 @@ _CROSS_JIT_DEPS = [
 # --- clrjit_universal_arm64_x64 ---
 cc_binary(
     name = "libclrjit_universal_arm64_x64.so",
+    includes = _JIT_INCLUDES,
     srcs = _JIT_COMMON_SOURCES + _JIT_ARM64_SOURCES,
     linkshared = True,
     linkstatic = True,
@@ -365,6 +370,7 @@ cc_binary(
 # --- clrjit_unix_x64_x64 ---
 cc_binary(
     name = "libclrjit_unix_x64_x64.so",
+    includes = _JIT_INCLUDES,
     srcs = _JIT_COMMON_SOURCES + _JIT_AMD64_SOURCES,
     linkshared = True,
     linkstatic = True,
@@ -386,6 +392,7 @@ cc_binary(
 # --- clrjit_win_x64_x64 ---
 cc_binary(
     name = "libclrjit_win_x64_x64.so",
+    includes = _JIT_INCLUDES,
     srcs = _JIT_COMMON_SOURCES + _JIT_AMD64_SOURCES,
     linkshared = True,
     linkstatic = True,
@@ -405,6 +412,7 @@ cc_binary(
 # --- clrjit_universal_arm_x64 ---
 cc_binary(
     name = "libclrjit_universal_arm_x64.so",
+    includes = _JIT_INCLUDES,
     srcs = _JIT_COMMON_SOURCES + _JIT_ARM_SOURCES,
     linkshared = True,
     linkstatic = True,
@@ -424,6 +432,7 @@ cc_binary(
 # --- clrjit_win_x86_x64 ---
 cc_binary(
     name = "libclrjit_win_x86_x64.so",
+    includes = _JIT_INCLUDES,
     srcs = _JIT_COMMON_SOURCES + _JIT_I386_SOURCES,
     linkshared = True,
     linkstatic = True,

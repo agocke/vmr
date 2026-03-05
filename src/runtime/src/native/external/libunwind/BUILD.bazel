@@ -32,9 +32,6 @@ cc_library(
 # --- Shared copts and defines ---
 
 LIBUNWIND_COPTS = [
-    "-Isrc/native/external/libunwind/include/tdep",
-    "-Isrc/native/external/libunwind/include",
-    "-Isrc/native/external/libunwind/src",
     "-Wno-format",
     "-Wno-format-security",
     "-Wno-implicit-fallthrough",
@@ -218,8 +215,6 @@ alias(
 # --- Tests ---
 
 _LIBUNWIND_TEST_COPTS = [
-    "-Isrc/native/external/libunwind/include",
-    "-Isrc/native/external/libunwind/tests",
     "-w",
 ]
 
@@ -233,6 +228,7 @@ cc_test(
     size = "small",
     srcs = ["tests/test-flush-cache.c"],
     copts = _LIBUNWIND_TEST_COPTS,
+    includes = ["include", "tests"],
     defines = _LIBUNWIND_TEST_DEFINES,
     linkstatic = True,
     target_compatible_with = ["@platforms//os:linux"],

@@ -5,6 +5,6 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 cc_library(
     name = "native_inc",
     hdrs = glob(["inc/*.h"]),
-    includes = ["inc"],
-    visibility = ["//src/coreclr:__subpackages__"],
+    includes = [".", "inc"],
+    visibility = ["//visibility:public"],
 )

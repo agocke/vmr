@@ -8,6 +8,24 @@ load("//src/coreclr/nativeaot:nativeaot_defs.bzl", "NATIVEAOT_COMMON_DEFINES", "
 
 package(default_visibility = ["//visibility:public"])
 
+cc_library(
+    name = "nativeaot_inc",
+    # Header-only target exposing shared NativeAOT include paths.
+    # Replaces the -Isrc/... copts that were in NATIVEAOT_COPTS.
+    includes = [
+        "Runtime",
+        "Runtime/inc",
+        "Runtime/unix",
+        "../gc",
+        "../gc/env",
+        "../runtime",
+        "../pal/inc/rt",
+    ] + select({
+        "@platforms//os:macos": ["Runtime/arm64"],
+        "@platforms//os:linux": ["Runtime/amd64"],
+    }),
+)
+
 # ---------------------------------------------------------------------------
 # Generated AsmOffsets.inc (preprocessed from unix/AsmOffsets.cpp)
 # ---------------------------------------------------------------------------
@@ -304,26 +322,25 @@ _GENERATED_SRCS = [
 ]
 
 # llvm-libunwind needs its own include path for internal headers
-_LLVM_LIBUNWIND_COPTS = [
-    "-Isrc/native/external/llvm-libunwind/include",
-    "-Isrc/native/external/llvm-libunwind/src",
-]
+# llvm-libunwind includes are now provided by
+# //src/native/external/llvm-libunwind:llvm_libunwind_headers via deps.
 
 # GC unix config header path
-_GC_UNIX_COPTS = [
-    "-Isrc/coreclr/gc/unix",
+_GC_UNIX_INCLUDES = [
+    "../gc/unix",
 ] + select({
-    "@platforms//os:macos": ["-Isrc/coreclr/gc/unix/bazel/darwin-arm64"],
-    "//conditions:default": ["-Isrc/coreclr/gc/unix/bazel/linux-glibc-x64"],
+    "@platforms//os:macos": ["../gc/unix/bazel/darwin-arm64"],
+    "//conditions:default": ["../gc/unix/bazel/linux-glibc-x64"],
 })
 
 # Pre-generated eventing headers (from genEventing.py)
-_EVENTING_COPTS = [
-    "-Isrc/coreclr/nativeaot/Runtime/eventpipe/bazel/inc",
+_EVENTING_INCLUDES = [
+    "Runtime/eventpipe/bazel/inc",
 ]
 
 # Combined deps for runtime targets
 _RUNTIME_DEPS = [
+    "//src/coreclr/nativeaot:nativeaot_inc",
     "//src/coreclr/gc:gc_headers",
     "//src/coreclr/runtime:runtime_headers",
     "//src/coreclr/pal:pal_rt_inc",
@@ -353,7 +370,8 @@ cc_library(
     ] + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS + _GC_UNIX_COPTS + _EVENTING_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
@@ -373,7 +391,8 @@ cc_library(
     srcs = _ALL_COMMON + _ALL_FULL + _ALL_ASM + _ASM_INCLUDES + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS + _GC_UNIX_COPTS + _EVENTING_COPTS + _LLVM_LIBUNWIND_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
@@ -391,7 +410,8 @@ cc_library(
     srcs = _ALL_COMMON + _ALL_FULL + _ALL_ASM + _ASM_INCLUDES + _SERVER_GC_SRCS + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS + _GC_UNIX_COPTS + _EVENTING_COPTS + _LLVM_LIBUNWIND_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES + ["FEATURE_SVR_GC"],
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
@@ -409,7 +429,8 @@ cc_library(
     srcs = ["Runtime/clrgc.disabled.cpp"] + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS + _GC_UNIX_COPTS + _EVENTING_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
@@ -421,7 +442,8 @@ cc_library(
     srcs = ["Runtime/clrgc.enabled.cpp"] + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS + _GC_UNIX_COPTS + _EVENTING_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
@@ -452,18 +474,18 @@ _VXSORT_SRCS = select({
 cc_library(
     name = "nativeaot_vxsort_enabled",
     srcs = _VXSORT_SRCS,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/gc/vxsort",
-        "-Isrc/coreclr/gc/vxsort/smallsort",
-    ] + select({
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + select({
         "@platforms//cpu:arm64": [],
         "//conditions:default": ["-mavx2"],
     }),
+    includes = ["../gc/vxsort", "../gc/vxsort/smallsort"],
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
     deps = [
+        "//src/coreclr/nativeaot:nativeaot_inc",
         "//src/coreclr/gc:gc_headers",
+        "//src/native:native_inc",
         "//src/native/minipal",
     ],
 )
@@ -471,14 +493,15 @@ cc_library(
 cc_library(
     name = "nativeaot_vxsort_disabled",
     srcs = ["//src/coreclr/gc:vxsort/dummy.cpp"],
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + [
-        "-Isrc/coreclr/gc/vxsort",
-    ],
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    includes = ["../gc/vxsort"],
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
     deps = [
+        "//src/coreclr/nativeaot:nativeaot_inc",
         "//src/coreclr/gc:gc_headers",
+        "//src/native:native_inc",
     ],
 )
 
@@ -493,7 +516,7 @@ cc_library(
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
-    deps = ["//src/native/minipal"],
+    deps = ["//src/coreclr/nativeaot:nativeaot_inc", "//src/native:native_inc", "//src/native/minipal"],
 )
 
 cc_library(
@@ -503,7 +526,7 @@ cc_library(
     defines = NATIVEAOT_DEFINES + ["NATIVEAOT_DLL"],
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
-    deps = ["//src/native/minipal"],
+    deps = ["//src/coreclr/nativeaot:nativeaot_inc", "//src/native:native_inc", "//src/native/minipal"],
 )
 
 cc_library(
@@ -513,6 +536,7 @@ cc_library(
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
+    deps = ["//src/coreclr/nativeaot:nativeaot_inc", "//src/native:native_inc"],
 )
 
 exports_files([

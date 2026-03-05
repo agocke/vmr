@@ -2,14 +2,21 @@
 #define EP_SHARED_CONFIG_H_INCLUDED
 
 #define HAVE_ERRNO_H 1
-#define HAVE_LINUX_USER_EVENTS_H 1
-#define HAVE_SYS_IOCTL_H 1
 #define HAVE_SYS_SOCKET_H 1
 #define HAVE_SYS_UIO_H 1
 /* mono files use ifdef HAVE_UNISTD_H, so for compatibility */
 #define HAVE_UNISTD_H 1
-/* This platforms supports setting flags atomically when accepting connections. */
+
+#ifdef __linux__
+#define HAVE_LINUX_USER_EVENTS_H 1
+#define HAVE_SYS_IOCTL_H 1
+/* This platform supports setting flags atomically when accepting connections. */
 #define HAVE_ACCEPT4 1
+#else
+#define HAVE_LINUX_USER_EVENTS_H 0
+#define HAVE_SYS_IOCTL_H 1
+#define HAVE_ACCEPT4 0
+#endif
 
 /* #undef FEATURE_PERFTRACING_PAL_TCP */
 #ifdef FEATURE_PERFTRACING_PAL_TCP
