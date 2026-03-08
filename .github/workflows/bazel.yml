@@ -1,0 +1,51 @@
+name: Bazel Build & Test
+
+on:
+  push:
+    branches: [ bazel ]
+  pull_request:
+    branches: [ bazel ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux release
+            config: clr_release
+          - os: ubuntu-latest
+            name: Linux checked
+            config: clr_checked
+          - os: macos-latest
+            name: macOS release
+            config: clr_release
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y clang-18 lld libkrb5-dev liblttng-ust-dev
+
+      - name: Mount Bazel cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk
+          key: bazel-${{ runner.os }}-${{ matrix.config }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-${{ github.sha }}
+          restore-keys: |
+            bazel-${{ runner.os }}-${{ matrix.config }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-
+            bazel-${{ runner.os }}-${{ matrix.config }}-
+
+      - name: Build
+        run: bazel build @dotnet_runtime//... --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk
+
+      - name: Test
+        run: bazel test @dotnet_runtime//... --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk --test_output=errors
