@@ -1,6 +1,6 @@
 load("@rules_dotnet//dotnet:defs.bzl", "import_library")
 load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
-load("@aspect_bazel_lib//lib:tar.bzl", "tar")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("//eng/bazel:runtime_archive.bzl", "runtime_staging")
 load("//eng/bazel:runtime_layout.bzl", "runtime_layout")
@@ -153,10 +153,19 @@ runtime_staging(
     ] + select({
         "@platforms//os:linux": ["//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl"],
         "//conditions:default": [],
+    }) + [
+        "//src/coreclr/debug:createdump",
+        "//src/coreclr/pal:libcoreclrtraceptprovider.so",
+    ] + select({
+        "@platforms//os:macos": [
+            "//src/coreclr/dlls/mscordac:libmscordaccore_dylib",
+            "//src/coreclr/dlls/mscordbi:libmscordbi_dylib",
+        ],
+        "//conditions:default": [
+            "//src/coreclr/dlls/mscordac:libmscordaccore.so",
+            "//src/coreclr/dlls/mscordbi:libmscordbi.so",
+        ],
     }),
-    # TODO: add these once Bazel BUILD files exist for them:
-    #   createdump, libmscordaccore.so, libmscordbi.so,
-    #   libcoreclrtraceptprovider.so
     framework_managed_files = [
         "//src/libraries:impl_netcoreapp",
         # ── Shim assemblies (type-forwarding facades) ──
@@ -217,18 +226,20 @@ runtime_staging(
 LINUX_RID = "linux-x64"
 MACOS_RID = "osx-arm64"
 
-tar(
+pkg_tar(
     name = "runtime_archive_linux",
     out = "dotnet-runtime-" + PRODUCT_VERSION_FULL + "-" + LINUX_RID + ".tar.gz",
     srcs = [":runtime_staging"],
-    compress = "gzip",
+    strip_prefix = "runtime_staging",
+    extension = "tar.gz",
 )
 
-tar(
+pkg_tar(
     name = "runtime_archive_macos",
     out = "dotnet-runtime-" + PRODUCT_VERSION_FULL + "-" + MACOS_RID + ".tar.gz",
     srcs = [":runtime_staging"],
-    compress = "gzip",
+    strip_prefix = "runtime_staging",
+    extension = "tar.gz",
 )
 
 alias(

@@ -3,7 +3,7 @@
 # Matches CMake: src/coreclr/utilcode/CMakeLists.txt
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES", "CORECLR_DAC_DEFINES")
 
 package(default_visibility = ["//src/coreclr:__subpackages__"])
 
@@ -106,6 +106,29 @@ cc_library(
     ],
     deps = [
         "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/minipal:coreclrminipal",
+        "//src/coreclr/nativeresources:nativeresourcestring",
+    ],
+)
+
+# utilcode_dac — static library for the DAC (Data Access Component)
+# Matches CMake: src/coreclr/utilcode/CMakeLists.txt  utilcode_dac target.
+# Same sources as utilcodestaticnohost, compiled with DAC_COMPONENT defines.
+cc_library(
+    name = "utilcode_dac",
+    srcs = _UTILCODE_COMMON_SOURCES + [
+        "hostimpl.cpp",
+    ] + _UTILCODE_HDRS,
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-include", "src/coreclr/utilcode/stdafx.h",
+    ],
+    includes = ["."],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DAC_DEFINES + [
+        "SELF_NO_HOST",
+    ],
+    deps = [
+        "//src/coreclr/inc:coreclr_inc_dac",
         "//src/coreclr/minipal:coreclrminipal",
         "//src/coreclr/nativeresources:nativeresourcestring",
     ],

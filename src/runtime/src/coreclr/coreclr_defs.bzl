@@ -1,18 +1,20 @@
 # Shared constants for CoreCLR Bazel builds.
 # Import into BUILD.bazel files with:
 #   load("//src/coreclr:coreclr_defs.bzl", "CORECLR_DEFINES", "CORECLR_COPTS")
+#   load("//src/coreclr:coreclr_defs.bzl", "CORECLR_DAC_DEFINES")
 #   load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CLR_CONFIG_COPTS")
 
 # --- Feature defines ---
 # Derived from clrdefinitions.cmake and clrfeatures.cmake.
 # Each platform list is the full set of defines for that platform.
 
-# Shared defines (identical across all supported platforms).
-_CORECLR_COMMON_DEFINES = [
+# Base defines shared by all variants (WKS, DAC, DBI).
+# PROFILING_SUPPORTED/PROFILING_SUPPORTED_DATA and FEATURE_PROFAPI_ATTACH_DETACH
+# differ between WKS and DAC, so they live in the variant-specific lists below.
+_CORECLR_BASE_DEFINES = [
     "FEATURE_CORECLR",
     "FEATURE_JIT",
     "DEBUGGING_SUPPORTED",
-    "PROFILING_SUPPORTED",
     "FEATURE_METADATA_UPDATER",
     "FEATURE_REMAP_FUNCTION",
     "FEATURE_COLLECTIBLE_TYPES",
@@ -28,7 +30,6 @@ _CORECLR_COMMON_DEFINES = [
     "FEATURE_PAL_ANSI",
     "FEATURE_MULTICOREJIT",
     "FEATURE_READYTORUN",
-    "FEATURE_PROFAPI_ATTACH_DETACH",
     "FEATURE_REMOTE_PROC_MEM",
     "FEATURE_SVR_GC",
     "FEATURE_SYMDIFF",
@@ -52,6 +53,21 @@ _CORECLR_COMMON_DEFINES = [
     "FEATURE_PORTABLE_SHUFFLE_THUNKS",
     "FEATURE_INSTANTIATINGSTUB_AS_IL",
     "FEATURE_STATICALLY_LINKED",
+]
+
+# WKS (workstation) variant — the default for VM, JIT, etc.
+_CORECLR_COMMON_DEFINES = _CORECLR_BASE_DEFINES + [
+    "PROFILING_SUPPORTED",
+    "FEATURE_PROFAPI_ATTACH_DETACH",
+]
+
+# DAC (data access component) variant — for diagnostic/debugger libraries.
+# clrdefinitions.cmake: DAC_COMPONENT=TRUE → DACCESS_COMPILE,
+#   PROFILING_SUPPORTED_DATA (replaces PROFILING_SUPPORTED),
+#   no FEATURE_PROFAPI_ATTACH_DETACH.
+_CORECLR_DAC_COMMON_DEFINES = _CORECLR_BASE_DEFINES + [
+    "DACCESS_COMPILE",
+    "PROFILING_SUPPORTED_DATA",
 ]
 
 CORECLR_DEFINES = _CORECLR_COMMON_DEFINES + select({
@@ -91,6 +107,41 @@ CORECLR_DEFINES = _CORECLR_COMMON_DEFINES + select({
         "UNIX_AMD64_ABI",
         "UNIX_AMD64_ABI_ITF",
         # clrfeatures.cmake — Linux-only features
+        "FEATURE_EVENTSOURCE_XPLAT=1",
+    ],
+})
+
+# DAC variant: same platform selects, different base defines.
+CORECLR_DAC_DEFINES = _CORECLR_DAC_COMMON_DEFINES + select({
+    "@platforms//os:macos": [
+        "HOST_64BIT",
+        "HOST_ARM64",
+        "HOST_UNIX",
+        "HOST_APPLE",
+        "HOST_OSX",
+        "TARGET_64BIT",
+        "TARGET_ARM64",
+        "TARGET_UNIX",
+        "TARGET_APPLE",
+        "TARGET_OSX",
+        "FEATURE_EMULATE_SINGLESTEP",
+        "OSX_ARM64_ABI",
+        "_XOPEN_SOURCE",
+        "_DARWIN_C_SOURCE",
+        "__DARWIN_NON_CANCELABLE=1",
+        "FEATURE_OBJCMARSHAL",
+    ],
+    "@platforms//os:linux": [
+        "_GNU_SOURCE",
+        "HOST_64BIT",
+        "HOST_AMD64",
+        "HOST_UNIX",
+        "TARGET_64BIT",
+        "TARGET_AMD64",
+        "TARGET_UNIX",
+        "TARGET_LINUX",
+        "UNIX_AMD64_ABI",
+        "UNIX_AMD64_ABI_ITF",
         "FEATURE_EVENTSOURCE_XPLAT=1",
     ],
 })

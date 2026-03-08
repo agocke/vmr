@@ -1,7 +1,7 @@
 # CoreCLR metadata headers and libraries.
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES", "CORECLR_DAC_DEFINES")
 
 package(default_visibility = ["//src/coreclr:__subpackages__"])
 
@@ -37,6 +37,26 @@ _MD_DEFINES = CORECLR_DEFINES + [
     "FEATURE_METADATA_INTERNAL_APIS",
     "FEATURE_METADATA_IN_VM",
     "FEATURE_METADATA_VERIFY_LAYOUTS",
+]
+
+# DAC variant: FEATURE_METADATA_EMIT_IN_DEBUGGER replaces _IN_VM and _VERIFY_LAYOUTS;
+# no FEATURE_METADATA_EMIT_ALL.
+_MD_DAC_DEFINES = CORECLR_DAC_DEFINES + [
+    "FEATURE_METADATA_EMIT",
+    "FEATURE_METADATA_INTERNAL_APIS",
+    "FEATURE_METADATA_EMIT_IN_DEBUGGER",
+]
+
+# DBI variant: like DAC but with DBI-specific data source defines;
+# uses WKS profiling defines (not DAC).
+_MD_DBI_DEFINES = CORECLR_DEFINES + [
+    "FEATURE_METADATA_EMIT",
+    "FEATURE_METADATA_INTERNAL_APIS",
+    "FEATURE_METADATA_EMIT_IN_DEBUGGER",
+    "FEATURE_METADATA_CUSTOM_DATA_SOURCE",
+    "FEATURE_METADATA_DEBUGGEE_DATA_SOURCE",
+    "FEATURE_METADATA_LOAD_TRUSTED_IMAGES",
+    "FEATURE_METADATA_RELEASE_MEMORY_ON_REOPEN",
 ]
 
 # --- mdcompiler_wks (metadata compiler, workstation) ---
@@ -195,7 +215,196 @@ cc_library(
     deps = ["//src/coreclr/inc:coreclr_inc"],
 )
 
-# --- mdruntimerw_ppdb (metadata runtime read-write / ENC, portable PDB) ---
+# ============================================================
+# DAC variant metadata libraries
+# ============================================================
+
+# Base compiler sources (without verifylayouts.cpp which is WKS-only).
+_MDCOMPILER_BASE_SOURCES = [
+    "compiler/assemblymd.cpp",
+    "compiler/assemblymd_emit.cpp",
+    "compiler/custattr_emit.cpp",
+    "compiler/custattr_import.cpp",
+    "compiler/disp.cpp",
+    "compiler/emit.cpp",
+    "compiler/filtermanager.cpp",
+    "compiler/helper.cpp",
+    "compiler/import.cpp",
+    "compiler/importhelper.cpp",
+    "compiler/mdutil.cpp",
+    "compiler/regmeta.cpp",
+    "compiler/regmeta_compilersupport.cpp",
+    "compiler/regmeta_emit.cpp",
+    "compiler/regmeta_import.cpp",
+    "compiler/regmeta_imetadatatables.cpp",
+    "compiler/regmeta_vm.cpp",
+    "compiler/stdafx.h",
+]
+
+# --- mdcompiler_dac ---
+# Matches CMake: src/coreclr/md/compiler/CMakeLists.txt  mdcompiler_dac target.
+cc_library(
+    name = "mdcompiler_dac",
+    srcs = _MDCOMPILER_BASE_SOURCES,
+    copts = _MD_COPTS + [
+        "-include", "src/coreclr/md/compiler/stdafx.h",
+    ],
+    includes = _MD_INCLUDES + ["compiler"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DAC_DEFINES,
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc_dac"],
+)
+
+# --- mdruntime_dac ---
+# Matches CMake: src/coreclr/md/runtime/CMakeLists.txt  mdruntime_dac target.
+cc_library(
+    name = "mdruntime_dac",
+    srcs = [
+        "runtime/liteweightstgdb.cpp",
+        "runtime/mdcolumndescriptors.cpp",
+        "runtime/mdfileformat.cpp",
+        "runtime/mdinternaldisp.cpp",
+        "runtime/mdinternalro.cpp",
+        "runtime/metamodel.cpp",
+        "runtime/metamodelro.cpp",
+        "runtime/recordpool.cpp",
+        "runtime/strongnameinternal.cpp",
+        "runtime/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-include", "src/coreclr/md/runtime/stdafx.h",
+    ],
+    includes = _MD_INCLUDES + ["runtime"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DAC_DEFINES + [
+        "NO_COR",
+    ],
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc_dac"],
+)
+
+# --- mdruntimerw_dac ---
+# Matches CMake: src/coreclr/md/enc/CMakeLists.txt  mdruntimerw_dac target.
+cc_library(
+    name = "mdruntimerw_dac",
+    srcs = [
+        "enc/liteweightstgdbrw.cpp",
+        "enc/mdinternalrw.cpp",
+        "enc/metamodelenc.cpp",
+        "enc/metamodelrw.cpp",
+        "enc/pdbheap.cpp",
+        "enc/peparse.cpp",
+        "enc/rwutil.cpp",
+        "enc/stgio.cpp",
+        "enc/stgtiggerstorage.cpp",
+        "enc/stgtiggerstream.cpp",
+        "enc/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-include", "src/coreclr/md/enc/stdafx.h",
+    ],
+    includes = _MD_INCLUDES + ["enc"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DAC_DEFINES,
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc_dac"],
+)
+
+# ============================================================
+# DBI variant metadata libraries
+# ============================================================
+
+# --- mdcompiler-dbi ---
+# Matches CMake: src/coreclr/md/compiler/CMakeLists.txt  mdcompiler-dbi target.
+cc_library(
+    name = "mdcompiler-dbi",
+    srcs = _MDCOMPILER_BASE_SOURCES,
+    copts = _MD_COPTS + [
+        "-include", "src/coreclr/md/compiler/stdafx.h",
+    ],
+    includes = _MD_INCLUDES + ["compiler"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DBI_DEFINES,
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# --- mdruntime-dbi ---
+# Matches CMake: src/coreclr/md/runtime/CMakeLists.txt  mdruntime-dbi target.
+cc_library(
+    name = "mdruntime-dbi",
+    srcs = [
+        "runtime/liteweightstgdb.cpp",
+        "runtime/mdcolumndescriptors.cpp",
+        "runtime/mdfileformat.cpp",
+        "runtime/mdinternaldisp.cpp",
+        "runtime/mdinternalro.cpp",
+        "runtime/metamodel.cpp",
+        "runtime/metamodelro.cpp",
+        "runtime/recordpool.cpp",
+        "runtime/strongnameinternal.cpp",
+        "runtime/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-include", "src/coreclr/md/runtime/stdafx.h",
+    ],
+    includes = _MD_INCLUDES + ["runtime"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DBI_DEFINES + [
+        "NO_COR",
+    ],
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# --- mdruntimerw-dbi ---
+# Matches CMake: src/coreclr/md/enc/CMakeLists.txt  mdruntimerw-dbi target.
+cc_library(
+    name = "mdruntimerw-dbi",
+    srcs = [
+        "enc/liteweightstgdbrw.cpp",
+        "enc/mdinternalrw.cpp",
+        "enc/metamodelenc.cpp",
+        "enc/metamodelrw.cpp",
+        "enc/pdbheap.cpp",
+        "enc/peparse.cpp",
+        "enc/rwutil.cpp",
+        "enc/stgio.cpp",
+        "enc/stgtiggerstorage.cpp",
+        "enc/stgtiggerstream.cpp",
+        "enc/stdafx.h",
+    ],
+    copts = _MD_COPTS + [
+        "-include", "src/coreclr/md/enc/stdafx.h",
+    ],
+    includes = _MD_INCLUDES + ["enc"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DBI_DEFINES,
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# --- mddatasource_dbi ---
+# Matches CMake: src/coreclr/md/datasource/CMakeLists.txt
+cc_library(
+    name = "mddatasource_dbi",
+    srcs = [
+        "datasource/api.cpp",
+        "datasource/datatargetreader.cpp",
+        "datasource/remotemdinternalrwsource.cpp",
+        "datasource/targettypes.cpp",
+    ],
+    copts = _MD_COPTS + [
+        "-include", "src/coreclr/md/datasource/stdafx.h",
+    ],
+    includes = _MD_INCLUDES + ["datasource"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _MD_DBI_DEFINES,
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
 # Matches CMake: src/coreclr/md/enc/CMakeLists.txt  mdruntimerw_ppdb target.
 cc_library(
     name = "mdruntimerw_ppdb",

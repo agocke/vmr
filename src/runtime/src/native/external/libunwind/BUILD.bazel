@@ -1,7 +1,7 @@
-# Bundled GNU libunwind for linux-x64.
+# Bundled GNU libunwind for linux-x64 and macOS DAC.
 # Used by CoreCLR PAL for stack unwinding on Linux.
-# On macOS, the system libunwind is used instead — this target provides an
-# empty library so that deps can reference it unconditionally.
+# On macOS, the system libunwind is used for normal unwinding; this target
+# also provides a DAC-specific build for remote unwinding (libunwind_dac_macos).
 # Matches CMake: src/native/external/libunwind_extras/CMakeLists.txt
 
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
@@ -29,6 +29,26 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# --- Generated config headers (darwin-arm64) for DAC ---
+
+cc_library(
+    name = "libunwind_config_macos",
+    hdrs = [
+        "bazel/darwin-arm64/include/libunwind-common.h",
+        "bazel/darwin-arm64/include/libunwind.h",
+        "bazel/darwin-arm64/include/tdep/libunwind_i.h",
+    ],
+    strip_include_prefix = "bazel/darwin-arm64/include",
+    target_compatible_with = ["@platforms//os:macos"],
+)
+
+cc_library(
+    name = "libunwind_internal_config_macos",
+    hdrs = ["bazel/darwin-arm64/include/config.h"],
+    strip_include_prefix = "bazel/darwin-arm64/include",
+    target_compatible_with = ["@platforms//os:macos"],
+)
+
 # --- Shared copts and defines ---
 
 LIBUNWIND_COPTS = [
@@ -54,6 +74,14 @@ LIBUNWIND_INTERNAL_HDRS = glob(
     [
         "src/*.h",
         "src/x86_64/*.h",
+    ],
+    allow_empty = True,
+)
+
+LIBUNWIND_INTERNAL_HDRS_AARCH64 = glob(
+    [
+        "src/*.h",
+        "src/aarch64/*.h",
     ],
     allow_empty = True,
 )
@@ -201,6 +229,102 @@ cc_library(
         ":libunwind_internal_config",
     ],
     target_compatible_with = ["@platforms//os:linux"],
+)
+
+# --- macOS DAC-only libunwind (remote unwind support) ---
+# On macOS, the normal runtime uses system libunwind, but DAC needs the bundled
+# GNU libunwind for remote unwinding (debugging another process).
+# Matches CMake: LIBUNWIND_SOURCES_BASE for CLR_CMAKE_HOST_APPLE
+cc_library(
+    name = "libunwind_dac_macos",
+    srcs = [
+        # remote/mac/missing-functions.c
+        "src/remote/mac/missing-functions.c",
+        # libunwind_la_SOURCES_aarch64_common (subset - no OS-specific files)
+        "src/mi/init.c",
+        "src/mi/flush_cache.c",
+        "src/mi/mempool.c",
+        "src/mi/strerror.c",
+        "src/aarch64/is_fpreg.c",
+        "src/aarch64/regname.c",
+        # libunwind_aarch64_la_SOURCES_aarch64 (remote/generic)
+        "src/mi/Gdyn-extract.c",
+        "src/mi/Gdyn-remote.c",
+        "src/mi/Gfind_dynamic_proc_info.c",
+        "src/mi/Gget_proc_info_by_ip.c",
+        "src/mi/Gget_proc_name.c",
+        "src/mi/Gput_dynamic_unwind_info.c",
+        "src/mi/Gdestroy_addr_space.c",
+        "src/mi/Gget_reg.c",
+        "src/mi/Gset_reg.c",
+        "src/mi/Gget_fpreg.c",
+        "src/mi/Gset_fpreg.c",
+        "src/mi/Gset_caching_policy.c",
+        "src/mi/Gset_cache_size.c",
+        "src/mi/Gaddress_validator.c",
+        "src/aarch64/Gapply_reg_state.c",
+        "src/aarch64/Greg_states_iterate.c",
+        "src/aarch64/Gcreate_addr_space.c",
+        "src/aarch64/Gget_proc_info.c",
+        "src/aarch64/Gget_save_loc.c",
+        "src/aarch64/Gglobal.c",
+        "src/aarch64/Ginit.c",
+        "src/aarch64/Ginit_local.c",
+        "src/aarch64/Ginit_remote.c",
+        "src/aarch64/Gis_signal_frame.c",
+        "src/aarch64/Gregs.c",
+        "src/aarch64/Gresume.c",
+        "src/aarch64/Gstash_frame.c",
+        "src/aarch64/Gstep.c",
+        "src/aarch64/Gtrace.c",
+        # libunwind_dwarf_common_la_SOURCES
+        "src/dwarf/global.c",
+        # libunwind_dwarf_generic_la_SOURCES
+        "src/dwarf/Gexpr.c",
+        "src/dwarf/Gfde.c",
+        "src/dwarf/Gparser.c",
+        "src/dwarf/Gpe.c",
+        "src/dwarf/Gfind_proc_info-lsb.c",
+        "src/dwarf/Gfind_unwind_table.c",
+        "src/dwarf/Gget_proc_info_in_range.c",
+        # Note: NO elf64.c on macOS - macOS uses Mach-O, not ELF
+    ] + LIBUNWIND_INTERNAL_HDRS_AARCH64,
+    textual_hdrs = glob(
+        [
+            "src/mi/G*.c",
+            "src/dwarf/G*.c",
+            "src/aarch64/G*.c",
+        ],
+        allow_empty = True,
+    ),
+    copts = LIBUNWIND_COPTS + CLR_CONFIG_COPTS + [
+        "-Wno-sometimes-uninitialized",
+        "-Wno-implicit-function-declaration",
+    ],
+    defines = LIBUNWIND_DEFINES + [
+        "UNW_REMOTE_ONLY",
+        # TARGET_ARM64 required by missing-functions.c
+        "TARGET_ARM64",
+    ],
+    hdrs = glob([
+        "include/*.h",
+        "include/tdep/*.h",
+        "include/tdep-aarch64/*.h",
+        "include/remote/*.h",
+        "include/remote/mac/*.h",
+    ]),
+    includes = [
+        "include",
+        "include/tdep",
+        "include/remote",
+        "include/remote/mac",
+        "src",
+    ],
+    deps = [
+        ":libunwind_config_macos",
+        ":libunwind_internal_config_macos",
+    ],
+    target_compatible_with = ["@platforms//os:macos"],
 )
 
 # Platform-selecting alias: GNU libunwind on Linux, empty stub on macOS.

@@ -18,6 +18,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Text.Encoding.CodePages",
+    multitarget = True,
     srcs = [
         "src/Microsoft/Win32/SafeHandles/SafeAllocHHandle.cs",
         "src/System/Text/BaseCodePageEncoding.cs",
@@ -53,6 +54,8 @@ netcoreapp_impl_assembly(
     resx_file = "src/Resources/Strings.resx",
     resources = ["src/Data/codepages.nlp"],
     resource_logical_names = {"codepages.nlp": "codepages.nlp"},
+    nowarn = ["NU5128"],
+    assembly_description = "Provides support for code-page based encodings, including Windows-1252, Shift-JIS, and GB2312.\n\nCommonly Used Types:\nSystem.Text.CodePagesEncodingProvider",
 )
 
 ref_impl_pair(

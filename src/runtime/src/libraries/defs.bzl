@@ -131,6 +131,7 @@ def netcoreapp_ref_assembly(
     compiler_options = [],
     keyfile = None,
     cls_compliant = True,
+    assembly_version = "10.0.0.0",
     **kwargs
 ):
     compiler_options = compiler_options + [
@@ -153,7 +154,7 @@ def netcoreapp_ref_assembly(
         srcs = srcs,
         deps = deps,
         cls_compliant = cls_compliant,
-        assembly_version = "10.0.0.0",
+        assembly_version = assembly_version,
         visibility = [ "//visibility:public" ],
         nullable = "annotations",
         keyfile = keyfile if keyfile else "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/MSFT.snk",
@@ -162,6 +163,7 @@ def netcoreapp_ref_assembly(
         nowarn = nowarn,
         compiler_options = compiler_options,
         ref_assembly = True,
+        debug_type = "none",
         **kwargs
     )
 
@@ -265,19 +267,87 @@ def netcoreapp_impl_assembly(
     resources = [],
     resource_logical_names = {},
     assembly_version = None,
+    assembly_description = None,
+    include_dll_safe_search_path = None,
+    include_neutral_resources_language = None,
+    os_targeted = False,
+    nowarn = [],
+    partial_facade = False,
+    skip_cs1591 = False,
+    pnse = False,
+    multitarget = False,
+    supported_os_platforms = [],
+    supported_os_platforms_short = [],
+    unsupported_os_platforms = [],
     **kwargs
 ):
     base_name = name[len("impl_"):]
+
+    # Assemblies whose MSBuild TFM includes an OS suffix receive OS-specific
+    # implicit defines.  Match that in Bazel via select().
+    # os_targeted can be True/"linux" for net10.0-linux, or "unix" for net10.0-unix.
+    if os_targeted == "unix" or os_targeted == "Unix":
+        defines = defines + select({
+            "@platforms//os:linux": ["UNIX", "UNIX1_0"],
+            "@platforms//os:macos": ["UNIX", "UNIX1_0"],
+            "//conditions:default": [],
+        })
+    elif os_targeted:
+        defines = defines + select({
+            "@platforms//os:linux": ["LINUX", "LINUX1_0"],
+            "@platforms//os:macos": ["OSX", "OSX1_0"],
+            "//conditions:default": [],
+        })
+
+    # MSBuild's intellisense packaging adds CS1591 to most source assemblies
+    # via SkipIntellisenseNoWarnCS1591. Assemblies that don't get CS1591:
+    # - skip_cs1591=True: 4 libraries that enforce doc comments AND pure shim
+    #   assemblies (type forwarders in src/libraries/shims/) which have
+    #   SkipIntellisenseNoWarnCS1591=true via packaging infrastructure.
+    if not skip_cs1591:
+        nowarn = nowarn + ["CS1591"]
+
+    # Partial facade assemblies (IsPartialFacadeAssembly=true in MSBuild) suppress
+    # obsolete-API warnings for type-forwarding facades.
+    if partial_facade:
+        nowarn = nowarn + [
+            "SYSLIB0003",
+            "SYSLIB0004",
+            "SYSLIB0015",
+            "SYSLIB0017",
+            "SYSLIB0021",
+            "SYSLIB0022",
+            "SYSLIB0023",
+            "SYSLIB0025",
+            "SYSLIB0032",
+            "SYSLIB0036",
+        ]
+
+    # PNSE assemblies (GeneratePlatformNotSupportedAssembly in MSBuild) get extra
+    # suppressions because the generated stub code triggers these warnings.
+    if pnse:
+        nowarn = nowarn + ["nullable", "CA1052", "CA1821", "CA1823", "CS0169"]
+
+    # Multi-targeted assemblies that also target netstandard/net4x suppress
+    # warnings about APIs that don't exist in older TFMs.
+    if multitarget:
+        nowarn = nowarn + [
+            "CA1510", "CA1511", "CA1512", "CA1513",
+            "CA1845", "CA1846", "CA1847", "CP0003",
+        ]
 
     if not exclude_sr:
         srcs = srcs + [
             "//src/libraries/Common:src/System/SR.cs",
         ]
 
-    # Add SkipLocalsInit.cs (matches MSBuild's inclusion via Common items)
-    srcs = srcs + [
-        "//src/libraries/Common:src/SkipLocalsInit.cs",
-    ]
+    # Add SkipLocalsInit.cs for non-shim assemblies (matches MSBuild's inclusion
+    # via Common items). Pure shim assemblies (type forwarders with both
+    # exclude_sr=True and skip_cs1591=True) don't include it.
+    if not (exclude_sr and skip_cs1591):
+        srcs = srcs + [
+            "//src/libraries/Common:src/SkipLocalsInit.cs",
+        ]
 
     # Generated files must be added in the same order as MSBuild:
     # 1. .NETCoreApp.AssemblyAttributes.cs
@@ -296,19 +366,25 @@ def netcoreapp_impl_assembly(
     # 2. System.SR.cs is added by the csharp_library wrapper via resx_file
 
     # 3. Generate the full AssemblyInfo.cs matching MSBuild's WriteCodeFragment
-    # MSBuild adds DefaultDllImportSearchPathsAttribute when referencing
-    # System.Private.CoreLib or System.Runtime.InteropServices
-    _include_dll_safe_search = False
-    for d in deps:
-        dep_str = str(d)
-        if "System.Private.CoreLib" in dep_str or "System.Runtime.InteropServices" in dep_str:
-            _include_dll_safe_search = True
-            break
+    # MSBuild adds DefaultDllImportSearchPathsAttribute when any ReferencePath
+    # has Filename of System.Runtime.InteropServices or System.Private.CoreLib.
+    # Auto-detect from deps if not explicitly specified.
+    if include_dll_safe_search_path == None:
+        _include_dll_safe_search = False
+        for d in deps:
+            dep_str = str(d)
+            if "System.Private.CoreLib" in dep_str or "System.Runtime.InteropServices" in dep_str:
+                _include_dll_safe_search = True
+                break
+    else:
+        _include_dll_safe_search = include_dll_safe_search_path
 
     assembly_info_target = "assemblyinfo_" + base_name
     assembly_info_kwargs = {}
     if assembly_version != None:
         assembly_info_kwargs["assembly_version"] = assembly_version
+    if assembly_description:
+        assembly_info_kwargs["assembly_description"] = assembly_description
     gen_assembly_info(
         name = assembly_info_target,
         out = name + "/" + base_name + ".AssemblyInfo.cs",
@@ -317,6 +393,11 @@ def netcoreapp_impl_assembly(
         is_trimmable = is_trimmable,
         is_aot_compatible = is_aot_compatible,
         include_dll_safe_search_path = _include_dll_safe_search,
+        include_neutral_resources_language = include_neutral_resources_language if include_neutral_resources_language != None else (resx_file != None),
+        not_supported = pnse,
+        supported_os_platforms = supported_os_platforms,
+        supported_os_platforms_short = supported_os_platforms_short,
+        unsupported_os_platforms = unsupported_os_platforms,
         **assembly_info_kwargs
     )
 
@@ -385,6 +466,7 @@ def netcoreapp_impl_assembly(
         internals_visible_to = internals_visible_to,
         # Match MSBuild's langversion:preview
         langversion = "preview",
+        nowarn = nowarn,
         **kwargs
     )
 

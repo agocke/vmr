@@ -18,6 +18,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Threading.Channels",
+    multitarget = True,
     srcs = [
         "src/System/VoidResult.cs",
         "src/System/Threading/Channels/AsyncOperation.cs",
@@ -57,9 +58,8 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading:ref_System.Threading",
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
     ],
-    generate_facades = True,
-    facade_contract_assembly = ":ref_System.Threading.Channels",
     resx_file = "src/Resources/Strings.resx",
+    assembly_description = "Provides types for passing data between producers and consumers.\n\nCommonly Used Types:\nSystem.Threading.Channel\nSystem.Threading.Channel<T>",
 )
 
 ref_impl_pair(

@@ -7,6 +7,7 @@ netcoreapp_ref_assembly(
     ],
     deps = [
         "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
         "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
     ],
 )
@@ -24,6 +25,7 @@ netcoreapp_impl_assembly(
         "//src/libraries:ref_System.ComponentModel.Primitives",
         "//src/libraries:ref_System.Diagnostics.Process",
         "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
         "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
         "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
         "//src/libraries/System.Console:ref_System.Console",
@@ -32,7 +34,9 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
         "//src/libraries/System.Threading:ref_System.Threading",
         "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
-    ],
+            "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+],
+    include_dll_safe_search_path = True,
 )
 
 ref_impl_pair(

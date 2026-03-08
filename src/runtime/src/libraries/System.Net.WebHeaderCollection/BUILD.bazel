@@ -33,8 +33,6 @@ netcoreapp_impl_assembly(
     ],
     allow_unsafe_blocks = True,
     resx_file = "src/Resources/Strings.resx",
-    generate_facades = True,
-    facade_contract_assembly = ":ref_System.Net.WebHeaderCollection",
 )
 
 ref_impl_pair(

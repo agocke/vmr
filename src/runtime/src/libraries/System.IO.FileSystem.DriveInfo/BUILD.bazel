@@ -12,6 +12,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.FileSystem.DriveInfo",
+    os_targeted = "unix",
     srcs = [
         "src/System/IO/DriveInfo.cs",
         "src/System/IO/DriveNotFoundException.cs",
@@ -50,5 +51,6 @@ netcoreapp_impl_assembly(
     resx_file = "src/Resources/Strings.resx",
     nowarn = [
         "CS8500", # Address of a pointer to a managed type
-    ]
+    ],
+    supported_os_platforms = ["unix"],
 )

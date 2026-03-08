@@ -2,6 +2,7 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.Xml",
+    skip_cs1591 = True,
     srcs = [
         "src/System.Xml.cs",
     ],
@@ -11,5 +12,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
         "//src/libraries/System.Xml.XPath:ref_System.Xml.XPath",
     ],
+    os_targeted = True,
     exclude_sr = True,
+    assembly_version = "4.0.0.0",
 )

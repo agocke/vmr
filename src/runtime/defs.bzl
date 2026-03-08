@@ -26,6 +26,8 @@ def _gen_resx_source_impl(ctx):
     ]
     if ctx.attr.resource_class_name:
         args.append("--resource-class-name=%s" % ctx.attr.resource_class_name)
+    if not ctx.attr.include_default_values:
+        args.append("--include-default-values=false")
     ctx.actions.run(
         executable = ctx.executable._exe,
         inputs = [ctx.file.resx_file],
@@ -40,6 +42,7 @@ gen_resx_source = rule(
         "assembly_name": attr.string(mandatory = True),
         "resource_name": attr.string(mandatory = False, default = ""),
         "resource_class_name": attr.string(mandatory = False, default = ""),
+        "include_default_values": attr.bool(default = True),
         "resx_file": attr.label(
             mandatory = True,
             allow_single_file = True,
@@ -79,6 +82,42 @@ resgen = rule(
     }
 )
 
+def _quote_csharp_string_cstyle(value, indent):
+    """Replicate CSharpCodeGenerator.QuoteSnippetStringCStyle: escape chars and split at 80-char boundaries."""
+    MAX_LINE_LENGTH = 80
+    escape_map = {"\r": "\\r", "\t": "\\t", "\"": "\\\"", "'": "\\'", "\\": "\\\\", "\0": "\\0", "\n": "\\n"}
+    parts = []
+    buf = ["\""]
+    is_multiline = False
+    for i in range(len(value)):
+        ch = value[i]
+        esc = escape_map.get(ch, None)
+        if esc != None:
+            buf.append(esc)
+        else:
+            buf.append(ch)
+        if i > 0 and (i % MAX_LINE_LENGTH) == 0 and i != len(value) - 1:
+            buf.append("\" +")
+            parts.append("".join(buf))
+            buf = [indent + "\""]
+            is_multiline = True
+    buf.append("\"")
+    parts.append("".join(buf))
+    result = "\n".join(parts)
+    if is_multiline:
+        result = "(" + result + ")"
+    return result
+
+def _quote_csharp_string_verbatim(value):
+    """Replicate CSharpCodeGenerator.QuoteSnippetStringVerbatimStyle."""
+    return '@"' + value.replace('"', '""') + '"'
+
+def _quote_csharp_string(value, indent):
+    """Replicate CSharpCodeGenerator.QuoteSnippetString: pick C-style vs verbatim based on length."""
+    if len(value) < 256 or len(value) > 1500:
+        return _quote_csharp_string_cstyle(value, indent)
+    return _quote_csharp_string_verbatim(value)
+
 def _gen_assembly_info_impl(ctx):
     """Generate an AssemblyInfo.cs matching MSBuild's WriteCodeFragment output."""
     lines = [
@@ -98,10 +137,16 @@ def _gen_assembly_info_impl(ctx):
 
     assembly_name = ctx.attr.assembly_name
 
-    lines.append('[assembly: System.Reflection.AssemblyMetadata("Serviceable", "True")]')
-    lines.append('[assembly: System.Reflection.AssemblyMetadata("PreferInbox", "True")]')
-    lines.append('[assembly: System.Reflection.AssemblyDefaultAliasAttribute("%s")]' % assembly_name)
-    lines.append('[assembly: System.Resources.NeutralResourcesLanguage("en-US")]')
+    if ctx.attr.not_supported:
+        lines.append('[assembly: System.Reflection.AssemblyMetadata("NotSupported", "True")]')
+
+    if ctx.attr.include_serviceable:
+        lines.append('[assembly: System.Reflection.AssemblyMetadata("Serviceable", "True")]')
+        lines.append('[assembly: System.Reflection.AssemblyMetadata("PreferInbox", "True")]')
+        lines.append('[assembly: System.Reflection.AssemblyDefaultAliasAttribute("%s")]' % assembly_name)
+
+    if ctx.attr.include_neutral_resources_language:
+        lines.append('[assembly: System.Resources.NeutralResourcesLanguage("en-US")]')
 
     if ctx.attr.cls_compliant:
         lines.append("[assembly: CLSCompliantAttribute(true)]")
@@ -112,18 +157,34 @@ def _gen_assembly_info_impl(ctx):
     if ctx.attr.is_aot_compatible:
         lines.append('[assembly: System.Reflection.AssemblyMetadata("IsAotCompatible", "True")]')
 
+    # Short-form platform attributes (from _SupportedOSPlatforms MSBuild property) go here
+    for platform in ctx.attr.supported_os_platforms_short:
+        lines.append('[assembly: System.Runtime.Versioning.SupportedOSPlatform("%s")]' % platform)
+    for platform in ctx.attr.unsupported_os_platforms:
+        lines.append('[assembly: System.Runtime.Versioning.UnsupportedOSPlatform("%s")]' % platform)
+
     if ctx.attr.include_dll_safe_search_path:
         lines.append("[assembly: System.Runtime.InteropServices.DefaultDllImportSearchPathsAttribute(System.Runtime.InteropServices.DllImportSearchPath.AssemblyDirectory | System.Runtime.InteropServices.DllImportSearchPath.System32)]")
 
     lines.append('[assembly: System.Reflection.AssemblyCompanyAttribute("Microsoft Corporation")]')
     lines.append('[assembly: System.Reflection.AssemblyCopyrightAttribute("© Microsoft Corporation. All rights reserved.")]')
-    lines.append('[assembly: System.Reflection.AssemblyDescriptionAttribute("%s")]' % assembly_name)
+    desc = ctx.attr.assembly_description if ctx.attr.assembly_description else assembly_name
+    # MSBuild's WriteCodeFragment uses CSharpCodeGenerator.QuoteSnippetString which
+    # picks C-style (escaped, 80-char chunked) or verbatim (@"") based on length.
+    # Indent is 4 spaces (1 indent level in CodeDOM default).
+    desc_str = _quote_csharp_string(desc, "    ")
+    lines.append('[assembly: System.Reflection.AssemblyDescriptionAttribute(%s)]' % desc_str)
     lines.append('[assembly: System.Reflection.AssemblyFileVersionAttribute("%s")]' % ctx.attr.file_version)
     lines.append('[assembly: System.Reflection.AssemblyInformationalVersionAttribute("%s")]' % ctx.attr.informational_version)
     lines.append('[assembly: System.Reflection.AssemblyProductAttribute("Microsoft® .NET")]')
     lines.append('[assembly: System.Reflection.AssemblyTitleAttribute("%s")]' % assembly_name)
     lines.append('[assembly: System.Reflection.AssemblyVersionAttribute("%s")]' % ctx.attr.assembly_version)
     lines.append('[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/dotnet/runtime")]')
+
+    # Long-form platform attributes (from TFM-based targeting) go after RepositoryUrl
+    for platform in ctx.attr.supported_os_platforms:
+        lines.append('[assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("%s")]' % platform)
+
     lines.append("")
     lines.append("// Generated by the MSBuild WriteCodeFragment class.")
     lines.append("")
@@ -142,7 +203,14 @@ gen_assembly_info = rule(
         "cls_compliant": attr.bool(default = True),
         "is_trimmable": attr.bool(default = True),
         "is_aot_compatible": attr.bool(default = True),
+        "include_serviceable": attr.bool(default = True),
         "include_dll_safe_search_path": attr.bool(default = False),
+        "include_neutral_resources_language": attr.bool(default = True),
+        "assembly_description": attr.string(default = ""),
+        "not_supported": attr.bool(default = False),
+        "supported_os_platforms": attr.string_list(default = []),
+        "supported_os_platforms_short": attr.string_list(default = []),
+        "unsupported_os_platforms": attr.string_list(default = []),
     },
 )
 
@@ -203,6 +271,7 @@ def csharp_library(
     out = None,
     resx_file = None,
     resource_name = None,
+    include_default_values = True,
     resources = [],
     resource_logical_names = {},
     nowarn = [],
@@ -238,6 +307,7 @@ def csharp_library(
             assembly_name = out,
             resource_name = _resource_name,
             resx_file = resx_file,
+            include_default_values = include_default_values,
         )
         srcs = srcs + [ ":" + resx_target ]
 
@@ -258,6 +328,13 @@ def csharp_library(
             # Match Directory.Build.props global NoWarn
             "CS8500",
             "CS8969",
+            # Arcade SDK global NoWarn (Microsoft.DotNet.Arcade.Sdk targets)
+            "CS1702",
+            "CS1705",
+            "NU5105",
+            # Directory.Build.props global NoWarn
+            "IDE0060",
+            "IDE0100",
         ],
         **kwargs
     )

@@ -2,7 +2,7 @@ bazel_dep(name = "rules_dotnet")
 git_override(
     module_name = "rules_dotnet",
     remote = "https://github.com/agocke/rules_dotnet.git",
-    commit = "4e8c3811cd0cd1181d64021d2ee3333882c74deb",
+    commit = "0907edc64e9513aa9b4967fae6e3f887b82fb8dc",
 )
 
 dotnet = use_extension("@rules_dotnet//dotnet:extensions.bzl", "dotnet")
@@ -23,6 +23,7 @@ use_repo(
 )
 
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+bazel_dep(name = "rules_pkg", version = "1.2.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.14")

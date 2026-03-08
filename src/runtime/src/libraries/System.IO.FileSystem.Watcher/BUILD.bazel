@@ -95,6 +95,8 @@ netcoreapp_impl_assembly(
     ],
     resx_file = "src/Resources/Strings.resx",
     allow_unsafe_blocks = True,
+    os_targeted = True,
+    supported_os_platforms = ["linux"],
 )
 
 ref_impl_pair(

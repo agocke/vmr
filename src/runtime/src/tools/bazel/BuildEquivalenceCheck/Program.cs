@@ -10,6 +10,7 @@ var binlogPaths = new List<string>();
 string? bazelAqueryNativePath = null;
 string? bazelAqueryManagedPath = null;
 string? jsonOutputPath = null;
+string? managedManifestPath = null;
 bool verbose = false;
 
 for (int i = 0; i < args.Length; i++)
@@ -33,6 +34,9 @@ for (int i = 0; i < args.Length; i++)
             break;
         case "--json-output":
             jsonOutputPath = args[++i];
+            break;
+        case "--managed-manifest":
+            managedManifestPath = args[++i];
             break;
         case "--verbose" or "-v":
             verbose = true;
@@ -113,6 +117,51 @@ Console.WriteLine("Comparing build inputs...");
 var report = ComparisonEngine.CompareNative(cmakeNativeRecords, bazelNativeRecords);
 ComparisonEngine.CompareManaged(report, msbuildManagedRecords, bazelManagedRecords);
 
+// ── Load managed assembly manifest ──────────────────────────────────
+if (managedManifestPath is not null)
+{
+    if (!File.Exists(managedManifestPath))
+    {
+        Console.Error.WriteLine($"Managed manifest file not found: {managedManifestPath}");
+        return 1;
+    }
+
+    var manifest = new Dictionary<string, ManifestEntry>(StringComparer.OrdinalIgnoreCase);
+    foreach (var rawLine in File.ReadAllLines(managedManifestPath))
+    {
+        var line = rawLine.Trim();
+        if (line.Length == 0 || line.StartsWith('#'))
+            continue;
+
+        var parts = line.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length != 2)
+        {
+            Console.Error.WriteLine($"Invalid manifest line (expected 'match|diff AssemblyName'): {line}");
+            return 1;
+        }
+
+        var status = parts[0].ToLowerInvariant() switch
+        {
+            "match" => ManifestStatus.Match,
+            "diff" => ManifestStatus.Diff,
+            _ => (ManifestStatus?)null,
+        };
+
+        if (status is null)
+        {
+            Console.Error.WriteLine($"Invalid manifest status '{parts[0]}' (expected 'match' or 'diff'): {line}");
+            return 1;
+        }
+
+        manifest[parts[1]] = new ManifestEntry { Name = parts[1], ExpectedStatus = status.Value };
+    }
+
+    report.ManagedManifest = manifest;
+    var matchCount = manifest.Values.Count(e => e.ExpectedStatus == ManifestStatus.Match);
+    var diffCount = manifest.Values.Count(e => e.ExpectedStatus == ManifestStatus.Diff);
+    Console.WriteLine($"  Loaded manifest: {manifest.Count} entries ({matchCount} match, {diffCount} diff) from {managedManifestPath}");
+}
+
 // ── Report ──────────────────────────────────────────────────────────
 ReportWriter.WriteConsoleReport(report, verbose);
 
@@ -154,6 +203,7 @@ static void PrintUsage()
           --bazel-native-aquery <path>       Bazel aquery JSON for native CppCompile actions
           --bazel-managed-aquery <path>      Bazel aquery JSON for managed CSharpCompile actions
           --json-output <path>               Write detailed JSON report to file
+          --managed-manifest <path>           Manifest listing expected assemblies and their status
           --verbose / -v                     Show all differences including only-in lists
           --help / -h                        Show this help
         """);

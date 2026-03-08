@@ -50,4 +50,5 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading:ref_System.Threading",
         "//src/libraries/System.Threading.Channels:ref_System.Threading.Channels",
     ],
+    unsupported_os_platforms = ["wasi"],
 )

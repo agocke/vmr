@@ -15,6 +15,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.Ping",
+    os_targeted = "unix",
     analyzers = [
         "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
         "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
@@ -100,4 +101,5 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading:ref_System.Threading",
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
     ],
+    supported_os_platforms = ["unix"],
 )

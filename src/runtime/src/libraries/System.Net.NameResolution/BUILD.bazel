@@ -13,6 +13,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.NameResolution",
+    os_targeted = "unix",
     analyzers = [
         "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
         "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
@@ -28,7 +29,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/Common:src/System/Net/InternalException.cs",
         "//src/libraries/Common:src/System/Net/IPAddressParserStatics.cs",
         "//src/libraries/Common:src/System/Net/SocketProtocolSupportPal.cs",
-        "//src/libraries/Common:src/System/Net/DebugSafeHandle.cs",
     ] + select({
         "@platforms//os:linux": [
             "//src/libraries/Common:src/System/Net/InteropIPAddressExtensions.Unix.cs",
@@ -78,4 +78,5 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading.Overlapped:ref_System.Threading.Overlapped",
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
     ],
+    supported_os_platforms = ["unix"],
 )

@@ -20,6 +20,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.HttpListener",
+    os_targeted = "unix",
     srcs = glob(
         ["src/System/**/*.cs"],
         exclude = [
@@ -101,4 +102,5 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading.Overlapped:ref_System.Threading.Overlapped",
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
     ],
+    supported_os_platforms = ["unix"],
 )

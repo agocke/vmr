@@ -212,7 +212,7 @@ namespace Xunit
         /// Iterates through an IEnumerable to generate an array of elements. The rational for using this instead of
         /// System.Linq.ToArray is that this will not require a dependency on System.Linq.dll
         /// </summary>
-        private static T[] CopyToArray<T>(IEnumerable<T> source)
+        private static T[]? CopyToArray<T>(IEnumerable<T>? source)
         {
             T[] items = new T[4];
             int count = 0;

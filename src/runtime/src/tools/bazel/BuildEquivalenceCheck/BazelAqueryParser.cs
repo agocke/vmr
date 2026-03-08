@@ -318,6 +318,7 @@ public static class BazelAqueryParser
             TargetType = targetType,
             LangVersion = langVersion,
             BuildSystem = "bazel",
+            TargetLabel = targetLabel,
         };
     }
 

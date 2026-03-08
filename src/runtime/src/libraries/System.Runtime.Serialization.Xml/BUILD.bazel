@@ -16,14 +16,15 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.Serialization.Xml",
+    partial_facade = True,
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Runtime.Serialization.Xml",
     exclude_sr = True,
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
-        "//src/libraries:impl_System.Runtime",
+        "//src/libraries:ref_System.Runtime",
         "//src/libraries/System.Private.DataContractSerialization:impl_System.Private.DataContractSerialization",
         "//src/libraries/System.Runtime.Serialization.Primitives:impl_System.Runtime.Serialization.Primitives",
         "//src/libraries/System.Xml.ReaderWriter:impl_System.Xml.ReaderWriter",
     ],
+    include_dll_safe_search_path = False,
 )

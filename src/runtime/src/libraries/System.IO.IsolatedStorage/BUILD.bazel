@@ -19,6 +19,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.IsolatedStorage",
+    os_targeted = "unix",
     srcs = [
         "src/System/IO/IsolatedStorage/IsolatedStorageException.cs",
         "src/System/IO/IsolatedStorage/IsolatedStorageFile.cs",
@@ -36,12 +37,15 @@ netcoreapp_impl_assembly(
         "src/System/IO/IsolatedStorage/IsolatedStorageFile.NonMobile.cs",
     ],
     deps = [
-        "//src/libraries/System.Collections:ref_System.Collections",
         "//src/libraries/System.Linq:ref_System.Linq",
         "//src/libraries/System.Memory:ref_System.Memory",
         "//src/libraries:ref_System.Runtime",
         "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
         "//src/libraries/System.Threading:ref_System.Threading",
-    ],
+            "//src/libraries/System.IO.FileSystem.AccessControl:ref_System.IO.FileSystem.AccessControl",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+],
     resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms = ["unix"],
 )

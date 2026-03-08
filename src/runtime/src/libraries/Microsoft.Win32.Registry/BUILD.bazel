@@ -15,7 +15,6 @@ netcoreapp_ref_assembly(
 netcoreapp_impl_assembly(
     name = "impl_Microsoft.Win32.Registry",
     srcs = [
-        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
         "//src/libraries/Common:src/Interop/Windows/Interop.Errors.cs",
         "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.FormatMessage.cs",
         "//src/libraries/Common:src/Interop/Windows/Interop.Libraries.cs",
@@ -62,11 +61,14 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
     ],
     allow_unsafe_blocks = True,
+    pnse = True,
     nowarn = [
-        "SYSLIB1092",
+        "CA2249",
+        "IDE0280",
     ],
     defines = [
         "REGISTRY_ASSEMBLY",
     ],
     resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms_short = ["windows"],
 )

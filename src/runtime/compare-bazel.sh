@@ -140,7 +140,7 @@ for cfg in "${configs[@]}"; do
 
     # ----- Step 4: Build the analysis tool -----
     log "Building analysis tool..."
-    dotnet build "$scriptroot/eng/tools/BuildEquivalenceCheck/BuildEquivalenceCheck.csproj" \
+    dotnet build "$scriptroot/src/tools/bazel/BuildEquivalenceCheck/BuildEquivalenceCheck.csproj" \
         --nologo -v quiet 2>&1
 
     # ----- Step 5: Run comparison -----
@@ -149,6 +149,7 @@ for cfg in "${configs[@]}"; do
         --repo-root "$scriptroot"
         --bazel-native-aquery "$bazel_native_aquery"
         --bazel-managed-aquery "$bazel_managed_aquery"
+        --managed-manifest "$scriptroot/src/tools/bazel/BuildEquivalenceCheck/managed-assembly-manifest.txt"
     )
 
     # Add compile_commands.json files that exist
@@ -172,7 +173,7 @@ for cfg in "${configs[@]}"; do
         tool_args+=(--json-output "$local_json")
     fi
 
-    dotnet run --project "$scriptroot/eng/tools/BuildEquivalenceCheck/BuildEquivalenceCheck.csproj" \
+    dotnet run --project "$scriptroot/src/tools/bazel/BuildEquivalenceCheck/BuildEquivalenceCheck.csproj" \
         --no-build -- "${tool_args[@]}" || overall_exit=1
 
     echo ""

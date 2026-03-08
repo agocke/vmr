@@ -17,6 +17,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.Security",
+    os_targeted = True,
     analyzers = [
         "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
         "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
@@ -242,4 +243,5 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
         "//src/libraries/System.Formats.Asn1:ref_System.Formats.Asn1",
     ],
+    supported_os_platforms = ["linux"],
 )

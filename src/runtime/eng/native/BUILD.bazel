@@ -3,8 +3,14 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 exports_files(
-    ["generateversionscript.sh"],
-    visibility = ["//src/native:__subpackages__"],
+    [
+        "generateversionscript.sh",
+        "generateexportedsymbols.sh",
+    ],
+    visibility = [
+        "//src/coreclr:__subpackages__",
+        "//src/native:__subpackages__",
+    ],
 )
 
 # Version headers and static version source.
@@ -13,6 +19,7 @@ exports_files(
 cc_library(
     name = "version_headers",
     hdrs = [
+        "version/_version.c",
         "version/_version.h",
         "version/runtime_version.h",
     ],

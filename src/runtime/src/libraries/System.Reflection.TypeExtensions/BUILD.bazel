@@ -21,5 +21,6 @@ netcoreapp_impl_assembly(
     ],
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Reflection.TypeExtensions",
+    partial_facade = True,
     resx_file = "src/Resources/Strings.resx",
 )

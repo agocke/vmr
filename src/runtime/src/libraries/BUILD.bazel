@@ -306,9 +306,6 @@ netcoreapp_ref_assembly(
     name = "ref_System.Runtime",
     srcs = [
         "System.Runtime/ref/System.Runtime.cs",
-        # ExtraApis needed so impl_System.Runtime generates type forwarders
-        # for DebugProvider (used by System.Diagnostics.TraceSource at runtime)
-        "//src/libraries/System.Private.CoreLib:ref/System.Private.CoreLib.ExtraApis.cs",
     ],
     compiler_options = [
         "/runtimemetadataversion:v4.0.30319",
@@ -332,6 +329,7 @@ netcoreapp_impl_assembly(
     deps = [
         "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
     ],
+    partial_facade = True,
     generate_facades = True,
     facade_contract_assembly = ":ref_Microsoft.Win32.Primitives",
     exclude_sr = True,
@@ -376,14 +374,12 @@ netcoreapp_ref_assembly(
 netcoreapp_impl_assembly(
     name = "impl_System.Private.Uri",
     srcs = [
-        "//src/libraries/Common:src/System/Collections/Generic/ArrayBuilder.cs",
         "//src/libraries/Common:src/System/HexConverter.cs",
         "//src/libraries/Common:src/System/Obsoletions.cs",
         "//src/libraries/Common:src/System/Net/IPv4AddressHelper.Common.cs",
         "//src/libraries/Common:src/System/Net/IPv6AddressHelper.Common.cs",
         "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
         "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.cs",
-        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.Pop.cs",
 
         "System.Private.Uri/src/System/DomainNameHelper.cs",
         "System.Private.Uri/src/System/GenericUriParser.cs",
@@ -405,13 +401,13 @@ netcoreapp_impl_assembly(
         "System.Private.Uri/src/System/UriScheme.cs",
         "System.Private.Uri/src/System/UriSyntax.cs",
         "System.Private.Uri/src/System/ValueStringBuilderExtensions.cs",
-
-        "System.Private.Uri/System.SR.cs",
     ],
     deps = [
         ":ref_System.Private.CoreLib",
     ],
     allow_unsafe_blocks = True,
+    include_neutral_resources_language = True,
+    resx_file = "System.Private.Uri/src/Resources/Strings.resx",
 )
 
 netcoreapp_impl_assembly(
@@ -423,6 +419,7 @@ netcoreapp_impl_assembly(
         ":ref_System.Private.CoreLib",
         ":impl_System.Private.Uri",
     ],
+    partial_facade = True,
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Runtime",
     facade_omit_types = [
@@ -433,6 +430,8 @@ netcoreapp_impl_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Diagnostics.Process",
+    os_targeted = True,
+    defines = ["FEATURE_REGISTRY"],
     analyzers = [
         "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
         "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
@@ -545,24 +544,25 @@ netcoreapp_impl_assembly(
     resx_file = "System.Diagnostics.Process/src/Resources/Strings.resx",
     deps = [
         ":ref_Microsoft.Win32.Primitives",
-#        ":ref_Microsoft.Win32.Registry",
+        "//src/libraries/Microsoft.Win32.Registry:ref_Microsoft.Win32.Registry",
         "//src/libraries/System.Collections:ref_System.Collections",
-#        ":ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
         "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
         "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
         "//src/libraries:ref_System.ComponentModel.Primitives",
         "//src/libraries/System.Diagnostics.FileVersionInfo:ref_System.Diagnostics.FileVersionInfo",
         "//src/libraries/System.IO.FileSystem.DriveInfo:ref_System.IO.FileSystem.DriveInfo",
-        "//src/libraries/System.Memory:ref_System.Memory",
         "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        "//src/libraries/System.Memory:ref_System.Memory",
         ":ref_System.Runtime",
         "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
-#        ":ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
         "//src/libraries/System.Threading:ref_System.Threading",
-#        ":ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
     ],
     allow_unsafe_blocks = True,
+    supported_os_platforms = ["linux"],
 )
 
 netcoreapp_impl_assembly(
@@ -604,6 +604,7 @@ netcoreapp_impl_assembly(
     deps = [
         "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
         "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Memory:ref_System.Memory",
         "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
         ":ref_System.Runtime",
         "//src/libraries/System.Threading:ref_System.Threading",

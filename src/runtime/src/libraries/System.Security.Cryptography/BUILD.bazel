@@ -22,6 +22,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Security.Cryptography",
+    os_targeted = "unix",
     srcs = [
         "//src/libraries/Common:src/System/Security/Cryptography/Asn1Reader/AsnValueReader.cs",
         "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
@@ -743,14 +744,21 @@ netcoreapp_impl_assembly(
     ],
     allow_unsafe_blocks = True,
     nowarn = [
-        "SYSLIB1051",
-        "SYSLIB1092",
-        "SYSLIB5006",
+        "CA5350",
+        "CA5351",
+        "CA5379",
+        "CA5384",
+        "CS0809",
         "CS8500",
+        "SYSLIB0026",
+        "SYSLIB5006",
     ],
     resx_file = "src/Resources/Strings.resx",
     defines = [
         "NET",
         "INTERNAL_ASYMMETRIC_IMPLEMENTATIONS",
-    ]
+        "DESIGNTIMEINTERFACES",
+        "SYSTEM_SECURITY_CRYPTOGRAPHY",
+    ],
+    supported_os_platforms = ["unix"],
 )

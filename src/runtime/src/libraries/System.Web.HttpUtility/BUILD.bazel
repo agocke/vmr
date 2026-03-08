@@ -30,8 +30,6 @@ netcoreapp_impl_assembly(
     ],
     allow_unsafe_blocks = True,
     exclude_sr = True,
-    generate_facades = True,
-    facade_contract_assembly = ":ref_System.Web.HttpUtility",
 )
 
 ref_impl_pair(

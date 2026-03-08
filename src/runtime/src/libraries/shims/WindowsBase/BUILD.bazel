@@ -2,6 +2,7 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_WindowsBase",
+    skip_cs1591 = True,
     srcs = [
         "src/WindowsBase.cs",
     ],
@@ -11,5 +12,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/shims/stubs:ref_System.IO.Packaging",
         "//src/libraries/shims/stubs:ref_System.Security.Permissions",
     ],
+    os_targeted = True,
     exclude_sr = True,
+    assembly_version = "4.0.0.0",
 )

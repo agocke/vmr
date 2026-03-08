@@ -20,6 +20,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Linq.AsyncEnumerable",
+    multitarget = True,
+    skip_cs1591 = True,
     srcs = [
         "src/System/Linq/AggregateAsync.cs",
         "src/System/Linq/AggregateBy.cs",

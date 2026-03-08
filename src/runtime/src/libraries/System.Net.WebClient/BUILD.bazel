@@ -43,4 +43,5 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading:ref_System.Threading",
         "//src/libraries/System.Web.HttpUtility:ref_System.Web.HttpUtility",
     ],
+    unsupported_os_platforms = ["browser", "wasi"],
 )

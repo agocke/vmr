@@ -33,16 +33,16 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -qq -y clang-18 lld libkrb5-dev
+          sudo apt-get install -qq -y clang-18 lld libkrb5-dev liblttng-ust-dev
 
       - name: Mount Bazel cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/bazel-disk
-          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-${{ github.sha }}
+          key: bazel-${{ runner.os }}-${{ matrix.config }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-${{ github.sha }}
           restore-keys: |
-            bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-
-            bazel-${{ runner.os }}-
+            bazel-${{ runner.os }}-${{ matrix.config }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-
+            bazel-${{ runner.os }}-${{ matrix.config }}-
 
       - name: Build
         run: bazel build //... --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk

@@ -39,4 +39,17 @@ public sealed class ManagedCompilationRecord
     public string TargetType { get; init; } = "library";
     public string LangVersion { get; init; } = "";
     public string BuildSystem { get; init; } = "";
+    /// <summary>
+    /// The output path of the assembly, used to distinguish ref vs impl builds.
+    /// </summary>
+    public string OutputPath { get; init; } = "";
+    /// <summary>
+    /// Whether this is a reference assembly build (source in ref/ directory).
+    /// </summary>
+    public bool IsReferenceAssembly { get; init; }
+    /// <summary>
+    /// The Bazel target label (e.g. "//src/libraries/System.Runtime:impl_System.Runtime").
+    /// Empty for MSBuild records.
+    /// </summary>
+    public string TargetLabel { get; init; } = "";
 }

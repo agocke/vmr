@@ -8,6 +8,7 @@ string? outputPath = null;
 string? resourceName = null;
 string? resourceFile = null;
 string? resourceClassName = null;
+bool includeDefaultValues = true;
 
 for (int i = 0; i < args.Length; i++)
 {
@@ -28,6 +29,10 @@ for (int i = 0; i < args.Length; i++)
     {
         resourceClassName = resClass;
     }
+    else if (StartsWith(arg, "--include-default-values=", out var defaultValues))
+    {
+        includeDefaultValues = bool.Parse(defaultValues);
+    }
 
 }
 
@@ -39,7 +44,7 @@ var resxGen = new Microsoft.DotNet.Arcade.GenerateResxSource()
     ResourceFile = resourceFile ?? throw new Exception("No resource file specified"),
     ResourceClassName = resourceClassName ?? "System.SR",
     OmitGetResourceString = resourceClassName == null,
-    IncludeDefaultValues = true,
+    IncludeDefaultValues = includeDefaultValues,
 };
 return resxGen.Execute() ? 0 : 1;
 

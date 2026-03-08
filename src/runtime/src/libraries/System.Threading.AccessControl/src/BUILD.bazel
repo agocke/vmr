@@ -4,9 +4,18 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 # On Linux, this library is either PlatformNotSupported or platform-specific.
 netcoreapp_impl_assembly(
     name = "impl_System.Threading.AccessControl",
+    multitarget = True,
+    pnse = True,
     srcs = ["//src/libraries/shims:System.Void.cs"],
     deps = [
         "//src/libraries:ref_System.Runtime",
-    ],
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+            "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+        "//src/libraries/System.Threading:ref_System.Threading",
+],
     exclude_sr = True,
+    supported_os_platforms_short = ["windows"],
+    include_dll_safe_search_path = True,
+    assembly_description = "Provides support for managing access and audit control lists for synchronization primitives.\n\nCommonly Used Types:\nSystem.Security.AccessControl.EventWaitHandleAccessRule\nSystem.Security.AccessControl.EventWaitHandleAuditRule\nSystem.Security.AccessControl.MutexAccessRule\nSystem.Security.AccessControl.MutexAuditRule\nSystem.Security.AccessControl.MutexSecurity\nSystem.Security.AccessControl.SemaphoreAccessRule\nSystem.Security.AccessControl.SemaphoreAuditRule\nSystem.Security.AccessControl.SemaphoreSecurity",
 )

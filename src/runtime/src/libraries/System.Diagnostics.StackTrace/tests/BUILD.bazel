@@ -12,8 +12,11 @@ live_csharp_library(
     # assertions about IL offsets still pass with debug info present.
 )
 
+# This test requires PDB files to exist (StackTraceSymbolsDoNotLockFile asserts
+# File.Exists(pdbPath)), so force PDB generation even in fastbuild mode.
 library_test(
     name = "System.Diagnostics.StackTrace.Tests",
+    debug_type = "portable",
     srcs = glob(
         ["*.cs"],
         exclude = ["ExceptionTestAssembly/**"],

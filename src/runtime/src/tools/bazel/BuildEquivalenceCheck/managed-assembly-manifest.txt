@@ -1,0 +1,214 @@
+# Managed assembly equivalence manifest.
+#
+# Lists every managed assembly expected in the equivalence check and whether
+# it should match ("match") or is a known difference ("diff").
+# Lines starting with # are comments. Blank lines are ignored.
+#
+# The equivalence check FAILS if:
+#   - A "match" assembly has differences (regression)
+#   - A listed assembly is missing from either build
+#   - An unlisted assembly appears in the comparison
+#
+# When a diff is resolved, change its status from "diff" to "match".
+
+# ── Archive assemblies ─────────────────────────────────────────────
+# These assemblies are shipped in the runtime archive tarball.
+
+match Microsoft.CSharp
+match Microsoft.VisualBasic
+match Microsoft.VisualBasic.Core
+match Microsoft.Win32.Primitives
+diff  System
+match System.AppContext
+match System.Buffers
+match System.Collections.Concurrent
+match System.Collections.Immutable
+match System.Collections.NonGeneric
+match System.Collections.Specialized
+match System.ComponentModel
+match System.ComponentModel.Annotations
+match System.ComponentModel.DataAnnotations
+match System.ComponentModel.EventBasedAsync
+match System.ComponentModel.Primitives
+match System.ComponentModel.TypeConverter
+match System.Configuration
+match System.Console
+match System.Core
+match System.Data
+match System.Data.Common
+match System.Data.DataSetExtensions
+match System.Diagnostics.Contracts
+match System.Diagnostics.Debug
+match System.Diagnostics.DiagnosticSource
+match System.Diagnostics.FileVersionInfo
+match System.Diagnostics.Process
+match System.Diagnostics.StackTrace
+match System.Diagnostics.TextWriterTraceListener
+match System.Diagnostics.Tools
+match System.Diagnostics.TraceSource
+match System.Diagnostics.Tracing
+match System.Drawing
+match System.Drawing.Primitives
+match System.Dynamic.Runtime
+match System.Formats.Asn1
+match System.Formats.Tar
+match System.Globalization
+match System.Globalization.Calendars
+match System.Globalization.Extensions
+match System.IO
+match System.IO.Compression
+match System.IO.Compression.Brotli
+match System.IO.Compression.FileSystem
+match System.IO.Compression.ZipFile
+match System.IO.FileSystem
+match System.IO.FileSystem.AccessControl
+match System.IO.FileSystem.DriveInfo
+match System.IO.FileSystem.Primitives
+match System.IO.FileSystem.Watcher
+match System.IO.IsolatedStorage
+match System.IO.MemoryMappedFiles
+match System.IO.Pipelines
+match System.IO.Pipes
+match System.IO.UnmanagedMemoryStream
+match System.Linq
+match System.Linq.AsyncEnumerable
+match System.Linq.Expressions
+match System.Linq.Parallel
+match System.Linq.Queryable
+match System.Memory
+match System.Net
+match System.Net.Http
+match System.Net.Http.Json
+match System.Net.HttpListener
+match System.Net.Mail
+match System.Net.NameResolution
+match System.Net.NetworkInformation
+match System.Net.Ping
+match System.Net.Primitives
+match System.Net.Requests
+match System.Net.Security
+match System.Net.ServerSentEvents
+match System.Net.ServicePoint
+match System.Net.Sockets
+match System.Net.WebClient
+match System.Net.WebHeaderCollection
+match System.Net.WebProxy
+match System.Net.WebSockets
+match System.Net.WebSockets.Client
+match System.Numerics
+match System.Numerics.Vectors
+match System.ObjectModel
+match System.Private.DataContractSerialization
+match System.Private.Xml
+match System.Private.Xml.Linq
+match System.Reflection
+match System.Reflection.DispatchProxy
+match System.Reflection.Emit
+match System.Reflection.Emit.ILGeneration
+match System.Reflection.Emit.Lightweight
+match System.Reflection.Extensions
+match System.Reflection.Metadata
+match System.Reflection.Primitives
+match System.Reflection.TypeExtensions
+match System.Resources.Reader
+match System.Resources.ResourceManager
+match System.Resources.Writer
+match System.Runtime.CompilerServices.Unsafe
+match System.Runtime.CompilerServices.VisualC
+match System.Runtime.Extensions
+match System.Runtime.Handles
+match System.Runtime.InteropServices
+match System.Runtime.InteropServices.RuntimeInformation
+match System.Runtime.Intrinsics
+match System.Runtime.Loader
+match System.Runtime.Numerics
+match System.Runtime.Serialization
+match System.Runtime.Serialization.Json
+match System.Runtime.Serialization.Primitives
+match System.Runtime.Serialization.Xml
+match System.Security
+match System.Security.AccessControl
+match System.Security.Claims
+match System.Security.Cryptography
+match System.Security.Cryptography.Algorithms
+match System.Security.Cryptography.Cng
+match System.Security.Cryptography.Csp
+match System.Security.Cryptography.Encoding
+match System.Security.Cryptography.OpenSsl
+match System.Security.Cryptography.Primitives
+match System.Security.Cryptography.X509Certificates
+match System.Security.Principal
+match System.Security.Principal.Windows
+match System.Security.SecureString
+match System.ServiceModel.Web
+match System.ServiceProcess
+match System.Text.Encoding
+match System.Text.Encoding.CodePages
+match System.Text.Encoding.Extensions
+match System.Text.Encodings.Web
+match System.Text.Json
+match System.Text.RegularExpressions
+match System.Threading
+match System.Threading.Channels
+match System.Threading.Overlapped
+match System.Threading.Tasks
+match System.Threading.Tasks.Dataflow
+match System.Threading.Tasks.Extensions
+match System.Threading.Tasks.Parallel
+match System.Threading.Thread
+match System.Threading.ThreadPool
+match System.Threading.Timer
+match System.Transactions
+match System.Transactions.Local
+match System.ValueTuple
+match System.Web
+match System.Web.HttpUtility
+match System.Windows
+match System.Xml
+match System.Xml.Linq
+match System.Xml.ReaderWriter
+match System.Xml.Serialization
+match System.Xml.XDocument
+match System.Xml.XPath
+match System.Xml.XPath.XDocument
+match System.Xml.XmlDocument
+match System.Xml.XmlSerializer
+match WindowsBase
+match mscorlib
+match netstandard
+
+# PNSE stubs: MSBuild generates .notsupported.cs; Bazel uses System.Void.cs
+diff  Microsoft.Win32.Registry
+diff  System.IO.Pipes.AccessControl
+diff  System.Threading.AccessControl
+
+# Generated content: Forwards.cs or SR.cs generation differences
+match System.Collections
+match System.Runtime
+diff  System.Private.CoreLib
+match System.Private.Uri
+
+# Complex: different source/ref sets due to platform stubs vs full impl
+diff  System.Net.Quic
+diff  System.Runtime.Serialization.Formatters
+diff  System.Runtime.InteropServices.JavaScript
+
+# ── Non-archive assemblies ─────────────────────────────────────────
+# These assemblies are built but not shipped in the runtime archive.
+# They differ because MSBuild uses the full targeting pack while Bazel
+# uses precise deps, or because of stub vs full impl differences.
+
+diff  Microsoft.Extensions.Primitives
+diff  Microsoft.Interop.ComInterfaceGenerator
+diff  Microsoft.Interop.LibraryImportGenerator
+diff  Microsoft.Interop.SourceGeneration
+diff  System.CodeDom
+diff  System.Formats.Cbor
+diff  System.Formats.Nrbf
+diff  System.Private.CoreLib.Generators
+diff  System.Reflection.MetadataLoadContext
+diff  System.Resources.Extensions
+diff  System.Security.Cryptography.Pkcs
+diff  System.Security.Cryptography.Xml
+diff  System.Text.RegularExpressions.Generator
+diff  System.Threading.RateLimiting

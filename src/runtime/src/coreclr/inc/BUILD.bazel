@@ -2,7 +2,7 @@
 # Nearly all coreclr components depend on this.
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DAC_DEFINES", "CORECLR_DEFINES")
 
 package(default_visibility = ["//src/coreclr:__subpackages__"])
 
@@ -22,7 +22,10 @@ cc_library(
     textual_hdrs = glob(["*.cpp"]),
     copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
     defines = CORECLR_DEFINES,
-    includes = ["."],
+    includes = [
+        ".",
+        "llvm",  # macOS createdump uses #include <ELF.h>
+    ],
     deps = [
         "//src/coreclr:coreclr_inc",
         "//src/coreclr/binder:binder_headers",
@@ -81,13 +84,60 @@ cc_library(
         allow_empty = True,
     ) + ["mpl/type_list"],
     textual_hdrs = glob(["*.cpp"]),
-    includes = ["."],
+    includes = [
+        ".",
+        "llvm",
+    ],
     deps = [
         "//src/coreclr:coreclr_inc",
         "//src/coreclr/minipal:coreclrminipal_headers",
         "//src/coreclr/pal:pal_headers",
         "//src/native:native_inc",
         "//src/native/minipal",
+    ],
+)
+
+# DAC variant of coreclr_inc — same headers and deps but propagates
+# CORECLR_DAC_DEFINES (DACCESS_COMPILE, PROFILING_SUPPORTED_DATA) instead
+# of the WKS defines (PROFILING_SUPPORTED, FEATURE_PROFAPI_ATTACH_DETACH).
+cc_library(
+    name = "coreclr_inc_dac",
+    hdrs = glob(
+        [
+            "*.h",
+            "*.inl",
+            "*.def",
+            "clr/**/*.h",
+            "llvm/*.h",
+            "llvm/*.def",
+        ],
+        allow_empty = True,
+    ) + ["mpl/type_list"],
+    textual_hdrs = glob(["*.cpp"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    defines = CORECLR_DAC_DEFINES,
+    includes = [
+        ".",
+        "llvm",
+    ],
+    deps = [
+        "//src/coreclr:coreclr_inc",
+        "//src/coreclr/binder:binder_headers",
+        "//src/coreclr/debug:debug_inc",
+        "//src/coreclr/dlls:dlls_headers",
+        "//src/coreclr/gc:gc_headers",
+        "//src/coreclr/gcdump:gcdump_headers",
+        "//src/coreclr/hosts:hosts_inc",
+        "//src/coreclr/interpreter:interpreter_headers",
+        "//src/coreclr/jit:jit_headers",
+        "//src/coreclr/md:md_inc",
+        "//src/coreclr/minipal:coreclrminipal_headers",
+        "//src/coreclr/pal:pal_headers",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+        "//src/native:native_inc",
+        "//src/native/minipal",
+        "//eng/native:version_headers",
     ],
 )
 
