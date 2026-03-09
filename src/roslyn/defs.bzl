@@ -20,6 +20,7 @@ def roslyn_assembly_info(name, assembly_version = ROSLYN_ASSEMBLY_VERSION, **kwa
             "using System.Reflection;",
             '[assembly: AssemblyVersion("%s")]' % assembly_version,
             '[assembly: AssemblyFileVersion("%s")]' % assembly_version,
+            '[assembly: AssemblyInformationalVersion("%s")]' % assembly_version,
             "",
         ],
         **kwargs
