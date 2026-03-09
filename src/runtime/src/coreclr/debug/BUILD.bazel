@@ -3,7 +3,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("//:cc_defs.bzl", "PLATFORM_DEFINES")
-load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES", "CORECLR_DAC_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CLR_DAC_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES", "CORECLR_DAC_DEFINES")
 
 package(default_visibility = ["//src/coreclr:__subpackages__"])
 
@@ -263,6 +263,8 @@ cc_binary(
 # --- cordbee_dac (debugger execution engine, DAC variant) ---
 # Matches CMake: src/coreclr/debug/ee/dac/CMakeLists.txt
 # Subset of cordbee_wks sources shared between DAC and WKS (CORDBEE_SOURCES_DAC_AND_WKS).
+# Uses CLR_DAC_CONFIG_DEFINES (always release mode) because ThreadHoldsLock() and
+# similar debug-only functions are inside #ifndef DACCESS_COMPILE.
 cc_library(
     name = "cordbee_dac",
     srcs = [
@@ -295,7 +297,7 @@ cc_library(
         "@platforms//cpu:arm64": ["../vm/arm64", "ee/arm64"],
         "//conditions:default": ["../vm/amd64", "ee/amd64"],
     }),
-    local_defines = CLR_CONFIG_DEFINES,
+    local_defines = CLR_DAC_CONFIG_DEFINES,
     defines = CORECLR_DAC_DEFINES + [
         "FEATURE_VIRTUAL_STUB_DISPATCH",
     ],

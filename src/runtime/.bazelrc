@@ -177,24 +177,34 @@ build --enable_platform_specific_config
 
 # --- CoreCLR default: debug ---
 build --//:clr_config=debug
+# When used as external module @dotnet_runtime, also set the module's flag
+build --@dotnet_runtime//:clr_config=debug
 
 # --- Libraries default: debug ---
 build --//:libs_config=debug
+# When used as external module @dotnet_runtime, also set the module's flag
+build --@dotnet_runtime//:libs_config=debug
 
 # =====================================================================
 # --config=clr_checked: Checked CoreCLR
 # =====================================================================
 build:clr_checked --//:clr_config=checked
+# When used as external module @dotnet_runtime, also set the module's flag
+build:clr_checked --@dotnet_runtime//:clr_config=checked
 
 # =====================================================================
 # --config=clr_release: Release CoreCLR
 # =====================================================================
 build:clr_release --//:clr_config=release
+# When used as external module @dotnet_runtime, also set the module's flag
+build:clr_release --@dotnet_runtime//:clr_config=release
 
 # =====================================================================
 # --config=libs_release: Release libraries
 # =====================================================================
 build:libs_release --//:libs_config=release
+# When used as external module @dotnet_runtime, also set the module's flag
+build:libs_release --@dotnet_runtime//:libs_config=release
 
 # =====================================================================
 # --config=release: Release everything (convenience)
