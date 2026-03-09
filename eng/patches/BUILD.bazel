@@ -1,0 +1,1 @@
+exports_files(["rules_dotnet_ivt_publickey.patch"])

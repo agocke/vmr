@@ -1,0 +1,40 @@
+load("@rules_dotnet//dotnet:defs.bzl", "csharp_binary")
+
+csharp_binary(
+    name = "VBCSCompiler",
+    srcs = [
+        "AnalyzerConsistencyChecker.cs",
+        "Assembly.cs",
+        "BuildProtocolUtil.cs",
+        "BuildServerController.cs",
+        "ClientConnectionHandler.cs",
+        "CompilerRequestHandler.cs",
+        "CompletionData.cs",
+        "CSharpCompilerServer.cs",
+        "DiagnosticListener.cs",
+        "IClientConnection.cs",
+        "ICompilerServerHost.cs",
+        "MemoryHelper.cs",
+        "MetadataCache.cs",
+        "NamedPipeClientConnection.cs",
+        "NamedPipeClientConnectionHost.cs",
+        "ServerDispatcher.cs",
+        "VBCSCompiler.cs",
+        "VisualBasicCompilerServer.cs",
+        # Shared compiler infrastructure
+        "//src/roslyn/src/Compilers/Shared:srcs",
+    ],
+    out = "VBCSCompiler",
+    deps = [
+        "//src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis",
+        "//src/roslyn/src/Compilers/CSharp/Portable:Microsoft.CodeAnalysis.CSharp",
+        "@paket.main//microsoft.codeanalysis.visualbasic",
+    ],
+    allow_unsafe_blocks = True,
+    nullable = "enable",
+    langversion = "preview",
+    keyfile = "//src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/snk:35MSSharedLib1024.snk",
+    compiler_options = ["/publicsign"],
+    target_frameworks = ["net10.0"],
+    visibility = ["//visibility:public"],
+)

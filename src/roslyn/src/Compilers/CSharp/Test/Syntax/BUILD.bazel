@@ -1,0 +1,62 @@
+load("@rules_dotnet//dotnet:defs.bzl", "csharp_library")
+load("@dotnet_runtime//:defs.bzl", "gen_resx_source", "resgen")
+load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE", "roslyn_assembly_info")
+
+roslyn_assembly_info(name = "assembly_info")
+
+gen_resx_source(
+    name = "resx_syntax",
+    out = "Resources.Generated.cs",
+    assembly_name = "Microsoft.CodeAnalysis.CSharp.Syntax.UnitTests",
+    resource_name = "Microsoft.CodeAnalysis.CSharp.UnitTests.Resources",
+    resource_class_name = "Microsoft.CodeAnalysis.CSharp.UnitTests.Resources",
+    resx_file = "Resources.resx",
+)
+
+resgen(
+    name = "resgen_syntax",
+    out = "Resources.resources",
+    resx_file = "Resources.resx",
+)
+
+csharp_library(
+    name = "Microsoft.CodeAnalysis.CSharp.Syntax.UnitTests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Needs PdbUtilities (extern alias not yet supported)
+            "Diagnostics/LineSpanDirectiveTests.cs",
+        ],
+    ) + [
+        ":resx_syntax",
+        ":assembly_info",
+    ],
+    out = "Microsoft.CodeAnalysis.CSharp.Syntax.UnitTests",
+    deps = [
+        "//src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis",
+        "//src/roslyn/src/Compilers/CSharp/Portable:Microsoft.CodeAnalysis.CSharp",
+        "//src/roslyn/src/Compilers/Test/Core:Microsoft.CodeAnalysis.Test.Utilities",
+        "//src/roslyn/src/Compilers/Test/Utilities/CSharp:Microsoft.CodeAnalysis.CSharp.Test.Utilities",
+        "//src/roslyn/src/Compilers/Test/Resources/Core:Microsoft.CodeAnalysis.Compiler.Test.Resources",
+        # TODO: Add PdbUtilities once extern alias support is available
+        # "//src/roslyn/src/Test/PdbUtilities:Roslyn.Test.PdbUtilities",
+        "@paket.main//microsoft.codeanalysis.visualbasic",
+        "@paket.main//xunit.assert",
+        "@paket.main//xunit.extensibility.core",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.combinatorial",
+        "@paket.main//xunit.extensibility.execution",
+    ],
+    resources = [":resgen_syntax"],
+    resource_logical_names = {
+        "Resources.resources": "Microsoft.CodeAnalysis.CSharp.UnitTests.Resources.resources",
+    },
+    allow_unsafe_blocks = True,
+    nullable = "enable",
+    langversion = "preview",
+    nowarn = ["CS1570", "CS1587"],
+    keyfile = ROSLYN_KEYFILE,
+    compiler_options = ["/publicsign", "/nostdlib"],
+    target_frameworks = ["net10.0"],
+    visibility = ["//src/roslyn:__subpackages__"],
+)
