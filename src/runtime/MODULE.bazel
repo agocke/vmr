@@ -1,3 +1,5 @@
+module(name = "dotnet_runtime")
+
 bazel_dep(name = "rules_dotnet")
 git_override(
     module_name = "rules_dotnet",
