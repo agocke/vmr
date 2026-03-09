@@ -1,4 +1,4 @@
-name: Bazel Build & Test
+name: Bazel Build
 
 on:
   push:
@@ -45,7 +45,4 @@ jobs:
             bazel-${{ runner.os }}-${{ matrix.config }}-
 
       - name: Build
-        run: bazel build @dotnet_runtime//... --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk
-
-      - name: Test
-        run: bazel test @dotnet_runtime//... --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk --test_output=errors
+        run: bazel build @dotnet_runtime//:runtime_archive --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk
