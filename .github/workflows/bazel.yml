@@ -45,4 +45,15 @@ jobs:
             bazel-${{ runner.os }}-${{ matrix.config }}-
 
       - name: Build
-        run: bazel build @dotnet_runtime//:runtime_archive --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk
+        run: |
+          bazel build --disk_cache=~/.cache/bazel-disk \
+            --config=${{ matrix.config }} \
+            @dotnet_runtime//:runtime_archive \
+            //src/roslyn/src/Compilers/CSharp/csc:csc \
+            //src/roslyn/src/Compilers/Server/VBCSCompiler:VBCSCompiler
+
+      - name: Test
+        run: |
+          bazel test --disk_cache=~/.cache/bazel-disk \
+            //src/roslyn/src/Compilers/CSharp/Test/Syntax:Microsoft.CodeAnalysis.CSharp.Syntax.UnitTests \
+            --test_timeout=300

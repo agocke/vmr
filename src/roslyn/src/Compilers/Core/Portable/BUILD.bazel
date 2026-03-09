@@ -1,0 +1,76 @@
+load("@rules_dotnet//dotnet:defs.bzl", "csharp_library")
+load("@dotnet_runtime//:defs.bzl", "gen_resx_source", "resgen")
+load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE", "ROSLYN_PUBLIC_KEY", "roslyn_assembly_info")
+
+# Generate AssemblyInfo with version matching NuGet packages
+roslyn_assembly_info(name = "assembly_info")
+
+# Generate resource accessor class from CodeAnalysisResources.resx
+gen_resx_source(
+    name = "resx_code_analysis",
+    out = "CodeAnalysisResources.Generated.cs",
+    assembly_name = "Microsoft.CodeAnalysis",
+    resource_name = "Microsoft.CodeAnalysis.CodeAnalysisResources",
+    resource_class_name = "Microsoft.CodeAnalysis.CodeAnalysisResources",
+    resx_file = "CodeAnalysisResources.resx",
+)
+
+# Compile .resx to binary .resources
+resgen(
+    name = "resgen_code_analysis",
+    out = "CodeAnalysisResources.resources",
+    resx_file = "CodeAnalysisResources.resx",
+)
+
+csharp_library(
+    name = "Microsoft.CodeAnalysis",
+    srcs = glob(["**/*.cs"]) + [
+        # Shared projects (compiled inline, not as separate assemblies)
+        "//src/roslyn/src/Compilers/Core/AnalyzerDriver:srcs",
+        "//src/roslyn/src/Dependencies/CodeAnalysis.Debugging:srcs",
+        "//src/roslyn/src/Dependencies/PooledObjects:srcs",
+        "//src/roslyn/src/Dependencies/Collections:srcs",
+        "//src/roslyn/src/Dependencies/Contracts:srcs",
+        # Generated sources
+        ":resx_code_analysis",
+        ":assembly_info",
+    ],
+    out = "Microsoft.CodeAnalysis",
+    resources = [":resgen_code_analysis"],
+    resource_logical_names = {
+        "CodeAnalysisResources.resources": "Microsoft.CodeAnalysis.CodeAnalysisResources.resources",
+    },
+    defines = [
+        "COMPILERCORE",
+        "MICROSOFT_CODEANALYSIS_CONTRACTS_NO_CONTRACT",
+        "MICROSOFT_CODEANALYSIS_POOLEDOBJECTS_NO_POOLED_DISPOSER",
+    ],
+    allow_unsafe_blocks = True,
+    nullable = "enable",
+    langversion = "preview",
+    keyfile = ROSLYN_KEYFILE,
+    compiler_options = ["/publicsign"],
+    target_frameworks = ["net10.0"],
+    internals_visible_to = [
+        "Microsoft.CodeAnalysis.CSharp, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.VisualBasic, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "csc, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "vbc, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "VBCSCompiler, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.Test.Utilities, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.Syntax.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.Semantic.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.Symbol.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.Emit.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.Emit2.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.Emit3.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.CommandLine.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.EndToEnd.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.IOperation.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.CSharp.WinRT.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.Test.Utilities, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Microsoft.CodeAnalysis.UnitTests, PublicKey=" + ROSLYN_PUBLIC_KEY,
+        "Roslyn.Test.PdbUtilities, PublicKey=" + ROSLYN_PUBLIC_KEY,
+    ],
+    visibility = ["//visibility:public"],
+)

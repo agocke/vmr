@@ -7,12 +7,21 @@ local_path_override(
     path = "src/runtime",
 )
 
+# ── NuGet packages (via runtime's paket) ────────────────────────────
+# Re-export the runtime's paket extension so VMR targets can reference
+# NuGet packages like @paket.main//microsoft.codeanalysis.visualbasic.
+main_extension = use_extension(
+    "@dotnet_runtime//paket:paket.main_extension.bzl",
+    "main_extension",
+)
+use_repo(main_extension, "paket.main")
+
 # ── Shared dependencies ────────────────────────────────────────────
 bazel_dep(name = "rules_dotnet")
 git_override(
     module_name = "rules_dotnet",
     remote = "https://github.com/agocke/rules_dotnet.git",
-    commit = "0907edc64e9513aa9b4967fae6e3f887b82fb8dc",
+    commit = "135a84744155442c7b1753e9d1a13fb6dfc1a401",
 )
 
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")

@@ -4,3 +4,9 @@
 /prereqs/packages
 /src/nuget-client/NuGet.config
 *.binlog
+
+# Bazel
+/bazel-bin
+/bazel-out
+/bazel-testlogs
+/bazel-vmr

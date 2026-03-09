@@ -1,0 +1,23 @@
+load("@rules_dotnet//dotnet:defs.bzl", "csharp_binary")
+load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE")
+
+csharp_binary(
+    name = "csc",
+    srcs = [
+        "Program.cs",
+        # Shared compiler infrastructure (csc-specific subset)
+        "//src/roslyn/src/Compilers/Shared:srcs",
+    ],
+    out = "csc",
+    deps = [
+        "//src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis",
+        "//src/roslyn/src/Compilers/CSharp/Portable:Microsoft.CodeAnalysis.CSharp",
+    ],
+    allow_unsafe_blocks = True,
+    nullable = "enable",
+    langversion = "preview",
+    keyfile = ROSLYN_KEYFILE,
+    compiler_options = ["/publicsign"],
+    target_frameworks = ["net10.0"],
+    visibility = ["//visibility:public"],
+)

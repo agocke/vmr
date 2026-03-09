@@ -230,3 +230,13 @@ CLR_CONFIG_COPTS = select({
     "//:clr_checked": ["-O2"],
     "//:clr_release": ["-O2"],
 })
+
+# --- DAC-specific configuration ---
+# The DAC (Data Access Component) is used for post-mortem debugging and live
+# diagnostics. It should always be built without debug assertions (_DEBUG)
+# because ThreadHoldsLock() and similar debug-only functions are defined
+# inside #ifndef DACCESS_COMPILE and are not available in DAC builds.
+# Using release-mode defines ensures _ASSERTE expands to ((void)0).
+CLR_DAC_CONFIG_DEFINES = _BASE_RELEASE + [
+    "URTBLDENV_FRIENDLY=Retail",
+]
