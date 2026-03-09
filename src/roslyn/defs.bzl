@@ -11,17 +11,48 @@ ROSLYN_KEYFILE = "//src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/snk:35MSSha
 # Assembly version that matches the NuGet packages (4.11.0)
 ROSLYN_ASSEMBLY_VERSION = "4.11.0.0"
 
-def roslyn_assembly_info(name, assembly_version = ROSLYN_ASSEMBLY_VERSION, **kwargs):
-    """Generate an AssemblyInfo.cs with version attributes for Roslyn assemblies."""
+# Informational version: matches Versions.props VersionPrefix
+ROSLYN_INFORMATIONAL_VERSION = "4.11.0"
+
+# Metadata from Arcade SDK ProjectDefaults.props and Roslyn's Settings.props
+_ROSLYN_COMPANY = "Microsoft Corporation"
+_ROSLYN_COPYRIGHT = "\\u00a9 Microsoft Corporation. All rights reserved."
+_ROSLYN_NEUTRAL_LANGUAGE = "en-US"
+
+def roslyn_assembly_info(
+        name,
+        assembly_version = ROSLYN_ASSEMBLY_VERSION,
+        informational_version = ROSLYN_INFORMATIONAL_VERSION,
+        product = "",
+        title = "",
+        **kwargs):
+    """Generate an AssemblyInfo.cs matching MSBuild's GenerateAssemblyInfo output.
+
+    Produces the same attributes as the .NET SDK's
+    Microsoft.NET.GenerateAssemblyInfo.targets for Roslyn projects.
+    """
+    content = [
+        "using System.Reflection;",
+        "using System.Resources;",
+        "using System.Runtime.InteropServices;",
+        "",
+        '[assembly: AssemblyVersion("%s")]' % assembly_version,
+        '[assembly: AssemblyFileVersion("%s")]' % assembly_version,
+        '[assembly: AssemblyInformationalVersion("%s")]' % informational_version,
+        '[assembly: AssemblyCompany("%s")]' % _ROSLYN_COMPANY,
+        '[assembly: AssemblyCopyright("%s")]' % _ROSLYN_COPYRIGHT,
+        '[assembly: NeutralResourcesLanguage("%s")]' % _ROSLYN_NEUTRAL_LANGUAGE,
+    ]
+    if product:
+        content.append('[assembly: AssemblyProduct("%s")]' % product)
+    if title:
+        content.append('[assembly: AssemblyTitle("%s")]' % title)
+    content.append('[assembly: ComVisible(false)]')
+    content.append("")
+
     write_file(
         name = name,
         out = name + ".cs",
-        content = [
-            "using System.Reflection;",
-            '[assembly: AssemblyVersion("%s")]' % assembly_version,
-            '[assembly: AssemblyFileVersion("%s")]' % assembly_version,
-            '[assembly: AssemblyInformationalVersion("%s")]' % assembly_version,
-            "",
-        ],
+        content = content,
         **kwargs
     )
