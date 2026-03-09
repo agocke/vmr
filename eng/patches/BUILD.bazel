@@ -1,1 +1,4 @@
-exports_files(["rules_dotnet_ivt_publickey.patch"])
+exports_files([
+    "rules_dotnet_ivt_publickey.patch",
+    "rules_dotnet_resource_logical_names.patch",
+])

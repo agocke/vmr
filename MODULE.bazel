@@ -22,7 +22,10 @@ git_override(
     module_name = "rules_dotnet",
     remote = "https://github.com/agocke/rules_dotnet.git",
     commit = "0907edc64e9513aa9b4967fae6e3f887b82fb8dc",
-    patches = ["//eng/patches:rules_dotnet_ivt_publickey.patch"],
+    patches = [
+        "//eng/patches:rules_dotnet_ivt_publickey.patch",
+        "//eng/patches:rules_dotnet_resource_logical_names.patch",
+    ],
     patch_strip = 1,
 )
 

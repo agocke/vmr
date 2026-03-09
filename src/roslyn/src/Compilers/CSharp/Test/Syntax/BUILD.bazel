@@ -1,6 +1,6 @@
-load("@rules_dotnet//dotnet:defs.bzl", "csharp_library")
 load("@dotnet_runtime//:defs.bzl", "gen_resx_source", "resgen")
 load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE", "roslyn_assembly_info")
+load("//src/roslyn:xunit_test.bzl", "roslyn_xunit_test")
 
 roslyn_assembly_info(name = "assembly_info")
 
@@ -19,7 +19,7 @@ resgen(
     resx_file = "Resources.resx",
 )
 
-csharp_library(
+roslyn_xunit_test(
     name = "Microsoft.CodeAnalysis.CSharp.Syntax.UnitTests",
     srcs = glob(
         ["**/*.cs"],
@@ -38,8 +38,6 @@ csharp_library(
         "//src/roslyn/src/Compilers/Test/Core:Microsoft.CodeAnalysis.Test.Utilities",
         "//src/roslyn/src/Compilers/Test/Utilities/CSharp:Microsoft.CodeAnalysis.CSharp.Test.Utilities",
         "//src/roslyn/src/Compilers/Test/Resources/Core:Microsoft.CodeAnalysis.Compiler.Test.Resources",
-        # TODO: Add PdbUtilities once extern alias support is available
-        # "//src/roslyn/src/Test/PdbUtilities:Roslyn.Test.PdbUtilities",
         "@paket.main//microsoft.codeanalysis.visualbasic",
         "@paket.main//xunit.assert",
         "@paket.main//xunit.extensibility.core",
@@ -57,6 +55,5 @@ csharp_library(
     nowarn = ["CS1570", "CS1587"],
     keyfile = ROSLYN_KEYFILE,
     compiler_options = ["/publicsign", "/nostdlib"],
-    target_frameworks = ["net10.0"],
     visibility = ["//src/roslyn:__subpackages__"],
 )

@@ -224,7 +224,7 @@
   "moduleExtensions": {
     "@@dotnet_runtime+//paket:paket.main_extension.bzl%main_extension": {
       "general": {
-        "bzlTransitiveDigest": "fFhSiuDoz3tP2ggtH/SZjeA2GelqUS0QBps4rUeOkng=",
+        "bzlTransitiveDigest": "ojBJ0/3FVOAZIKmOVfPFutfyToU3GpM8jGjsiZ9XAcc=",
         "usagesDigest": "MApaWVqdxjVlSIllGeU0v5RrvQqxDBO7Sh0XhpMi7Ac=",
         "recordedInputs": [
           "REPO_MAPPING:bazel_lib+,bazel_skylib bazel_skylib+",
