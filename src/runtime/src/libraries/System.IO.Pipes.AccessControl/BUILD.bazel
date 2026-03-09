@@ -1,0 +1,3 @@
+exports_files([
+    "ref/System.IO.Pipes.AccessControl.cs",
+])

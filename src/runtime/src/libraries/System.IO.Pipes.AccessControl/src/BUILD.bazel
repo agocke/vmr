@@ -1,18 +1,23 @@
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
-# PNSE/stub assembly — placeholder for the runtime pack.
-# On Linux, this library is either PlatformNotSupported or platform-specific.
+# PNSE stub assembly — on Linux, all public API throws PlatformNotSupportedException.
+# Matches MSBuild's GeneratePlatformNotSupportedAssemblyMessage behavior.
 netcoreapp_impl_assembly(
     name = "impl_System.IO.Pipes.AccessControl",
     pnse = True,
-    srcs = ["//src/libraries/shims:System.Void.cs"],
+    pnse_message = "SR.PlatformNotSupported_AccessControl",
+    pnse_ref_srcs = [
+        "//src/libraries/System.IO.Pipes.AccessControl:ref/System.IO.Pipes.AccessControl.cs",
+    ],
+    srcs = [],
     deps = [
         "//src/libraries:ref_System.Runtime",
-            "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
         "//src/libraries/System.Memory:ref_System.Memory",
         "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
         "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
-],
-    exclude_sr = True,
+    ],
+    resx_file = "Resources/Strings.resx",
     supported_os_platforms_short = ["windows"],
+    nullable = "annotations",
 )

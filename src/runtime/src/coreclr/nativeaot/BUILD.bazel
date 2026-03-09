@@ -311,15 +311,20 @@ _RUNTIME_HDRS = glob(
 )
 
 # Gendir include path for generated files (AsmOffsets.inc, config.h)
-_GENDIR_COPTS = [
-    "-I$(GENDIR)/src/coreclr/nativeaot",
-]
+# Wrapped in a cc_library so Bazel resolves the include path automatically,
+# regardless of whether the runtime is built standalone or as a module dep.
+cc_library(
+    name = "nativeaot_generated_headers",
+    hdrs = [
+        ":gen_asm_offsets",
+        ":gen_config_h",
+    ],
+    includes = ["."],
+    linkstatic = True,
+)
 
 # Generated files needed by the runtime
-_GENERATED_SRCS = [
-    ":gen_asm_offsets",
-    ":gen_config_h",
-]
+_GENERATED_SRCS = []
 
 # llvm-libunwind needs its own include path for internal headers
 # llvm-libunwind includes are now provided by
@@ -370,12 +375,14 @@ cc_library(
     ] + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
     includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
-    deps = _RUNTIME_DEPS,
+    deps = _RUNTIME_DEPS + [
+        ":nativeaot_generated_headers",
+    ],
 )
 
 # TODO: eventpipe_enabled requires generated eventing headers from the
@@ -391,13 +398,14 @@ cc_library(
     srcs = _ALL_COMMON + _ALL_FULL + _ALL_ASM + _ASM_INCLUDES + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
     includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
     deps = _RUNTIME_DEPS + [
         ":eventpipe_disabled",
+        ":nativeaot_generated_headers",
     ],
 )
 
@@ -410,13 +418,14 @@ cc_library(
     srcs = _ALL_COMMON + _ALL_FULL + _ALL_ASM + _ASM_INCLUDES + _SERVER_GC_SRCS + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
     includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES + ["FEATURE_SVR_GC"],
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
     deps = _RUNTIME_DEPS + [
         ":eventpipe_disabled",
+        ":nativeaot_generated_headers",
     ],
 )
 
@@ -429,12 +438,14 @@ cc_library(
     srcs = ["Runtime/clrgc.disabled.cpp"] + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
     includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
-    deps = _RUNTIME_DEPS,
+    deps = _RUNTIME_DEPS + [
+        ":nativeaot_generated_headers",
+    ],
 )
 
 cc_library(
@@ -442,12 +453,14 @@ cc_library(
     srcs = ["Runtime/clrgc.enabled.cpp"] + _GENERATED_SRCS + _CORECLR_INC_FILES,
     hdrs = _RUNTIME_HDRS,
     textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
-    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + _GENDIR_COPTS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
     includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
     defines = NATIVEAOT_DEFINES,
     local_defines = CLR_BASE_CONFIG_DEFINES,
     linkstatic = True,
-    deps = _RUNTIME_DEPS,
+    deps = _RUNTIME_DEPS + [
+        ":nativeaot_generated_headers",
+    ],
 )
 
 # ---------------------------------------------------------------------------

@@ -372,6 +372,8 @@ csharp_library(
     }),
     resx_file = "//src/libraries/System.Private.CoreLib:src/Resources/Strings.resx",
     resource_name = "System.Private.CoreLib.Strings",
+    resource_class_name = "System.SR",
+    omit_getresourcestring = True,
     include_default_values = False,
     # assembly_version is set via gen_assembly_info; pass "" to suppress
     # rules_dotnet's auto-generated AssemblyInfo.cs.

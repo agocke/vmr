@@ -137,18 +137,20 @@ areas:
   `-DFOO=1`), plus missing/extra defines in `coreclr_defs.bzl` and `native_defs.bzl`
 - **Native flags/optimization** (1000 files): Warning flags and optimization level
   mismatches between `.bazelrc` and `CMakeLists.txt`
-- **Managed assemblies**: 162 of 172 archive assemblies fully match MSBuild's CSC
-  invocations (defines, nowarn, source files, generated content, references). The
-  remaining 10 differ due to:
-  - **PNSE stub approach** (3): MSBuild generates `.notsupported.cs` with
-    PlatformNotSupportedException throws; Bazel uses `System.Void.cs` + full impl sources
-    (Registry, IO.Pipes.AccessControl, Threading.AccessControl)
-  - **Generated file content** (4): Forwards.cs/SR.cs differences from gen_facades
-    and string resource generation (System.Collections, System.Runtime,
-    System.Private.CoreLib, System.Private.Uri)
-  - **Complex assemblies** (3): System.Net.Quic (stub vs full impl),
-    System.Runtime.Serialization.Formatters (BinaryFormatter inclusion),
-    System.Runtime.InteropServices.JavaScript (WASM vs stub)
+- **Managed assemblies**: 164 of 186 archive+non-archive assemblies fully match
+  MSBuild's CSC invocations (defines, nowarn, source files, generated content,
+  references). The remaining 22 differ due to:
+  - **PNSE stub generation** (4): Bazel now generates `.notsupported.cs` via
+    `GenNotSupportedSource` (matching MSBuild's `GeneratePlatformNotSupportedAssemblyMessage`),
+    but reference sets may still differ (Registry, IO.Pipes.AccessControl,
+    Threading.AccessControl, InteropServices.JavaScript)
+  - **Generated file content** (2): SR.cs/Forwards.cs differences
+    (System.Private.CoreLib, System shim)
+  - **Complex assemblies** (2): System.Net.Quic (PNSE stub vs full Linux impl),
+    System.Runtime.Serialization.Formatters (BinaryFormatter stub vs full impl —
+    now uses Removed.cs matching MSBuild, may still diff on deps)
+  - **Non-archive assemblies** (14): Differ by design — Bazel uses precise deps
+    while MSBuild uses the full targeting pack
 - **Unmatched compilations**: 640 CMake-only + 405 MSBuild-only units not yet ported
   to Bazel
 
@@ -512,12 +514,14 @@ The main CLR runtime engine. Large C++ codebase, 86 CMakeLists.txt files.
 
 Managed C# framework assemblies built with `rules_dotnet`. The NetCoreApp shared
 framework contains 150 assemblies (per `NetCoreAppLibrary.props`). Of those, **145
-have `impl_` targets** in Bazel and are in the `impl_netcoreapp` aggregate. The
-remaining 5 need special support: Microsoft.VisualBasic.Core (VB compiler),
-System.IO.Pipes.AccessControl and System.Threading.AccessControl (Windows PNSE stubs),
-System.Net.Quic (msquic native library), and System.Runtime.InteropServices.JavaScript
-(Browser/WASM-only). 93 libraries have Bazel test BUILD files (out of ~187 with
-test projects).
+have `impl_` targets** in Bazel and are in the `impl_netcoreapp` aggregate.
+Windows-only and browser-only libraries (System.IO.Pipes.AccessControl,
+System.Threading.AccessControl, Microsoft.Win32.Registry,
+System.Runtime.InteropServices.JavaScript) use `gen_pnse_source` to generate
+`.notsupported.cs` stubs matching MSBuild's `GeneratePlatformNotSupportedAssemblyMessage`.
+The remaining 2 need special support: Microsoft.VisualBasic.Core (VB compiler)
+and System.Net.Quic (msquic native library + full Linux implementation).
+93 libraries have Bazel test BUILD files (out of ~187 with test projects).
 
 ### 5.1 System.Private.CoreLib — ✅ DONE
 - [x] `src/coreclr/System.Private.CoreLib/BUILD.bazel`
@@ -700,21 +704,16 @@ special support**. The `impl_netcoreapp` filegroup contains 154 total entries
 |----------|------:|-------------|
 | ✅ In `impl_netcoreapp` | 154 | Built and aggregated (145 non-shim NetCoreApp + mscorlib shim + 8 non-NetCoreApp extras) |
 | ❌ VB project | 1 | Microsoft.VisualBasic.Core — needs VB compiler in Bazel |
-| ❌ Windows PNSE | 2 | System.IO.Pipes.AccessControl, System.Threading.AccessControl — need PNSE stub generation |
-| ❌ Native deps | 1 | System.Net.Quic — needs msquic native library |
-| ❌ Browser-only | 1 | System.Runtime.InteropServices.JavaScript — WASM/Browser platform only |
+| ❌ Native deps | 1 | System.Net.Quic — needs msquic native library + full Linux impl |
 | ❌ NetFxRef shims | 21 | Legacy .NET Framework type-forwarder shims (System, System.Core, etc.) |
 
 
-### 9.2 Remaining 5 Assemblies
+### 9.2 Remaining Assemblies
 
 | Library | Reason | Notes |
 |---------|--------|-------|
 | Microsoft.VisualBasic.Core | VB compiler | Needs VB compilation support in rules_dotnet |
-| System.IO.Pipes.AccessControl | Windows PNSE | Needs PlatformNotSupportedException stub generator |
-| System.Net.Quic | Native deps | Needs msquic native library for Linux build |
-| System.Runtime.InteropServices.JavaScript | Browser-only | WASM/Browser platform, PNSE on other platforms |
-| System.Threading.AccessControl | Windows PNSE | Needs PlatformNotSupportedException stub generator |
+| System.Net.Quic | Native deps | Needs msquic native library + ~86 source files for full Linux impl |
 
 ---
 

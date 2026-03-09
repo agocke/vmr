@@ -5,6 +5,7 @@ load(
     "csharp_library",
     "gen_assembly_info",
     "gen_illink_substitutions",
+    "gen_pnse_source",
     "gen_target_framework_attrs",
 )
 
@@ -210,7 +211,7 @@ gen_facades = rule(
             doc = "The types to omit from the generated facades.",
         ),
         "_exe": attr.label(
-            default = Label("//src/tools/GenFacades:GenFacades"),
+            default = Label("//src/tools/bazel/GenFacades:GenFacades"),
             cfg = "exec",
             executable = True,
         ),
@@ -239,7 +240,7 @@ gen_resx_source = rule(
             allow_single_file = True,
         ),
         "_exe": attr.label(
-            default = Label("//src/tools/GenerateResxSource:GenerateResxSource"),
+            default = Label("//src/tools/bazel/GenerateResxSource:GenerateResxSource"),
             cfg = "exec",
             executable = True,
         ),
@@ -256,6 +257,7 @@ def netcoreapp_impl_assembly(
     facade_contract_assembly = None,
     facade_omit_types = [],
     resx_file = None,
+    resource_class_name = None,
     exclude_sr = False,
     keyfile = None,
     cls_compliant = True,
@@ -275,6 +277,9 @@ def netcoreapp_impl_assembly(
     partial_facade = False,
     skip_cs1591 = False,
     pnse = False,
+    pnse_message = None,
+    pnse_ref_srcs = None,
+    pnse_api_exclusion_list = None,
     multitarget = False,
     supported_os_platforms = [],
     supported_os_platforms_short = [],
@@ -327,6 +332,19 @@ def netcoreapp_impl_assembly(
     # suppressions because the generated stub code triggers these warnings.
     if pnse:
         nowarn = nowarn + ["nullable", "CA1052", "CA1821", "CA1823", "CS0169"]
+
+    # When pnse_message is set, generate a .notsupported.cs from the ref assembly
+    # source files, matching MSBuild's GeneratePlatformNotSupportedAssemblyMessage.
+    if pnse_message and pnse_ref_srcs:
+        pnse_target = "pnse_" + name
+        gen_pnse_source(
+            name = pnse_target,
+            out = name + "/" + base_name + ".notsupported.cs",
+            srcs = pnse_ref_srcs,
+            message = pnse_message,
+            api_exclusion_list = pnse_api_exclusion_list,
+        )
+        srcs = srcs + [":" + pnse_target]
 
     # Multi-targeted assemblies that also target netstandard/net4x suppress
     # warnings about APIs that don't exist in older TFMs.
@@ -461,6 +479,7 @@ def netcoreapp_impl_assembly(
         disable_implicit_framework_refs = True,
         compiler_options = compiler_options,
         resx_file = resx_file,
+        resource_class_name = resource_class_name,
         resources = resources,
         resource_logical_names = resource_logical_names,
         internals_visible_to = internals_visible_to,

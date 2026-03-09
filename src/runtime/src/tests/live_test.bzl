@@ -317,7 +317,7 @@ def _generate_runtimeconfigs(ctx, dll, tfm, sdk_version, additional_runfiles):
       "version": "{version}"
     }},
     "configProperties": {{
-      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": true
+      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false
     }}
   }}
 }}

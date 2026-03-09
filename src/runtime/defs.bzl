@@ -28,6 +28,8 @@ def _gen_resx_source_impl(ctx):
         args.append("--resource-class-name=%s" % ctx.attr.resource_class_name)
     if not ctx.attr.include_default_values:
         args.append("--include-default-values=false")
+    if ctx.attr.omit_getresourcestring:
+        args.append("--omit-getresourcestring")
     ctx.actions.run(
         executable = ctx.executable._exe,
         inputs = [ctx.file.resx_file],
@@ -43,16 +45,55 @@ gen_resx_source = rule(
         "resource_name": attr.string(mandatory = False, default = ""),
         "resource_class_name": attr.string(mandatory = False, default = ""),
         "include_default_values": attr.bool(default = True),
+        "omit_getresourcestring": attr.bool(default = False),
         "resx_file": attr.label(
             mandatory = True,
             allow_single_file = True,
         ),
         "_exe": attr.label(
-            default = Label("//src/tools/GenerateResxSource:GenerateResxSource"),
+            default = Label("//src/tools/bazel/GenerateResxSource:GenerateResxSource"),
             cfg = "exec",
             executable = True,
         ),
     }
+)
+
+def _gen_pnse_source_impl(ctx):
+    args = [
+        "--output-path=%s" % ctx.outputs.out.path,
+        "--message=%s" % ctx.attr.message,
+    ]
+    if ctx.attr.api_exclusion_list:
+        args.append("--api-exclusion-list=%s" % ctx.file.api_exclusion_list.path)
+    inputs = []
+    for src in ctx.files.srcs:
+        args.append("--source=%s" % src.path)
+        inputs.append(src)
+    if ctx.file.api_exclusion_list:
+        inputs.append(ctx.file.api_exclusion_list)
+    ctx.actions.run(
+        executable = ctx.executable._exe,
+        inputs = inputs,
+        outputs = [ctx.outputs.out],
+        arguments = args,
+    )
+
+gen_pnse_source = rule(
+    implementation = _gen_pnse_source_impl,
+    attrs = {
+        "out": attr.output(mandatory = True),
+        "srcs": attr.label_list(mandatory = True, allow_files = True),
+        "message": attr.string(mandatory = True),
+        "api_exclusion_list": attr.label(
+            mandatory = False,
+            allow_single_file = True,
+        ),
+        "_exe": attr.label(
+            default = Label("//src/tools/bazel/GenNotSupportedSource:GenNotSupportedSource"),
+            cfg = "exec",
+            executable = True,
+        ),
+    },
 )
 
 def _resgen_impl(ctx):
@@ -75,7 +116,7 @@ resgen = rule(
             allow_single_file = True,
         ),
         "_exe": attr.label(
-            default = Label("//src/tools/ResGen:ResGen"),
+            default = Label("//src/tools/bazel/ResGen:ResGen"),
             cfg = "exec",
             executable = True,
         ),
@@ -271,6 +312,8 @@ def csharp_library(
     out = None,
     resx_file = None,
     resource_name = None,
+    resource_class_name = None,
+    omit_getresourcestring = False,
     include_default_values = True,
     resources = [],
     resource_logical_names = {},
@@ -306,8 +349,10 @@ def csharp_library(
             out = name + "/System.SR.cs",
             assembly_name = out,
             resource_name = _resource_name,
+            resource_class_name = resource_class_name if resource_class_name else "",
             resx_file = resx_file,
             include_default_values = include_default_values,
+            omit_getresourcestring = omit_getresourcestring,
         )
         srcs = srcs + [ ":" + resx_target ]
 

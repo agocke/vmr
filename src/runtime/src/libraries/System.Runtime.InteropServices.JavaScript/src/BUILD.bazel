@@ -1,15 +1,21 @@
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
-# PNSE/stub assembly — placeholder for the runtime pack.
-# On Linux, this library is either PlatformNotSupported or platform-specific.
+# PNSE stub assembly — on non-browser platforms, all public API throws
+# PlatformNotSupportedException. Matches MSBuild's behavior.
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.InteropServices.JavaScript",
     pnse = True,
-    srcs = ["//src/libraries/shims:System.Void.cs"],
+    pnse_message = "SR.SystemRuntimeInteropServicesJavaScript_PlatformNotSupported",
+    pnse_ref_srcs = [
+        "//src/libraries/System.Runtime.InteropServices.JavaScript:ref/System.Runtime.InteropServices.JavaScript.cs",
+    ],
+    srcs = [],
     deps = [
         "//src/libraries:ref_System.Runtime",
         "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
     ],
-    exclude_sr = True,
+    resx_file = "Resources/Strings.resx",
     include_dll_safe_search_path = True,
+    nullable = "annotations",
 )

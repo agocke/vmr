@@ -1,0 +1,3 @@
+exports_files([
+    "ref/System.Runtime.InteropServices.JavaScript.cs",
+])
