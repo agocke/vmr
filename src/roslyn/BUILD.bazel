@@ -1,5 +1,7 @@
 # Roslyn root package
 
+load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
+
 exports_files(["run_xunit_test.sh.tpl"])
 
 filegroup(
@@ -11,5 +13,35 @@ filegroup(
         "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.runner.reporters.netcoreapp10.dll",
         "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.runner.utility.netcoreapp10.dll",
     ],
+    visibility = ["//src/roslyn:__subpackages__"],
+)
+
+# ── Roslyn test host: full runtime for xunit test execution ──────────
+# Like @dotnet_runtime//:Core_Root but uses impl_netcoreapp (full ~145
+# assemblies) instead of impl_netcoreapp_minimal. Roslyn tests (and xunit
+# itself) need the full framework at runtime.
+copy_to_directory(
+    name = "roslyn_test_host",
+    out = "roslyn_test_host",
+    srcs = [
+        "@dotnet_runtime//src/coreclr/hosts:corerun",
+        "@dotnet_runtime//src/native/libs/System.Native:System.Native",
+        "@dotnet_runtime//src/native/libs/System.Globalization.Native:System.Globalization.Native",
+        "@dotnet_runtime//src/libraries:impl_netcoreapp",
+    ] + select({
+        "@platforms//os:macos": ["@dotnet_runtime//src/coreclr/dlls/mscoree/coreclr:libcoreclr_dylib"],
+        "//conditions:default": ["@dotnet_runtime//src/coreclr/dlls/mscoree/coreclr:libcoreclr.so"],
+    }) + select({
+        "@platforms//os:linux": [
+            "@dotnet_runtime//src/coreclr/System.Private.CoreLib:crossgen_System.Private.CoreLib",
+            "@dotnet_runtime//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl",
+        ],
+        "@platforms//os:macos": [],
+    }),
+    allow_overwrites = True,
+    replace_prefixes = {
+        "System.Private.CoreLib.r2r.dll": "System.Private.CoreLib.dll",
+    },
+    root_paths = ["**"],
     visibility = ["//src/roslyn:__subpackages__"],
 )

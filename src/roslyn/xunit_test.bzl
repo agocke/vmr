@@ -1,8 +1,8 @@
 """Roslyn xunit test rule.
 
 Wraps a csharp_library test assembly and runs it with the xunit console runner
-via the SDK dotnet host. Similar to the runtime's library_test but simplified
-for Roslyn (no testhost/Core_Root dependency).
+via corerun from the live-built runtime test host. Tests execute against the
+same runtime that is built from source in the VMR.
 """
 
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
@@ -135,36 +135,7 @@ def _roslyn_xunit_test_impl(ctx):
                 )
                 additional_runfiles.append(dst)
 
-    # Generate runtimeconfig.json
-    toolchain = get_toolchain(ctx)
-    sdk_version = toolchain.dotnetinfo.runtime_version
-    test_name = dll.basename.replace(".dll", "")
-    runtimeconfig = ctx.actions.declare_file(
-        "%s/%s/%s.runtimeconfig.json" % (ctx.label.name, tfm, test_name),
-    )
-    ctx.actions.write(
-        output = runtimeconfig,
-        content = """\
-{{
-  "runtimeOptions": {{
-    "tfm": "{tfm}",
-    "framework": {{
-      "name": "Microsoft.NETCore.App",
-      "version": "{version}"
-    }}
-  }}
-}}
-""".format(tfm = tfm, version = sdk_version),
-    )
-    additional_runfiles.append(runtimeconfig)
-
-    # Create launcher script - use dotnet from toolchain
-    toolchain = get_toolchain(ctx)
-    dotnet_runtime_files = toolchain.dotnetinfo.runtime_files
-    dotnet_host = dotnet_runtime_files[0] if dotnet_runtime_files else None
-    if dotnet_host == None:
-        fail("No dotnet host found in toolchain")
-
+    # Create launcher script - use corerun from live-built test host
     launcher = ctx.actions.declare_file(
         "%s/%s/%s.sh" % (ctx.label.name, tfm, dll.basename),
     )
@@ -172,14 +143,14 @@ def _roslyn_xunit_test_impl(ctx):
         template = ctx.file._launcher_sh,
         output = launcher,
         substitutions = {
-            "TEMPLATED_dotnet": to_rlocation_path(ctx, dotnet_host),
+            "TEMPLATED_test_host": to_rlocation_path(ctx, ctx.file._test_host),
             "TEMPLATED_xunit_console": to_rlocation_path(ctx, xunit_console_dll),
             "TEMPLATED_entry_dll": to_rlocation_path(ctx, dll),
         },
         is_executable = True,
     )
 
-    additional_runfiles.extend(dotnet_runtime_files)
+    additional_runfiles.append(ctx.file._test_host)
     additional_runfiles.extend(ctx.files._bash_runfiles)
 
     default_info = DefaultInfo(
@@ -208,6 +179,11 @@ _roslyn_xunit_test = rule(
                 default = "//src/roslyn:run_xunit_test.sh.tpl",
                 allow_single_file = True,
             ),
+            "_test_host": attr.label(
+                doc = "Live-built runtime test host (corerun + framework assemblies)",
+                default = "//src/roslyn:roslyn_test_host",
+                allow_single_file = True,
+            ),
             "_xunit_runner": attr.label(
                 doc = "The xunit console runner files",
                 default = "//src/roslyn:xunit_console_runner",
@@ -232,7 +208,11 @@ def roslyn_xunit_test(
         nowarn = [],
         size = "medium",
         **kwargs):
-    """Macro for Roslyn xunit tests."""
+    """Macro for Roslyn xunit tests.
+
+    Tests run with corerun from the live-built test host so they
+    execute against the runtime built from source in the VMR.
+    """
     _roslyn_xunit_test(
         name = name,
         deps = deps,

@@ -1,5 +1,5 @@
 load("@rules_dotnet//dotnet:defs.bzl", "csharp_binary")
-load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE")
+load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE", "ROSLYN_LIVE_REFPACK_DEPS")
 
 csharp_binary(
     name = "csc",
@@ -12,12 +12,13 @@ csharp_binary(
     deps = [
         "//src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis",
         "//src/roslyn/src/Compilers/CSharp/Portable:Microsoft.CodeAnalysis.CSharp",
-    ],
+    ] + ROSLYN_LIVE_REFPACK_DEPS,
     allow_unsafe_blocks = True,
     nullable = "enable",
     langversion = "preview",
     keyfile = ROSLYN_KEYFILE,
     compiler_options = ["/publicsign"],
     target_frameworks = ["net10.0"],
+    disable_implicit_framework_refs = True,
     visibility = ["//visibility:public"],
 )

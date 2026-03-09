@@ -1,3 +1,19 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly")
+
 exports_files([
     "ref/System.IO.Pipes.AccessControl.cs",
 ])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Pipes.AccessControl",
+    srcs = [
+        "ref/System.IO.Pipes.AccessControl.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+)

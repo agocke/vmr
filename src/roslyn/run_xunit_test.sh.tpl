@@ -10,16 +10,12 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
   { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
 # --- end runfiles.bash initialization v3 ---
 
-DOTNET="$(rlocation TEMPLATED_dotnet)"
+TEST_HOST="$(rlocation TEMPLATED_test_host)"
 XUNIT_CONSOLE="$(rlocation TEMPLATED_xunit_console)"
 ENTRY_DLL="$(rlocation TEMPLATED_entry_dll)"
-
-# Set DOTNET_ROOT so the host can find shared frameworks
-DOTNET_DIR="$(dirname "$(readlink -f "$DOTNET")")"
-export DOTNET_ROOT="$DOTNET_DIR"
 
 # Run from the directory containing the test DLL so deps can be found
 RESOLVED_DIR="$(dirname "$(readlink -f "$ENTRY_DLL")")"
 cd "$RESOLVED_DIR"
 
-"$DOTNET" exec "$XUNIT_CONSOLE" "$ENTRY_DLL" -nologo "$@"
+"$TEST_HOST/corerun" "$XUNIT_CONSOLE" "$ENTRY_DLL" -nologo "$@"

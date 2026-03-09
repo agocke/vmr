@@ -464,5 +464,5 @@ csharp_library(
     visibility = ["//src/roslyn:__subpackages__"],
     deps = [
         "//src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis",
-    ],
+    ] ,
 )

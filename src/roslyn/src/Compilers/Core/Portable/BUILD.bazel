@@ -1,6 +1,6 @@
 load("@rules_dotnet//dotnet:defs.bzl", "csharp_library")
 load("@dotnet_runtime//:defs.bzl", "gen_resx_source", "resgen")
-load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE", "ROSLYN_PUBLIC_KEY", "roslyn_assembly_info")
+load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE", "ROSLYN_LIVE_REFPACK_DEPS", "ROSLYN_PUBLIC_KEY", "roslyn_assembly_info")
 
 # Generate AssemblyInfo with version matching NuGet packages
 roslyn_assembly_info(name = "assembly_info")
@@ -36,6 +36,10 @@ csharp_library(
         ":assembly_info",
     ],
     out = "Microsoft.CodeAnalysis",
+    deps = ROSLYN_LIVE_REFPACK_DEPS,
+    analyzers = [
+        "@dotnet_runtime//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
     resources = [":resgen_code_analysis"],
     resource_logical_names = {
         "CodeAnalysisResources.resources": "Microsoft.CodeAnalysis.CodeAnalysisResources.resources",
@@ -51,6 +55,7 @@ csharp_library(
     keyfile = ROSLYN_KEYFILE,
     compiler_options = ["/publicsign"],
     target_frameworks = ["net10.0"],
+    disable_implicit_framework_refs = True,
     internals_visible_to = [
         "Microsoft.CodeAnalysis.CSharp, PublicKey=" + ROSLYN_PUBLIC_KEY,
         "Microsoft.CodeAnalysis.VisualBasic, PublicKey=" + ROSLYN_PUBLIC_KEY,

@@ -60,7 +60,7 @@ csharp_library(
         "@paket.main//basic.reference.assemblies.net40",
         "@paket.main//basic.reference.assemblies.net461",
         "@paket.main//microsoft.ilverification",
-    ],
+    ] ,
     resources = [":resgen_test"],
     resource_logical_names = {
         "TestResource.resources": "Microsoft.CodeAnalysis.Test.Utilities.TestResource.resources",

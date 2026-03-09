@@ -19,7 +19,7 @@ csharp_library(
         "@paket.main//basic.reference.assemblies.netstandard20",
         "@paket.main//basic.reference.assemblies.net461",
         "@paket.main//basic.reference.assemblies.net70",
-    ],
+    ] ,
     allow_unsafe_blocks = True,
     nullable = "enable",
     langversion = "preview",
