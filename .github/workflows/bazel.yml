@@ -46,3 +46,34 @@ jobs:
 
       - name: Build
         run: bazel build @dotnet_runtime//:runtime_archive --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk
+
+  roslyn:
+    name: Roslyn compiler
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Mount Bazel cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk
+          key: bazel-Linux-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-${{ github.sha }}
+          restore-keys: |
+            bazel-Linux-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-
+            bazel-Linux-
+
+      - name: Build Roslyn
+        run: |
+          bazel build --disk_cache=~/.cache/bazel-disk \
+            //src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis \
+            //src/roslyn/src/Compilers/CSharp/Portable:Microsoft.CodeAnalysis.CSharp \
+            //src/roslyn/src/Compilers/CSharp/csc:csc \
+            //src/roslyn/src/Compilers/Server/VBCSCompiler:VBCSCompiler
+
+      - name: Test Roslyn
+        run: |
+          bazel test --disk_cache=~/.cache/bazel-disk \
+            //src/roslyn/src/Compilers/CSharp/Test/Syntax:Microsoft.CodeAnalysis.CSharp.Syntax.UnitTests \
+            --test_timeout=300
