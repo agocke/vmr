@@ -19,6 +19,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.ServerSentEvents",
+    multitarget = True,
+    skip_cs1591 = True,
     srcs = [
         "src/System/Net/ServerSentEvents/Helpers.cs",
         "src/System/Net/ServerSentEvents/PooledByteBufferWriter.cs",
@@ -38,9 +40,8 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
     ],
     allow_unsafe_blocks = True,
-    generate_facades = True,
-    facade_contract_assembly = ":ref_System.Net.ServerSentEvents",
     resx_file = "src/Resources/Strings.resx",
+    assembly_description = "Provides a simple parser for server-sent events (SSE).\n\nCommonly Used Types:\nSystem.Net.ServerSentEvents.SseParser",
 )
 
 ref_impl_pair(

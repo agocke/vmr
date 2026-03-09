@@ -2,6 +2,7 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.Core",
+    skip_cs1591 = True,
     srcs = [
         "src/System.Core.cs",
     ],
@@ -21,5 +22,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/shims/stubs:ref_System.Diagnostics.EventLog",
         "//src/libraries/shims/stubs:ref_System.Diagnostics.PerformanceCounter",
     ],
+    os_targeted = True,
     exclude_sr = True,
+    assembly_version = "4.0.0.0",
 )

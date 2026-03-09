@@ -8,6 +8,8 @@ string? outputPath = null;
 string? resourceName = null;
 string? resourceFile = null;
 string? resourceClassName = null;
+bool includeDefaultValues = true;
+bool omitGetResourceString = false;
 
 for (int i = 0; i < args.Length; i++)
 {
@@ -28,6 +30,14 @@ for (int i = 0; i < args.Length; i++)
     {
         resourceClassName = resClass;
     }
+    else if (StartsWith(arg, "--include-default-values=", out var defaultValues))
+    {
+        includeDefaultValues = bool.Parse(defaultValues);
+    }
+    else if (arg == "--omit-getresourcestring")
+    {
+        omitGetResourceString = true;
+    }
 
 }
 
@@ -38,8 +48,8 @@ var resxGen = new Microsoft.DotNet.Arcade.GenerateResxSource()
     ResourceName = resourceName ?? throw new Exception("No resource name specified"),
     ResourceFile = resourceFile ?? throw new Exception("No resource file specified"),
     ResourceClassName = resourceClassName ?? "System.SR",
-    OmitGetResourceString = resourceClassName == null,
-    IncludeDefaultValues = true,
+    OmitGetResourceString = omitGetResourceString || resourceClassName == null,
+    IncludeDefaultValues = includeDefaultValues,
 };
 return resxGen.Execute() ? 0 : 1;
 

@@ -12,6 +12,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Resources.Writer",
+    nowarn = ["CA1510"],
     srcs = [
         "src/System/Resources/__FastResourceComparer.cs",
         "src/System/Resources/IResourceWriter.cs",
@@ -23,6 +24,7 @@ netcoreapp_impl_assembly(
     deps = [
         "//src/libraries/System.Collections:ref_System.Collections",
         "//src/libraries:ref_System.Runtime",
-    ],
+            "//src/libraries/System.Memory:ref_System.Memory",
+],
     resx_file = "src/Resources/Strings.resx",
 )

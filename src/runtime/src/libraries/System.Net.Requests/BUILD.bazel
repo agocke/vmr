@@ -26,6 +26,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.Requests",
+    os_targeted = "unix",
     srcs = glob(
         ["src/System/**/*.cs"],
         exclude = [
@@ -82,4 +83,5 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading:ref_System.Threading",
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
     ],
+    supported_os_platforms = ["unix"],
 )

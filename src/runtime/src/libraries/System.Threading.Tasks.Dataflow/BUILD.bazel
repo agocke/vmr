@@ -17,6 +17,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Threading.Tasks.Dataflow",
+    multitarget = True,
     srcs = [
         "src/Base/DataflowBlock.cs",
         "src/Base/DataflowBlock.netstandard21.cs",
@@ -69,10 +70,8 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
     ],
-    generate_facades = True,
-    facade_contract_assembly = ":ref_System.Threading.Tasks.Dataflow",
     resx_file = "src/Resources/Strings.resx",
-    nowarn = ["CS1589"],
+    assembly_description = "TPL Dataflow promotes actor/agent-oriented designs through primitives for in-process message passing, dataflow, and pipelining. TDF builds upon the APIs and scheduling infrastructure provided by the Task Parallel Library (TPL), and integrates with the language support for asynchrony provided by C#, Visual Basic, and F#.\n\nCommonly Used Types:\nSystem.Threading.Tasks.Dataflow.ActionBlock<TInput>\nSystem.Threading.Tasks.Dataflow.BatchBlock<T>\nSystem.Threading.Tasks.Dataflow.BatchedJoinBlock<T1, T2>\nSystem.Threading.Tasks.Dataflow.BatchedJoinBlock<T1, T2, T3>\nSystem.Threading.Tasks.Dataflow.BroadcastBlock<T>\nSystem.Threading.Tasks.Dataflow.BufferBlock<T>\nSystem.Threading.Tasks.Dataflow.DataflowBlock\nSystem.Threading.Tasks.Dataflow.JoinBlock<T1, T2>\nSystem.Threading.Tasks.Dataflow.JoinBlock<T1, T2, T3>\nSystem.Threading.Tasks.Dataflow.TransformBlock<TInput, TOutput>\nSystem.Threading.Tasks.Dataflow.TransformManyBlock<TInput, TOutput>\nSystem.Threading.Tasks.Dataflow.WriteOnceBlock<T>",
 )
 
 ref_impl_pair(

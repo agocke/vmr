@@ -44,7 +44,7 @@ netcoreapp_impl_assembly(
     ],
     resx_file = "src/Resources/Strings.resx",
     allow_unsafe_blocks = True,
-    nowarn = ["SYSLIB0038", "CS8604"],
+    nowarn = ["SYSLIB0038"],
     deps = [
         "//src/libraries:ref_System.Private.CoreLib",
         "//src/libraries:impl_System.Runtime",

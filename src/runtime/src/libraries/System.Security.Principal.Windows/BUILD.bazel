@@ -7,18 +7,27 @@ netcoreapp_ref_assembly(
     ],
     deps = [
         "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
         "//src/libraries/System.Security.Claims:ref_System.Security.Claims",
     ],
 )
 
 netcoreapp_impl_assembly(
     name = "impl_System.Security.Principal.Windows",
+    pnse = True,
     srcs = [
         "System.Security.Principal.Windows.notsupported.cs",
     ],
     deps = [
         "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
         "//src/libraries/System.Security.Claims:ref_System.Security.Claims",
-    ],
+            "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+],
     resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms_short = ["windows"],
+    include_dll_safe_search_path = True,
 )

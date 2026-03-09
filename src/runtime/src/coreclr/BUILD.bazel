@@ -2,6 +2,8 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
+exports_files(["generateredefinesfile.sh"])
+
 cc_library(
     name = "coreclr_inc",
     # Header-only target exposing shared CoreCLR include paths.

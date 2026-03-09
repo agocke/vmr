@@ -190,6 +190,15 @@ COMMON_ATTRS = {
         mandatory = False,
         default = [],
     ),
+    "debug_type": attr.string(
+        doc = "Controls PDB / debug info generation, mirroring the csc /debug option. " +
+              "When set to 'auto' (the default), the debug type is derived from the " +
+              "Bazel compilation mode: 'portable' in opt/dbg, 'none' in fastbuild. " +
+              "Set to an explicit value to override (e.g. 'portable' for tests that " +
+              "require PDB files to exist at runtime).",
+        default = "auto",
+        values = ["auto", "portable", "embedded", "full", "pdbonly", "none"],
+    ),
     "use_shared_compilation": attr.bool(
         doc = "When True, uses the Roslyn compiler server via a Bazel persistent worker.",
         default = True,

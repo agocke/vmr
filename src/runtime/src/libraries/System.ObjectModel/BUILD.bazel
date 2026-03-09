@@ -41,6 +41,8 @@ netcoreapp_impl_assembly(
     deps = [
         "//src/libraries/System.Collections:ref_System.Collections",
         "//src/libraries:ref_System.Runtime",
-    ],
+            "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+],
     resx_file = "src/Resources/Strings.resx",
 )

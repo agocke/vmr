@@ -2,6 +2,7 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.Xml.Linq",
+    skip_cs1591 = True,
     srcs = [
         "src/System.Xml.Linq.cs",
     ],
@@ -10,5 +11,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
         "//src/libraries/System.Xml.XPath.XDocument:ref_System.Xml.XPath.XDocument",
     ],
+    os_targeted = True,
     exclude_sr = True,
+    assembly_version = "4.0.0.0",
 )

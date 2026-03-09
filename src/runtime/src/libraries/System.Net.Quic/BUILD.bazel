@@ -9,6 +9,7 @@ netcoreapp_ref_assembly(
     ],
     deps = [
         "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
         "//src/libraries/System.Collections:ref_System.Collections",
         "//src/libraries/System.Memory:ref_System.Memory",
         "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
@@ -21,9 +22,14 @@ netcoreapp_ref_assembly(
 # On Linux, this library is either PlatformNotSupported or platform-specific.
 netcoreapp_impl_assembly(
     name = "impl_System.Net.Quic",
+    os_targeted = True,
     srcs = ["//src/libraries/shims:System.Void.cs"],
     deps = [
         "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
     ],
     exclude_sr = True,
+    nowarn = ["SYSLIB1054"],
+    supported_os_platforms = ["linux"],
+    include_dll_safe_search_path = True,
 )

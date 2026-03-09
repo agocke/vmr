@@ -192,7 +192,7 @@ netcoreapp_impl_assembly(
     defines = [
         "LEGACY_GETRESOURCESTRING_USER",
     ],
-    nowarn = ["nullable"],
+    nowarn = ["CA1859", "nullable"],
 )
 
 ref_impl_pair(

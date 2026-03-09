@@ -16,6 +16,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.NetworkInformation",
+    os_targeted = True,
     analyzers = [
         "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
         "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
@@ -230,7 +231,6 @@ netcoreapp_impl_assembly(
     }),
     resx_file = "src/Resources/Strings.resx",
     allow_unsafe_blocks = True,
-    defines = ["SYSTEM_NET_NETWORKINFORMATION_DLL"],
     deps = [
         "//src/libraries:ref_Microsoft.Win32.Primitives",
         "//src/libraries:ref_System.Runtime",
@@ -245,4 +245,5 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
     ],
+    supported_os_platforms = ["linux"],
 )

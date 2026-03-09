@@ -2,6 +2,7 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.Transactions",
+    skip_cs1591 = True,
     srcs = [
         "src/System.Transactions.cs",
     ],
@@ -10,5 +11,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Transactions.Local:ref_System.Transactions.Local",
         "//src/libraries/shims/stubs:ref_System.Security.Permissions",
     ],
+    os_targeted = True,
     exclude_sr = True,
+    assembly_version = "4.0.0.0",
 )

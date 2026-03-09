@@ -1,0 +1,80 @@
+# mscordbi — the DBI (Debugger Interface) shared library.
+# Matches CMake: src/coreclr/dlls/mscordbi/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//visibility:public"])
+
+# Generate the DBI export version script from mscordbi_unixexports.src.
+# On Linux, use version script format.
+# On macOS, use exported symbols list format.
+genrule(
+    name = "gen_mscordbi_exports",
+    srcs = ["mscordbi_unixexports.src"],
+    outs = ["mscordbi.exports"],
+    cmd = select({
+        "@platforms//os:macos": "$(location //eng/native:generateexportedsymbols.sh) $(location mscordbi_unixexports.src) > $@",
+        "//conditions:default": "$(location //eng/native:generateversionscript.sh) $(location mscordbi_unixexports.src) > $@",
+    }),
+    tools = select({
+        "@platforms//os:macos": ["//eng/native:generateexportedsymbols.sh"],
+        "//conditions:default": ["//eng/native:generateversionscript.sh"],
+    }),
+)
+
+cc_binary(
+    name = "libmscordbi.so",
+    srcs = [
+        "mscordbi.cpp",
+    ] + select({
+        "@platforms//os:linux": [
+            "//src/coreclr/dlls/mscordac:gen_palredefines_inc",
+        ],
+        "//conditions:default": [],
+    }),
+    linkshared = True,
+    linkstatic = True,
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    includes = ["."],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    additional_linker_inputs = [
+        ":gen_mscordbi_exports",
+        "//src/coreclr/dlls/mscordac:libmscordaccore.so",
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-Wl,-rpath,@loader_path",
+            "-Wl,-exported_symbols_list,$(location :gen_mscordbi_exports)",
+            "$(location //src/coreclr/dlls/mscordac:libmscordaccore.so)",
+        ],
+        "//conditions:default": [
+            "-Wl,-rpath,$$ORIGIN",
+            "-Wl,-Bsymbolic",
+            "-Wl,--version-script=$(location :gen_mscordbi_exports)",
+            "-Wl,--undefined-version",
+            "$(location //src/coreclr/dlls/mscordac:libmscordaccore.so)",
+        ],
+    }),
+    deps = [
+        # COREDBI_LIBRARIES
+        "//src/coreclr/debug:debug-pal",
+        "//src/coreclr/debug:cordbdi",
+        "//src/coreclr/utilcode:utilcodestaticnohost",
+        "//src/coreclr/md:mdcompiler-dbi",
+        "//src/coreclr/md:mdruntime-dbi",
+        "//src/coreclr/md:mdruntimerw-dbi",
+        "//src/coreclr/md:mddatasource_dbi",
+        "//src/coreclr/inc:corguids",
+        "//src/native/minipal",
+    ],
+)
+
+# On macOS, produce libmscordbi.dylib from libmscordbi.so
+genrule(
+    name = "libmscordbi_dylib",
+    srcs = [":libmscordbi.so"],
+    outs = ["libmscordbi.dylib"],
+    cmd = "cp $< $@",
+)

@@ -229,6 +229,7 @@ netcoreapp_impl_assembly(
     defines = [
         "FEATURE_FAST_CREATE",
     ],
+    nowarn = ["CA1859"],
 )
 
 ref_impl_pair(

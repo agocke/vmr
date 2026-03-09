@@ -2,7 +2,7 @@
 # Matches CMake: src/coreclr/vm/CMakeLists.txt + vm/wks/CMakeLists.txt
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES", "CORECLR_DAC_DEFINES")
 
 package(default_visibility = ["//src/coreclr:__subpackages__"])
 
@@ -430,6 +430,160 @@ cc_library(
         "//src/coreclr/vm/eventing:eventpipe_shim_headers",
         "//src/coreclr/vm/eventing:eventing_headers",
         "//src/coreclr/vm/eventing:userevents_headers",
+        "//src/native/corehost:corehost_headers",
+        "//src/native/eventpipe:eventpipe-headers",
+    ],
+)
+
+# --- cee_dac (VM core, DAC variant) ---
+# Matches CMake: src/coreclr/vm/CMakeLists.txt  cee_dac target.
+# VM_SOURCES_DAC = VM_SOURCES_DAC_AND_WKS_COMMON + conditionalweaktable.cpp
+#   + threaddebugblockinginfo.cpp + exceptionhandling.cpp + peimagelayout.cpp
+#   + arch-specific (DAC_AND_WKS_ARCH) + GC handle sources.
+
+_VM_DAC_DEFINES = CORECLR_DAC_DEFINES + [
+    "FEATURE_VIRTUAL_STUB_DISPATCH",
+    "FEATURE_SIMD",
+    "FEATURE_HW_INTRINSICS",
+    "FEATURE_MASKED_HW_INTRINSICS",
+]
+
+cc_library(
+    name = "cee_dac",
+    srcs = [
+        # VM_SOURCES_DAC_AND_WKS_COMMON
+        "appdomain.cpp",
+        "array.cpp",
+        "assembly.cpp",
+        "assemblybinder.cpp",
+        "binder.cpp",
+        "callcounting.cpp",
+        "castcache.cpp",
+        "cdacplatformmetadata.cpp",
+        "ceeload.cpp",
+        "class.cpp",
+        "classhash.cpp",
+        "classlayoutinfo.cpp",
+        "clsload.cpp",
+        "codeman.cpp",
+        "codeversion.cpp",
+        "contractimpl.cpp",
+        "corhost.cpp",
+        "crst.cpp",
+        "debugdebugger.cpp",
+        "debughelp.cpp",
+        "debuginfostore.cpp",
+        "decodemd.cpp",
+        "disassembler.cpp",
+        "domainassembly.cpp",
+        "dynamicmethod.cpp",
+        "ecall.cpp",
+        "eedbginterfaceimpl.cpp",
+        "eehash.cpp",
+        "eetwain.cpp",
+        "encee.cpp",
+        "excep.cpp",
+        "exinfo.cpp",
+        "exstate.cpp",
+        "field.cpp",
+        "formattype.cpp",
+        "fptrstubs.cpp",
+        "frames.cpp",
+        "gchandleutilities.cpp",
+        "gcheaputilities.cpp",
+        "gctoclreventsink.cpp",
+        "genericdict.cpp",
+        "generics.cpp",
+        "hash.cpp",
+        "ilinstrumentation.cpp",
+        "ilstubcache.cpp",
+        "ilstubresolver.cpp",
+        "inlinetracking.cpp",
+        "instmethhash.cpp",
+        "jithost.cpp",
+        "jitinterface.cpp",
+        "loaderallocator.cpp",
+        "memberload.cpp",
+        "method.cpp",
+        "methoddescbackpatchinfo.cpp",
+        "methodimpl.cpp",
+        "methoditer.cpp",
+        "methodtable.cpp",
+        "nativeimage.cpp",
+        "object.cpp",
+        "onstackreplacement.cpp",
+        "peassembly.cpp",
+        "peimage.cpp",
+        "perfmap.cpp",
+        "pgo.cpp",
+        "precode.cpp",
+        "prestub.cpp",
+        "readytorunstandalonemethodmetadata.cpp",
+        "rejit.cpp",
+        "sigformat.cpp",
+        "siginfo.cpp",
+        "spinlock.cpp",
+        "stackwalk.cpp",
+        "stublink.cpp",
+        "stubmgr.cpp",
+        "syncblk.cpp",
+        "threads.cpp",
+        "threadstatics.cpp",
+        "tieredcompilation.cpp",
+        "typectxt.cpp",
+        "typedesc.cpp",
+        "typeequivalencehash.cpp",
+        "typehandle.cpp",
+        "typehash.cpp",
+        "typestring.cpp",
+        "util.cpp",
+        "vars.cpp",
+        "versionresilienthashcode.cpp",
+        "virtualcallstub.cpp",
+        "zapsig.cpp",
+        # FEATURE_READYTORUN
+        "readytoruninfo.cpp",
+        # VM_SOURCES_DAC (additional)
+        "conditionalweaktable.cpp",
+        "threaddebugblockinginfo.cpp",
+        # VM_SOURCES_DAC_ARCH
+        "exceptionhandling.cpp",
+        "peimagelayout.cpp",
+        # GC_SOURCES_DAC (handle table sources needed for linking)
+        "//src/coreclr/gc:handletable.cpp",
+        "//src/coreclr/gc:handletablecore.cpp",
+        "//src/coreclr/gc:handletablescan.cpp",
+        "//src/coreclr/gc:objecthandle.cpp",
+    ] + select({
+        "@platforms//cpu:arm64": [
+            # VM_SOURCES_DAC_AND_WKS_ARCH (arm64)
+            "arm64/stubs.cpp",
+        ],
+        "//conditions:default": [
+            # VM_SOURCES_DAC_AND_WKS_ARCH (amd64)
+            "amd64/cgenamd64.cpp",
+            "amd64/excepamd64.cpp",
+            "amd64/stublinkeramd64.cpp",
+        ],
+    }),
+    textual_hdrs = [
+        "yieldprocessornormalizedshared.cpp",
+        "i386/stublinkerx86.cpp",
+    ],
+    copts = _VM_COPTS,
+    includes = _VM_INCLUDES + [
+        "../interop/inc",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _VM_DAC_DEFINES,
+    linkstatic = True,
+    deps = [
+        "//src/coreclr/gc:gc_headers",
+        "//src/coreclr/inc:coreclr_inc_dac",
+        "//src/coreclr/interop:interop_headers",
+        "//src/coreclr/runtime:runtime_headers",
+        "//src/coreclr/vm/eventing:eventpipe_shim_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
         "//src/native/corehost:corehost_headers",
         "//src/native/eventpipe:eventpipe-headers",
     ],

@@ -17,6 +17,9 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Formats.Asn1",
+    multitarget = True,
+    skip_cs1591 = True,
+    defines = ["CP_NO_ZEROMEMORY"],
     srcs = glob(["src/System/Formats/Asn1/**/*.cs"]) + [
         "//src/libraries/Common:src/System/Security/Cryptography/CryptoPool.cs",
         "//src/libraries/Common:src/System/Obsoletions.cs",
@@ -28,7 +31,7 @@ netcoreapp_impl_assembly(
         "//src/libraries:ref_System.Runtime",
         "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
         "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
-        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
         "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
     ],
+    assembly_description = "Provides classes that can read and write the ASN.1 BER, CER, and DER data formats.",
 )

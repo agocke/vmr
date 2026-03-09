@@ -155,6 +155,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.InteropServices",
+    partial_facade = True,
     srcs = [
         "src/System/Runtime/CompilerServices/IDispatchConstantAttribute.cs",
         "src/System/Runtime/CompilerServices/IUnknownConstantAttribute.cs",
@@ -226,8 +227,7 @@ netcoreapp_impl_assembly(
     ],
     deps = [
         "//src/libraries:ref_System.Private.CoreLib",
-        "//src/libraries:impl_System.Runtime",
-        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Concurrent:impl_System.Collections.Concurrent",
     ],
     allow_unsafe_blocks = True,
     resx_file = "src/Resources/Strings.resx",

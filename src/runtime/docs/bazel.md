@@ -20,7 +20,8 @@ layout.
 
 - **Native C++**: libcoreclr.so (with statically-linked JIT), dotnet host,
   hostfxr, hostpolicy, apphost, nethost, 6 native interop libraries,
-  NativeAOT runtime, standalone GC, AOT JIT interface
+  NativeAOT runtime, standalone GC, AOT JIT interface,
+  DAC (libmscordaccore.so), DBI (libmscordbi.so), createdump
 - **Managed C#**: System.Private.CoreLib, 154 framework assemblies
   (145 of 150 non-shim NetCoreApp assemblies + shims + extras),
   ref assemblies, source generators
@@ -76,7 +77,7 @@ layout.
 
 - Remaining managed libraries (21 NetFxReference shims + 5 non-shim assemblies not yet in Bazel)
 - Library unit tests (93 of ~187 libraries have Bazel test BUILD files)
-- CoreCLR diagnostic tooling: DAC (mscordac), DBI (mscordbi), createdump, SOS
+- CoreCLR diagnostic tooling: SOS
 - CoreCLR tools: SuperPMI, ildasm (full binary)
 - ILC BUILD files and end-to-end NativeAOT pipeline (see [NativeAOT Compilation Pipeline](#nativeaot-compilation-pipeline))
 - Bootstrap mode: NativeAOT-compile crossgen2, use it for System.Private.CoreLib
@@ -123,7 +124,7 @@ bazel build //...                                       # Bazel
 ./compare-bazel.sh --json-output results.json           # machine-readable output
 ```
 
-The tool lives in `eng/tools/BuildEquivalenceCheck/`. It parses MSBuild `.binlog`
+The tool lives in `src/tools/BuildEquivalenceCheck/`. It parses MSBuild `.binlog`
 files, CMake `compile_commands.json`, and Bazel `aquery` output to extract and
 normalize compilation records, then compares them field-by-field.
 
@@ -136,10 +137,20 @@ areas:
   `-DFOO=1`), plus missing/extra defines in `coreclr_defs.bzl` and `native_defs.bzl`
 - **Native flags/optimization** (1000 files): Warning flags and optimization level
   mismatches between `.bazelrc` and `CMakeLists.txt`
-- **Managed source files** (23 assemblies): Missing `SkipLocalsInit.cs`, `Forwards.cs`
-  generation gaps, facade build strategy differences
-- **Managed nowarn** (23 assemblies): MSBuild's `Directory.Build.props` suppressions
-  not replicated in Bazel
+- **Managed assemblies**: 164 of 186 archive+non-archive assemblies fully match
+  MSBuild's CSC invocations (defines, nowarn, source files, generated content,
+  references). The remaining 22 differ due to:
+  - **PNSE stub generation** (4): Bazel now generates `.notsupported.cs` via
+    `GenNotSupportedSource` (matching MSBuild's `GeneratePlatformNotSupportedAssemblyMessage`),
+    but reference sets may still differ (Registry, IO.Pipes.AccessControl,
+    Threading.AccessControl, InteropServices.JavaScript)
+  - **Generated file content** (2): SR.cs/Forwards.cs differences
+    (System.Private.CoreLib, System shim)
+  - **Complex assemblies** (2): System.Net.Quic (PNSE stub vs full Linux impl),
+    System.Runtime.Serialization.Formatters (BinaryFormatter stub vs full impl —
+    now uses Removed.cs matching MSBuild, may still diff on deps)
+  - **Non-archive assemblies** (14): Differ by design — Bazel uses precise deps
+    while MSBuild uses the full targeting pack
 - **Unmatched compilations**: 640 CMake-only + 405 MSBuild-only units not yet ported
   to Bazel
 
@@ -158,8 +169,8 @@ producing the correct output.
 ./build.sh packs -rc Release -lc Release
 # → artifacts/packages/*/Shipping/dotnet-runtime-*-linux-x64.tar.gz
 
-# 2. Build the Bazel runtime archive (once implemented)
-# bazel build //:runtime_archive
+# 2. Build the Bazel runtime archive
+bazel build --config=release //:runtime_archive
 # → bazel-bin/dotnet-runtime-*-linux-x64.tar.gz
 
 # 3. Compare them
@@ -301,12 +312,14 @@ CMake currently supports all of these OS × architecture combinations. Bazel sup
 - [ ] `src/native/external/llvm-libunwind/BUILD.bazel`
   - [ ] LLVM's libunwind, alternative to GNU libunwind
 
-### 2.8 Bundled GNU libunwind — ✅ DONE (linux-x64)
+### 2.8 Bundled GNU libunwind — ✅ DONE (linux-x64, darwin-arm64)
 - [x] `src/native/external/libunwind/BUILD.bazel`
   - [x] `libunwind_generic` cc_library (G-prefix sources: remote/generic unwind)
   - [x] `libunwind_local` cc_library (L-prefix sources: local-only unwind)
   - [x] `libunwind` combined cc_library
+  - [x] `libunwind_dac_macos` cc_library (darwin-arm64: DAC remote-only unwind)
   - [x] `bazel/linux-glibc-x64/include/config.h` (hardcoded linux-x64)
+  - [x] `bazel/darwin-arm64/include/config.h` (hardcoded darwin-arm64)
   - [x] Generated `libunwind-common.h`, `libunwind.h`, `tdep/libunwind_i.h`
 
 ### 2.8 rapidjson — ✅ DONE
@@ -368,8 +381,10 @@ The main CLR runtime engine. Large C++ codebase, 86 CMakeLists.txt files.
 ### 4.1 Common headers and defines — ✅ DONE (linux-x64)
 - [x] `src/coreclr/inc/BUILD.bazel`
   - [x] `coreclr_inc` cc_library (161 headers + CORECLR_DEFINES + global copts); depends on all component header targets (binder, debug, dlls, gc, gcdump, hosts, interpreter, jit, md, minipal, pal, vm, eventing, native_inc, native minipal, version_headers)
+  - [x] `coreclr_inc_dac` cc_library (same headers, propagates CORECLR_DAC_DEFINES instead of WKS defines)
   - [x] `coreclr_inc_headers_only` lightweight header-only target (no transitive deps, used by PAL)
   - [x] `CORECLR_DEFINES` constant list (~60 defines for linux-x64 retail)
+  - [x] `CORECLR_DAC_DEFINES` constant list (DACCESS_COMPILE + PROFILING_SUPPORTED_DATA)
   - [x] `CORECLR_COPTS` constant list (global include paths + warning suppression)
 
 ### 4.2 CoreCLR minipal — ✅ DONE (linux-x64)
@@ -399,6 +414,7 @@ The main CLR runtime engine. Large C++ codebase, 86 CMakeLists.txt files.
 - [x] `cee_wks_asm` cc_library (23 .S assembly files, separate target without PCH)
 - [x] `cee_wks_core` cc_library (~220 .cpp VM core sources)
 - [x] `cee_wks` cc_library (ceemain.cpp, codeman.cpp, peimagelayout.cpp)
+- [x] `cee_dac` cc_library (~100 sources — DAC variant of the VM)
 - [x] `src/coreclr/vm/eventing/BUILD.bazel`
   - [x] `eventing_headers` — pre-generated event headers for linux-glibc-x64
   - [x] `eventpipe_gen_srcs` — pre-generated eventpipe C++ sources (5 files)
@@ -411,6 +427,7 @@ The main CLR runtime engine. Large C++ codebase, 86 CMakeLists.txt files.
 ### 4.7 PAL (Platform Abstraction Layer) — ✅ DONE (linux-x64)
 - [x] `src/coreclr/pal/BUILD.bazel`
   - [x] `coreclrpal` static library (~50 C/C++ + 4 assembly files)
+  - [x] `coreclrpal_dac` static library (minimal DAC PAL: remote-unwind.cpp)
   - [x] `tracepointprovider` object library
   - [x] Pre-generated `config.h` for linux-glibc-x64
 
@@ -423,24 +440,29 @@ The main CLR runtime engine. Large C++ codebase, 86 CMakeLists.txt files.
 - [x] `mdcompiler_wks` cc_library (18 .cpp compiler sources)
 - [x] `mdruntime_wks` cc_library (12 .cpp runtime sources)
 - [x] `mdruntimerw_wks` cc_library (10 .cpp ENC sources)
+- [x] DAC variants: `mdcompiler_dac`, `mdruntime_dac`, `mdruntimerw_dac`
+- [x] DBI variants: `mdcompiler-dbi`, `mdruntime-dbi`, `mdruntimerw-dbi`, `mddatasource_dbi`
 - [x] `src/coreclr/md/ceefilegen/BUILD.bazel` — `ceefgen` cc_library (5 .cpp)
 
 ### 4.10 Utility code — ✅ DONE (linux-x64)
-- [x] `src/coreclr/utilcode/BUILD.bazel` — `utilcode` (OBJECT) + `utilcodestaticnohost` (STATIC)
-- [x] `src/coreclr/gcinfo/BUILD.bazel` — `gcinfo` static library
-- [x] `src/coreclr/unwinder/BUILD.bazel` — `unwinder_wks` OBJECT library
-- [x] `src/coreclr/interop/BUILD.bazel` — `interop` OBJECT library
-- [x] `src/coreclr/gcdump/BUILD.bazel` — `gcdump_headers` (headers done, compiled lib pending)
+- [x] `src/coreclr/utilcode/BUILD.bazel` — `utilcode` (OBJECT) + `utilcodestaticnohost` (STATIC) + `utilcode_dac` (DAC variant)
+- [x] `src/coreclr/gcinfo/BUILD.bazel` — `gcinfo` static library + cross-arch variants
+- [x] `src/coreclr/unwinder/BUILD.bazel` — `unwinder_wks` OBJECT library + `unwinder_dac` (DAC variant)
+- [x] `src/coreclr/interop/BUILD.bazel` — `interop` OBJECT library + `interop_headers` (define-free, for DAC)
+- [x] `src/coreclr/gcdump/BUILD.bazel` — `gcdump_headers` (headers + textual .cpp includes for DAC)
 - [x] `src/coreclr/interpreter/BUILD.bazel` — `interpreter_headers` (headers done, compiled lib pending)
 
-### 4.11 Debug support — 🔨 Partial (linux-x64)
+### 4.11 Debug support — ✅ DONE (linux-x64)
 - [x] `src/coreclr/debug/BUILD.bazel` — `debug_inc` (inc/ + ee/ + daccess/ + dbgutil/ + di/ headers)
 - [x] `debug-pal` cc_library (2 .cpp debug PAL sources)
 - [x] `cordbee_wks` cc_library (16 sources — debugger EE, workstation)
-- [ ] DAC (`mscordac`) — data access component for debugging/diagnostics
-- [ ] DBI (`mscordbi`) — debug interface library
-- [ ] dbgutil — debug utility library
-- [ ] createdump — crash dump generation tool
+- [x] `cordbee_dac` cc_library (5 sources — debugger EE, DAC variant)
+- [x] `daccess` cc_library (17 sources + arch primitives — data access core)
+- [x] `cordbdi` cc_library (25 sources — debugger interface)
+- [x] DAC (`mscordac`) — `libmscordaccore.so` shared library
+- [x] DBI (`mscordbi`) — `libmscordbi.so` shared library
+- [x] dbgutil — debug utility library (ELF/Mach-O reader)
+- [x] createdump — crash dump generation tool
 - [ ] runtimeinfo — runtime info for debuggers
 
 ### 4.12 Hosts & DLLs — ✅ libcoreclr DONE (linux-x64)
@@ -452,7 +474,13 @@ The main CLR runtime engine. Large C++ codebase, 86 CMakeLists.txt files.
   - [x] Links all component libraries: VM, JIT, metadata, binder, debug, GC, PAL, eventpipe, etc.
   - [x] 737 total Bazel actions, ~79s clean build
 - [x] `src/coreclr/pal/BUILD.bazel` — `eventprovider` cc_library (pre-generated dummy LTTng stubs)
-  - [ ] mscordac, mscordbi (diagnostic tooling — pending)
+- [x] `src/coreclr/pal/BUILD.bazel` — `libcoreclrtraceptprovider.so` (pre-generated LTTng tracepoint provider, links lttng-ust)
+- [x] `src/coreclr/dlls/mscordac/BUILD.bazel` — `libmscordaccore.so` (DAC shared library)
+  - [x] Version script + redefines generation from `mscordac_unixexports.src`
+  - [x] Links DAC variants: cee_dac, cordbee_dac, daccess, utilcode_dac, unwinder_dac, coreclrpal_dac, md variants
+- [x] `src/coreclr/dlls/mscordbi/BUILD.bazel` — `libmscordbi.so` (DBI shared library)
+  - [x] Version script from `mscordbi_unixexports.src`
+  - [x] Links DBI variants: cordbdi, md DBI variants; links against libmscordaccore.so for PAL
 
 ### 4.13 IL Assembler — ✅ DONE (linux-x64)
 - [x] `src/coreclr/ilasm/BUILD.bazel` — `ilasm` cc_binary (cfg="exec" tool)
@@ -486,12 +514,14 @@ The main CLR runtime engine. Large C++ codebase, 86 CMakeLists.txt files.
 
 Managed C# framework assemblies built with `rules_dotnet`. The NetCoreApp shared
 framework contains 150 assemblies (per `NetCoreAppLibrary.props`). Of those, **145
-have `impl_` targets** in Bazel and are in the `impl_netcoreapp` aggregate. The
-remaining 5 need special support: Microsoft.VisualBasic.Core (VB compiler),
-System.IO.Pipes.AccessControl and System.Threading.AccessControl (Windows PNSE stubs),
-System.Net.Quic (msquic native library), and System.Runtime.InteropServices.JavaScript
-(Browser/WASM-only). 93 libraries have Bazel test BUILD files (out of ~187 with
-test projects).
+have `impl_` targets** in Bazel and are in the `impl_netcoreapp` aggregate.
+Windows-only and browser-only libraries (System.IO.Pipes.AccessControl,
+System.Threading.AccessControl, Microsoft.Win32.Registry,
+System.Runtime.InteropServices.JavaScript) use `gen_pnse_source` to generate
+`.notsupported.cs` stubs matching MSBuild's `GeneratePlatformNotSupportedAssemblyMessage`.
+The remaining 2 need special support: Microsoft.VisualBasic.Core (VB compiler)
+and System.Net.Quic (msquic native library + full Linux implementation).
+93 libraries have Bazel test BUILD files (out of ~187 with test projects).
 
 ### 5.1 System.Private.CoreLib — ✅ DONE
 - [x] `src/coreclr/System.Private.CoreLib/BUILD.bazel`
@@ -674,21 +704,16 @@ special support**. The `impl_netcoreapp` filegroup contains 154 total entries
 |----------|------:|-------------|
 | ✅ In `impl_netcoreapp` | 154 | Built and aggregated (145 non-shim NetCoreApp + mscorlib shim + 8 non-NetCoreApp extras) |
 | ❌ VB project | 1 | Microsoft.VisualBasic.Core — needs VB compiler in Bazel |
-| ❌ Windows PNSE | 2 | System.IO.Pipes.AccessControl, System.Threading.AccessControl — need PNSE stub generation |
-| ❌ Native deps | 1 | System.Net.Quic — needs msquic native library |
-| ❌ Browser-only | 1 | System.Runtime.InteropServices.JavaScript — WASM/Browser platform only |
+| ❌ Native deps | 1 | System.Net.Quic — needs msquic native library + full Linux impl |
 | ❌ NetFxRef shims | 21 | Legacy .NET Framework type-forwarder shims (System, System.Core, etc.) |
 
 
-### 9.2 Remaining 5 Assemblies
+### 9.2 Remaining Assemblies
 
 | Library | Reason | Notes |
 |---------|--------|-------|
 | Microsoft.VisualBasic.Core | VB compiler | Needs VB compilation support in rules_dotnet |
-| System.IO.Pipes.AccessControl | Windows PNSE | Needs PlatformNotSupportedException stub generator |
-| System.Net.Quic | Native deps | Needs msquic native library for Linux build |
-| System.Runtime.InteropServices.JavaScript | Browser-only | WASM/Browser platform, PNSE on other platforms |
-| System.Threading.AccessControl | Windows PNSE | Needs PlatformNotSupportedException stub generator |
+| System.Net.Quic | Native deps | Needs msquic native library + ~86 source files for full Linux impl |
 
 ---
 

@@ -14,6 +14,7 @@ load("@rules_dotnet//dotnet/private:common.bzl",
     "is_core_framework",
     "is_debug",
     "is_standard_framework",
+    "resolve_debug_type",
     "to_rlocation_path",)
 load("@rules_dotnet//dotnet/private/macros:register_tfms.bzl", "get_tfm_value")
 load("//src/libraries:defs.bzl", "LIVE_REFPACK_DEPS", "CORE_ROOT_REFPACK_DEPS")
@@ -99,6 +100,7 @@ def _compile_csharp_library(ctx, tfm):
         additionalfiles = ctx.files.additionalfiles,
         direct_analyzers = ctx.attr.analyzers,
         debug = is_debug(ctx),
+        debug_type = resolve_debug_type(ctx),
         defines = ctx.attr.defines,
         deps = ctx.attr.deps,
         exports = [],
@@ -315,7 +317,7 @@ def _generate_runtimeconfigs(ctx, dll, tfm, sdk_version, additional_runfiles):
       "version": "{version}"
     }},
     "configProperties": {{
-      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": true
+      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false
     }}
   }}
 }}
@@ -712,7 +714,7 @@ _transform_dep = rule(
 )
 
 def _il_test_impl(ctx):
-    args = []
+    args = ["-quiet"]
     if ctx.attr.debug_type == "full":
         args.append("-debug")
     if ctx.attr.debug_type == "pdbonly":

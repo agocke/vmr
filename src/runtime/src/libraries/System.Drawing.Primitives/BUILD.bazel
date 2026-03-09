@@ -43,8 +43,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
     ],
     resx_file = "src/Resources/Strings.resx",
-    generate_facades = True,
-    facade_contract_assembly = ":ref_System.Drawing.Primitives",
 )
 
 ref_impl_pair(

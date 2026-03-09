@@ -34,11 +34,12 @@ netcoreapp_impl_assembly(
     deps = [
         "//src/libraries/System.Collections:impl_System.Collections",
         "//src/libraries:ref_System.Private.CoreLib",
-        #"//src/libraries/System.Diagnostics.Tracing:impl_System.Diagnostics.Tracing",
+        "//src/libraries/System.Diagnostics.Tracing:impl_System.Diagnostics.Tracing",
         "//src/libraries/System.Threading:impl_System.Threading",
     ],
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Collections.Concurrent",
+    partial_facade = True,
     resx_file = "src/Resources/Strings.resx",
 )
 

@@ -12,6 +12,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.Compression",
+    os_targeted = "unix",
     analyzers = [
         "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
         "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
@@ -27,7 +28,6 @@ netcoreapp_impl_assembly(
 
         # Common misc
         "//src/libraries/Common:src/System/Obsoletions.cs",
-        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
 
         # Zip archive files (from SharedOpenSourcePath, but live in src/)
         "src/System/IO/Compression/ZipArchive.cs",
@@ -94,6 +94,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
     resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms = ["unix"],
 )
 
 ref_impl_pair(

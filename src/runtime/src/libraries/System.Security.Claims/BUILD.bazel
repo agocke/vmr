@@ -27,6 +27,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Collections:ref_System.Collections",
         "//src/libraries:ref_System.Runtime",
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
-    ],
+            "//src/libraries/System.Memory:ref_System.Memory",
+],
     resx_file = "src/Resources/Strings.resx",
 )

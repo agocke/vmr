@@ -44,6 +44,7 @@ public static class BinlogParser
         string targetType = "library";
         string langVersion = "";
         string? assemblyName = null;
+        string? outputPath = null;
 
         // Extract parameters from task children
         var folder = task.FindChild<Folder>("Parameters");
@@ -58,6 +59,7 @@ public static class BinlogParser
                 {
                     case "OutputAssembly":
                         assemblyName = Path.GetFileNameWithoutExtension(prop.Value);
+                        outputPath = prop.Value;
                         break;
                     case "DefineConstants":
                         foreach (var d in prop.Value.Split(';', StringSplitOptions.RemoveEmptyEntries))
@@ -139,6 +141,11 @@ public static class BinlogParser
             });
         }
 
+        // Determine if this is a reference assembly by checking the project
+        // directory or output path for a "/ref/" segment.
+        var isRef = projectDirectory.Contains("/ref/") || projectDirectory.Contains("/ref\\")
+            || (outputPath?.Contains("/ref/") == true) || (outputPath?.Contains("/ref\\") == true);
+
         return new ManagedCompilationRecord
         {
             AssemblyName = assemblyName,
@@ -152,6 +159,8 @@ public static class BinlogParser
             TargetType = targetType,
             LangVersion = langVersion,
             BuildSystem = "msbuild",
+            OutputPath = outputPath ?? "",
+            IsReferenceAssembly = isRef,
         };
     }
 
@@ -198,15 +207,24 @@ public static class BinlogParser
     }
 
     /// <summary>
-    /// Normalize warning codes to a consistent CS-prefixed format.
+    /// Normalize warning codes to a consistent format.
     /// MSBuild sometimes emits bare numbers (e.g. "1701") and sometimes
     /// prefixed codes (e.g. "CS1701"). Normalize to always use "CS" prefix
-    /// for numeric codes so they match Bazel's format.
+    /// for numeric codes and pad CS codes to at least 4 digits so that
+    /// CS649 and CS0649 compare as equal.
     /// </summary>
     private static string NormalizeWarningCode(string code)
     {
         if (code.Length > 0 && char.IsDigit(code[0]))
-            return "CS" + code;
+            return "CS" + code.PadLeft(4, '0');
+
+        // Normalize CSnnnn codes to at least 4 digits (e.g. CS649 → CS0649)
+        if (code.StartsWith("CS", StringComparison.Ordinal) && code.Length > 2)
+        {
+            var numPart = code.AsSpan(2);
+            if (numPart.Length > 0 && char.IsDigit(numPart[0]))
+                return "CS" + numPart.ToString().PadLeft(4, '0');
+        }
 
         return code;
     }

@@ -42,6 +42,7 @@ netcoreapp_impl_assembly(
         "//src/libraries:ref_System.Private.CoreLib",
     ],
     allow_unsafe_blocks = True,
+    partial_facade = True,
     resx_file = "src/Resources/Strings.resx",
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Memory",

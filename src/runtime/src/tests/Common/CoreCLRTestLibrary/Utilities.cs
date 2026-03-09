@@ -468,8 +468,9 @@ namespace TestLibrary
             alcWeakRef = new WeakReference(alc);
 
             Assembly asm = alc.LoadFromAssemblyPath(assemblyPath);
-            Type testType = asm.GetType(typeName);
-            testType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static).Invoke(null, args);
+            Type testType = asm.GetType(typeName) ?? throw new ArgumentException($"Type '{typeName}' not found in assembly '{assemblyPath}'", nameof(typeName));
+            MethodInfo method = testType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static) ?? throw new ArgumentException($"Method '{methodName}' not found on type '{typeName}'", nameof(methodName));
+            method.Invoke(null, args);
             alc.Unload();
         }
 

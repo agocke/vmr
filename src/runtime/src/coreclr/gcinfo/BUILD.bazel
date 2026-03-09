@@ -7,6 +7,11 @@ load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "C
 
 package(default_visibility = ["//src/coreclr:__subpackages__"])
 
+exports_files([
+    "gcinfodumper.cpp",
+    "gcinfohelpers.h",
+])
+
 # Common sources for all gcinfo variants.
 _GCINFO_ALLARCH_SOURCES = [
     "arraylist.cpp",

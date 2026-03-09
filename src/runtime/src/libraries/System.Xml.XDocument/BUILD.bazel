@@ -14,14 +14,15 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Xml.XDocument",
+    partial_facade = True,
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Xml.XDocument",
     exclude_sr = True,
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
-        "//src/libraries:impl_System.Runtime",
+        "//src/libraries:ref_System.Runtime",
         "//src/libraries/System.ObjectModel:impl_System.ObjectModel",
         "//src/libraries/System.Private.Xml:impl_System.Private.Xml",
         "//src/libraries/System.Private.Xml.Linq:impl_System.Private.Xml.Linq",
     ],
+    include_dll_safe_search_path = False,
 )

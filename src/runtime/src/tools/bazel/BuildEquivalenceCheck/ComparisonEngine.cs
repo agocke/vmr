@@ -24,6 +24,21 @@ public sealed class Difference
 }
 
 /// <summary>
+/// A single entry from the managed assembly manifest.
+/// </summary>
+public sealed class ManifestEntry
+{
+    public required string Name { get; init; }
+    public required ManifestStatus ExpectedStatus { get; init; }
+}
+
+public enum ManifestStatus
+{
+    Match,
+    Diff,
+}
+
+/// <summary>
 /// Full report of the equivalence check.
 /// </summary>
 public sealed class EquivalenceReport
@@ -35,14 +50,76 @@ public sealed class EquivalenceReport
     public List<string> OnlyInMSBuild { get; } = [];
     public List<string> OnlyInBazelManaged { get; } = [];
 
+    /// <summary>
+    /// Manifest entries describing every expected managed assembly and
+    /// whether it should match or is a known diff.  When set, the
+    /// equivalence check also verifies that no assemblies are missing
+    /// from either build and that no unexpected assemblies appear.
+    /// </summary>
+    public Dictionary<string, ManifestEntry> ManagedManifest { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Set of native file names whose differences are expected.
+    /// </summary>
+    public HashSet<string> KnownNativeDiffs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     public int TotalComparisons => NativeResults.Count + ManagedResults.Count;
     public int Matches => NativeResults.Count(r => r.IsMatch) + ManagedResults.Count(r => r.IsMatch);
+
+    public bool IsManagedKnownDiff(string name) =>
+        ManagedManifest.TryGetValue(name, out var entry) && entry.ExpectedStatus == ManifestStatus.Diff;
+
+    public int KnownMismatches => NativeResults.Count(r => !r.IsMatch && KnownNativeDiffs.Contains(r.Name))
+        + ManagedResults.Count(r => !r.IsMatch && IsManagedKnownDiff(r.Name));
+    public int UnexpectedMismatches => TotalComparisons - Matches - KnownMismatches;
     public int Mismatches => TotalComparisons - Matches;
-    public bool IsEquivalent => Mismatches == 0
-        && OnlyInCMake.Count == 0
-        && OnlyInBazel.Count == 0
-        && OnlyInMSBuild.Count == 0
-        && OnlyInBazelManaged.Count == 0;
+
+    /// <summary>
+    /// Managed assemblies present in the manifest but missing from both builds.
+    /// </summary>
+    public List<string> MissingFromBothBuilds =>
+        ManagedManifest.Keys
+            .Where(name => !ManagedResults.Any(r => r.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                && !OnlyInMSBuild.Contains(name, StringComparer.OrdinalIgnoreCase)
+                && !OnlyInBazelManaged.Contains(name, StringComparer.OrdinalIgnoreCase))
+            .Order()
+            .ToList();
+
+    /// <summary>
+    /// Managed assemblies that appear in the comparison (both builds) but are not in the manifest.
+    /// Only-in-one-build assemblies are not flagged — they are already tracked separately.
+    /// </summary>
+    public List<string> UnlistedAssemblies
+    {
+        get
+        {
+            if (ManagedManifest.Count == 0)
+                return [];
+
+            return ManagedResults
+                .Select(r => r.Name)
+                .Where(name => !ManagedManifest.ContainsKey(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Order()
+                .ToList();
+        }
+    }
+
+    /// <summary>
+    /// Managed assemblies expected to match that actually differ.
+    /// </summary>
+    public List<ComparisonResult> Regressions =>
+        ManagedResults
+            .Where(r => !r.IsMatch
+                && ManagedManifest.TryGetValue(r.Name, out var entry)
+                && entry.ExpectedStatus == ManifestStatus.Match)
+            .ToList();
+
+    public bool IsEquivalent =>
+        UnexpectedMismatches == 0
+        && Regressions.Count == 0
+        && MissingFromBothBuilds.Count == 0
+        && UnlistedAssemblies.Count == 0;
 }
 
 public static class ComparisonEngine
@@ -50,6 +127,8 @@ public static class ComparisonEngine
     // Flags injected by Bazel's cc_toolchain that CMake doesn't use.
     // Only include flags that are genuinely from the Bazel C++ toolchain
     // and have no CMake equivalent — NOT flags from .bazelrc that mirror CMake.
+    // Do NOT add config-sensitive flags here (debug info, optimization, etc.)
+    // — those must be compared to catch configuration mismatches.
     private static readonly HashSet<string> BazelToolchainFlags =
     [
         "-U_FORTIFY_SOURCE",
@@ -63,14 +142,14 @@ public static class ComparisonEngine
         "-no-canonical-prefixes",
         "-Wno-builtin-macro-redefined",
         "-fdata-sections",
-        "-g0",
     ];
 
     // Flags injected by CMake that Bazel doesn't use.
+    // Do NOT add config-sensitive flags here (debug info, optimization, etc.)
+    // — those must be compared to catch configuration mismatches.
     private static readonly HashSet<string> CMakeToolchainFlags =
     [
         "-Wno-null-conversion",
-        "-glldb",
         "-Wvla",
     ];
 
@@ -133,12 +212,28 @@ public static class ComparisonEngine
         List<ManagedCompilationRecord> msbuildRecords,
         List<ManagedCompilationRecord> bazelRecords)
     {
+        // For MSBuild, prefer impl assemblies over ref assemblies when both exist.
+        // When multiple impl records exist for the same assembly (multi-targeted),
+        // prefer the platform-specific TFM since that's what goes in the runtime
+        // archive and what Bazel builds. Priority:
+        //   1. net10.0-linux (highest — exact Linux match)
+        //   2. net10.0-unix  (covers Linux)
+        //   3. plain net10.0 (fallback — often a PNSE stub)
         var msbuildByName = msbuildRecords
+            .Where(r => !r.IsReferenceAssembly)
             .GroupBy(r => r.AssemblyName)
-            .ToDictionary(g => g.Key, g => g.First());
+            .ToDictionary(g => g.Key, g =>
+                g.OrderByDescending(r => TfmPriority(r.OutputPath))
+                .First());
+
+        // For Bazel, prefer impl_ targets (the actual implementation assemblies)
+        // over ref_ targets (reference assemblies used only as compile inputs).
         var bazelByName = bazelRecords
+            .Where(r => r.TargetLabel.Contains(":impl_") || r.TargetLabel.Contains("/impl_")
+                || (!r.TargetLabel.Contains(":ref_") && !r.TargetLabel.Contains("/ref_")))
             .GroupBy(r => r.AssemblyName)
-            .ToDictionary(g => g.Key, g => g.First());
+            .ToDictionary(g => g.Key, g =>
+                g.OrderByDescending(r => r.TargetLabel.Contains(":impl_") || r.TargetLabel.Contains("/impl_")).First());
 
         var allNames = msbuildByName.Keys.Union(bazelByName.Keys).Order().ToList();
 
@@ -385,5 +480,22 @@ public static class ComparisonEngine
             return "14.0";
 
         return version;
+    }
+
+    /// <summary>
+    /// Assign a priority score for TFM selection from multi-targeted MSBuild builds.
+    /// Higher is better. Platform-specific TFMs (linux, unix) are preferred
+    /// over the plain net10.0 TFM which is often a PNSE stub.
+    /// </summary>
+    private static int TfmPriority(string outputPath)
+    {
+        if (outputPath.Contains("net10.0-linux", StringComparison.OrdinalIgnoreCase))
+            return 3;
+        if (outputPath.Contains("net10.0-unix", StringComparison.OrdinalIgnoreCase))
+            return 2;
+        if (outputPath.Contains("net10.0-osx", StringComparison.OrdinalIgnoreCase))
+            return 1;
+
+        return 0;
     }
 }

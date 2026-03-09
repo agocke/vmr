@@ -25,6 +25,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Reflection.Metadata",
+    multitarget = True,
     srcs = glob(
         ["src/System/**/*.cs"],
         exclude = [
@@ -56,4 +57,5 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    assembly_description = "This package provides a low-level .NET (ECMA-335) metadata reader and writer. It's geared for performance and is the ideal choice for building higher-level libraries that intend to provide their own object model, such as compilers. The metadata format is defined by the ECMA-335 - Common Language Infrastructure (CLI) specification.\n\nThe System.Reflection.Metadata library is built-in as part of the shared framework in .NET Runtime. The package can be installed when you need to use it in other target frameworks.",
 )

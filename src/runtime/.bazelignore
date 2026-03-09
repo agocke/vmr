@@ -2,4 +2,5 @@ bazel-bazel
 bazel-bazel-libs
 bazel-bin
 bazel-out
+bazel-runtime
 bazel-testlogs

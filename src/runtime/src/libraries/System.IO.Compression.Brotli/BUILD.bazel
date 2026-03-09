@@ -13,6 +13,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.Compression.Brotli",
+    os_targeted = "unix",
     analyzers = [
         "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
         "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
@@ -24,7 +25,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/Common:src/Microsoft/Win32/SafeHandles/SafeBrotliHandle.cs",
 
         # Common misc
-        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
 
         # Brotli source files
         "src/System/IO/Compression/BrotliStream.cs",
@@ -53,6 +53,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
     resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms = ["unix"],
 )
 
 ref_impl_pair(

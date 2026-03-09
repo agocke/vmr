@@ -31,6 +31,7 @@ netcoreapp_impl_assembly(
     deps = [
         "//src/libraries:ref_System.Private.CoreLib",
     ],
+    partial_facade = True,
     resx_file = "src/Resources/Strings.resx",
     allow_unsafe_blocks = True,
     generate_facades = True,

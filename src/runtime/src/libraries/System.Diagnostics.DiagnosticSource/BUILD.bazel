@@ -54,11 +54,13 @@ write_file(
         "",
         "    public static Version AssemblyFileVersion { get; } = new(BuildAssemblyFileVersion);",
         "}",
+        "",
     ],
 )
 
 netcoreapp_impl_assembly(
     name = "impl_System.Diagnostics.DiagnosticSource",
+    multitarget = True,
     srcs = [
         # Unconditional sources
         "src/System/Diagnostics/Activity.cs",
@@ -164,6 +166,8 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
     ],
     resx_file = "src/Resources/Strings.resx",
+    nowarn = ["SA1205"],
+    assembly_description = "Provides Classes that allow you to decouple code logging rich (unserializable) diagnostics/telemetry (e.g. framework) from code that consumes it (e.g. tools)\n\nCommonly Used Types:\nSystem.Diagnostics.DiagnosticListener\nSystem.Diagnostics.DiagnosticSource",
 )
 
 live_csharp_library(

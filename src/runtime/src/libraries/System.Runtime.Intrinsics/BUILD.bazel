@@ -23,9 +23,13 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.Intrinsics",
+    srcs = [
+        "//src/libraries/Common:src/System/Experimentals.cs",
+    ],
     deps = [
         "//src/libraries:ref_System.Private.CoreLib",
     ],
+    partial_facade = True,
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Runtime.Intrinsics",
     exclude_sr = True,

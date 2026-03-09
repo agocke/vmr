@@ -2,6 +2,7 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_Microsoft.VisualBasic",
+    skip_cs1591 = True,
     srcs = [
         "src/Microsoft.VisualBasic.cs",
     ],
@@ -9,5 +10,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/shims/stubs:ref_Microsoft.VisualBasic.Core",
         "//src/libraries:ref_System.Runtime",
     ],
+    os_targeted = True,
     exclude_sr = True,
 )

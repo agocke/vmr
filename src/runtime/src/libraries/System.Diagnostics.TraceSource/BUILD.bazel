@@ -12,17 +12,9 @@ netcoreapp_ref_assembly(
     ],
 )
 
-# Match the SDK's ImplicitUsings (global using System.Linq) needed for array Contains
-genrule(
-    name = "global_usings",
-    outs = ["GlobalUsings.g.cs"],
-    cmd = "echo 'global using System.Linq;' > $@",
-)
-
 netcoreapp_impl_assembly(
     name = "impl_System.Diagnostics.TraceSource",
     srcs = [
-        ":global_usings",
         "src/System/Diagnostics/BooleanSwitch.cs",
         "src/System/Diagnostics/InitializingSwitchEventArgs.cs",
         "src/System/Diagnostics/InitializingTraceSourceEventArgs.cs",
@@ -51,18 +43,16 @@ netcoreapp_impl_assembly(
     ],
     defines = ["TRACE"],
     deps = [
-        "//src/libraries:ref_System.Runtime",
-        "//src/libraries/System.Collections:ref_System.Collections",
-        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
-        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
-        "//src/libraries:ref_System.ComponentModel.Primitives",
-        "//src/libraries/System.Diagnostics.StackTrace:ref_System.Diagnostics.StackTrace",
-        "//src/libraries/System.Linq:ref_System.Linq",
-        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/libraries:impl_System.Runtime",
+        "//src/libraries/System.Collections:impl_System.Collections",
+        "//src/libraries/System.Collections.NonGeneric:impl_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:impl_System.Collections.Specialized",
+        "//src/libraries:impl_System.ComponentModel.Primitives",
+        "//src/libraries/System.Threading:impl_System.Threading",
     ],
     resx_file = "src/Resources/Strings.resx",
-    generate_facades = True,
-    facade_contract_assembly = ":ref_System.Diagnostics.TraceSource",
+    include_dll_safe_search_path = True,
 )
 
 ref_impl_pair(

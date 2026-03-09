@@ -1,0 +1,14 @@
+# cDAC reader API headers.
+# Matches CMake: src/native/managed/cdac/cmake/CMakeLists.txt (INTERFACE library).
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "cdac_api",
+    hdrs = ["inc/cdac_reader.h"],
+    strip_include_prefix = "inc",
+)
+
+exports_files(["inc/cdac_reader.h"])

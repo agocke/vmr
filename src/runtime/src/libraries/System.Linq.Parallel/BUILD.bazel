@@ -167,8 +167,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Memory:ref_System.Memory",
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
-    generate_facades = True,
-    facade_contract_assembly = ":ref_System.Linq.Parallel",
     resx_file = "src/Resources/Strings.resx",
 )
 

@@ -23,6 +23,9 @@ netcoreapp_impl_assembly(
     ) + [
         "//src/libraries/Common:src/System/Obsoletions.cs",
     ],
+    partial_facade = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Transactions.Local",
     resx_file = "src/Resources/Strings.resx",
     allow_unsafe_blocks = True,
     nowarn = ["CA1805", "IDE0059", "CS3016"],

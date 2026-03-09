@@ -13,7 +13,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/Common:src/System/CodeDom/CodeObject.cs",
     ],
     resx_file = "src/Resources/Strings.resx",
-    nowarn = ["1634", "1691", "649"],
+    nowarn = ["CS0649", "CS1634", "CS1691"],
     allow_unsafe_blocks = True,
     deps = [
         "//src/libraries/System.Collections:ref_System.Collections",

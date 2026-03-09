@@ -25,6 +25,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Text.Encodings.Web",
+    multitarget = True,
     srcs = [
         "src/System/IO/TextWriterExtensions.cs",
         "src/System/Text/Encodings/Web/AllowedBmpCodePointsBitmap.cs",
@@ -57,16 +58,16 @@ netcoreapp_impl_assembly(
         "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
     ],
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
-        "//src/libraries/System.Memory:impl_System.Memory",
-        "//src/libraries/System.Numerics.Vectors:impl_System.Numerics.Vectors",
-        "//src/libraries/System.Runtime.Intrinsics:impl_System.Runtime.Intrinsics",
-        "//src/libraries/System.Threading:impl_System.Threading",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Numerics.Vectors:ref_System.Numerics.Vectors",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.Intrinsics:ref_System.Runtime.Intrinsics",
+        "//src/libraries/System.Threading:ref_System.Threading",
     ],
     resx_file = "src/Resources/Strings.resx",
     nowarn = ["CS3011"],
-    generate_facades = True,
-    facade_contract_assembly = ":ref_System.Text.Encodings.Web",
+    include_dll_safe_search_path = False,
+    assembly_description = "Provides types for encoding and escaping strings for use in JavaScript, HyperText Markup Language (HTML), and uniform resource locators (URL).\n\nCommonly Used Types:\nSystem.Text.Encodings.Web.HtmlEncoder\nSystem.Text.Encodings.Web.UrlEncoder\nSystem.Text.Encodings.Web.JavaScriptEncoder",
 )
 
 ref_impl_pair(
