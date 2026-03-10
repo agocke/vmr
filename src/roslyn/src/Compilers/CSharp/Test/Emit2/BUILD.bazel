@@ -1,0 +1,67 @@
+load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE", "roslyn_assembly_info")
+load("//src/roslyn:xunit_test.bzl", "roslyn_xunit_test")
+
+roslyn_assembly_info(name = "assembly_info")
+
+roslyn_xunit_test(
+    name = "Microsoft.CodeAnalysis.CSharp.Emit2.UnitTests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Needs PdbUtilities (extern alias not yet supported)
+            "Emit/EditAndContinue/AssemblyReferencesTests.cs",
+            "Emit/EditAndContinue/EditAndContinueClosureTests.cs",
+            "Emit/EditAndContinue/EditAndContinueDelegateCacheTests.cs",
+            "Emit/EditAndContinue/EditAndContinuePdbTests.cs",
+            "Emit/EditAndContinue/EditAndContinueStateMachineTests.cs",
+            "Emit/EditAndContinue/EditAndContinueTest.cs",
+            "Emit/EditAndContinue/EditAndContinueTestBase.cs",
+            "Emit/EditAndContinue/EditAndContinueTests.cs",
+            "Emit/EditAndContinue/LocalSlotMappingTests.cs",
+            "Emit/EditAndContinue/SymbolMatcherTests.cs",
+            "PDB/CSharpDeterministicBuildCompilationTests.cs",
+            "PDB/CSharpPDBTestBase.cs",
+            "PDB/CheckSumTest.cs",
+            "PDB/PDBAsyncTests.cs",
+            "PDB/PDBConstantTests.cs",
+            "PDB/PDBDynamicLocalsTests.cs",
+            "PDB/PDBEmbeddedSourceTests.cs",
+            "PDB/PDBIteratorTests.cs",
+            "PDB/PDBLambdaTests.cs",
+            "PDB/PDBLocalFunctionTests.cs",
+            "PDB/PDBSourceLinkTests.cs",
+            "PDB/PDBTests.cs",
+            "PDB/PDBTupleTests.cs",
+            "PDB/PDBUsingTests.cs",
+            "PDB/PortablePdbTests.cs",
+            # Uses PdbTestUtilities from PdbUtilities
+            "PDB/PDBWinMdExpTests.cs",
+            # Uses WithSource from EditAndContinueTestBase
+            "Emit/LocalStateTracing/LocalStateTracingTests.cs",
+        ],
+    ) + [
+        ":assembly_info",
+    ],
+    out = "Microsoft.CodeAnalysis.CSharp.Emit2.UnitTests",
+    deps = [
+        "//src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis",
+        "//src/roslyn/src/Compilers/CSharp/Portable:Microsoft.CodeAnalysis.CSharp",
+        "//src/roslyn/src/Compilers/Test/Core:Microsoft.CodeAnalysis.Test.Utilities",
+        "//src/roslyn/src/Compilers/Test/Utilities/CSharp:Microsoft.CodeAnalysis.CSharp.Test.Utilities",
+        "//src/roslyn/src/Compilers/Test/Resources/Core:Microsoft.CodeAnalysis.Compiler.Test.Resources",
+        "@paket.main//microsoft.codeanalysis.visualbasic",
+        "@paket.main//xunit.assert",
+        "@paket.main//xunit.extensibility.core",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.combinatorial",
+        "@paket.main//xunit.extensibility.execution",
+        "@paket.main//basic.reference.assemblies.net20",
+    ],
+    allow_unsafe_blocks = True,
+    nullable = "enable",
+    langversion = "preview",
+    nowarn = ["CS1570", "CS1587"],
+    keyfile = ROSLYN_KEYFILE,
+    compiler_options = ["/publicsign", "/nostdlib"],
+    visibility = ["//src/roslyn:__subpackages__"],
+)

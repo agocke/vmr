@@ -55,5 +55,12 @@ jobs:
       - name: Test
         run: |
           bazel test --disk_cache=~/.cache/bazel-disk \
+            --config=${{ matrix.config }} \
             //src/roslyn/src/Compilers/CSharp/Test/Syntax:Microsoft.CodeAnalysis.CSharp.Syntax.UnitTests \
+            //src/roslyn/src/Compilers/CSharp/Test/Semantic:Microsoft.CodeAnalysis.CSharp.Semantic.UnitTests \
+            //src/roslyn/src/Compilers/CSharp/Test/Symbol:Microsoft.CodeAnalysis.CSharp.Symbol.UnitTests \
+            //src/roslyn/src/Compilers/CSharp/Test/Emit:Microsoft.CodeAnalysis.CSharp.Emit.UnitTests \
+            //src/roslyn/src/Compilers/CSharp/Test/Emit2:Microsoft.CodeAnalysis.CSharp.Emit2.UnitTests \
+            //src/roslyn/src/Compilers/CSharp/Test/Emit3:Microsoft.CodeAnalysis.CSharp.Emit3.UnitTests \
+            //src/roslyn/src/Compilers/CSharp/Test/CommandLine:Microsoft.CodeAnalysis.CSharp.CommandLine.UnitTests \
             --test_timeout=300

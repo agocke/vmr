@@ -1,0 +1,57 @@
+load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE", "roslyn_assembly_info")
+load("//src/roslyn:xunit_test.bzl", "roslyn_xunit_test")
+
+roslyn_assembly_info(name = "assembly_info")
+
+roslyn_xunit_test(
+    name = "Microsoft.CodeAnalysis.CSharp.Symbol.UnitTests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Needs PdbUtilities (extern alias not yet supported)
+            "Compilation/GetImportScopesTests.cs",
+            "Compilation/GetUnusedImportDirectivesTests.cs",
+            "Compilation/ReferenceManagerTests.cs",
+            "Compilation/SemanticModelAPITests.cs",
+            "Compilation/UsedAssembliesTests.cs",
+            "DocumentationComments/CrefTests.cs",
+            "Symbols/AssemblyAndNamespaceTests.cs",
+            "Symbols/Metadata/PE/TypeForwarders.cs",
+            "Symbols/ModuleInitializers/ModuleInitializersTests.cs",
+            "Symbols/Source/ExternAliasTests.cs",
+            "Symbols/SymbolErrorTests.cs",
+            # References CrefTests which is excluded above
+            "Symbols/CheckedUserDefinedOperatorsTests.cs",
+            "Symbols/UnsignedRightShiftTests.cs",
+            # Needs Basic.Reference.Assemblies.Net50 (not yet in paket)
+            "Symbols/CorLibrary/CorTypes.cs",
+        ],
+    ) + [
+        ":assembly_info",
+    ],
+    out = "Microsoft.CodeAnalysis.CSharp.Symbol.UnitTests",
+    deps = [
+        "//src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis",
+        "//src/roslyn/src/Compilers/CSharp/Portable:Microsoft.CodeAnalysis.CSharp",
+        "//src/roslyn/src/Compilers/Test/Core:Microsoft.CodeAnalysis.Test.Utilities",
+        "//src/roslyn/src/Compilers/Test/Utilities/CSharp:Microsoft.CodeAnalysis.CSharp.Test.Utilities",
+        "//src/roslyn/src/Compilers/Test/Resources/Core:Microsoft.CodeAnalysis.Compiler.Test.Resources",
+        "@paket.main//microsoft.codeanalysis.visualbasic",
+        "@paket.main//xunit.assert",
+        "@paket.main//xunit.extensibility.core",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.combinatorial",
+        "@paket.main//xunit.extensibility.execution",
+        "@paket.main//basic.reference.assemblies.net20",
+        "@paket.main//basic.reference.assemblies.net40",
+        "@paket.main//basic.reference.assemblies.net461",
+        "@paket.main//basic.reference.assemblies.net70",
+    ],
+    allow_unsafe_blocks = True,
+    nullable = "enable",
+    langversion = "preview",
+    nowarn = ["CS1570", "CS1587"],
+    keyfile = ROSLYN_KEYFILE,
+    compiler_options = ["/publicsign", "/nostdlib"],
+    visibility = ["//src/roslyn:__subpackages__"],
+)

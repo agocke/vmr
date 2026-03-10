@@ -1,0 +1,40 @@
+load("//src/roslyn:defs.bzl", "ROSLYN_KEYFILE", "roslyn_assembly_info")
+load("//src/roslyn:xunit_test.bzl", "roslyn_xunit_test")
+
+roslyn_assembly_info(name = "assembly_info")
+
+roslyn_xunit_test(
+    name = "Microsoft.CodeAnalysis.CSharp.CommandLine.UnitTests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Needs PdbUtilities + DiaSymReader + NetStandard13 (not yet available)
+            "CommandLineTests.cs",
+        ],
+    ) + [
+        ":assembly_info",
+    ],
+    out = "Microsoft.CodeAnalysis.CSharp.CommandLine.UnitTests",
+    deps = [
+        "//src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis",
+        "//src/roslyn/src/Compilers/CSharp/Portable:Microsoft.CodeAnalysis.CSharp",
+        "//src/roslyn/src/Compilers/Test/Core:Microsoft.CodeAnalysis.Test.Utilities",
+        "//src/roslyn/src/Compilers/Test/Utilities/CSharp:Microsoft.CodeAnalysis.CSharp.Test.Utilities",
+        "//src/roslyn/src/Compilers/Test/Resources/Core:Microsoft.CodeAnalysis.Compiler.Test.Resources",
+        "@paket.main//microsoft.codeanalysis.visualbasic",
+        "@paket.main//xunit.assert",
+        "@paket.main//xunit.extensibility.core",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.combinatorial",
+        "@paket.main//xunit.extensibility.execution",
+        "@paket.main//basic.reference.assemblies.net461",
+        "@paket.main//newtonsoft.json",
+    ],
+    allow_unsafe_blocks = True,
+    nullable = "enable",
+    langversion = "preview",
+    nowarn = ["CS1570", "CS1587"],
+    keyfile = ROSLYN_KEYFILE,
+    compiler_options = ["/publicsign", "/nostdlib"],
+    visibility = ["//src/roslyn:__subpackages__"],
+)
