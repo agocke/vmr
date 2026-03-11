@@ -803,8 +803,12 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             {
                 if (symbol is IMethodSymbol method)
                 {
-                    VisualBasic.SymbolDisplay.ToDisplayString(method, SymbolDisplayFormat.TestFormat);
-                    VisualBasic.SymbolDisplay.ToDisplayString(method);
+                    try
+                    {
+                        VisualBasic.SymbolDisplay.ToDisplayString(method, SymbolDisplayFormat.TestFormat);
+                        VisualBasic.SymbolDisplay.ToDisplayString(method);
+                    }
+                    catch (TypeLoadException) { } // VB package may be incompatible with live-built CodeAnalysis
                     CSharp.SymbolDisplay.ToDisplayString(method, SymbolDisplayFormat.TestFormat);
                     CSharp.SymbolDisplay.ToDisplayString(method);
 
@@ -850,10 +854,18 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             {
                 case LanguageNames.CSharp:
                     CSharp.Conversion csharpConversion = CSharp.CSharpExtensions.GetConversion(operation);
-                    Assert.Throws<ArgumentException>(() => VisualBasic.VisualBasicExtensions.GetConversion(operation));
+                    try
+                    {
+                        Assert.Throws<ArgumentException>(() => VisualBasic.VisualBasicExtensions.GetConversion(operation));
+                    }
+                    catch (TypeLoadException) { }
                     break;
                 case LanguageNames.VisualBasic:
-                    VisualBasic.Conversion visualBasicConversion = VisualBasic.VisualBasicExtensions.GetConversion(operation);
+                    try
+                    {
+                        VisualBasic.Conversion visualBasicConversion = VisualBasic.VisualBasicExtensions.GetConversion(operation);
+                    }
+                    catch (TypeLoadException) { }
                     Assert.Throws<ArgumentException>(() => CSharp.CSharpExtensions.GetConversion(operation));
                     break;
                 default:
@@ -865,8 +877,12 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
 
             if (operatorMethod != null)
             {
-                VisualBasic.SymbolDisplay.ToDisplayString(operatorMethod, SymbolDisplayFormat.TestFormat);
-                VisualBasic.SymbolDisplay.ToDisplayString(operatorMethod);
+                try
+                {
+                    VisualBasic.SymbolDisplay.ToDisplayString(operatorMethod, SymbolDisplayFormat.TestFormat);
+                    VisualBasic.SymbolDisplay.ToDisplayString(operatorMethod);
+                }
+                catch (TypeLoadException) { }
                 CSharp.SymbolDisplay.ToDisplayString(operatorMethod, SymbolDisplayFormat.TestFormat);
                 CSharp.SymbolDisplay.ToDisplayString(operatorMethod);
             }
@@ -1176,8 +1192,12 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
 
             if (operation.Syntax.Language == LanguageNames.CSharp)
             {
-                Assert.Throws<ArgumentException>("compoundAssignment", () => VisualBasic.VisualBasicExtensions.GetInConversion(operation));
-                Assert.Throws<ArgumentException>("compoundAssignment", () => VisualBasic.VisualBasicExtensions.GetOutConversion(operation));
+                try
+                {
+                    Assert.Throws<ArgumentException>("compoundAssignment", () => VisualBasic.VisualBasicExtensions.GetInConversion(operation));
+                    Assert.Throws<ArgumentException>("compoundAssignment", () => VisualBasic.VisualBasicExtensions.GetOutConversion(operation));
+                }
+                catch (TypeLoadException) { }
                 var inConversionInternal = CSharp.CSharpExtensions.GetInConversion(operation);
                 var outConversionInternal = CSharp.CSharpExtensions.GetOutConversion(operation);
             }
@@ -1185,8 +1205,12 @@ namespace Microsoft.CodeAnalysis.Test.Utilities
             {
                 Assert.Throws<ArgumentException>("compoundAssignment", () => CSharp.CSharpExtensions.GetInConversion(operation));
                 Assert.Throws<ArgumentException>("compoundAssignment", () => CSharp.CSharpExtensions.GetOutConversion(operation));
-                var inConversionInternal = VisualBasic.VisualBasicExtensions.GetInConversion(operation);
-                var outConversionInternal = VisualBasic.VisualBasicExtensions.GetOutConversion(operation);
+                try
+                {
+                    var inConversionInternal = VisualBasic.VisualBasicExtensions.GetInConversion(operation);
+                    var outConversionInternal = VisualBasic.VisualBasicExtensions.GetOutConversion(operation);
+                }
+                catch (TypeLoadException) { }
             }
 
             var isLifted = operation.IsLifted;

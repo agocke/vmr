@@ -23,8 +23,22 @@ roslyn_xunit_test(
             # References CrefTests which is excluded above
             "Symbols/CheckedUserDefinedOperatorsTests.cs",
             "Symbols/UnsignedRightShiftTests.cs",
-            # Needs Basic.Reference.Assemblies.Net50 (not yet in paket)
-            "Symbols/CorLibrary/CorTypes.cs",
+            # Uses VisualBasicCompilation (VB NuGet incompatible with live-built CodeAnalysis)
+            "CrossLanguageTests.cs",
+            "SymbolDisplay/SymbolDisplayTests.cs",
+            "Compilation/CompilationAPITests.cs",
+            "Compilation/GetSemanticInfoTests.cs",
+            "Compilation/IndexedProperties_BindingTests.cs",
+            "Compilation/SemanticModelGetSemanticInfoTests.cs",
+            "Symbols/CovariantReturnTests.cs",
+            "Symbols/DestructorTests.cs",
+            "Symbols/ExtendedPartialMethodsTests.cs",
+            "Symbols/ExtensionMethodTests.cs",
+            "Symbols/GenericConstraintTests.cs",
+            "Symbols/IndexedPropertyTests.cs",
+            "Symbols/PEParameterSymbolTests.cs",
+            "Symbols/Source/LocalTests.cs",
+            "Symbols/Source/PropertyTests.cs",
         ],
     ) + [
         ":assembly_info",
@@ -45,6 +59,8 @@ roslyn_xunit_test(
         "@paket.main//basic.reference.assemblies.net20",
         "@paket.main//basic.reference.assemblies.net40",
         "@paket.main//basic.reference.assemblies.net461",
+        "@paket.main//basic.reference.assemblies.net50",
+        "@paket.main//basic.reference.assemblies.net60",
         "@paket.main//basic.reference.assemblies.net70",
     ],
     allow_unsafe_blocks = True,
@@ -53,5 +69,7 @@ roslyn_xunit_test(
     nowarn = ["CS1570", "CS1587"],
     keyfile = ROSLYN_KEYFILE,
     compiler_options = ["/publicsign", "/nostdlib"],
+    native_tools = ["@dotnet_runtime//src/coreclr/ilasm"],
+    size = "enormous",
     visibility = ["//src/roslyn:__subpackages__"],
 )

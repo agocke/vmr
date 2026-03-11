@@ -1,8 +1,8 @@
 """Roslyn xunit test rule.
 
 Wraps a csharp_library test assembly and runs it with the xunit console runner
-via corerun from the live-built runtime test host. Tests execute against the
-same runtime that is built from source in the VMR.
+via the dotnet host from the shared testhost. Tests execute against the same
+runtime that is built from source in the VMR.
 """
 
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
@@ -135,7 +135,92 @@ def _roslyn_xunit_test_impl(ctx):
                 )
                 additional_runfiles.append(dst)
 
-    # Create launcher script - use corerun from live-built test host
+    # Copy native tools (e.g. ilasm) into runtimes/linux-x64/native/ subdirectory
+    for tool in ctx.files.native_tools:
+        dst = ctx.actions.declare_file(
+            "%s/%s/runtimes/linux-x64/native/%s" % (ctx.label.name, tfm, tool.basename),
+        )
+        ctx.actions.run_shell(
+            inputs = [tool],
+            outputs = [dst],
+            command = "cp -f \"$1\" \"$2\"",
+            arguments = [tool.path, dst.path],
+            mnemonic = "CopyNativeTool",
+            progress_message = "Copying native tool %s" % tool.basename,
+            use_default_shell_env = True,
+            execution_requirements = COPY_EXECUTION_REQUIREMENTS,
+        )
+        additional_runfiles.append(dst)
+
+    # Generate runtimeconfig.json for dotnet exec
+    toolchain = get_toolchain(ctx)
+    sdk_version = toolchain.dotnetinfo.runtime_version
+
+    test_name = dll.basename.replace(".dll", "")
+    runtimeconfig = ctx.actions.declare_file(
+        "%s/%s/%s.runtimeconfig.json" % (ctx.label.name, tfm, test_name),
+    )
+    runtimeconfig_content = """\
+{{
+  "runtimeOptions": {{
+    "tfm": "{tfm}",
+    "framework": {{
+      "name": "Microsoft.NETCore.App",
+      "version": "{version}"
+    }},
+    "configProperties": {{
+      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false
+    }}
+  }}
+}}
+""".format(tfm = tfm, version = sdk_version)
+    ctx.actions.write(output = runtimeconfig, content = runtimeconfig_content)
+    additional_runfiles.append(runtimeconfig)
+
+    # Generate deps.json listing all DLLs so the host adds them to TPA
+    depsfile = ctx.actions.declare_file(
+        "%s/%s/%s.deps.json" % (ctx.label.name, tfm, test_name),
+    )
+    dll_entries = []
+    seen = {}
+    for f in additional_runfiles:
+        if f.path.endswith(".dll") and f.basename not in seen:
+            seen[f.basename] = True
+            dll_entries.append('          "%s": {}' % f.basename)
+    if dll.basename not in seen:
+        dll_entries.append('          "%s": {}' % dll.basename)
+    runtime_block = ",\n".join(dll_entries)
+    depsfile_content = """\
+{{
+  "runtimeTarget": {{
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  }},
+  "targets": {{
+    ".NETCoreApp,Version=v10.0": {{
+      "{test_name}/1.0.0": {{
+        "runtime": {{
+{runtime_block}
+        }}
+      }}
+    }}
+  }},
+  "libraries": {{
+    "{test_name}/1.0.0": {{
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }}
+  }}
+}}
+""".format(test_name = test_name, runtime_block = runtime_block)
+    ctx.actions.write(output = depsfile, content = depsfile_content)
+    additional_runfiles.append(depsfile)
+
+    # Get shared testhost (dotnet host + framework)
+    testhost = ctx.file._test_host
+
+    # Create launcher script
     launcher = ctx.actions.declare_file(
         "%s/%s/%s.sh" % (ctx.label.name, tfm, dll.basename),
     )
@@ -143,14 +228,16 @@ def _roslyn_xunit_test_impl(ctx):
         template = ctx.file._launcher_sh,
         output = launcher,
         substitutions = {
-            "TEMPLATED_test_host": to_rlocation_path(ctx, ctx.file._test_host),
+            "TEMPLATED_testhost": to_rlocation_path(ctx, testhost),
             "TEMPLATED_xunit_console": to_rlocation_path(ctx, xunit_console_dll),
             "TEMPLATED_entry_dll": to_rlocation_path(ctx, dll),
+            "TEMPLATED_depsfile": to_rlocation_path(ctx, depsfile),
+            "TEMPLATED_runtimeconfig": to_rlocation_path(ctx, runtimeconfig),
         },
         is_executable = True,
     )
 
-    additional_runfiles.append(ctx.file._test_host)
+    additional_runfiles.append(testhost)
     additional_runfiles.extend(ctx.files._bash_runfiles)
 
     default_info = DefaultInfo(
@@ -180,8 +267,8 @@ _roslyn_xunit_test = rule(
                 allow_single_file = True,
             ),
             "_test_host": attr.label(
-                doc = "Live-built runtime test host (corerun + framework assemblies)",
-                default = "//src/roslyn:roslyn_test_host",
+                doc = "Shared testhost directory (dotnet host + framework assemblies)",
+                default = "@dotnet_runtime//src/tests:shared_testhost",
                 allow_single_file = True,
             ),
             "_xunit_runner": attr.label(
@@ -192,6 +279,11 @@ _roslyn_xunit_test = rule(
             "_bash_runfiles": attr.label(
                 doc = "Bash runfiles library",
                 default = "@bazel_tools//tools/bash/runfiles",
+            ),
+            "native_tools": attr.label_list(
+                doc = "Native tools (e.g. ilasm, ildasm) to place in runtimes/linux-x64/native/",
+                default = [],
+                allow_files = True,
             ),
         },
     ),
@@ -210,7 +302,7 @@ def roslyn_xunit_test(
         **kwargs):
     """Macro for Roslyn xunit tests.
 
-    Tests run with corerun from the live-built test host so they
+    Tests run with the dotnet host from the shared testhost so they
     execute against the runtime built from source in the VMR.
     """
     _roslyn_xunit_test(

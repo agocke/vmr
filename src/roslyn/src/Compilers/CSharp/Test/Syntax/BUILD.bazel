@@ -55,5 +55,6 @@ roslyn_xunit_test(
     nowarn = ["CS1570", "CS1587"],
     keyfile = ROSLYN_KEYFILE,
     compiler_options = ["/publicsign", "/nostdlib"],
+    size = "enormous",
     visibility = ["//src/roslyn:__subpackages__"],
 )

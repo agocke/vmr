@@ -15,6 +15,21 @@ roslyn_xunit_test(
             # References ExtensionTests class (excluded above)
             "Semantics/ExtensionOperatorsTests.cs",
             "Semantics/PatternMatchingTests.cs",
+            # Uses VisualBasicCompilation (VB NuGet incompatible with live-built CodeAnalysis)
+            "OverloadResolutionPriorityTests.cs",
+            "RefReadonlyParameterTests.cs",
+            "Symbols/UserDefinedCompoundAssignmentOperatorsTests.cs",
+            "Attributes/AttributeTests.cs",
+            "Attributes/AttributeTests_CallerInfoAttributes.cs",
+            "Attributes/AttributeTests_NullableContext.cs",
+            "Attributes/InternalsVisibleToAndStrongNameTests.cs",
+            # Partial class of InternalsVisibleToAndStrongNameTests (excluded above)
+            "Attributes/EmitTestStrongNameProvider.cs",
+            "Semantics/InlineArrayTests.cs",
+            "Semantics/ParamsCollectionTests.cs",
+            "Semantics/PatternMatchingTests4.cs",
+            "Semantics/PatternMatchingTests_ListPatterns.cs",
+            "Semantics/RecordTests.cs",
         ],
     ) + [
         ":assembly_info",
@@ -33,6 +48,12 @@ roslyn_xunit_test(
         "@paket.main//xunit.combinatorial",
         "@paket.main//xunit.extensibility.execution",
         "@paket.main//basic.reference.assemblies.net40",
+        "@paket.main//basic.reference.assemblies.net50",
+        "@paket.main//basic.reference.assemblies.net60",
+        "@paket.main//basic.reference.assemblies.net70",
+        "@paket.main//basic.reference.assemblies.net80",
+        "@paket.main//basic.reference.assemblies.net90",
+        "@paket.main//basic.reference.assemblies.net100",
     ],
     allow_unsafe_blocks = True,
     nullable = "enable",
@@ -40,5 +61,7 @@ roslyn_xunit_test(
     nowarn = ["CS1570", "CS1587"],
     keyfile = ROSLYN_KEYFILE,
     compiler_options = ["/publicsign", "/nostdlib"],
+    native_tools = ["@dotnet_runtime//src/coreclr/ilasm"],
+    size = "enormous",
     visibility = ["//src/roslyn:__subpackages__"],
 )

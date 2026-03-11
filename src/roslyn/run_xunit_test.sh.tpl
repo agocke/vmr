@@ -10,12 +10,14 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
   { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
 # --- end runfiles.bash initialization v3 ---
 
-TEST_HOST="$(rlocation TEMPLATED_test_host)"
+TESTHOST="$(rlocation TEMPLATED_testhost)"
 XUNIT_CONSOLE="$(rlocation TEMPLATED_xunit_console)"
 ENTRY_DLL="$(rlocation TEMPLATED_entry_dll)"
+DEPSFILE="$(rlocation TEMPLATED_depsfile)"
+RUNTIMECONFIG="$(rlocation TEMPLATED_runtimeconfig)"
 
 # Run from the directory containing the test DLL so deps can be found
 RESOLVED_DIR="$(dirname "$(readlink -f "$ENTRY_DLL")")"
 cd "$RESOLVED_DIR"
 
-"$TEST_HOST/corerun" "$XUNIT_CONSOLE" "$ENTRY_DLL" -nologo "$@"
+"$TESTHOST/dotnet" exec --runtimeconfig "$RUNTIMECONFIG" --depsfile "$DEPSFILE" "$XUNIT_CONSOLE" "$ENTRY_DLL" -nologo -parallel none "$@"

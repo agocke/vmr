@@ -2,10 +2,11 @@
 #
 # Per-component configuration (matching MSBuild's -rc / -lc flags):
 #
-#   CoreCLR (clr_config):   debug (default), checked, release
+#   CoreCLR (clr_config):   checked (default), debug, release
 #   Libraries (libs_config): debug (default), release
 #
 # Use --config flags to select:
+#   --config=clr_debug       Debug CLR (unoptimized, -O0)
 #   --config=clr_checked     Checked CLR (debug asserts + release optimization)
 #   --config=clr_release     Release CLR
 #   --config=libs_release    Release libraries
@@ -17,9 +18,9 @@
 #   -c fastbuild Default (fast incremental builds)
 #
 # Examples:
-#   bazel build //...                                          # debug everything
+#   bazel build //...                                          # checked CLR + debug libs
 #   bazel build --config=release //...                         # release everything
-#   bazel build --config=clr_checked --config=libs_release //... # checked CLR + release libs
+#   bazel build --config=clr_debug //...                       # debug CLR (unoptimized)
 #   bazel build -c opt --config=clr_checked //...              # checked CLR + debug libs + -O2
 
 # --- Default compiler: Clang (matching CMake) ---
@@ -175,15 +176,26 @@ build --enable_platform_specific_config
 # src/native/native_defs.bzl.  The --config flags below set the
 # string_flag values that drive those select() expressions.
 
-# --- CoreCLR default: debug ---
-build --//:clr_config=debug
+# --- CoreCLR default: checked ---
+# Checked = debug asserts + release optimization (-O2).
+# Matches the typical dev inner-loop and avoids timing-sensitive bugs
+# that only manifest under -O0 (e.g. async output interleaving in
+# Roslyn tests). Use --config=clr_debug for unoptimized debug builds.
+build --//:clr_config=checked
 # When used as external module @dotnet_runtime, also set the module's flag
-build --@dotnet_runtime//:clr_config=debug
+build --@dotnet_runtime//:clr_config=checked
 
 # --- Libraries default: debug ---
 build --//:libs_config=debug
 # When used as external module @dotnet_runtime, also set the module's flag
 build --@dotnet_runtime//:libs_config=debug
+
+# =====================================================================
+# --config=clr_debug: Debug CoreCLR (unoptimized, -O0)
+# =====================================================================
+build:clr_debug --//:clr_config=debug
+# When used as external module @dotnet_runtime, also set the module's flag
+build:clr_debug --@dotnet_runtime//:clr_config=debug
 
 # =====================================================================
 # --config=clr_checked: Checked CoreCLR

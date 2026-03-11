@@ -18,6 +18,12 @@ roslyn_xunit_test(
             "Emit/NoPiaEmbedTypes.cs",
             # Needs Microsoft.CodeAnalysis.BuildTasks (MSBuildTask project)
             "Emit/CompilationEmitTests.cs",
+            # Uses VisualBasicCompilation (VB NuGet incompatible with live-built CodeAnalysis)
+            "CodeGen/CodeGenDynamicTests.cs",
+            "CodeGen/CodeGenExprLambdaTests.cs",
+            "CodeGen/CodeGenNullCoalescingAssignmentTests.cs",
+            "CodeGen/CodeGenOverridingAndHiding.cs",
+            "Emit/CovariantReturnTests.cs",
         ],
     ) + [
         ":assembly_info",
@@ -38,6 +44,12 @@ roslyn_xunit_test(
         "@paket.main//basic.reference.assemblies.net20",
         "@paket.main//basic.reference.assemblies.net40",
         "@paket.main//basic.reference.assemblies.net461",
+        "@paket.main//basic.reference.assemblies.net50",
+        "@paket.main//basic.reference.assemblies.net60",
+        "@paket.main//basic.reference.assemblies.net70",
+        "@paket.main//basic.reference.assemblies.net80",
+        "@paket.main//basic.reference.assemblies.net90",
+        "@paket.main//basic.reference.assemblies.net100",
         "@paket.main//basic.reference.assemblies.netstandard20",
     ],
     allow_unsafe_blocks = True,
@@ -46,5 +58,7 @@ roslyn_xunit_test(
     nowarn = ["CS1570", "CS1587"],
     keyfile = ROSLYN_KEYFILE,
     compiler_options = ["/publicsign", "/nostdlib"],
+    native_tools = ["@dotnet_runtime//src/coreclr/ilasm"],
+    size = "enormous",
     visibility = ["//src/roslyn:__subpackages__"],
 )

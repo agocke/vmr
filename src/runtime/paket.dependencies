@@ -37,7 +37,12 @@ nuget ICSharpCode.Decompiler 9.1.0.7988
 nuget Newtonsoft.Json 13.0.3
 nuget Basic.Reference.Assemblies.NetStandard20 1.8.3
 nuget Basic.Reference.Assemblies.Net20 1.8.3
+nuget Basic.Reference.Assemblies.Net50 1.8.3
+nuget Basic.Reference.Assemblies.Net60 1.8.3
 nuget Basic.Reference.Assemblies.Net70 1.8.3
+nuget Basic.Reference.Assemblies.Net80 1.8.3
+nuget Basic.Reference.Assemblies.Net90 1.8.3
+nuget Basic.Reference.Assemblies.Net100 1.8.3
 nuget Basic.Reference.Assemblies.Net40 1.8.3
 nuget Basic.Reference.Assemblies.Net461 1.8.3
 nuget Xunit.Combinatorial 1.6.24
