@@ -534,3 +534,49 @@ def live_csharp_library(
         target_frameworks = [ NETCOREAPP_CURRENT ],
         **kwargs
     )
+# ── Live ref-pack input (transition wrapper) ──────────────────────────
+#
+# Used by the VMR hybrid targeting pack to embed live runtime ref
+# assemblies into the targeting pack that the override flag installs.
+# Without this transition we get a cycle: the active targeting pack
+# depends on a csharp_library whose internal _targeting_pack attr is
+# itself transitioned to the active targeting pack (because the override
+# applies in every config, including the host config where the compiler
+# tool runs).
+#
+# The transition resets the override flag to "" along the dep edge, so
+# the wrapped csharp_library (and any csharp tools it pulls in) sees the
+# vanilla SDK pack via the lookup table, breaking the cycle.
+_OVERRIDE_FLAG = "@rules_dotnet//dotnet/private/sdk/targeting_packs:default_net10_0_pack_override"
+
+def _no_override_transition_impl(_settings, _attr):
+    return {_OVERRIDE_FLAG: ""}
+
+_no_override_transition = transition(
+    implementation = _no_override_transition_impl,
+    inputs = [],
+    outputs = [_OVERRIDE_FLAG],
+)
+
+def _live_ref_pack_input_impl(ctx):
+    # With `cfg = transition`, attr.label returns a list (the transition could
+    # in principle split, even though ours is 1:1). Pull the single entry out.
+    src = ctx.attr.src[0]
+    info = src[DotnetAssemblyCompileInfo]
+    return [DefaultInfo(files = depset(list(info.refs)))]
+
+live_ref_pack_input = rule(
+    implementation = _live_ref_pack_input_impl,
+    attrs = {
+        "src": attr.label(
+            cfg = _no_override_transition,
+            providers = [DotnetAssemblyCompileInfo],
+            mandatory = True,
+            doc = "A csharp_library (or any DotnetAssemblyCompileInfo provider) " +
+                  "whose ref DLLs will be folded into the VMR hybrid targeting pack.",
+        ),
+    },
+    doc = "Wrapper that builds its `src` with the targeting-pack override " +
+          "flag forced to empty. Use this on every runtime ref assembly that " +
+          "is part of the hybrid pack to avoid an analysis-time cycle.",
+)

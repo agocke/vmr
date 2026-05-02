@@ -14,3 +14,14 @@ string_flag(
     build_setting_default = "debug",
     visibility = ["//visibility:public"],
 )
+
+# Alias used by .bazelrc to point rules_dotnet's targeting pack override at
+# the runtime's hybrid pack. We can't put @dotnet_runtime//... in the override
+# flag value directly because the label is parsed in rules_dotnet's repo
+# context, where dotnet_runtime isn't visible. By using a root-module alias
+# (referenced as @@// in the flag value), we avoid that visibility problem.
+alias(
+    name = "vmr_targeting_pack_net10",
+    actual = "@dotnet_runtime//src/libraries:vmr_targeting_pack_net10",
+    visibility = ["//visibility:public"],
+)

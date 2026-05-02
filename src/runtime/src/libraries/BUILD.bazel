@@ -2,10 +2,12 @@ load(
     "@rules_dotnet//dotnet:defs.bzl",
     "csharp_library",
     "import_library",
+    "targeting_pack",
 )
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("defs.bzl",
+    "live_ref_pack_input",
     "netcoreapp_ref_assembly",
     "netcoreapp_impl_assembly",
     "ref_impl_pair",
@@ -659,5 +661,57 @@ import_library(
     refs = [
         "//src/libraries/Microsoft.CSharp:ref/Microsoft.CSharp.dll",
     ],
+    visibility = ["//visibility:public"],
+)
+# ── VMR hybrid targeting pack ─────────────────────────────────────────
+#
+# This target is selected by rules_dotnet's targeting_pack_transition when
+# the override flag
+#   //dotnet/private/sdk/targeting_packs:default_net10_0_pack_override
+# is set to point here. It lets the VMR substitute live runtime ref
+# assemblies into Roslyn (and other) builds without modifying any
+# downstream BUILD files.
+#
+# Mechanics: targeting_pack merges the framework_list dicts from each pack
+# in `packs` order, so entries from the *last* pack win. The SDK pack
+# supplies the full set of refs; the live overrides pack replaces selected
+# entries with runtime-built ref assemblies. collect_compile_info uses
+# the merged framework_list to pick which file goes onto the CSC /r: line
+# for each framework DLL.
+#
+# Today only System.Collections.Immutable is wired through. To add more,
+# extend the framework_list and refs of :_vmr_live_overrides_pack.
+import_library(
+    name = "_vmr_live_overrides_pack",
+    library_name = "Microsoft.NETCore.App.Ref.LiveOverrides",
+    version = "10.0.7",
+    refs = [
+        ":_live_ref_System.Collections.Immutable",
+    ],
+    framework_list = {
+        "system.collections.immutable": "10.0.0.0",
+    },
+    visibility = ["//visibility:private"],
+)
+
+# Wraps the runtime-built ref assembly in a configuration that disables
+# the targeting pack override, breaking what would otherwise be an
+# analysis-time cycle.
+live_ref_pack_input(
+    name = "_live_ref_System.Collections.Immutable",
+    src = "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+    visibility = ["//visibility:private"],
+)
+
+targeting_pack(
+    name = "vmr_targeting_pack_net10",
+    packs = [
+        # SDK pack first: provides the full set of net10.0 refs.
+        "@dotnet.targeting_packs//microsoft.netcore.app.ref.v10.0.7",
+        # Live overrides last: its framework_list entries override the SDK
+        # pack's, swapping selected DLLs for runtime-built ref assemblies.
+        ":_vmr_live_overrides_pack",
+    ],
+    target_framework = "net10.0",
     visibility = ["//visibility:public"],
 )

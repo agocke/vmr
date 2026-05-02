@@ -21,7 +21,7 @@ bazel_dep(name = "rules_dotnet")
 git_override(
     module_name = "rules_dotnet",
     remote = "https://github.com/agocke/rules_dotnet.git",
-    commit = "135a84744155442c7b1753e9d1a13fb6dfc1a401",
+    commit = "4fcde2a277b008c5d6b2a8c80b1294cb49ef7648",
 )
 
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")

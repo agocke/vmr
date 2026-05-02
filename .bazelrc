@@ -1,2 +1,8 @@
 # Import runtime build configuration
 import %workspace%/src/runtime/.bazelrc
+
+# When building from the VMR, substitute the SDK targeting pack for net10.0
+# with our hybrid pack from the runtime repo. Roslyn (and other consumers)
+# don't need to know about this — the swap happens during targeting_pack
+# resolution inside rules_dotnet.
+build --@rules_dotnet//dotnet/private/sdk/targeting_packs:default_net10_0_pack_override=@@//:vmr_targeting_pack_net10
