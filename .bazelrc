@@ -1,2 +1,6 @@
 # Import runtime build configuration
 import %workspace%/src/runtime/.bazelrc
+
+# Skip targets incompatible with the current platform (e.g. Linux-only
+# native libs when building on macOS) instead of failing.
+build --skip_incompatible_explicit_targets
