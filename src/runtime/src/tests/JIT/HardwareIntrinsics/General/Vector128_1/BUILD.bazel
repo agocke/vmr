@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Vector128_1_r",
+    srcs = [
+        "Program.Vector128_1.cs",
+        "//src/tests/JIT/HardwareIntrinsics/General/Shared:Program.cs",
+    ],
+)
+
+coreclr_test(
+    name = "Vector128_1_ro",
+    srcs = [
+        "Program.Vector128_1.cs",
+        "//src/tests/JIT/HardwareIntrinsics/General/Shared:Program.cs",
+    ],
+    optimize = True,
+)

@@ -1,15 +1,31 @@
-load("//:defs.bzl", "csharp_library")
+load("//:defs.bzl", "csharp_library", "gen_assembly_info", "gen_target_framework_attrs")
 
-genrule(
-    name = "AssemblyInfo",
-    outs = ["AssemblyInfo.g.cs"],
-    cmd = "echo '[assembly: System.Reflection.AssemblyFileVersion(\"10.0.0.0\")]' > $@",
+gen_assembly_info(
+    name = "assemblyinfo_ILCompiler.MetadataTransform",
+    out = "ILCompiler.MetadataTransform.AssemblyInfo.cs",
+    assembly_name = "ILCompiler.MetadataTransform",
+    cls_compliant = False,
+    is_aot_compatible = False,
+    include_serviceable = False,
+    include_description = False,
+    assembly_configuration = "Release",
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_ILCompiler.MetadataTransform",
+    out = ".NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
 )
 
 csharp_library(
     name = "ILCompiler.MetadataTransform",
+    nowarn = ["1591"],
+    msbuild_analyzer_config = "source",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    compiler_options = ["/warnaserror+:NU1605"],
     srcs = [
-        ":AssemblyInfo",
+        ":assemblyinfo_ILCompiler.MetadataTransform",
+        ":tfmattrs_ILCompiler.MetadataTransform",
         "ILCompiler/Metadata/EntityMap.cs",
         "ILCompiler/Metadata/IMetadataPolicy.cs",
         "ILCompiler/Metadata/MetadataTransform.cs",
@@ -48,9 +64,14 @@ csharp_library(
         "//src/coreclr/tools/Common:Internal/NativeFormat/NativeFormatWriterExtensions.cs",
     ],
     defines = ["NATIVEFORMAT_PUBLICWRITER"],
-    compiler_options = ["/unsafe"],
+    allow_unsafe_blocks = True,
+    analyzers = [
+        "//:source_build_analyzers",
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+    ],
     deps = [
         "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//microsoft.diasymreader",
     ],
     target_frameworks = ["net10.0"],
     visibility = ["//visibility:public"],

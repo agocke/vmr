@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Basic",
+    srcs = ["Basic.cs"],
+)
+
+coreclr_test(
+    name = "PrivateInitialize",
+    srcs = ["PrivateInitialize.cs"],
+)

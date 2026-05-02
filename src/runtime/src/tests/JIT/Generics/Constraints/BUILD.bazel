@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["Convert_static01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -12,6 +13,7 @@ coreclr_test(
     srcs = ["Transitive_static01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -20,6 +22,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -28,6 +31,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -35,6 +39,7 @@ coreclr_test(
     srcs = ["Call_instance01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -42,6 +47,7 @@ coreclr_test(
     srcs = ["Call_instance01.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -49,12 +55,14 @@ coreclr_test(
     srcs = ["Call_static01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
     name = "Call_instance01_r",
     srcs = ["Call_instance01.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -62,6 +70,7 @@ coreclr_test(
     srcs = ["Transitive_instance01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -69,4 +78,5 @@ coreclr_test(
     srcs = ["Convert_instance01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

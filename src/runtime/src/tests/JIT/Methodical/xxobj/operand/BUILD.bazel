@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["unbox_d.il", "unbox.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["unbox_r.il", "unbox.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["refanyval_d.il", "refanyval.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -26,6 +29,7 @@ il_coreclr_test(
     srcs = ["refanyval_r.il", "refanyval.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +37,7 @@ il_coreclr_test(
     srcs = ["mdarray_d.il", "mdarray.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -40,6 +45,7 @@ il_coreclr_test(
     srcs = ["const_r.il", "const.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -47,6 +53,7 @@ il_coreclr_test(
     srcs = ["mdarray_r.il", "mdarray.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -54,6 +61,7 @@ il_coreclr_test(
     srcs = ["ldelema_d.il", "ldelema.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -61,6 +69,7 @@ il_coreclr_test(
     srcs = ["ldelema_r.il", "ldelema.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -68,4 +77,5 @@ il_coreclr_test(
     srcs = ["const_d.il", "const.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

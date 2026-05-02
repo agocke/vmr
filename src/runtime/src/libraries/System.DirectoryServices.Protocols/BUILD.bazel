@@ -1,0 +1,46 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files(["ref/System.DirectoryServices.Protocols.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.DirectoryServices.Protocols",
+    srcs = ["ref/System.DirectoryServices.Protocols.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.DirectoryServices.Protocols",
+    include_editorconfig = False,
+    pnse = True,
+    pnse_message = "SR.DirectoryServicesProtocols_PlatformNotSupported",
+    pnse_ref_srcs = ["ref/System.DirectoryServices.Protocols.cs"],
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591", "CS3016", "NU5128"],
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    supported_os_platforms_short = ["windows"],
+    nullable = "disable",
+)
+
+ref_impl_pair(
+    name = "live_System.DirectoryServices.Protocols",
+    ref = ":ref_System.DirectoryServices.Protocols",
+    lib = ":impl_System.DirectoryServices.Protocols",
+    visibility = ["//visibility:public"],
+)

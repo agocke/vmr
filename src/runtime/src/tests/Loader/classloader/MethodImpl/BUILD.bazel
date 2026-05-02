@@ -1,0 +1,50 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "InternalMethodImplTest",
+    srcs = ["InternalMethodImplTest.cs"],
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+il_coreclr_test(
+    name = "generics_override1",
+    srcs = ["generics_override1.il"],
+)
+
+il_coreclr_test(
+    name = "override_override1",
+    srcs = ["override_override1.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "self_override1",
+    srcs = ["self_override1.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "self_override2",
+    srcs = ["Desktop/self_override2.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "self_override3",
+    srcs = ["self_override3.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "self_override5",
+    srcs = ["Desktop/self_override5.il"],
+    pri = 1,
+    size = "medium",
+)

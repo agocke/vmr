@@ -5,14 +5,14 @@ import_library(
     name = "GenFacadesNuGetFiles",
     library_name = "GenFacadesDlls",
     refs = [
-        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26102.102//:tools/net/Microsoft.DotNet.GenFacades.dll",
-        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26102.102//:tools/net/Microsoft.CodeAnalysis.dll",
-        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26102.102//:tools/net/Microsoft.CodeAnalysis.CSharp.dll",
+        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26170.102//:tools/net/Microsoft.DotNet.GenFacades.dll",
+        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26170.102//:tools/net/Microsoft.CodeAnalysis.dll",
+        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26170.102//:tools/net/Microsoft.CodeAnalysis.CSharp.dll",
     ],
     libs = [
-        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26102.102//:tools/net/Microsoft.DotNet.GenFacades.dll",
-        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26102.102//:tools/net/Microsoft.CodeAnalysis.dll",
-        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26102.102//:tools/net/Microsoft.CodeAnalysis.CSharp.dll",
+        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26170.102//:tools/net/Microsoft.DotNet.GenFacades.dll",
+        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26170.102//:tools/net/Microsoft.CodeAnalysis.dll",
+        "@nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26170.102//:tools/net/Microsoft.CodeAnalysis.CSharp.dll",
     ],
 )
 

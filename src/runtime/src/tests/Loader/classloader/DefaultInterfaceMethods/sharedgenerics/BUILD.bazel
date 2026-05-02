@@ -1,0 +1,16 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "non_virtual_calls_to_instance_methods",
+    srcs = ["non_virtual_calls_to_instance_methods.il"],
+)
+
+il_coreclr_test(
+    name = "sharedgenerics_d",
+    srcs = ["sharedgenerics.il"],
+)
+
+il_coreclr_test(
+    name = "sharedgenerics_r",
+    srcs = ["sharedgenerics.il"],
+)

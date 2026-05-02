@@ -20,8 +20,10 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.Loader",
+    include_editorconfig = False,
+    nowarn = ["CS1591"],
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
     ],
     partial_facade = True,
     generate_facades = True,

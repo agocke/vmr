@@ -22,7 +22,10 @@ ENTRY_DLL="$(rlocation TEMPLATED_entry_dll)"
 DEPSFILE="$(rlocation TEMPLATED_depsfile)"
 RUNTIMECONFIG="$(rlocation TEMPLATED_runtimeconfig)"
 
-RESOLVED_DIR="$(dirname "$(readlink -f "$XUNIT_CONSOLE")")"
+# Resolve the directory containing test outputs. Use pwd -P to resolve
+# directory-level symlinks but preserve file-level symlinks (which Bazel
+# uses for efficiency via ctx.actions.symlink).
+RESOLVED_DIR="$(cd "$(dirname "$XUNIT_CONSOLE")" && pwd -P)"
 
 if [ "TEMPLATED_writable_test_dir" = "true" ]; then
     # Copy all runtime files to a writable directory.  Bazel's linux-sandbox
@@ -30,8 +33,9 @@ if [ "TEMPLATED_writable_test_dir" = "true" ]; then
     # File.Move on files next to the assembly (e.g. PDB rename).
     WORK_DIR="${TEST_TMPDIR:-/tmp}/testdir"
     mkdir -p "$WORK_DIR"
-    # Copy everything including subdirectories (test data), then make writable.
-    cp -a "$RESOLVED_DIR"/. "$WORK_DIR/"
+    # Copy everything including subdirectories (test data), dereferencing
+    # symlinks (-L) so the work dir contains real writable files.
+    cp -RL "$RESOLVED_DIR"/. "$WORK_DIR/"
     chmod -R u+w "$WORK_DIR"
     cd "$WORK_DIR"
     XUNIT_CONSOLE="$WORK_DIR/$(basename "$XUNIT_CONSOLE")"

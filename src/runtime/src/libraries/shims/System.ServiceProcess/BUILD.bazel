@@ -1,8 +1,11 @@
+load("//:defs.bzl", "ECMA_SNK")
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.ServiceProcess",
-    skip_cs1591 = True,
+    generate_documentation_file = False,
+    library_import_generator = False,
+    skip_locals_init = False,
     srcs = [
         "src/System.ServiceProcess.cs",
     ],

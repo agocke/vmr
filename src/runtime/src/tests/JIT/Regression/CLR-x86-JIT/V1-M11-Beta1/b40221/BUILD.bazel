@@ -5,4 +5,5 @@ coreclr_test(
     srcs = ["b40221.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

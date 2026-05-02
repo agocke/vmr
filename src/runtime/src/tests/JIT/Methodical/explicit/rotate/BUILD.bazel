@@ -11,6 +11,7 @@ il_coreclr_test(
     srcs = ["rotate_i4_d.il", "rotate_i4.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -36,6 +37,7 @@ il_coreclr_test(
     srcs = ["rotate_i4_r.il", "rotate_i4.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -55,6 +57,7 @@ il_coreclr_test(
     srcs = ["rotate_u2_r.il", "rotate_u2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -74,4 +77,5 @@ il_coreclr_test(
     srcs = ["rotate_u2_d.il", "rotate_u2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

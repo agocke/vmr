@@ -17,6 +17,7 @@ il_coreclr_test(
     srcs = ["compat_i2_bool_r.il", "compat_i2_bool.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -42,6 +43,7 @@ il_coreclr_test(
     srcs = ["compat_i_u2_r.il", "compat_i_u2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -61,6 +63,7 @@ il_coreclr_test(
     srcs = ["compat_r4_r8_d.il", "compat_r4_r8.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -74,6 +77,7 @@ il_coreclr_test(
     srcs = ["compat_i_u2_d.il", "compat_i_u2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -93,6 +97,7 @@ il_coreclr_test(
     srcs = ["compat_r4_r8_inl_r.il", "compat_r4_r8_inl.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 # pointer_d is disabled (DisableProjectBuild=true, rva_statics support #2451)
@@ -134,6 +139,7 @@ il_coreclr_test(
     srcs = ["compat_r8_r4_r.il", "compat_r8_r4.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -153,6 +159,7 @@ il_coreclr_test(
     srcs = ["compat_r4_r8_inl_d.il", "compat_r4_r8_inl.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -166,6 +173,7 @@ il_coreclr_test(
     srcs = ["compat_i2_bool_d.il", "compat_i2_bool.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -197,6 +205,7 @@ il_coreclr_test(
     srcs = ["compat_i4_i1_r.il", "compat_i4_i1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -210,6 +219,7 @@ il_coreclr_test(
     srcs = ["compat_r8_r4_inl_d.il", "compat_r8_r4_inl.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -265,6 +275,7 @@ il_coreclr_test(
     srcs = ["test_3b_r.il", "test_3b.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -272,6 +283,7 @@ il_coreclr_test(
     srcs = ["compat_i4_i1_d.il", "compat_i4_i1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -285,6 +297,7 @@ il_coreclr_test(
     srcs = ["compat_r8_r4_inl_r.il", "compat_r8_r4_inl.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -298,6 +311,7 @@ il_coreclr_test(
     srcs = ["compat_r8_r4_d.il", "compat_r8_r4.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -349,6 +363,7 @@ il_coreclr_test(
     srcs = ["compat_r4_r8_r.il", "compat_r4_r8.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(

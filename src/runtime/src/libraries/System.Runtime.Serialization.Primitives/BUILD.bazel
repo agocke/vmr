@@ -13,6 +13,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.Serialization.Primitives",
+    nowarn = ["CS1591"],
     compiler_options = ["/unsafe"],
     srcs = [
         "src/System.Runtime.Serialization.Primitives.TypeForwards.cs",
@@ -34,6 +35,8 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Memory:ref_System.Memory",
     ],
     resx_file = "src/Resources/Strings.resx",
+
+    library_import_generator = False,
 )
 
 ref_impl_pair(

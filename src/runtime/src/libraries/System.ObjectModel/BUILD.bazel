@@ -14,6 +14,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.ObjectModel",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System.ObjectModel.Forwards.cs",
         "src/System/Collections/CollectionHelpers.cs",

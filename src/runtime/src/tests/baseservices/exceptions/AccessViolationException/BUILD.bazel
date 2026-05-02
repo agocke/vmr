@@ -1,0 +1,22 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "AVException01",
+    srcs = ["AVException01.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AVException02",
+    srcs = ["AVException02.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AVException03",
+    srcs = ["AVException03.cs"],
+    pri = 1,
+    size = "medium",
+)

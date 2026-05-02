@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "TypeMapLib1",
+    srcs = ["GroupTypes.cs"],
+)
+
+coreclr_test(
+    name = "TypeMapLib2",
+    srcs = ["Lib2.cs"],
+)

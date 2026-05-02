@@ -5,4 +5,5 @@ coreclr_test(
     srcs = ["GitHub_27027.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )

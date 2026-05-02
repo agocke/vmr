@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["25param3b_d.il", "25param3b.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -18,6 +19,7 @@ il_coreclr_test(
     srcs = ["25param3b_r.il", "25param3b.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -43,6 +45,7 @@ il_coreclr_test(
     srcs = ["25param1b_d.il", "25param1b.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -62,6 +65,7 @@ il_coreclr_test(
     srcs = ["25param1b_r.il", "25param1b.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -69,6 +73,7 @@ il_coreclr_test(
     srcs = ["25param2b_r.il", "25param2b.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -76,6 +81,7 @@ il_coreclr_test(
     srcs = ["25param2b_d.il", "25param2b.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -83,6 +89,7 @@ il_coreclr_test(
     srcs = ["25param2c_r.il", "25param2c.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(

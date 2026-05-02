@@ -17,6 +17,7 @@ il_coreclr_test(
     srcs = ["ldfld_mul_d.il", "ldfld_mul.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -24,6 +25,7 @@ il_coreclr_test(
     srcs = ["ldc_mul_d.il", "ldc_mul.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -43,6 +45,7 @@ il_coreclr_test(
     srcs = ["ldsfld_mul_d.il", "ldsfld_mul.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -74,6 +77,7 @@ il_coreclr_test(
     srcs = ["ldsfld_mul_r.il", "ldsfld_mul.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -87,6 +91,7 @@ il_coreclr_test(
     srcs = ["ldc_mul_r.il", "ldc_mul.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -94,6 +99,7 @@ il_coreclr_test(
     srcs = ["ldfld_mul_r.il", "ldfld_mul.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(

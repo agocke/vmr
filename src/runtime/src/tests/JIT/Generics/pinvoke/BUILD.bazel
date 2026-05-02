@@ -1,0 +1,41 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "instance01",
+    srcs = ["instance01.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "instance02",
+    srcs = ["instance02.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "instance03",
+    srcs = ["instance03.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "static01",
+    srcs = ["static01.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "static02",
+    srcs = ["static02.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)

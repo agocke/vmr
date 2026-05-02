@@ -1,7 +1,10 @@
 
 load(
     "//:defs.bzl",
-    "csharp_library"
+    "OPEN_SNK",
+    "csharp_library",
+    "gen_assembly_info",
+    "gen_target_framework_attrs",
 )
 
 exports_files([
@@ -11,36 +14,62 @@ exports_files([
 ])
 exports_files(glob(["src/**/*.cs"]))
 
+gen_assembly_info(
+    name = "assemblyinfo_System.Private.CoreLib.Generators",
+    out = "System.Private.CoreLib.Generators.AssemblyInfo.cs",
+    assembly_name = "System.Private.CoreLib.Generators",
+    assembly_version = "42.42.42.42",
+    is_trimmable = False,
+    is_aot_compatible = False,
+    include_neutral_resources_language = False,
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_System.Private.CoreLib.Generators",
+    out = ".NETStandard,Version=v2.0.AssemblyAttributes.cs",
+    framework_type = "netstandard",
+    major_version = "2",
+    minor_version = "0",
+)
+
 csharp_library(
     name = "System.Private.CoreLib.Generators",
+    keyfile = OPEN_SNK,
     srcs = glob(["gen/*.cs"]) + [
         "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
         "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.cs",
         "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.Pop.cs",
+        ":assemblyinfo_System.Private.CoreLib.Generators",
+        ":tfmattrs_System.Private.CoreLib.Generators",
     ],
     target_frameworks = ["netstandard2.0"],
     langversion = "preview",
-    nullable = "annotations",
-    allow_unsafe_blocks = True,
+    nullable = "enable",
     deps = [
         "@paket.main//microsoft.codeanalysis.common",
         "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.illink//system.numerics.vectors",
         "@paket.main//system.collections.immutable",
         "@paket.main//system.memory",
         "@paket.main//system.buffers",
+        "@paket.main//system.reflection.metadata",
+        "@paket.main//system.runtime.compilerservices.unsafe",
+        "@paket.illink//system.text.encoding.codepages",
+        "@paket.illink//system.threading.tasks.extensions",
     ],
+    analyzers = [
+        "//:source_build_analyzers",
+    ],
+    msbuild_analyzer_config = "source",
+    include_syslib_warnaserror = False,
+    extra_editorconfig_content = "dotnet_diagnostic.RS1036.severity = none",
     nowarn = [
         "CS3001",
-        "CS3003",
-        # MSBuild does not generate XML docs for generator projects
-        "CS1572",
-        "CS1574",
-        "CS1734",
-        # Nullable warnings from IntrinsicsInSystemPrivateCoreLibAnalyzer.cs (#nullable enable)
-        "CS8600",
-        "CS8602",
-        "CS8604",
+        "CS3021",
+        "CS1591",
+        "nullable",
     ],
-    defines = [ "MICROSOFT_INTEROP_SOURCEGENERATION", "BAZEL" ],
+    defines = ["BAZEL"],
     visibility = ["//visibility:public"],
 )

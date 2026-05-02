@@ -1,8 +1,37 @@
-load("//:defs.bzl", "csharp_library")
+load("//:defs.bzl", "csharp_library", "gen_assembly_info", "gen_target_framework_attrs", "resgen")
+
+resgen(
+    name = "TypeSystemResources",
+    out = "Internal.TypeSystem.Resources.resources",
+    resx_file = "//src/coreclr/tools/Common:TypeSystem/Common/Properties/Resources.resx",
+)
+
+exports_files(["BannedSymbols.txt"])
+
+gen_assembly_info(
+    name = "assemblyinfo_ILCompiler.TypeSystem",
+    out = "ILCompiler.TypeSystem.AssemblyInfo.cs",
+    assembly_name = "ILCompiler.TypeSystem",
+    cls_compliant = False,
+    is_aot_compatible = False,
+    include_serviceable = False,
+    include_description = False,
+    assembly_configuration = "Release",
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_ILCompiler.TypeSystem",
+    out = ".NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+)
 
 csharp_library(
     name = "ILCompiler.TypeSystem",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    nowarn = ["1591", "CA1859", "CA1866"],
     srcs = [
+        ":assemblyinfo_ILCompiler.TypeSystem",
+        ":tfmattrs_ILCompiler.TypeSystem",
         "//src/coreclr/tools/Common:TypeSystem/Common/ArrayMethod.Diagnostic.cs",
         "//src/coreclr/tools/Common:TypeSystem/Canon/ArrayType.Canon.cs",
         "//src/coreclr/tools/Common:TypeSystem/Canon/ByRefType.Canon.cs",
@@ -229,10 +258,24 @@ csharp_library(
         "//src/coreclr/tools/Common:TypeSystem/Sorting/TypeDesc.Sorting.cs",
         "//src/coreclr/tools/Common:TypeSystem/Sorting/TypeSystemComparer.cs",
     ],
-    compiler_options = ["/unsafe"],
+    compiler_options = ["/unsafe", "/warnaserror+:NU1605"],
+    resources = [":TypeSystemResources"],
+    resource_logical_names = {
+        "Internal.TypeSystem.Resources.resources": "Internal.TypeSystem.Strings.resources",
+    },
+    additionalfiles = [
+        ":BannedSymbols.txt",
+        "//src/coreclr/tools/Common:TypeSystem/Common/Properties/Resources.resx",
+    ],
     deps = [
         "@paket.main//microsoft.diasymreader",
     ],
     target_frameworks = ["net10.0"],
     visibility = ["//visibility:public"],
+    analyzers = [
+        "//:source_build_analyzers",
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+        "//:bannedapi_analyzers",
+    ],
+    msbuild_analyzer_config = "source",
 )

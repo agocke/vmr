@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "varargsupport",
+    srcs = ["varargsupport.il"],
+)
+
+il_coreclr_test(
+    name = "varargsupport_r",
+    srcs = ["varargsupport.il"],
+)

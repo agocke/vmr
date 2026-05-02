@@ -14,6 +14,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Xml.XPath.XDocument",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Xml/XPath/XDocumentExtensions.cs",
     ],

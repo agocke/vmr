@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["ldobj_R4_d.il", "ldobj_R4.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["ldobj_V_d.il", "ldobj_V.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["ldobj_R4_r.il", "ldobj_R4.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -26,6 +29,7 @@ il_coreclr_test(
     srcs = ["ldobj_I_r.il", "ldobj_I.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +37,7 @@ il_coreclr_test(
     srcs = ["ldobj_U2_d.il", "ldobj_U2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -40,6 +45,7 @@ il_coreclr_test(
     srcs = ["ldobj_U2_r.il", "ldobj_U2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -47,6 +53,7 @@ il_coreclr_test(
     srcs = ["ldobj_R8_d.il", "ldobj_R8.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -54,6 +61,7 @@ il_coreclr_test(
     srcs = ["ldobj_I_d.il", "ldobj_I.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -61,6 +69,7 @@ il_coreclr_test(
     srcs = ["ldobj_I8_r.il", "ldobj_I8.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -68,6 +77,7 @@ il_coreclr_test(
     srcs = ["ldobj_R8_r.il", "ldobj_R8.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -75,6 +85,7 @@ il_coreclr_test(
     srcs = ["ldobj_V_r.il", "ldobj_V.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -82,4 +93,5 @@ il_coreclr_test(
     srcs = ["ldobj_I8_d.il", "ldobj_I8.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

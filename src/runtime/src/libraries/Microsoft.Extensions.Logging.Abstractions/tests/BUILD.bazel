@@ -1,0 +1,5 @@
+# NOTE: The tests in this library are Roslyn source generator tests
+# (Microsoft.Extensions.Logging.Generators.Tests) that require
+# Microsoft.CodeAnalysis packages and analyzer project references,
+# which are not yet supported in the Bazel build infrastructure.
+# This BUILD file is a placeholder for future implementation.

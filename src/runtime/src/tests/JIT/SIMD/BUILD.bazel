@@ -26,6 +26,7 @@ coreclr_test(
     name = "StoreElement_r",
     srcs = ["StoreElement.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -116,6 +117,7 @@ coreclr_test(
     srcs = ["BugWithAVX.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -147,6 +149,7 @@ coreclr_test(
     name = "BoxUnbox_r",
     srcs = ["BoxUnbox.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -177,6 +180,7 @@ coreclr_test(
     srcs = ["Vector3GetHash.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -195,6 +199,7 @@ coreclr_test(
     name = "VectorCeilFloor_r",
     srcs = ["VectorCeilFloor.cs", "VectorUtil.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -218,6 +223,7 @@ coreclr_test(
     name = "Vector3GetHash_r",
     srcs = ["Vector3GetHash.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -294,6 +300,7 @@ coreclr_test(
     srcs = ["Ldind.cs"],
     pri = 1,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -305,6 +312,7 @@ coreclr_test(
     name = "BugWithAVX_r",
     srcs = ["BugWithAVX.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -360,6 +368,7 @@ coreclr_test(
     name = "VectorSqrt_r",
     srcs = ["VectorSqrt.cs", "VectorUtil.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -379,6 +388,7 @@ coreclr_test(
     pri = 1,
     optimize = True,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -430,6 +440,7 @@ coreclr_test(
     name = "Mul_r",
     srcs = ["Mul.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -592,6 +603,7 @@ coreclr_test(
     name = "VectorIntEquals_r",
     srcs = ["VectorIntEquals.cs", "VectorUtil.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(

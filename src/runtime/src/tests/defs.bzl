@@ -22,13 +22,17 @@ load(
 )
 load("@rules_dotnet//dotnet/private/macros:register_tfms.bzl", "get_tfm_value")
 load("@rules_dotnet//dotnet/private/sdk/targeting_packs:targeting_pack_transition.bzl", "targeting_pack_transition")
-load("//:defs.bzl", "csharp_library")
+load("//:defs.bzl", "ILLINK_TASKS_NET10_REPO", "ILLINK_TASKS_NET8_REPO", "ILLINK_TASKS_NET9_REPO", "csharp_library")
 load("//src/libraries:defs.bzl", "LIVE_REFPACK_DEPS")
 
 # Label for the Roslyn compiler server persistent worker binary.
 _SHARED_COMPILATION_WORKER = "@rules_dotnet//dotnet/private/tools/compiler_worker"
 
 COMMON_ATTRS = {
+    "pathmap": attr.string_dict(
+        doc = "Additional /pathmap entries for deterministic builds.",
+        default = {},
+    ),
     "deps": attr.label_list(
         doc = "Other libraries, binaries, or imported DLLs",
         providers = [DotnetAssemblyCompileInfo, DotnetAssemblyRuntimeInfo],
@@ -252,15 +256,15 @@ COMMON_ATTRS = {
         default = False,
     ),
     "_illink_analyzers_net8": attr.label(
-        default = "@nuget.microsoft.net.illink.tasks.v8.0.22//:analyzers_csharp",
+        default = "@{}//:analyzers_csharp".format(ILLINK_TASKS_NET8_REPO),
         allow_files = True,
     ),
     "_illink_analyzers_net9": attr.label(
-        default = "@nuget.microsoft.net.illink.tasks.v9.0.11//:analyzers_csharp",
+        default = "@{}//:analyzers_csharp".format(ILLINK_TASKS_NET9_REPO),
         allow_files = True,
     ),
     "_illink_analyzers_net10": attr.label(
-        default = "@nuget.microsoft.net.illink.tasks.v10.0.0//:analyzers_csharp",
+        default = "@{}//:analyzers_csharp".format(ILLINK_TASKS_NET10_REPO),
         allow_files = True,
     ),
 }
@@ -318,36 +322,6 @@ def create_launcher(ctx, runfiles, entry_dll):
     runfiles.extend(ctx.files._bash_runfiles)
 
     return launcher
-
-# Hints for Bazel spawn strategy
-COPY_EXECUTION_REQUIREMENTS = {
-    # ----------------+-----------------------------------------------------------------------------
-    # no-remote       | Prevents the action or test from being executed remotely or cached remotely.
-    #                 | This is equivalent to using both `no-remote-cache` and `no-remote-exec`.
-    # ----------------+-----------------------------------------------------------------------------
-    # no-cache        | Results in the action or test never being cached (remotely or locally)
-    # ----------------+-----------------------------------------------------------------------------
-    # See https://bazel.build/reference/be/common-definitions#common-attributes
-    #
-    # Copying file & directories is entirely IO-bound and there is no point doing this work
-    # remotely.
-    #
-    # Also, remote-execution does not allow source directory inputs, see
-    # https://github.com/bazelbuild/bazel/commit/c64421bc35214f0414e4f4226cc953e8c55fa0d2 So we must
-    # not attempt to execute remotely in that case.
-    #
-    # There is also no point pulling the output file or directory from the remote cache since the
-    # bytes to copy are already available locally. Conversely, no point in writing to the cache if
-    # no one has any reason to check it for this action.
-    #
-    # Read and writing to disk cache is disabled as well primarily to reduce disk usage on the local
-    # machine. A disk cache hit of a directory copy could be slghtly faster than a copy since the
-    # disk cache stores the directory artifact as a single entry, but the slight performance bump
-    # comes at the cost of heavy disk cache usage, which is an unmanaged directory that grow beyond
-    # the bounds of the physical disk.
-    "no-remote": "1",
-    "no-cache": "1",
-}
 
 def build_binary(ctx, compile_action):
     """Builds a .Net binary from a compilation action
@@ -418,17 +392,10 @@ def build_binary(ctx, compile_action):
     for dep in transitive_runtime_deps:
         for lib in dep.libs:
             if lib.extension == "dll":
-                src = lib
                 dst = ctx.actions.declare_file("%s/%s/%s" % (ctx.label.name, tfm, lib.basename))
-                ctx.actions.run_shell(
-                    inputs = [src],
-                    outputs = [dst],
-                    command = "cp -f \"$1\" \"$2\"",
-                    arguments = [src.path, dst.path],
-                    mnemonic = "CopyFile",
-                    progress_message = "Copying files",
-                    use_default_shell_env = True,
-                    execution_requirements = COPY_EXECUTION_REQUIREMENTS,
+                ctx.actions.symlink(
+                    output = dst,
+                    target_file = lib,
                 )
                 additional_runfiles.append(dst)
 

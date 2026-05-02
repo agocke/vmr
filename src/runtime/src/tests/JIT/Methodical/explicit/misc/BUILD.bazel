@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["refarg_box_val_d.il", "refarg_box_val.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["refarg_box_val_r.il", "refarg_box_val.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(

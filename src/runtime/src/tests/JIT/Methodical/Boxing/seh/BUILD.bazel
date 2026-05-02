@@ -6,6 +6,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -13,6 +14,7 @@ il_coreclr_test(
     srcs = ["filter_d.il", "filter.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -21,6 +23,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -28,6 +31,7 @@ il_coreclr_test(
     srcs = ["fault_d.il", "fault.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -35,6 +39,7 @@ il_coreclr_test(
     srcs = ["try_d.il", "try.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -43,4 +48,5 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )

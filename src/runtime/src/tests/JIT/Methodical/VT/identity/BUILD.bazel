@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["volatile_d.il", "volatile.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["accum_r.il", "accum.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["livecall_d.il", "livecall.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -26,6 +29,7 @@ il_coreclr_test(
     srcs = ["accum_d.il", "accum.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +37,7 @@ il_coreclr_test(
     srcs = ["volatile_r.il", "volatile.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -40,4 +45,5 @@ il_coreclr_test(
     srcs = ["livecall_r.il", "livecall.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

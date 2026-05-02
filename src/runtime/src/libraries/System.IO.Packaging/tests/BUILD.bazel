@@ -1,0 +1,30 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.IO.Packaging.Tests",
+    nowarn = MULTITARGET_NOWARN,
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = ["Tests.NetFramework.cs"],
+    ) + [
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelization.cs",
+        "//src/libraries/Common/tests:System/IO/WrappedStream.cs",
+    ],
+    deps = [
+        "//src/libraries/System.IO.Packaging:impl_System.IO.Packaging",
+        "//src/libraries/System.IO.Compression:ref_System.IO.Compression",
+        "//src/libraries/System.Net.Mail:ref_System.Net.Mail",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    data = ["@paket.main//system.io.packaging.testdata:content_files"],
+    size = "large",
+    keyfile = OPEN_SNK,
+)

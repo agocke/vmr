@@ -13,6 +13,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.WebHeaderCollection",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Net/HeaderInfo.cs",
         "src/System/Net/HeaderInfoTable.cs",

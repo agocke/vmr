@@ -1,0 +1,60 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Hosting.Systemd.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Hosting.Systemd",
+    srcs = [
+        "ref/Microsoft.Extensions.Hosting.Systemd.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Hosting:ref_Microsoft.Extensions.Hosting",
+        "//src/libraries/Microsoft.Extensions.Hosting.Abstractions:ref_Microsoft.Extensions.Hosting.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Hosting.Systemd",
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    allow_unsafe_blocks = True,
+    exclude_sr = True,
+    srcs = glob(
+        ["src/**/*.cs"],
+        exclude = [
+            "src/SystemdLifetime.netstandard.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/Interop/Unix/libc/Interop.GetParentPid.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+    ],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Hosting:ref_Microsoft.Extensions.Hosting",
+        "//src/libraries/Microsoft.Extensions.Hosting.Abstractions:ref_Microsoft.Extensions.Hosting.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Console:ref_Microsoft.Extensions.Logging.Console",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Sockets:ref_System.Net.Sockets",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Hosting.Systemd",
+    ref = ":ref_Microsoft.Extensions.Hosting.Systemd",
+    lib = ":impl_Microsoft.Extensions.Hosting.Systemd",
+    visibility = ["//visibility:public"],
+)

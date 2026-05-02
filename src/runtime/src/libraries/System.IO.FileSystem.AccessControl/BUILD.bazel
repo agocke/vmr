@@ -14,6 +14,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.FileSystem.AccessControl",
+    nowarn = ["CS1591"],
     pnse = True,
     resx_file = "src/Resources/Strings.resx",
     srcs = [
@@ -26,6 +27,8 @@ netcoreapp_impl_assembly(
             "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
         "//src/libraries/System.Memory:ref_System.Memory",
 ],
-    nullable = "annotations",
+    nullable = "enable",
     supported_os_platforms_short = ["windows"],
+    include_editorconfig = False,
+    library_import_generator = False,
 )

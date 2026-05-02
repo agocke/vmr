@@ -2,7 +2,7 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.Web",
-    skip_cs1591 = True,
+    skip_locals_init = False,
     srcs = [
         "src/System.Web.cs",
     ],
@@ -13,4 +13,6 @@ netcoreapp_impl_assembly(
     os_targeted = True,
     exclude_sr = True,
     assembly_version = "4.0.0.0",
+    generate_documentation_file = False,
+    library_import_generator = False,
 )

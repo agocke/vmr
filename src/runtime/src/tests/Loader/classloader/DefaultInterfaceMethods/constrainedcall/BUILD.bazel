@@ -1,0 +1,31 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "constrained2",
+    srcs = ["constrained2.il"],
+)
+
+il_coreclr_test(
+    name = "constrained2_brl",
+    srcs = ["constrained2_brl.il"],
+)
+
+il_coreclr_test(
+    name = "constrained2_gm",
+    srcs = ["constrained2_gm.il"],
+)
+
+il_coreclr_test(
+    name = "constrained3",
+    srcs = ["constrained3.il"],
+)
+
+il_coreclr_test(
+    name = "constrained3_gm",
+    srcs = ["constrained3_gm.il"],
+)
+
+il_coreclr_test(
+    name = "constrainedcall",
+    srcs = ["constrainedcall.il"],
+)

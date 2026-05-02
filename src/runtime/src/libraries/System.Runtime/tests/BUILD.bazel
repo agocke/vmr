@@ -1,0 +1,1068 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK", "csharp_library", "resgen")
+
+exports_files([
+    "System.Runtime.Tests/System/IndexTests.cs",
+    "System.Runtime.Tests/System/RangeTests.cs",
+    "System.Runtime.Tests/System/Text/Unicode/Utf8Tests.cs",
+    "System.Threading.Tasks.Extensions.Tests/ManualResetValueTaskSourceTests.cs",
+    "System.Threading.Tasks.Tests/System.Runtime.CompilerServices/ConfiguredAsyncDisposable.cs",
+    "System.Threading.Tasks.Tests/System.Runtime.CompilerServices/ConfiguredCancelableAsyncEnumerableTests.cs",
+])
+
+XUNIT_DEPS = [
+    "@paket.main//microsoft.dotnet.xunitassert",
+    "@paket.main//microsoft.dotnet.xunitextensions",
+    "@paket.main//xunit.abstractions",
+    "@paket.main//xunit.extensibility.core",
+]
+
+library_test(
+    name = "System.IO.FileSystem.Primitives.Tests",
+    srcs = glob(["System.IO.FileSystem.Primitives.Tests/**/*.cs"]),
+    deps = [
+        "//src/libraries/shims/System.IO.FileSystem.Primitives:impl_System.IO.FileSystem.Primitives",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "small",
+)
+
+library_test(
+    name = "System.IO.UnmanagedMemoryStream.Tests",
+    srcs = glob(["System.IO.UnmanagedMemoryStream.Tests/**/*.cs"]),
+    deps = [
+        "//src/libraries/shims/System.IO.UnmanagedMemoryStream:impl_System.IO.UnmanagedMemoryStream",
+        "//src/libraries/Common/tests:StreamConformanceTests",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+library_test(
+    name = "System.Runtime.CompilerServices.Unsafe.Tests",
+    srcs = glob(["System.Runtime.CompilerServices.Unsafe.Tests/**/*.cs"]),
+    deps = [
+        "//src/libraries/shims/System.Runtime.CompilerServices.Unsafe:impl_System.Runtime.CompilerServices.Unsafe",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "small",
+)
+
+library_test(
+    name = "System.Runtime.Handles.Tests",
+    srcs = glob(["System.Runtime.Handles.Tests/**/*.cs"]),
+    deps = [
+        "//src/libraries/shims/System.Runtime.Handles:impl_System.Runtime.Handles",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "small",
+)
+
+library_test(
+    name = "System.Security.SecureString.Tests",
+    srcs = glob(["System.Security.SecureString.Tests/**/*.cs"]),
+    deps = [
+        "//src/libraries/shims/System.Security.SecureString:impl_System.Security.SecureString",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "small",
+)
+
+library_test(
+    name = "System.ValueTuple.Tests",
+    srcs = glob(["System.ValueTuple.Tests/**/*.cs"]),
+    deps = [
+        "//src/libraries/shims/System.ValueTuple:impl_System.ValueTuple",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "small",
+)
+
+library_test(
+    name = "System.Diagnostics.Tools.Tests",
+    srcs = glob(["System.Diagnostics.Tools.Tests/**/*.cs"]),
+    deps = [
+        "//src/libraries/shims/System.Diagnostics.Tools:impl_System.Diagnostics.Tools",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "small",
+)
+
+library_test(
+    name = "System.Resources.Reader.Tests",
+    srcs = glob(["System.Resources.Reader.Tests/**/*.cs"]),
+    deps = [
+        "//src/libraries/shims/System.Resources.Reader:impl_System.Resources.Reader",
+        "//src/libraries/System.Resources.Writer:ref_System.Resources.Writer",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "small",
+)
+
+library_test(
+    name = "System.Buffers.Tests",
+    srcs = glob(["System.Buffers.Tests/**/*.cs"]) + [
+        "//src/libraries/Common/tests:System/Diagnostics/Tracing/TestEventListener.cs",
+    ],
+    deps = [
+        "//src/libraries/shims/System.Buffers:impl_System.Buffers",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+library_test(
+    name = "System.Threading.Timer.Tests",
+    srcs = glob(["System.Threading.Timer.Tests/**/*.cs"]) + [
+        "//src/libraries/Common/tests:System/Threading/ThreadTestHelpers.cs",
+    ],
+    deps = [
+        "//src/libraries/shims/System.Threading.Timer:impl_System.Threading.Timer",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+library_test(
+    name = "System.Threading.Tasks.Extensions.Tests",
+    srcs = glob(["System.Threading.Tasks.Extensions.Tests/**/*.cs"]) + [
+        "//src/libraries/Common/tests:System/Threading/Tasks/Sources/ManualResetValueTaskSource.cs",
+        "//src/libraries/Common/tests:System/Threading/Tasks/Sources/ManualResetValueTaskSourceFactory.cs",
+        "//src/libraries/Common/tests:System/Threading/Tasks/GetStateMachineData.cs",
+    ],
+    deps = [
+        "//src/libraries/shims/System.Threading.Tasks.Extensions:impl_System.Threading.Tasks.Extensions",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries/shims/System.Security:impl_System.Security",
+        "//src/libraries:ref_System.Threading.Tasks",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+library_test(
+    name = "System.Threading.Tasks.Tests",
+    srcs = glob(["System.Threading.Tasks.Tests/**/*.cs"]) + [
+        "//src/libraries/Common/tests:System/Diagnostics/Tracing/TestEventListener.cs",
+        "//src/libraries/Common/tests:System/Threading/ThreadPoolHelpers.cs",
+        "//src/libraries/Common/tests:System/Threading/Tasks/TaskTimeoutExtensions.cs",
+    ],
+    deps = [
+        "//src/libraries/shims/System.Threading.Tasks:impl_System.Threading.Tasks",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Linq.AsyncEnumerable:ref_System.Linq.AsyncEnumerable",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries:ref_Microsoft.CSharp",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "large",
+)
+
+library_test(
+    name = "System.Dynamic.Runtime.Tests",
+    srcs = glob(["System.Dynamic.Runtime.Tests/**/*.cs"]),
+    nowarn = [
+        "67", "168", "219", "414", "162", "184", "458", "464",
+        "78", "169", "114", "693", "108", "1981", "649", "109",
+        "1066", "3021", "3026", "3002", "3014", "3022", "660",
+        "661", "429", "xUnit1013",
+    ],
+    deps = [
+        "//src/libraries:ref_Microsoft.CSharp",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "large",
+)
+
+library_test(
+    name = "System.Globalization.Calendars.Tests",
+    srcs = glob(
+        ["System.Globalization.Calendars.Tests/**/*.cs"],
+        exclude = [
+            "System.Globalization.Calendars.Tests/CalendarTestWithConfigSwitch/**",
+            "System.Globalization.Calendars.Tests/Hybrid/**",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/RandomDataGenerator.cs",
+    ],
+    deps = [
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+# NOTE: System.Diagnostics.Debug.Tests uses CompileUsingReferenceAssemblies=false
+# to access DebugProvider from System.Private.CoreLib internals.
+# Files DebugTests.cs and DebugTestsUsingListeners.cs reference CoreLib-internal
+# types and must be excluded until CoreLib impl assembly is available as a Bazel dep.
+library_test(
+    name = "System.Diagnostics.Debug.Tests",
+    srcs = glob(
+        ["System.Diagnostics.Debug.Tests/**/*.cs"],
+        exclude = [
+            # These files use internal types (DebugProvider, DefaultTraceListener)
+            # from CoreLib impl assembly which is not yet available as a Bazel dep.
+            "System.Diagnostics.Debug.Tests/DebugTests.cs",
+            "System.Diagnostics.Debug.Tests/DebugTestsNoListeners.cs",
+            "System.Diagnostics.Debug.Tests/DebugTestsNoListeners.Interpolation.cs",
+            "System.Diagnostics.Debug.Tests/DebugTestsUsingListeners.cs",
+        ],
+    ),
+    deps = [
+        "//src/libraries/shims/System.Diagnostics.Debug:impl_System.Diagnostics.Debug",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "small",
+)
+
+library_test(
+    name = "System.Globalization.Extensions.Tests",
+    srcs = glob(["System.Globalization.Extensions.Tests/**/*.cs"]),
+    deps = [
+        "//src/libraries/shims/System.Globalization.Extensions:impl_System.Globalization.Extensions",
+        "//src/libraries:ref_System.Threading.Tasks",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    resources = glob(
+        ["System.Globalization.Extensions.Tests/IdnMapping/Data/**/*.txt",
+         "System.Globalization.Extensions.Tests/Normalization/Data/*.txt"],
+        exclude = ["System.Globalization.Extensions.Tests/IdnMapping/Data/**/ReadMe.txt"],
+    ),
+    resource_logical_names = {
+        "System.Globalization.Extensions.Tests/IdnMapping/Data/Unicode_6_0/IdnaTest_6.txt": "System.Globalization.Extensions.Tests.IdnMapping.Data.Unicode_6_0.IdnaTest_6.txt",
+        "System.Globalization.Extensions.Tests/IdnMapping/Data/Unicode_Win7/IdnaTest_Win7.txt": "System.Globalization.Extensions.Tests.IdnMapping.Data.Unicode_Win7.IdnaTest_Win7.txt",
+        "System.Globalization.Extensions.Tests/IdnMapping/Data/Unicode_9_0/IdnaTest_9.txt": "System.Globalization.Extensions.Tests.IdnMapping.Data.Unicode_9_0.IdnaTest_9.txt",
+        "System.Globalization.Extensions.Tests/IdnMapping/Data/Unicode_11_0/IdnaTest_11.txt": "System.Globalization.Extensions.Tests.IdnMapping.Data.Unicode_11_0.IdnaTest_11.txt",
+        "System.Globalization.Extensions.Tests/IdnMapping/Data/Unicode_13_0/IdnaTest_13.txt": "System.Globalization.Extensions.Tests.IdnMapping.Data.Unicode_13_0.IdnaTest_13.txt",
+        "System.Globalization.Extensions.Tests/IdnMapping/Data/Unicode_15_0/IdnaTest_15_0.txt": "System.Globalization.Extensions.Tests.IdnMapping.Data.Unicode_15_0.IdnaTest_15_0.txt",
+        "System.Globalization.Extensions.Tests/IdnMapping/Data/Unicode_15_1/IdnaTest_15_1.txt": "System.Globalization.Extensions.Tests.IdnMapping.Data.Unicode_15_1.IdnaTest_15_1.txt",
+        "System.Globalization.Extensions.Tests/IdnMapping/Data/Unicode_16_0/IdnaTest_16.txt": "System.Globalization.Extensions.Tests.IdnMapping.Data.Unicode_16_0.IdnaTest_16.txt",
+        "System.Globalization.Extensions.Tests/IdnMapping/Data/Unicode_17_0/IdnaTest_17.txt": "System.Globalization.Extensions.Tests.IdnMapping.Data.Unicode_17_0.IdnaTest_17.txt",
+        "System.Globalization.Extensions.Tests/Normalization/Data/win8.txt": "NormalizationDataWin8",
+        "System.Globalization.Extensions.Tests/Normalization/Data/win7.txt": "NormalizationDataWin7",
+    },
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+library_test(
+    name = "System.Globalization.Tests",
+    srcs = glob(
+        ["System.Globalization.Tests/**/*.cs"],
+        exclude = [
+            "System.Globalization.Tests/Hybrid/**",
+            "System.Globalization.Tests/Invariant/**",
+            "System.Globalization.Tests/IcuAppLocal/**",
+            "System.Globalization.Tests/NlsTests/**",
+            "System.Globalization.Tests/CultureInfo/CultureInfoGetCultures.cs",
+            "System.Globalization.Tests/CultureInfo/CultureInfoThreeLetterISOInfo.cs",
+            # CharUnicodeInfoTests and GraphemeBreakTest depend on TestUtilities.Unicode
+            # (CodePoint type) and Microsoft.VisualBasic which are not yet available.
+            "System.Globalization.Tests/System/Globalization/CharUnicodeInfoTests.cs",
+            "System.Globalization.Tests/System/Globalization/CharUnicodeInfoTests.Generated.cs",
+            "System.Globalization.Tests/System/Globalization/CharUnicodeInfoTestData.cs",
+            "System.Globalization.Tests/System/Globalization/GraphemeBreakTest.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/RandomDataGenerator.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries:ref_System.Threading.Tasks",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    resources = [
+        "@nuget.system.private.runtime.unicodedata.v10.0.0-beta.25418.1//:contentFiles/any/any/16.0.0/ucd/auxiliary/GraphemeBreakTest.txt",
+        "@nuget.system.private.runtime.unicodedata.v10.0.0-beta.25418.1//:contentFiles/any/any/16.0.0/ucd/UnicodeData.txt",
+    ],
+    resource_logical_names = {
+        "GraphemeBreakTest.txt": "GraphemeBreakTest.txt",
+        "UnicodeData.txt": "UnicodeData.txt",
+    },
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "large",
+)
+
+library_test(
+    name = "System.IO.FileSystem.Tests",
+    srcs = glob(
+        ["System.IO.FileSystem.Tests/**/*.cs"],
+        exclude = [
+            "System.IO.FileSystem.Tests/FileSystemTest.Windows.cs",
+            "System.IO.FileSystem.Tests/FileSystemTest.Browser.cs",
+            "System.IO.FileSystem.Tests/Directory/Delete.Windows.cs",
+            "System.IO.FileSystem.Tests/Directory/CreateDirectory_UnixFileMode.Windows.cs",
+            "System.IO.FileSystem.Tests/File/EncryptDecrypt.Windows.cs",
+            "System.IO.FileSystem.Tests/FileStream/ctor_options.Windows.cs",
+            "System.IO.FileSystem.Tests/FileStream/ctor_options.Browser.cs",
+            "System.IO.FileSystem.Tests/FileStream/FileStreamConformanceTests.Windows.cs",
+            "System.IO.FileSystem.Tests/Junctions.Windows.cs",
+            "System.IO.FileSystem.Tests/RandomAccess/Mixed.Windows.cs",
+            "System.IO.FileSystem.Tests/RandomAccess/NoBuffering.Windows.cs",
+            "System.IO.FileSystem.Tests/RandomAccess/SectorAlignedMemory.Windows.cs",
+            "System.IO.FileSystem.Tests/VirtualDriveSymbolicLinks.Windows.cs",
+            "System.IO.FileSystem.Tests/ManualTests/**",
+            # DisabledFileLockingTests is a separate test project with its own runtimeconfig
+            # (System.IO.DisableFileLocking=true); can't mix with the main FileSystem test
+            "System.IO.FileSystem.Tests/DisabledFileLockingTests/**",
+            # RandomAccess_SetLength writes to /tmp which is restricted in Bazel sandbox
+            "System.IO.FileSystem.Tests/RandomAccess/SetLength.cs",
+            # SetUser/SetGroup (setuid/setgid) tests fail on macOS sandbox which strips
+            # these bits for non-root processes. Exclude on all platforms for CI stability.
+            "System.IO.FileSystem.Tests/Base/BaseGetSetUnixFileMode.cs",
+            "System.IO.FileSystem.Tests/File/GetSetUnixFileMode.cs",
+            "System.IO.FileSystem.Tests/File/GetSetUnixFileMode_SafeFileHandle.cs",
+            "System.IO.FileSystem.Tests/DirectoryInfo/GetSetUnixFileMode.cs",
+            "System.IO.FileSystem.Tests/FileInfo/GetSetUnixFileMode.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/System/IO/PathInternal.CaseSensitivity.cs",
+        "//src/libraries/Common/tests:System/Buffers/NativeMemoryManager.cs",
+        "//src/libraries/Common/tests:System/IO/TempFile.cs",
+        "//src/libraries/Common/tests:System/IO/PathFeatures.cs",
+        "//src/libraries/Common/tests:System/IO/ReparsePointUtilities.cs",
+        "//src/libraries/Common/tests:Tests/TheoryDataExtensions.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelization.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+    ],
+    deps = [
+        "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        "//src/libraries/System.IO.FileSystem.DriveInfo:ref_System.IO.FileSystem.DriveInfo",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/Common/tests:StreamConformanceTests",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    data = ["System.IO.FileSystem.Tests/DirectoryInfo/test-dir/dummy.txt"],
+    allow_unsafe_blocks = True,
+    writable_test_dir = True,
+    keyfile = OPEN_SNK,
+    size = "large",
+    # 6/8700 tests fail on macOS: SettingUpdatesPropertiesAfterAnother (base class
+    # tests that set file timestamps fail in macOS sandbox — utimes silently fails).
+    # Can't exclude individual methods from abstract base class.
+    tags = ["manual"],
+)
+
+# MSBuild embeds EmbeddedImage.png and EmbeddedTextFile.txt twice each with
+# different logical names. Bazel resource_logical_names only supports one
+# logical name per file path, so copy the files to get distinct paths.
+genrule(
+    name = "reflection_EmbeddedImage1",
+    srcs = ["System.Reflection.Tests/Resources/EmbeddedImage.png"],
+    outs = ["System.Reflection.Tests/Resources/EmbeddedImage1.png"],
+    cmd = "cp $< $@",
+)
+
+genrule(
+    name = "reflection_EmbeddedTextFile1",
+    srcs = ["System.Reflection.Tests/Resources/EmbeddedTextFile.txt"],
+    outs = ["System.Reflection.Tests/Resources/EmbeddedTextFile1.txt"],
+    cmd = "cp $< $@",
+)
+
+library_test(
+    name = "System.Reflection.Tests",
+    srcs = glob(
+        ["System.Reflection.Tests/**/*.cs"],
+        exclude = [
+            "System.Reflection.Tests/AssemblyVersion/**",
+            "System.Reflection.Tests/CoreCLR/**",
+            "System.Reflection.Tests/ForwardedTypesAssembly/**",
+            "System.Reflection.Tests/Hello工程123/**",
+            "System.Reflection.Tests/InvokeEmit/**",
+            "System.Reflection.Tests/InvokeInterpreted/**",
+            "System.Reflection.Tests/TestAssembly/**",
+            "System.Reflection.Tests/TestExe/**",
+            "System.Reflection.Tests/UnloadableAssembly/**",
+            # These files depend on ForwardedTypesAssembly/TestAssembly helper projects
+            # that are not yet wired as Bazel deps.
+            "System.Reflection.Tests/AssemblyTests.cs",
+            "System.Reflection.Tests/GetTypeTests.cs",
+            "System.Reflection.Tests/AssemblyNameTests.cs",
+            "System.Reflection.Tests/FieldInfoTests.cs",
+            "System.Reflection.Tests/MethodInfoTests.cs",
+            "System.Reflection.Tests/MethodCommonTests.cs",
+            "System.Reflection.Tests/MethodInvokerTests.cs",
+        ],
+    ) + [
+        "//src/libraries/System.Runtime/tests/System.Reflection.Tests/TestAssembly:EquivalentValueType.cs",
+        "//src/libraries/Common/tests:System/Reflection/MockParameterInfo.cs",
+        "//src/libraries/Common/tests:System/MockType.cs",
+        "//src/libraries/Common/tests:System/IO/TempFile.cs",
+    ],
+    nowarn = ["SYSLIB0013", "SYSLIB0037"],
+    deps = [
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.TypeExtensions:ref_System.Reflection.TypeExtensions",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    resources = [
+        "System.Reflection.Tests/Resources/EmbeddedImage.png",
+        ":reflection_EmbeddedImage1",
+        "System.Reflection.Tests/Resources/EmbeddedTextFile.txt",
+        ":reflection_EmbeddedTextFile1",
+        "System.Reflection.Tests/Resources/ResourceTextFile.txt",
+    ],
+    resource_logical_names = {
+        "EmbeddedImage.png": "EmbeddedImage.png",
+        "EmbeddedImage1.png": "System.Reflection.Tests.EmbeddedImage1.png",
+        "EmbeddedTextFile.txt": "EmbeddedTextFile.txt",
+        "EmbeddedTextFile1.txt": "System.Reflection.Tests.EmbeddedTextFile1.txt",
+        "ResourceTextFile.txt": "ResourceTextFile.txt",
+    },
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "large",
+)
+
+# NOTE: System.Resources.ResourceManager.Tests requires System.Drawing.Common (NuGet),
+# System.Resources.Extensions, System.Runtime.Serialization.Formatters, resx-generated
+# code, and satellite assemblies. Ported with available deps; satellite assemblies and
+# .resources content files may need additional work.
+#
+# MSBuild compiles .resx files to .resources before embedding. The neutral
+# .resx files (AToZResx, CustomReader, TestResx) are compiled via resgen;
+# satellite .resx files are passed as /additionalfile only (for analyzers).
+resgen(
+    name = "resgen_AToZResx",
+    out = "AToZResx.resources",
+    resx_file = "System.Resources.ResourceManager.Tests/Resources/AToZResx.resx",
+)
+
+resgen(
+    name = "resgen_CustomReader",
+    out = "CustomReader.resources",
+    resx_file = "System.Resources.ResourceManager.Tests/Resources/CustomReader.resx",
+)
+
+resgen(
+    name = "resgen_TestResx",
+    out = "TestResx.resources",
+    resx_file = "System.Resources.ResourceManager.Tests/Resources/TestResx.resx",
+)
+
+library_test(
+    name = "System.Resources.ResourceManager.Tests",
+    srcs = glob(
+        ["System.Resources.ResourceManager.Tests/**/*.cs"],
+        exclude = [
+            # Uses System.Drawing types (NuGet not available in Bazel)
+            "System.Resources.ResourceManager.Tests/ResourceManagerTests.cs",
+            "System.Resources.ResourceManager.Tests/Resources/TestResx.netstandard17.Designer.cs",
+            # TrimCompatibilityTests expects NotSupportedException but gets MissingManifestResourceException
+            # because the feature switch is not active without trimming
+            "System.Resources.ResourceManager.Tests/TrimCompatibilityTests.cs",
+        ],
+    ),
+    deps = [
+        "//src/libraries/shims/System.Resources.ResourceManager:impl_System.Resources.ResourceManager",
+        "//src/libraries/System.Resources.Extensions:ref_System.Resources.Extensions",
+        "//src/libraries/System.Resources.Writer:ref_System.Resources.Writer",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    resources = [
+        ":resgen_AToZResx",
+        ":resgen_CustomReader",
+        ":resgen_TestResx",
+        "System.Resources.ResourceManager.Tests/Resources/TestResx.netstandard17.resources",
+    ],
+    resource_logical_names = {
+        "AToZResx.resources": "System.Resources.Tests.Resources.AToZResx.resources",
+        "CustomReader.resources": "System.Resources.Tests.Resources.CustomReader.resources",
+        "TestResx.resources": "System.Resources.Tests.Resources.TestResx.resources",
+        "TestResx.netstandard17.resources": "System.Resources.Tests.Resources.TestResx.netstandard17.resources",
+    },
+    additionalfiles = glob([
+        "System.Resources.ResourceManager.Tests/Resources/*.resx",
+    ]),
+    data = [
+        "System.Resources.ResourceManager.Tests/Resources/TestResx.netstandard17.resources",
+        "System.Resources.ResourceManager.Tests/Resources/bitmap.bmp",
+        "System.Resources.ResourceManager.Tests/Resources/icon.ico",
+    ],
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+library_test(
+    name = "System.Runtime.Extensions.Tests",
+    srcs = glob(
+        ["System.Runtime.Extensions.Tests/**/*.cs"],
+        exclude = [
+            "System.Runtime.Extensions.Tests/AssemblyResolveTestApp/**",
+            "System.Runtime.Extensions.Tests/TestAppOutsideOfTPA/**",
+            "System.Runtime.Extensions.Tests/VoidMainWithExitCodeApp/**",
+            "System.Runtime.Extensions.Tests/TestApp/**",
+            "System.Runtime.Extensions.Tests/TargetFrameworkNameTestApp/**",
+            # Environment.ProcessorCount.cs uses Win32Exception (Windows-only)
+            "System.Runtime.Extensions.Tests/System/Environment.ProcessorCount.cs",
+            # AppDomainTests needs AssemblyResolveTestApp/TestApp/TargetFrameworkNameTestApp
+            # helper assemblies loaded by name at runtime (not available in Bazel sandbox)
+            "System.Runtime.Extensions.Tests/System/AppDomainTests.cs",
+            # GetCommandLineArgs uses RemoteExecutor with path assertions that don't work in Bazel
+            "System.Runtime.Extensions.Tests/System/Environment.GetCommandLineArgs.cs",
+            # Environment_Exit needs VoidMainWithExitCodeApp helper binary (not loadable in sandbox)
+            "System.Runtime.Extensions.Tests/System/Environment.Exit.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetHostName.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        "//src/libraries/Common/tests:System/Diagnostics/DebuggerAttributes.cs",
+        "//src/libraries/Common/tests:System/GenericMathTestMemberData.cs",
+        "//src/libraries/Common/tests:System/IO/PathFeatures.cs",
+        "//src/libraries/Common/tests:System/ShouldNotBeInvokedException.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/ByteUtils.cs",
+    ],
+    defines = ["Unix"],
+    deps = [
+        "//src/libraries/shims/System.Runtime.Extensions:impl_System.Runtime.Extensions",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Security.Claims:ref_System.Security.Claims",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "large",
+    # 2/2500 tests fail on macOS: EnvironmentTests.OSVersion_ValidVersion_OSX (revision
+    # 0 vs -1) and GetFolderPath_Unix_PersonalIsDocumentsAndUserProfile (sandbox HOME
+    # mismatch). Can't exclude EnvironmentTests.cs (shared MemberData dependency).
+    tags = ["manual"],
+)
+
+library_test(
+    name = "System.Text.Encoding.Tests",
+    srcs = glob(["System.Text.Encoding.Tests/**/*.cs"]) + [
+        "//src/libraries/Common/tests:System/RandomDataGenerator.cs",
+        "//src/libraries/Common/tests:System/IO/ConnectedStreams.cs",
+        "//src/libraries/Common:src/System/Net/ArrayBuffer.cs",
+        "//src/libraries/Common:src/System/Net/MultiArrayBuffer.cs",
+        "//src/libraries/Common:src/System/Net/StreamBuffer.cs",
+    ],
+    nowarn = ["SYSLIB0001"],
+    deps = [
+        "//src/libraries/shims/System.Text.Encoding:impl_System.Text.Encoding",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.IO.Pipelines:ref_System.IO.Pipelines",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:StreamConformanceTests",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//moq",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "large",
+    runtimeconfig_properties = {
+        "System.Text.Encoding.EnableUnsafeUTF7Encoding": "true",
+    },
+)
+
+# NOTE: System.Runtime.Tests is very large and has dependencies on helper IL projects
+# (TestILAssembly, TestLoadAssembly, TestCollectibleAssembly, TestModule, TestStructs)
+# and the UnicodeData NuGet package. These helper projects are not yet ported to Bazel.
+# The test is included with available sources; some tests depending on helper assemblies
+# may fail at runtime until those projects are ported.
+library_test(
+    name = "System.Runtime.Tests",
+    srcs = glob(
+        ["System.Runtime.Tests/**/*.cs"],
+        exclude = [
+            "System.Runtime.Tests/TestCollectibleAssembly/**",
+            "System.Runtime.Tests/TestLoadAssembly/**",
+            "System.Runtime.Tests/TestModule/**",
+            "System.Runtime.Tests/TestStructs/**",
+            "System.Runtime.Tests/TrimmingTests/**",
+            "System.Runtime.Tests/Hybrid/**",
+            "System.Runtime.Tests/InvariantTimezone/**",
+            "System.Runtime.Tests/NlsTests/**",
+            # InlineArrayTests.cs has non-static methods in static class - compile error
+            "System.Runtime.Tests/System/Runtime/CompilerServices/InlineArrayTests.cs",
+            # ActivatorTests use types from excluded TestStructs IL project
+            "System.Runtime.Tests/System/ActivatorTests.cs",
+            "System.Runtime.Tests/System/ActivatorTests.Generic.cs",
+            # CharTests and RuneTests use UnicodeData NuGet package (not available in Bazel)
+            "System.Runtime.Tests/System/CharTests.cs",
+            "System.Runtime.Tests/System/Text/RuneTests.cs",
+            # ModuleTests uses TestModule helper project (excluded)
+            "System.Runtime.Tests/System/Reflection/ModuleTests.cs",
+            # FieldInfoTests uses TestAttributes namespace from ModuleTests.cs
+            "System.Runtime.Tests/System/Reflection/FieldInfoTests.cs",
+            # NullabilityInfoContextTests needs TestLoadAssembly IL helper (not ported)
+            "System.Runtime.Tests/System/Reflection/NullabilityInfoContextTests.cs",
+            # IsCollectibleTests needs TestCollectibleAssembly helper (not ported)
+            "System.Runtime.Tests/System/Reflection/IsCollectibleTests.cs",
+            # TimeZoneInfoTests.Invariant.cs expects InvariantGlobalization mode (separate test target)
+            "System.Runtime.Tests/System/TimeZoneInfoTests.Invariant.cs",
+            # Attributes.cs expects MSBuild-generated assembly info attributes not present in Bazel
+            "System.Runtime.Tests/System/Attributes.cs",
+            # NullableMetadataTests needs System.Security.Permissions assembly at runtime
+            "System.Runtime.Tests/System/NullableMetadataTests.cs",
+            # ExceptionTests.ThrowStatement* tests check stack trace line numbers that differ
+            # between debug and release builds (Bazel builds in release mode)
+            "System.Runtime.Tests/System/ExceptionTests.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/EnumTypes.cs",
+        "//src/libraries/Common/tests:System/FunctionPointerTests.cs",
+        "//src/libraries/Common/tests:System/FunctionPointerCallingConventionTests.cs",
+        "//src/libraries/Common/tests:System/FunctionPointerEqualityTests.cs",
+        "//src/libraries/Common/tests:System/MockType.cs",
+        "//src/libraries/Common/tests:System/Collections/CollectionAsserts.cs",
+        "//src/libraries/Common/tests:System/Collections/ICollection.Generic.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IEnumerable.Generic.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IList.Generic.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/TestBase.Generic.cs",
+        "//src/libraries/Common/tests:System/Collections/TestBase.NonGeneric.cs",
+        "//src/libraries/Common/tests:System/Diagnostics/DebuggerAttributes.cs",
+        "//src/libraries/Common/tests:System/GenericMathTestMemberData.cs",
+        "//src/libraries/Common/tests:System/TimeProviderTests.cs",
+        "//src/libraries/Common/tests:Tests/System/StringTests.cs",
+        "//src/libraries/Common/tests:System/Collections/IDictionary.NonGeneric.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IList.NonGeneric.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/ICollection.NonGeneric.Tests.cs",
+        "//src/libraries/Common/tests:System/Collections/IEnumerable.NonGeneric.Tests.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelization.cs",
+        "//src/libraries/Common/tests:System/GenericMathHelpers.cs",
+        "//src/libraries/Common/tests:System/Collections/IEnumerable.Generic.Serialization.Tests.cs",
+        "//src/libraries/Common/tests:System/Runtime/Serialization/Formatters/BinaryFormatterHelpers.cs",
+        "//src/libraries/Common/tests:System/RandomDataGenerator.cs",
+        "//src/libraries/Common/tests:System/RealFormatterTestsBase.cs",
+        "//src/libraries/Common/tests:System/RealParserTestsBase.cs",
+    ],
+    nowarn = ["1718", "SYSLIB0013", "xUnit1012"],
+    deps = [
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Diagnostics.StackTrace:ref_System.Diagnostics.StackTrace",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.Lightweight:ref_System.Reflection.Emit.Lightweight",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries:ref_System.Threading.Tasks",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Security.Permissions:ref_System.Security.Permissions",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//moq",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    data = [
+        "@paket.main//system.runtime.numerics.testdata:content_files",
+    ],
+    resources = [
+        "System.Runtime.Tests/System/Reflection/EmbeddedImage.png",
+        "System.Runtime.Tests/System/Reflection/EmbeddedTextFile.txt",
+    ],
+    resource_logical_names = {
+        "System.Runtime.Tests/System/Reflection/EmbeddedImage.png": "System.Reflection.Tests.EmbeddedImage.png",
+        "System.Runtime.Tests/System/Reflection/EmbeddedTextFile.txt": "System.Reflection.Tests.EmbeddedTextFile.txt",
+    },
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "large",
+    # 5/62739 tests fail: TypeTests needs System.TestStructs IL project and
+    # TestLoadAssembly helper, neither of which are ported to Bazel yet.
+    tags = ["manual"],
+)
+
+library_test(
+    name = "System.IO.Tests",
+    srcs = glob(["System.IO.Tests/**/*.cs"]) + [
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelization.cs",
+        "//src/libraries/Common/tests:System/Buffers/NativeMemoryManager.cs",
+        "//src/libraries/Common/tests:System/IO/CallTrackingStream.cs",
+        "//src/libraries/Common/tests:System/IO/DelegateStream.cs",
+        "//src/libraries/Common/tests:System/IO/WrappedMemoryStream.cs",
+        "//src/libraries/Common/tests:System/IO/ConnectedStreams.cs",
+        "//src/libraries/Common:src/System/Net/MultiArrayBuffer.cs",
+        "//src/libraries/Common:src/System/Net/StreamBuffer.cs",
+    ],
+    deps = [
+        "//src/libraries/shims/System.IO:impl_System.IO",
+        "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Encoding.CodePages:ref_System.Text.Encoding.CodePages",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/Common/tests:StreamConformanceTests",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "large",
+)
+
+# NOTE: System.Runtime.InteropServices.RuntimeInformation.Tests is defined in its
+# own sub-package BUILD.bazel and should be built from there.
+
+# ── Helper library for System.Reflection.CoreCLR.Tests ──
+# TestExe is a trivial helper project used as a compile-time reference.
+# NOTE: Compiled as a library, not an exe, so Assembly.EntryPoint will return
+# null at runtime. The EntryPoint() test will fail until exe compilation is
+# supported.
+csharp_library(
+    name = "System.Reflection.TestExe",
+    srcs = ["System.Reflection.Tests/TestExe/Program.cs"],
+    target_frameworks = ["net10.0"],
+    keyfile = OPEN_SNK,
+    nullable = "annotations",
+    nowarn = [
+        "IL2121",
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+    ],
+    msbuild_analyzer_config = "style",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+)
+
+# NOTE: System.Reflection.CoreCLR.Tests depends on TestExe as a project
+# reference. TestExe is compiled as a library (not exe) so the EntryPoint()
+# test will fail at runtime. The LoadFromStream and CurrentLocation tests
+# should work.
+library_test(
+    name = "System.Reflection.CoreCLR.Tests",
+    srcs = ["System.Reflection.Tests/CoreCLR/AssemblyTests.cs"],
+    deps = [
+        ":System.Reflection.TestExe",
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    resources = ["//src/libraries/Common/tests:Data/TinyAssembly.dll"],
+    resource_logical_names = {
+        "Data/TinyAssembly.dll": "TinyAssembly.dll",
+    },
+    keyfile = OPEN_SNK,
+    size = "small",
+    # 1/3 tests fail: TestExe compiled as library, so Assembly.EntryPoint is null
+    tags = ["manual"],
+)
+
+# NOTE: System.Reflection.InvokeEmit.Tests reuses parent Reflection test sources
+# with ForceEmitInvoke runtimeconfig. Files depending on TestAssembly helper
+# project (MethodInfoTests, MethodCommonTests, MethodInvokerTests) are excluded
+# until TestAssembly is ported to Bazel.
+library_test(
+    name = "System.Reflection.InvokeEmit.Tests",
+    srcs = [
+        "System.Reflection.Tests/Common.cs",
+        "System.Reflection.Tests/ConstructorCommonTests.cs",
+        "System.Reflection.Tests/ConstructorInfoTests.cs",
+        "System.Reflection.Tests/ConstructorInvokerTests.cs",
+        "System.Reflection.Tests/MethodCommonTests.cs",
+        "System.Reflection.Tests/MethodInfoTests.cs",
+        "System.Reflection.Tests/MethodInvokerTests.cs",
+        "System.Reflection.Tests/PropertyInfoTests.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.TypeExtensions:ref_System.Reflection.TypeExtensions",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/Common/tests:TestUtilities",
+        "//src/libraries/shims/netstandard:impl_netstandard",
+        "//src/libraries/System.Runtime/tests/System.Reflection.Tests/TestAssembly",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    runtimeconfig_properties = {
+        "Switch.System.Reflection.ForceEmitInvoke": "true",
+    },
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+# NOTE: System.Reflection.InvokeInterpreted.Tests reuses parent Reflection test
+# sources with ForceInterpretedInvoke runtimeconfig. Same exclusions as InvokeEmit.
+library_test(
+    name = "System.Reflection.InvokeInterpreted.Tests",
+    srcs = [
+        "System.Reflection.Tests/Common.cs",
+        "System.Reflection.Tests/ConstructorCommonTests.cs",
+        "System.Reflection.Tests/ConstructorInfoTests.cs",
+        "System.Reflection.Tests/ConstructorInvokerTests.cs",
+        "System.Reflection.Tests/MethodCommonTests.cs",
+        "System.Reflection.Tests/MethodInfoTests.cs",
+        "System.Reflection.Tests/MethodInvokerTests.cs",
+        "System.Reflection.Tests/PropertyInfoTests.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.TypeExtensions:ref_System.Reflection.TypeExtensions",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/Common/tests:TestUtilities",
+        "//src/libraries/shims/netstandard:impl_netstandard",
+        "//src/libraries/System.Runtime/tests/System.Reflection.Tests/TestAssembly",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    runtimeconfig_properties = {
+        "Switch.System.Reflection.ForceInterpretedInvoke": "true",
+    },
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+# NOTE: System.Runtime.ReflectionInvokeEmit.Tests reuses System.Runtime.Tests
+# reflection invoke sources with ForceEmitInvoke runtimeconfig.
+library_test(
+    name = "System.Runtime.ReflectionInvokeEmit.Tests",
+    srcs = [
+        "System.Runtime.Tests/System/Reflection/BindingFlagsDoNotWrap.cs",
+        "System.Runtime.Tests/System/Reflection/InvokeRefReturn.cs",
+        "System.Runtime.Tests/System/Reflection/InvokeWithRefLikeArgs.cs",
+        "System.Runtime.Tests/System/Reflection/PointerTests.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//moq",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    runtimeconfig_properties = {
+        "Switch.System.Reflection.ForceEmitInvoke": "true",
+    },
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+# NOTE: System.Runtime.ReflectionInvokeInterpreted.Tests reuses System.Runtime.Tests
+# reflection invoke sources with ForceInterpretedInvoke runtimeconfig.
+library_test(
+    name = "System.Runtime.ReflectionInvokeInterpreted.Tests",
+    srcs = [
+        "System.Runtime.Tests/System/Reflection/BindingFlagsDoNotWrap.cs",
+        "System.Runtime.Tests/System/Reflection/InvokeRefReturn.cs",
+        "System.Runtime.Tests/System/Reflection/InvokeWithRefLikeArgs.cs",
+        "System.Runtime.Tests/System/Reflection/PointerTests.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//moq",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    runtimeconfig_properties = {
+        "Switch.System.Reflection.ForceInterpretedInvoke": "true",
+    },
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+# Invariant.Tests: globalization invariant mode with InvariantGlobalization=true.
+library_test(
+    name = "Invariant.Tests",
+    srcs = ["System.Globalization.Tests/Invariant/InvariantMode.cs"],
+    deps = [
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    runtimeconfig_properties = {
+        "System.Globalization.Invariant": "true",
+        "System.Globalization.PredefinedCulturesOnly": "false",
+    },
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+# CalendarsWithConfigSwitch.Tests: Japanese era year range enforcement switch.
+library_test(
+    name = "System.Globalization.CalendarsWithConfigSwitch.Tests",
+    srcs = ["System.Globalization.Calendars.Tests/CalendarTestWithConfigSwitch/CalendarTests.cs"],
+    deps = [
+        "//src/libraries/Common/tests:TestUtilities",
+    ] + XUNIT_DEPS,
+    runtimeconfig_properties = {
+        "Switch.System.Globalization.EnforceJapaneseEraYearRanges": "true",
+    },
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+# DisabledFileLocking.Tests: file locking disabled via config switch.
+# This test includes sources from the parent FileSystem.Tests with a different config.
+library_test(
+    name = "System.IO.FileSystem.DisabledFileLocking.Tests",
+    srcs = [
+        "System.IO.FileSystem.Tests/DisabledFileLockingTests/DisabledFileLockingSwitchTests.cs",
+        "System.IO.FileSystem.Tests/FSAssert.cs",
+        "System.IO.FileSystem.Tests/TestData.cs",
+        "System.IO.FileSystem.Tests/FileSystemTest.cs",
+        "System.IO.FileSystem.Tests/FileSystemTest.Unix.cs",
+        "System.IO.FileSystem.Tests/UnseekableFileStream.cs",
+        "System.IO.FileSystem.Tests/PortedCommon/DllImports.cs",
+        "System.IO.FileSystem.Tests/PortedCommon/IOInputs.cs",
+        "System.IO.FileSystem.Tests/PortedCommon/IOServices.cs",
+    ] + glob(
+        ["System.IO.FileSystem.Tests/FileStream/**/*.cs"],
+        exclude = [
+            "System.IO.FileSystem.Tests/FileStream/ctor_options.Windows.cs",
+            "System.IO.FileSystem.Tests/FileStream/ctor_options.Browser.cs",
+            "System.IO.FileSystem.Tests/FileStream/FileStreamConformanceTests.Windows.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common/tests:System/IO/PathFeatures.cs",
+        "//src/libraries/Common/tests:Tests/TheoryDataExtensions.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelization.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+    ],
+    deps = [
+        "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        "//src/libraries/System.IO.FileSystem.DriveInfo:ref_System.IO.FileSystem.DriveInfo",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/Common/tests:StreamConformanceTests",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    runtimeconfig_properties = {
+        "System.IO.DisableFileLocking": "true",
+    },
+    os_targeted = "unix",
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "large",
+)
+
+# InvariantTimezone.Tests: timezone invariant mode via config switch.
+library_test(
+    name = "System.Runtime.InvariantTimezone.Tests",
+    srcs = [
+        "System.Runtime.Tests/System/TimeZoneInfoTests.Common.cs",
+        "System.Runtime.Tests/System/TimeZoneInfoTests.Invariant.cs",
+        "System.Runtime.Tests/System/TimeZoneTests.cs",
+        "System.Runtime.Tests/System/TimeZoneNotFoundExceptionTests.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    runtimeconfig_properties = {
+        "System.TimeZoneInfo.Invariant": "true",
+    },
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)
+
+# IcuAppLocal.Tests: ICU app-local globalization test.
+# The ICU NuGet package (Microsoft.ICU.ICU4C.Runtime) is not available in Bazel,
+# so the test is marked incompatible.
+library_test(
+    name = "IcuAppLocal.Tests",
+    srcs = ["System.Globalization.Tests/IcuAppLocal/IcuAppLocal.cs"],
+    deps = [
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+    ] + XUNIT_DEPS,
+    keyfile = OPEN_SNK,
+    size = "medium",
+    target_compatible_with = ["@platforms//:incompatible"],
+)

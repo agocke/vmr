@@ -1,0 +1,48 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "DOWNLEVEL_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly")
+load("//:defs.bzl", "MSFT_SNK", "csharp_library")
+
+_ATTRIBUTED_MODEL_SRCS = [
+    "src/System/Composition/Convention/AttributedModelProvider.cs",
+    "src/System/Composition/ExportAttribute.cs",
+    "src/System/Composition/ExportMetadataAttribute.cs",
+    "src/System/Composition/ImportAttribute.cs",
+    "src/System/Composition/ImportingConstructorAttribute.cs",
+    "src/System/Composition/ImportManyAttribute.cs",
+    "src/System/Composition/ImportMetadataConstraintAttribute.cs",
+    "src/System/Composition/MetadataAttributeAttribute.cs",
+    "src/System/Composition/OnImportsSatisfiedAttribute.cs",
+    "src/System/Composition/PartMetadataAttribute.cs",
+    "src/System/Composition/PartNotDiscoverableAttribute.cs",
+    "src/System/Composition/SharedAttribute.cs",
+    "src/System/Composition/SharingBoundaryAttribute.cs",
+]
+
+impl_assembly(
+    name = "impl_System.Composition.AttributedModel",
+    srcs = _ATTRIBUTED_MODEL_SRCS,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    nullable = "disable",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "nullable", "CS1591"],
+    exclude_sr = True,
+)
+
+# netstandard2.0 build matching MSBuild's multi-targeting. Used by test
+# helpers that must share type identity with the net10.0 impl at runtime.
+csharp_library(
+    name = "System.Composition.AttributedModel_netstandard2.0",
+    out = "System.Composition.AttributedModel",
+    analyzers = DOWNLEVEL_GENERATOR_ANALYZERS,
+    keyfile = MSFT_SNK,
+    srcs = _ATTRIBUTED_MODEL_SRCS,
+    target_frameworks = ["netstandard2.0"],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    nullable = "annotations",
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051", "nullable", "CA1510", "CA1511", "CA1512", "CA1513", "CA1845", "CA1846", "CA1847", "CS3021"],
+    visibility = ["//src/libraries:__subpackages__"],
+)

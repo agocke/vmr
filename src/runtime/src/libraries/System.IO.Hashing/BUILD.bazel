@@ -1,4 +1,5 @@
 load("//src/libraries:defs.bzl", "live_csharp_library", "netcoreapp_ref_assembly")
+load("//:defs.bzl", "OPEN_SNK", "gen_illink_substitutions")
 
 netcoreapp_ref_assembly(
     name = "ref_System.IO.Hashing",
@@ -12,8 +13,18 @@ netcoreapp_ref_assembly(
     nowarn = ["CS0809"],
 )
 
+gen_illink_substitutions(
+    name = "illink_System.IO.Hashing",
+    out = "live_System.IO.Hashing/ILLink.Substitutions.xml",
+    assembly_name = "System.IO.Hashing",
+    resource_name = "FxResources.System.IO.Hashing.SR",
+)
+
 live_csharp_library(
     name = "live_System.IO.Hashing",
+    out = "System.IO.Hashing",
+    keyfile = OPEN_SNK,
+    generate_assembly_info = True,
     srcs = glob(
         ["src/**/*.cs"],
         exclude = [
@@ -24,7 +35,27 @@ live_csharp_library(
         "//src/libraries/Common:src/System/SR.cs",
     ],
     resx_file = "src/Resources/Strings.resx",
+    additionalfiles = ["src/Resources/Strings.resx"],
+    resources = [":illink_System.IO.Hashing"],
+    resource_logical_names = {
+        "ILLink.Substitutions.xml": "ILLink.Substitutions.xml",
+    },
     allow_unsafe_blocks = True,
-    nullable = "annotations",
+    nullable = "enable",
+    msbuild_analyzer_config = "source",
+    generate_documentation_file = True,
+    treat_warnings_as_errors = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    nowarn = ["1591", "CA1510", "CA1511", "CA1512", "CA1513", "CA1845", "CA1846", "CA1847", "CP0003"],
+    analyzers = [
+        "//:source_build_analyzers",
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Runtime.InteropServices.JavaScript:JSImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
     visibility = ["//visibility:public"],
 )

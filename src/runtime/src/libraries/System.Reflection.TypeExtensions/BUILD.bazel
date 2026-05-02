@@ -13,6 +13,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Reflection.TypeExtensions",
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Reflection/TypeExtensions.cs",
     ],

@@ -1,21 +1,45 @@
 load("//src/tests:live_test.bzl", "library_test")
-load("//:defs.bzl", "csharp_binary")
+load("//:defs.bzl", "OPEN_SNK", "csharp_binary")
 
 csharp_binary(
     name = "STAMain",
     srcs = ["STAMain/STAMain.cs"],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
     target_frameworks = ["net10.0"],
 )
 
 csharp_binary(
     name = "MTAMain",
     srcs = ["MTAMain/MTAMain.cs"],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
     target_frameworks = ["net10.0"],
 )
 
 csharp_binary(
     name = "DefaultApartmentStateMain",
     srcs = ["DefaultApartmentStateMain/DefaultApartmentStateMain.cs"],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
     target_frameworks = ["net10.0"],
 )
 
@@ -43,5 +67,5 @@ library_test(
         "@paket.main//xunit.extensibility.core",
     ],
     allow_unsafe_blocks = True,
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

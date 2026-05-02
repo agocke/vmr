@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "createdelegate",
+    srcs = ["createdelegate.il"],
+)
+
+il_coreclr_test(
+    name = "debug15",
+    srcs = ["debug15.il"],
+)

@@ -1,15 +1,19 @@
+load("//:defs.bzl", "ECMA_SNK")
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.Data",
-    skip_cs1591 = True,
+    keyfile = ECMA_SNK,
+    generate_documentation_file = False,
+    library_import_generator = False,
+    skip_locals_init = False,
     srcs = [
         "src/System.Data.cs",
         "ref/System.Data.cs",
     ],
     deps = [
-        "//src/libraries/System.Data.Common:ref_System.Data.Common",
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/libraries/System.Data.Common:impl_System.Data.Common",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
         "//src/libraries:impl_System.Runtime",
         "//src/libraries/shims/stubs:ref_System.Data.Odbc",
         "//src/libraries/shims/stubs:ref_System.Data.OleDb",

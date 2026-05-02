@@ -73,7 +73,9 @@ public static class BazelAqueryParser
             var args = ParseArguments(action);
             var record = ParseManagedArguments(args, targetLabel, repoRoot);
 
-            if (record is not null && seen.Add(record.AssemblyName))
+            // Dedup by assembly name + target label so both ref and impl
+            // targets for the same assembly survive into the comparison engine.
+            if (record is not null && seen.Add(record.AssemblyName + "|" + targetLabel))
                 records.Add(record);
         }
 
@@ -243,12 +245,13 @@ public static class BazelAqueryParser
         var sourceFileOriginalPaths = new Dictionary<string, string>(StringComparer.Ordinal);
         var defines = new SortedSet<string>(StringComparer.Ordinal);
         var references = new SortedSet<string>(StringComparer.Ordinal);
-        var noWarn = new SortedSet<string>(StringComparer.Ordinal);
         var analyzers = new SortedSet<string>(StringComparer.Ordinal);
+        var analyzerPaths = new Dictionary<string, string>(StringComparer.Ordinal);
         var cscFlags = new SortedSet<string>(StringComparer.Ordinal);
         string targetType = "library";
         string langVersion = "";
         string? assemblyName = null;
+        string? outputPath = null;
 
         foreach (var arg in args)
         {
@@ -264,8 +267,9 @@ public static class BazelAqueryParser
             }
             else if (arg.StartsWith("/nowarn:"))
             {
+                // Expand comma-separated codes into individual /nowarn: flags.
                 foreach (var w in arg[8..].Split(',', StringSplitOptions.RemoveEmptyEntries))
-                    noWarn.Add(w);
+                    cscFlags.Add("/nowarn:" + BinlogParser.NormalizeWarningCode(w.Trim()));
             }
             else if (arg.StartsWith("-r:") || arg.StartsWith("/r:") || arg.StartsWith("/reference:") || arg.StartsWith("-reference:"))
             {
@@ -274,7 +278,10 @@ public static class BazelAqueryParser
             }
             else if (arg.StartsWith("/analyzer:"))
             {
-                analyzers.Add(ExtractAssemblyName(arg[10..]));
+                var analyzerPath = arg[10..];
+                var name = ExtractAssemblyName(analyzerPath);
+                analyzers.Add(name);
+                analyzerPaths.TryAdd(name, analyzerPath);
             }
             else if (arg.StartsWith("/target:"))
             {
@@ -286,7 +293,23 @@ public static class BazelAqueryParser
             }
             else if (arg.StartsWith("/out:"))
             {
-                assemblyName = ExtractAssemblyName(arg[5..]);
+                outputPath = arg[5..];
+                assemblyName = ExtractAssemblyName(outputPath);
+            }
+            else if (arg is "/unsafe+" or "/unsafe-")
+            {
+                // rules_dotnet emits a default /unsafe- and then appends /unsafe+
+                // when allow_unsafe_blocks is enabled. Model csc's last-wins
+                // behavior so we compare the effective flag, not both entries.
+                cscFlags.Remove("/unsafe+");
+                cscFlags.Remove("/unsafe-");
+                cscFlags.Add(arg);
+            }
+            else if (arg is "/checked+" or "/checked-")
+            {
+                cscFlags.Remove("/checked+");
+                cscFlags.Remove("/checked-");
+                cscFlags.Add(arg);
             }
             else if (arg.StartsWith('/'))
             {
@@ -312,20 +335,49 @@ public static class BazelAqueryParser
             SourceFileOriginalPaths = sourceFileOriginalPaths,
             Defines = defines,
             References = references,
-            NoWarn = noWarn,
             Analyzers = analyzers,
+            AnalyzerPaths = analyzerPaths,
             Flags = cscFlags,
             TargetType = targetType,
             LangVersion = langVersion,
             BuildSystem = "bazel",
             TargetLabel = targetLabel,
+            OutputPath = outputPath ?? "",
+            TargetFramework = ExtractTfmFromOutputPath(outputPath),
         };
     }
 
     private static string ExtractAssemblyName(string path)
     {
         var fileName = Path.GetFileNameWithoutExtension(path);
+        // Bazel ref_impl_pair targets are named "live_X" and produce DLLs
+        // with that prefix.  Strip it so we compare against the plain assembly name.
+        if (fileName.StartsWith("live_", StringComparison.Ordinal))
+            fileName = fileName["live_".Length..];
         return fileName;
+    }
+
+    /// <summary>
+    /// Extracts the target framework moniker from a Bazel /out: path.
+    /// rules_dotnet places the TFM as the parent directory of the output DLL,
+    /// e.g. ".../net10.0/Foo.dll" → "net10.0", ".../netstandard2.0/Bar.dll" → "netstandard2.0".
+    /// </summary>
+    private static string ExtractTfmFromOutputPath(string? outputPath)
+    {
+        if (string.IsNullOrEmpty(outputPath))
+            return "";
+
+        // The parent directory of the DLL is the TFM.
+        var dir = Path.GetDirectoryName(outputPath);
+        if (string.IsNullOrEmpty(dir))
+            return "";
+
+        var tfm = Path.GetFileName(dir);
+        // Sanity check: TFMs start with "net" (net10.0, netstandard2.0, net48, etc.)
+        if (tfm.StartsWith("net", StringComparison.OrdinalIgnoreCase))
+            return tfm;
+
+        return "";
     }
 
     internal static string NormalizeBazelPath(string path, string repoRoot)

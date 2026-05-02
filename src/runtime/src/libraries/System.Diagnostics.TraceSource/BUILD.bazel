@@ -14,6 +14,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Diagnostics.TraceSource",
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Diagnostics/BooleanSwitch.cs",
         "src/System/Diagnostics/InitializingSwitchEventArgs.cs",
@@ -43,7 +44,7 @@ netcoreapp_impl_assembly(
     ],
     defines = ["TRACE"],
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
         "//src/libraries:impl_System.Runtime",
         "//src/libraries/System.Collections:impl_System.Collections",
         "//src/libraries/System.Collections.NonGeneric:impl_System.Collections.NonGeneric",

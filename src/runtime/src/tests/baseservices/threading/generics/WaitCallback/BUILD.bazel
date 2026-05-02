@@ -1,0 +1,211 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "thread01_WaitCallback",
+    srcs = ["thread01.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread02_WaitCallback",
+    srcs = ["thread02.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread03_WaitCallback",
+    srcs = ["thread03.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread04_WaitCallback",
+    srcs = ["thread04.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread05_WaitCallback",
+    srcs = ["thread05.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread06_WaitCallback",
+    srcs = ["thread06.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread07_WaitCallback",
+    srcs = ["thread07.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread08_WaitCallback",
+    srcs = ["thread08.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread09_WaitCallback",
+    srcs = ["thread09.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread10_WaitCallback",
+    srcs = ["thread10.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread11_WaitCallback",
+    srcs = ["thread11.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread12_WaitCallback",
+    srcs = ["thread12.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread13_WaitCallback",
+    srcs = ["thread13.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread14_WaitCallback",
+    srcs = ["thread14.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread15_WaitCallback",
+    srcs = ["thread15.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread16_WaitCallback",
+    srcs = ["thread16.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread17_WaitCallback",
+    srcs = ["thread17.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread18_WaitCallback",
+    srcs = ["thread18.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread19_WaitCallback",
+    srcs = ["thread19.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread20_WaitCallback",
+    srcs = ["thread20.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread21_WaitCallback",
+    srcs = ["thread21.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread22_WaitCallback",
+    srcs = ["thread22.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread23_WaitCallback",
+    srcs = ["thread23.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread24_WaitCallback",
+    srcs = ["thread24.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread25_WaitCallback",
+    srcs = ["thread25.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread26_WaitCallback",
+    srcs = ["thread26.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread27_WaitCallback",
+    srcs = ["thread27.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread28_WaitCallback",
+    srcs = ["thread28.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread29_WaitCallback",
+    srcs = ["thread29.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "thread30_WaitCallback",
+    srcs = ["thread30.cs"],
+    pri = 1,
+    size = "medium",
+)

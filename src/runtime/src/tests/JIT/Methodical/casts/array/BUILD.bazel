@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["castclass_ldlen_r.il", "castclass_ldlen.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["castclass_ldlen_d.il", "castclass_ldlen.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["isinst_ldlen_d.il", "isinst_ldlen.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -38,4 +41,5 @@ il_coreclr_test(
     srcs = ["isinst_ldlen_r.il", "isinst_ldlen.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

@@ -22,4 +22,5 @@ coreclr_test(
     debug_type = "pdbonly",
     tags = ["manual"],  # Requires extern alias support
     deps = [":library1", ":library2"],
+    size = "medium",
 )

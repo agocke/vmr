@@ -1,20 +1,78 @@
 # Package for eng/ (enables subpackage references)
 
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("//:defs.bzl", "ARCADE_SDK_REPO", "XUNIT_CONSOLE_RUNNER_REPO")
+
 exports_files([
+    "CodeAnalysis.src.globalconfig",
+    "CodeAnalysis.test.globalconfig",
+    "Default.ruleset",
     "run_binary.sh.tpl",
     "run_test.sh.tpl",
     "run_library_test.sh.tpl",
     "testing/xunit/xunit.runner.json",
 ])
 
+# ── Stable-path copies of signing keys ───────────────────────────────
+# SNK files are sourced from the Arcade SDK NuGet package, whose repo
+# name contains a version string.  When the version bumps, the external
+# repo path changes, which changes Bazel action keys for every target
+# that uses a keyfile — even though the file content is identical.
+#
+# Copying to a fixed output path breaks that chain: the copy_file
+# action re-runs (instant), but downstream compilations see the same
+# path + same content digest → cache hit.
+
+copy_file(
+    name = "MSFT_snk",
+    src = "@{}//:tools/snk/MSFT.snk".format(ARCADE_SDK_REPO),
+    out = "snk/MSFT.snk",
+    visibility = ["//visibility:public"],
+)
+
+copy_file(
+    name = "Open_snk",
+    src = "@{}//:tools/snk/Open.snk".format(ARCADE_SDK_REPO),
+    out = "snk/Open.snk",
+    visibility = ["//visibility:public"],
+)
+
+copy_file(
+    name = "AspNetCore_snk",
+    src = "@{}//:tools/snk/AspNetCore.snk".format(ARCADE_SDK_REPO),
+    out = "snk/AspNetCore.snk",
+    visibility = ["//visibility:public"],
+)
+
+copy_file(
+    name = "ECMA_snk",
+    src = "@{}//:tools/snk/ECMA.snk".format(ARCADE_SDK_REPO),
+    out = "snk/ECMA.snk",
+    visibility = ["//visibility:public"],
+)
+
+copy_file(
+    name = "35MSSharedLib1024_snk",
+    src = "@{}//:tools/snk/35MSSharedLib1024.snk".format(ARCADE_SDK_REPO),
+    out = "snk/35MSSharedLib1024.snk",
+    visibility = ["//visibility:public"],
+)
+
+copy_file(
+    name = "SilverlightPlatformPublicKey_snk",
+    src = "@{}//:tools/snk/SilverlightPlatformPublicKey.snk".format(ARCADE_SDK_REPO),
+    out = "snk/SilverlightPlatformPublicKey.snk",
+    visibility = ["//visibility:public"],
+)
+
 filegroup(
     name = "xunit_console_runner",
     srcs = [
-        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.console.dll",
-        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.console.runtimeconfig.json",
-        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.console.deps.json",
-        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.runner.reporters.netcoreapp10.dll",
-        "@nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.runner.utility.netcoreapp10.dll",
+        "@{}//:tools/net/xunit.console.dll".format(XUNIT_CONSOLE_RUNNER_REPO),
+        "@{}//:tools/net/xunit.console.runtimeconfig.json".format(XUNIT_CONSOLE_RUNNER_REPO),
+        "@{}//:tools/net/xunit.console.deps.json".format(XUNIT_CONSOLE_RUNNER_REPO),
+        "@{}//:tools/net/xunit.runner.reporters.netcoreapp10.dll".format(XUNIT_CONSOLE_RUNNER_REPO),
+        "@{}//:tools/net/xunit.runner.utility.netcoreapp10.dll".format(XUNIT_CONSOLE_RUNNER_REPO),
     ],
     visibility = ["//visibility:public"],
 )

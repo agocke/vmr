@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "runningmono",
+    optimize = False,
+    srcs = ["runningmono.cs"],
+    tags = ["manual"],  # Mono-only test: expects Mono runtime, fails on CoreCLR
+)

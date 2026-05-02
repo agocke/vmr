@@ -1,0 +1,75 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Logging.Console.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Logging.Console",
+    srcs = [
+        "ref/Microsoft.Extensions.Logging.Console.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Logging.Console",
+    analyzers = COMMON_GENERATOR_ANALYZERS + [
+        "//src/libraries/Microsoft.Extensions.Configuration.Binder:ConfigurationBinderSourceGeneration",
+    ],
+    interceptors_namespaces = ";Microsoft.Extensions.Configuration.Binder.SourceGeneration;Microsoft.Extensions.Validation.Generated",
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "SYSLIB1100", "SYSLIB1101"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/Extensions/Logging/NullExternalScopeProvider.cs",
+        "//src/libraries/Common:src/Extensions/Logging/NullScope.cs",
+        "//src/libraries/Common:src/System/Net/ArrayBuffer.cs",
+        "//src/libraries/Common:src/System/Text/Json/PooledByteBufferWriter.cs",
+        "//src/libraries/Common:src/Interop/Windows/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.GetConsoleMode.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.GetStdHandle.cs",
+        "//src/libraries/Common:src/System/Console/ConsoleUtils.cs",
+    ],
+    allow_unsafe_blocks = True,
+    defines = ["NO_SUPPRESS_GC_TRANSITION"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration.Binder:ref_Microsoft.Extensions.Configuration.Binder",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Configuration:ref_Microsoft.Extensions.Logging.Configuration",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/Microsoft.Extensions.Options.ConfigurationExtensions:ref_Microsoft.Extensions.Options.ConfigurationExtensions",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Console:ref_System.Console",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.IO.Pipelines:ref_System.IO.Pipelines",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Logging.Console",
+    ref = ":ref_Microsoft.Extensions.Logging.Console",
+    lib = ":impl_Microsoft.Extensions.Logging.Console",
+    visibility = ["//visibility:public"],
+)

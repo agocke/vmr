@@ -1,0 +1,36 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "Microsoft.Bcl.Memory.Tests",
+    srcs = [
+        "//src/libraries/System.Memory/tests:AllocationHelper.cs",
+        "//src/libraries/System.Memory/tests:Base64/Base64TestBase.cs",
+        "//src/libraries/System.Memory/tests:Base64/Base64TestHelper.cs",
+        "//src/libraries/System.Memory/tests:Base64Url/Base64UrlDecoderUnitTests.cs",
+        "//src/libraries/System.Memory/tests:Base64Url/Base64UrlEncoderUnitTests.cs",
+        "//src/libraries/System.Memory/tests:Base64Url/Base64UrlValidationUnitTests.cs",
+        "//src/libraries/System.Runtime/tests:System.Runtime.Tests/System/IndexTests.cs",
+        "//src/libraries/System.Runtime/tests:System.Runtime.Tests/System/RangeTests.cs",
+        "//src/libraries/System.Runtime/tests:System.Runtime.Tests/System/Text/Unicode/Utf8Tests.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Text/UnicodeDebug.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Text/UnicodeUtility.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    nowarn = ["CA1510", "CA1511", "CA1512", "CA1513", "CA1845", "CA1846", "CA1847"],
+    size = "large",
+)

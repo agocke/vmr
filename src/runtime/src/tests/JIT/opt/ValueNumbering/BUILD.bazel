@@ -30,6 +30,7 @@ coreclr_test(
     srcs = ["ExceptionSetsPropagation_Hwi.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -37,6 +38,7 @@ coreclr_test(
     srcs = ["ExceptionSets.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -44,6 +46,7 @@ coreclr_test(
     srcs = ["ExposedLocalsNumbering.cs"],
     optimize = True,
     allow_unsafe_blocks = True,
+    tags = ["flaky"],  # Flaky upstream: https://github.com/dotnet/runtime/issues/105187
     deps = [
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
         "//src/libraries/System.Threading:ref_System.Threading",
@@ -55,6 +58,7 @@ il_coreclr_test(
     srcs = ["ExceptionSetsPropagation_LclHeap.il"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(

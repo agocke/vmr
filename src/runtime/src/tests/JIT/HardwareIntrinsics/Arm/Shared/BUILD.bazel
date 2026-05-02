@@ -1,0 +1,4 @@
+exports_files([
+    "Helpers.cs",
+    "Program.cs",
+], visibility = ["//src/tests:__subpackages__"])

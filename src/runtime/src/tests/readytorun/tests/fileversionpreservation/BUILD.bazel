@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "fileversionpreservation",
+    srcs = [
+        "fileversionpreservation.cs",
+        "Properties/AssemblyInfo.cs",
+    ],
+    optimize = True,
+)

@@ -11,7 +11,7 @@ load(
     "coreclr_x64_files", "coreclr_arm64_files"
 )
 
-load("//:defs.bzl", "csharp_library", "gen_assembly_info")
+load("//:defs.bzl", "MIBC_FILES", "SILVERLIGHT_SNK", "csharp_library", "gen_assembly_info", "gen_resx_source", "gen_target_framework_attrs", "resgen")
 load("//eng/bazel:version.bzl", "PRODUCT_VERSION")
 
 nowarn = [ "CS0419", "CS0649", "CS1591", "CS8500", "CS8969" ]
@@ -25,10 +25,78 @@ gen_assembly_info(
     out = "System.Private.CoreLib.AssemblyInfo.cs",
     assembly_name = "System.Private.CoreLib",
     assembly_version = "10.0.0.0",
+    assembly_configuration = "Release",
+    is_trimmable = True,
     cls_compliant = False,
     include_serviceable = False,
     include_neutral_resources_language = False,
     is_aot_compatible = False,
+)
+
+gen_target_framework_attrs(
+    name = "corelib_tfm_attrs",
+    out = ".NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+)
+
+genrule(
+    name = "corelib_generated_msbuild_editorconfig",
+    outs = ["System.Private.CoreLib.GeneratedMSBuildEditorConfig.editorconfig"],
+    cmd = """cat >"$@" <<'EOF'
+is_global = true
+build_property.InformationalVersion = {version}
+EOF""".format(version = PRODUCT_VERSION),
+)
+
+genrule(
+    name = "corelib_disabled_analyzers_config",
+    outs = ["disabledAnalyzers.config"],
+    cmd = ": > \"$@\"",
+)
+
+genrule(
+    name = "corelib_illink_descriptors",
+    srcs = [
+        "src/ILLink/ILLink.Descriptors.Shared.xml",
+    ] + select({
+        "@platforms//os:windows": ["src/ILLink/ILLink.Descriptors.Windows.xml"],
+        "//conditions:default": [],
+    }) + select({
+        "//:clr_release": [],
+        "//conditions:default": ["src/ILLink/ILLink.Descriptors.Debug.xml"],
+    }),
+    outs = ["ILLink.Descriptors.xml"],
+    cmd = """echo '<linker>' > "$@" && \
+for f in $(SRCS); do \
+  sed -e '1{/^<\\?xml/d;}' \
+      -e '/^[[:space:]]*<linker>[[:space:]]*$$/d' \
+      -e '/^[[:space:]]*<\\/linker>[[:space:]]*$$/d' "$$f" >> "$@"; \
+done && \
+echo '</linker>' >> "$@"
+""",
+)
+
+genrule(
+    name = "corelib_illink_link_attributes",
+    srcs = ["src/ILLink/ILLink.Suppressions.LibraryBuild.xml"],
+    outs = ["ILLink.LinkAttributes.xml"],
+    cmd = "cp \"$<\" \"$@\"",
+)
+
+resgen(
+    name = "corelib_strings_resources",
+    out = "System.Private.CoreLib.Strings.resources",
+    resx_file = "//src/libraries/System.Private.CoreLib:src/Resources/Strings.resx",
+)
+
+gen_resx_source(
+    name = "corelib_system_sr",
+    out = "impl_System.Private.CoreLib/System.SR.cs",
+    assembly_name = "System.Private.CoreLib",
+    resource_name = "System.Private.CoreLib.Strings",
+    resource_class_name = "System.SR",
+    resx_file = "//src/libraries/System.Private.CoreLib:src/Resources/Strings.resx",
+    include_default_values = False,
+    omit_getresourcestring = True,
 )
 
 common_imports = [
@@ -195,18 +263,26 @@ csharp_library(
     out = "System.Private.CoreLib",
     override_debug = True,
     additionalfiles = [
+        ":corelib_disabled_analyzers_config",
+        "MembersMustExist.AnalyzerData",
         "//src/coreclr/vm:ClrEtwAll.man",
+        "//src/libraries/System.Private.CoreLib:src/Resources/Strings.resx",
     ],
     analyzer_configs = [
-        "//eng/bazel:product_version_globalconfig",
+        "//:source_analyzer_configs",
+        ":corelib_generated_msbuild_editorconfig",
     ],
     analyzers = [
+        "//:source_build_analyzers",
         "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
         "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
         "//src/libraries/System.Private.CoreLib:System.Private.CoreLib.Generators",
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
     ],
     srcs = [
         ":corelib_assembly_info",
+        ":corelib_tfm_attrs",
+        ":corelib_system_sr",
         "src/Internal/Runtime/CompilerHelpers/ThrowHelpers.cs",
         "src/Internal/Runtime/InteropServices/ComActivationContextInternal.cs",
         "src/Internal/Runtime/InteropServices/ComponentActivator.CoreCLR.cs",
@@ -316,7 +392,6 @@ csharp_library(
         "src/System/Runtime/JitInfo.CoreCLR.cs",
         "src/System/Runtime/InteropServices/DynamicInterfaceCastableHelpers.cs",
         "src/System/Runtime/InteropServices/GCHandle.CoreCLR.cs",
-        "src/System/Runtime/InteropServices/Java/JavaMarshal.CoreCLR.cs",
         "src/System/Runtime/InteropServices/Marshal.CoreCLR.cs",
         "src/System/Runtime/InteropServices/MemoryMarshal.CoreCLR.cs",
         "src/System/Runtime/InteropServices/NativeLibrary.CoreCLR.cs",
@@ -369,12 +444,29 @@ csharp_library(
     select({
         "@platforms//os:linux": linux_srcs,
         "@platforms//os:macos": macos_srcs,
+    }) +
+    select({
+        # FEATURE_JAVAMARSHAL is debug/checked only; release uses the unsupported stub.
+        "//:clr_release": [
+            "//src/libraries/System.Private.CoreLib:src/System/Runtime/InteropServices/Java/JavaMarshal.Unsupported.cs",
+        ],
+        "//conditions:default": [
+            "src/System/Runtime/InteropServices/Java/JavaMarshal.CoreCLR.cs",
+        ],
     }),
-    resx_file = "//src/libraries/System.Private.CoreLib:src/Resources/Strings.resx",
-    resource_name = "System.Private.CoreLib.Strings",
-    resource_class_name = "System.SR",
-    omit_getresourcestring = True,
-    include_default_values = False,
+    generate_documentation_file = True,
+    resources = [
+        ":corelib_strings_resources",
+        ":corelib_illink_descriptors",
+        ":corelib_illink_link_attributes",
+        "src/ILLink/ILLink.Substitutions.xml",
+    ],
+    resource_logical_names = {
+        "ILLink.Descriptors.xml": "ILLink.Descriptors.xml",
+        "ILLink.LinkAttributes.xml": "ILLink.LinkAttributes.xml",
+        "ILLink.Substitutions.xml": "ILLink.Substitutions.xml",
+        "System.Private.CoreLib.Strings.resources": "System.Private.CoreLib.Strings.resources",
+    },
     # assembly_version is set via gen_assembly_info; pass "" to suppress
     # rules_dotnet's auto-generated AssemblyInfo.cs.
     assembly_version = "",
@@ -384,9 +476,16 @@ csharp_library(
     disable_implicit_framework_refs = True,
     cls_compliant = False,
     compiler_options = [
+        "/features:InterceptorsNamespaces=;Microsoft.Extensions.Validation.Generated",
+        "/features:nullablePublicOnly",
+        "/features:strict",
+        "/platform:AnyCPU",
         "/runtimemetadataversion:v4.0.30319",
         "/checksumalgorithm:SHA256",
         "/publicsign+",
+        # SDK WarningsAsErrors: NU1605 added by Microsoft.NET.Sdk.CSharp.props.
+        # SYSLIB0011 is added by the csharp_library wrapper.
+        "/warnaserror+:NU1605",
     ] + select({
         # override_debug skips /debug and /optimize; set them per CLR config.
         # MSBuild: Debug → /optimize-, Checked → /optimize+, Release → /optimize+
@@ -395,7 +494,7 @@ csharp_library(
         "//:clr_checked": [ "/debug:portable", "/optimize+" ],
         "//conditions:default": [ "/debug:portable", "/optimize-" ],
     }),
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/SilverlightPlatformPublicKey.snk",
+    keyfile = SILVERLIGHT_SNK,
     defines = [
         "SYSTEM_PRIVATE_CORELIB",
         "CORECLR",
@@ -404,7 +503,6 @@ csharp_library(
         "FEATURE_EH_FUNCLETS",
         "FEATURE_PERFTRACING",
         "PROFILING_SUPPORTED",
-        "_LOGGING",
     ] + select({
         "@platforms//cpu:x86_64": [ "TARGET_AMD64", "TARGET_64BIT" ],
         "@platforms//cpu:aarch64": [ "TARGET_ARM64", "TARGET_64BIT" ],
@@ -417,8 +515,8 @@ csharp_library(
         # FEATURE_JAVAMARSHAL and FEATURE_INTERPRETER change the QCall/FCall
         # entry-point tables; a mismatch crashes the runtime at startup.
         # Both debug and checked configs enable these features.
-        "//:clr_release": [ "RELEASE" ],
-        "//conditions:default": [ "DEBUG", "FEATURE_INTERPRETER", "FEATURE_JAVAMARSHAL" ],
+        "//:clr_release": [],
+        "//conditions:default": [ "DEBUG", "_LOGGING", "FEATURE_INTERPRETER", "FEATURE_JAVAMARSHAL" ],
     }),
     nowarn = nowarn,
     visibility = ["//visibility:public"]
@@ -431,13 +529,17 @@ crossgen_corelib(
     assembly = ":impl_System.Private.CoreLib",
     out = "System.Private.CoreLib.r2r.dll",
     clrjit = select({
-        "@platforms//cpu:arm64": "//src/coreclr/jit:libclrjit.so",
+        "//:macos_arm64": "//src/coreclr/jit:libclrjit.so",
+        "//:macos_x64": "//src/coreclr/jit:libclrjit_unix_x64_x64.so",
         "//conditions:default": "//src/coreclr/jit:libclrjit_unix_x64_x64.so",
     }),
     jitinterface = select({
-        "@platforms//cpu:arm64": "//src/coreclr/tools/aot/jitinterface:libjitinterface_arm64_dylib",
+        "//:macos_arm64": "//src/coreclr/tools/aot/jitinterface:libjitinterface_arm64_dylib",
+        "//:macos_x64": "//src/coreclr/tools/aot/jitinterface:libjitinterface_x64_dylib",
         "//conditions:default": "//src/coreclr/tools/aot/jitinterface:libjitinterface_x64.so",
     }),
+    mibc = MIBC_FILES,
+    native_crossgen2 = "//src/coreclr/tools/aot/crossgen2:crossgen2-publish",
     target_arch = select({
         "@platforms//cpu:arm64": "arm64",
         "//conditions:default": "x64",

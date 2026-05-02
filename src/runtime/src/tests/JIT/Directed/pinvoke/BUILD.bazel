@@ -1,0 +1,56 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "calli_excep",
+    srcs = ["calli_excep.il"],
+    optimize = True,
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "jump",
+    srcs = ["jump.il"],
+    optimize = True,
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pinvoke-bug",
+    srcs = ["pinvoke-bug.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "preemptive_cooperative",
+    srcs = ["preemptive_cooperative.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "sin",
+    srcs = ["sin.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "sysinfo_cs",
+    srcs = ["sysinfo.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "sysinfo_il",
+    srcs = ["sysinfo.il"],
+    optimize = True,
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)

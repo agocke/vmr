@@ -10,6 +10,16 @@ exports_files(glob(["*.cpp", "unix/*.cpp", "unix/bazel/**/*.h", "vxsort/*.cpp", 
 
 # --- Headers ---
 
+# Private GC headers only needed by GC implementation sources (gc.cpp, gcee.cpp,
+# handletable*.cpp). Separated so that changes to these large headers (gcpriv.h
+# alone is ~7k lines) don't invalidate the ~220 VM .cpp files that never include
+# them.
+_GC_INTERNAL_HDRS = [
+    "gcpriv.h",
+    "gcimpl.h",
+    "handletablepriv.h",
+]
+
 cc_library(
     name = "gc_headers",
     hdrs = glob(
@@ -23,8 +33,17 @@ cc_library(
             "vxsort/smallsort/*.h",
             "unix/*.h",
         ],
+        exclude = _GC_INTERNAL_HDRS,
         allow_empty = True,
     ),
+)
+
+# Internal GC headers — only for targets that compile GC implementation sources.
+# Use via implementation_deps to prevent propagation to downstream consumers.
+cc_library(
+    name = "gc_internal_headers",
+    hdrs = _GC_INTERNAL_HDRS,
+    deps = [":gc_headers"],
 )
 
 # --- Standalone GC defines (shared by all GC compiled targets) ---
@@ -50,7 +69,7 @@ _GC_STANDALONE_DEFINES = [
     "URTBLDENV_FRIENDLY=Retail",
     "_FILE_OFFSET_BITS=64",
 ] + select({
-    "@platforms//os:macos": [
+    "//:macos_arm64": [
         "HOST_64BIT",
         "HOST_ARM64",
         "HOST_UNIX",
@@ -58,6 +77,18 @@ _GC_STANDALONE_DEFINES = [
         "HOST_OSX",
         "TARGET_64BIT",
         "TARGET_ARM64",
+        "TARGET_UNIX",
+        "TARGET_APPLE",
+        "TARGET_OSX",
+    ],
+    "//:macos_x64": [
+        "HOST_64BIT",
+        "HOST_AMD64",
+        "HOST_UNIX",
+        "HOST_APPLE",
+        "HOST_OSX",
+        "TARGET_64BIT",
+        "TARGET_AMD64",
         "TARGET_UNIX",
         "TARGET_APPLE",
         "TARGET_OSX",
@@ -86,7 +117,8 @@ _GC_INCLUDES = [
     ".",
     "env",
 ] + select({
-    "@platforms//os:macos": ["unix/bazel/darwin-arm64"],
+    "//:macos_arm64": ["unix/bazel/osx-arm64"],
+    "//:macos_x64": ["unix/bazel/osx-x64"],
     "//conditions:default": ["unix/bazel/linux-glibc-x64"],
 })
 
@@ -112,7 +144,8 @@ cc_library(
         "unix/events.cpp",
         "unix/cgroup.cpp",
     ] + select({
-        "@platforms//os:macos": ["unix/bazel/darwin-arm64/config.gc.h"],
+        "//:macos_arm64": ["unix/bazel/osx-arm64/config.gc.h"],
+        "//:macos_x64": ["unix/bazel/osx-x64/config.gc.h"],
         "//conditions:default": ["unix/bazel/linux-glibc-x64/config.gc.h"],
     }),
     copts = _GC_COPTS + CLR_CONFIG_COPTS,
@@ -263,6 +296,7 @@ cc_library(
     alwayslink = True,
     deps = [
         ":gc_headers",
+        ":gc_internal_headers",
         ":gc_pal",
         ":gc_vxsort",
         ":gc_dll_wks_descriptor",
@@ -299,6 +333,7 @@ cc_library(
     alwayslink = True,
     deps = [
         ":gc_headers",
+        ":gc_internal_headers",
         ":gc_pal",
         ":gc_vxsort",
         ":gcexp_dll_wks_descriptor",

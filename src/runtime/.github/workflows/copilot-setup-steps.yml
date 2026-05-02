@@ -1,47 +1,37 @@
 name: "Copilot Setup Steps"
 
-# Allow testing of the setup steps from your repository's "Actions" tab.
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
 
 jobs:
   # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
-  # See https://docs.github.com/en/copilot/customizing-copilot/customizing-the-development-environment-for-copilot-coding-agent
   copilot-setup-steps:
-    runs-on: 8-core-ubuntu-latest
-
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-
-    # You can define any steps you want, and they will run before the agent starts.
-    # If you do not check out your code, Copilot will do this for you.
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
 
-      - name: Install Dependencies
-        env:
-          LIBMSQUIC_VERSION: '2.4.8'
+      - name: Install dotnet SDK
         run: |
-          sudo ./eng/common/native/install-dependencies.sh && \
-          sudo apt-get install -qq -y \
-            curl \
-            libbpf1 \
-            libelf1t64 \
-            libnl-3-200 \
-            libnl-route-3-200 \
-            libnuma1 \
-            libxdp1 && \
-          curl -LO "https://packages.microsoft.com/ubuntu/24.04/prod/pool/main/libm/libmsquic/libmsquic_${LIBMSQUIC_VERSION}_amd64.deb" && \
-          sudo dpkg -i libmsquic* && \
-          rm libmsquic*
+          # dotnet.sh sources eng/common/tools.sh and runs InitializeDotNetCli,
+          # which installs the SDK version from global.json into .dotnet/.
+          ./dotnet.sh --info
 
-      - name: Restore solution
-        run: ./build.sh --restore --excludecibinarylog --warnaserror false /p:BuildAllConfigurations=true /p:DotNetBuildAllRuntimePacks=true /p:DotNetBuildTests=true
+      - name: Install paket
+        run: dotnet tool install -g paket --add-source https://api.nuget.org/v3/index.json
 
-      - name: Put dotnet on the path
-        run: echo "PATH=$PWD/.dotnet:$PATH" >> $GITHUB_ENV
+      - name: Verify Bazel (pre-installed via Bazelisk)
+        run: bazel version
 
-      - name: Run dotnet info
-        run: dotnet --info
-
-      - name: Build clr+libs
-        run: ./build.sh clr+libs -rc release
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y clang-18 lld libkrb5-dev liblttng-ust-dev

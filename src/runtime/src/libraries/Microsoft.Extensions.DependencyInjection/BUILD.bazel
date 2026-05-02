@@ -1,0 +1,55 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.DependencyInjection.cs",
+    "ref/Microsoft.Extensions.DependencyInjection.Forwards.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.DependencyInjection",
+    srcs = [
+        "ref/Microsoft.Extensions.DependencyInjection.cs",
+        "ref/Microsoft.Extensions.DependencyInjection.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.DependencyInjection",
+    nowarn = MULTITARGET_NOWARN + ["CP0001", "CP0003"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/Extensions/ParameterDefaultValue/ParameterDefaultValue.cs",
+        "//src/libraries/Common:src/Extensions/ParameterDefaultValue/ParameterDefaultValue.netcoreapp.cs",
+        "//src/libraries/Common:src/Extensions/TypeNameHelper/TypeNameHelper.cs",
+    ],
+    defines = ["IL_EMIT"],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Emit.Lightweight:ref_System.Reflection.Emit.Lightweight",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.DependencyInjection",
+    ref = ":ref_Microsoft.Extensions.DependencyInjection",
+    lib = ":impl_Microsoft.Extensions.DependencyInjection",
+    visibility = ["//visibility:public"],
+)

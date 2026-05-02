@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["complex1.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -12,6 +13,7 @@ coreclr_test(
     srcs = ["complex2.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -20,6 +22,7 @@ coreclr_test(
     allow_unsafe_blocks = True,
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -27,6 +30,7 @@ coreclr_test(
     srcs = ["simple1.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -34,6 +38,7 @@ coreclr_test(
     srcs = ["simple2.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(

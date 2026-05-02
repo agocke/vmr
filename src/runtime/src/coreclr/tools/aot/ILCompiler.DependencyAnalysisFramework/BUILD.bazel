@@ -1,7 +1,28 @@
-load("//:defs.bzl", "csharp_library")
+load("//:defs.bzl", "csharp_library", "gen_assembly_info", "gen_target_framework_attrs")
+
+gen_assembly_info(
+    name = "assemblyinfo_ILCompiler.DependencyAnalysisFramework",
+    out = "ILCompiler.DependencyAnalysisFramework.AssemblyInfo.cs",
+    assembly_name = "ILCompiler.DependencyAnalysisFramework",
+    cls_compliant = False,
+    is_aot_compatible = False,
+    include_serviceable = False,
+    include_description = False,
+    assembly_configuration = "Release",
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_ILCompiler.DependencyAnalysisFramework",
+    out = ".NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+)
 
 csharp_library(
     name = "ILCompiler.DependencyAnalysisFramework",
+    nowarn = ["1591"],
+    msbuild_analyzer_config = "source",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    compiler_options = ["/warnaserror+:NU1605"],
     srcs = glob(["*.cs"]) + [
         "//src/coreclr/tools/Common:Sorting/ArrayAccessor.cs",
         "//src/coreclr/tools/Common:Sorting/ICompareAsEqualAction.cs",
@@ -9,6 +30,12 @@ csharp_library(
         "//src/coreclr/tools/Common:Sorting/ListAccessor.cs",
         "//src/coreclr/tools/Common:Sorting/MergeSort.cs",
         "//src/coreclr/tools/Common:Sorting/MergeSortCore.cs",
+        ":assemblyinfo_ILCompiler.DependencyAnalysisFramework",
+        ":tfmattrs_ILCompiler.DependencyAnalysisFramework",
+    ],
+    analyzers = [
+        "//:source_build_analyzers",
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
     ],
     target_frameworks = ["net10.0"],
     visibility = ["//visibility:public"],

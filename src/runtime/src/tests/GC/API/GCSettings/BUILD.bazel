@@ -1,0 +1,27 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "InducedGen0GC",
+    srcs = ["InducedGen0GC.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InducedGen1GC",
+    srcs = ["InducedGen1GC.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InducedGen2GC",
+    srcs = ["InducedGen2GC.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InputValidation",
+    srcs = ["InputValidation.cs"],
+)

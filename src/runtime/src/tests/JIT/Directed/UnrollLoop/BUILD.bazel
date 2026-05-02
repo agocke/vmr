@@ -11,6 +11,7 @@ coreclr_test(
     srcs = ["loop6.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -19,6 +20,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -27,6 +29,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -48,6 +51,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -55,6 +59,7 @@ coreclr_test(
     srcs = ["loop1.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -63,6 +68,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -70,12 +76,14 @@ il_coreclr_test(
     srcs = ["loop3_d.il", "loop3.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
     name = "loop6_cs_r",
     srcs = ["loop6.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -84,12 +92,14 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "loop1_cs_r",
     srcs = ["loop1.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -98,10 +108,12 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
     name = "loop4_cs_r",
     srcs = ["loop4.cs"],
     pri = 1,
+    size = "medium",
 )

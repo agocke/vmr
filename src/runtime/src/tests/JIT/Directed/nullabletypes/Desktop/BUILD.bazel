@@ -6,6 +6,7 @@ coreclr_test(
     name = "nullcomparaison_r",
     srcs = ["nullcomparaison.cs", "StructDefinitions.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -21,6 +22,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -28,6 +30,7 @@ coreclr_test(
     srcs = ["nullcomparaison.cs", "StructDefinitions.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -41,6 +44,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(

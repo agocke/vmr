@@ -1,0 +1,25 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "Functionpointer",
+    srcs = ["Functionpointer.cs"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "Normalization",
+    srcs = ["Normalization.cs"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "castclasspointer",
+    srcs = ["castclasspointer.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "punninglib",
+    srcs = ["punninglib.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

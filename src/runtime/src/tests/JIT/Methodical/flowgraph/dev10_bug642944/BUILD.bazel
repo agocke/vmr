@@ -5,4 +5,5 @@ il_coreclr_test(
     srcs = ["GCMaskForGSCookie.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

@@ -19,6 +19,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -32,6 +33,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -45,6 +47,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -58,6 +61,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -70,6 +74,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -81,6 +86,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -94,6 +100,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -106,6 +113,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -119,6 +127,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -132,6 +141,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -143,6 +153,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -154,6 +165,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -178,6 +190,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -190,6 +203,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -201,4 +215,5 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )

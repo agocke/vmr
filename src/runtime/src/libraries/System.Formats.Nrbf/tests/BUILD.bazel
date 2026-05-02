@@ -1,4 +1,6 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.Formats.Nrbf.Tests",
@@ -21,7 +23,7 @@ library_test(
         "@paket.main//xunit.abstractions",
         "@paket.main//xunit.extensibility.core",
     ],
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
-    nowarn = ["SYSLIB0011", "SYSLIB0050"],
+    keyfile = OPEN_SNK,
+    nowarn = MULTITARGET_NOWARN + ["SYSLIB0011", "SYSLIB0050"],
     size = "large",
 )

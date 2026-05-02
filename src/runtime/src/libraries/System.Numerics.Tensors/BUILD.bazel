@@ -1,0 +1,43 @@
+load("//src/libraries:defs.bzl",
+    "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly", "netcoreapp_ref_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Numerics.Tensors",
+    srcs = [
+        "ref/System.Numerics.Tensors.cs",
+        "ref/System.Numerics.Tensors.net9.cs",
+        "ref/System.Numerics.Tensors.netcore.cs",
+    ],
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Numerics.Tensors",
+    keyfile = OPEN_SNK,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    srcs = glob(
+        ["src/**/*.cs"],
+        exclude = ["src/System/Numerics/Tensors/netstandard/**"],
+    ),
+    allow_unsafe_blocks = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "SA1001"],
+    resx_file = "src/Resources/Strings.resx",
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Runtime.Intrinsics:ref_System.Runtime.Intrinsics",
+    ],
+)
+
+ref_impl_pair(
+    name = "live_System.Numerics.Tensors",
+    lib = ":impl_System.Numerics.Tensors",
+    ref = ":ref_System.Numerics.Tensors",
+    visibility = ["//visibility:public"],
+)

@@ -4,6 +4,8 @@ exports_files([
     "ref/System.ComponentModel.TypeConverter.cs",
     "ref/System.ComponentModel.TypeConverter.Forwards.cs",
     "ref/System.ComponentModel.manual.cs",
+    "src/ILLink/ILLink.Descriptors.LibraryBuild.xml",
+    "src/ILLink/ILLink.Suppressions.LibraryBuild.xml",
 ])
 
 netcoreapp_ref_assembly(
@@ -25,6 +27,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.ComponentModel.TypeConverter",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     analyzers = [
         "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
     ],

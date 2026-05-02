@@ -1,8 +1,10 @@
-load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
 
 exports_files([
     "ref/System.Resources.Extensions.cs",
-])
+    "src/Resources/Strings.resx",
+] + glob(["src/**/*.cs"]))
 
 netcoreapp_ref_assembly(
     name = "ref_System.Resources.Extensions",
@@ -15,8 +17,13 @@ netcoreapp_ref_assembly(
     ],
 )
 
-netcoreapp_impl_assembly(
+impl_assembly(
     name = "impl_System.Resources.Extensions",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    com_interface_generator = True,
+    keyfile = OPEN_SNK,
+    allow_unsafe_blocks = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
     srcs = [
         "//src/libraries/Common:src/System/Obsoletions.cs",
         "//src/libraries/Common:src/System/Resources/ResourceWriter.cs",

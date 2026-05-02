@@ -1,0 +1,22 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "13662-a",
+    srcs = ["13662-a.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "13662-b",
+    srcs = ["13662-b.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "13662-simple",
+    srcs = ["simple.cs"],
+    pri = 1,
+    size = "medium",
+)

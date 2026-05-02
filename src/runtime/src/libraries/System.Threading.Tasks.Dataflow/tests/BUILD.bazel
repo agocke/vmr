@@ -1,7 +1,10 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.Threading.Tasks.Dataflow.Tests",
+    nowarn = MULTITARGET_NOWARN,
     srcs = glob(["**/*.cs"]) + [
         "//src/libraries/Common/tests:System/Diagnostics/Tracing/TestEventListener.cs",
         "//src/libraries/Common/tests:System/Diagnostics/DebuggerAttributes.cs",
@@ -19,5 +22,5 @@ library_test(
         "@paket.main//xunit.extensibility.core",
     ],
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

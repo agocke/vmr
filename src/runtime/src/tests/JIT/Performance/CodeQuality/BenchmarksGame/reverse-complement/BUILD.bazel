@@ -1,0 +1,21 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "reverse-complement-1",
+    tags = ["manual"],  # Needs EmbeddedResource support
+    srcs = [
+        "reverse-complement-1.cs",
+        "harness-helpers.cs",
+    ],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "reverse-complement-6",
+    tags = ["manual"],  # Needs EmbeddedResource support
+    srcs = [
+        "reverse-complement-6.cs",
+        "harness-helpers.cs",
+    ],
+    optimize = True,
+)

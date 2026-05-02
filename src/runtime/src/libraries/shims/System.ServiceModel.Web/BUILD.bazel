@@ -1,8 +1,12 @@
+load("//:defs.bzl", "ECMA_SNK", "SHAREDLIB1024_SNK")
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.ServiceModel.Web",
-    skip_cs1591 = True,
+    keyfile = SHAREDLIB1024_SNK,
+    generate_documentation_file = False,
+    library_import_generator = False,
+    skip_locals_init = False,
     srcs = [
         "src/System.ServiceModel.Web.cs",
     ],

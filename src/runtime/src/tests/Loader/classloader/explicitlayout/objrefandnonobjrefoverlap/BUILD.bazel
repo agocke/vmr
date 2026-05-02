@@ -1,0 +1,71 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "case1",
+    srcs = ["case1.cs"],
+)
+
+coreclr_test(
+    name = "case11",
+    srcs = ["case11.cs"],
+)
+
+coreclr_test(
+    name = "case12",
+    srcs = ["case12.cs"],
+)
+
+coreclr_test(
+    name = "case13",
+    srcs = ["case13.cs"],
+)
+
+coreclr_test(
+    name = "case14",
+    srcs = ["case14.cs"],
+)
+
+coreclr_test(
+    name = "case15",
+    srcs = ["case15.cs"],
+)
+
+coreclr_test(
+    name = "case2",
+    srcs = ["case2.cs"],
+)
+
+coreclr_test(
+    name = "case3",
+    srcs = ["case3.cs"],
+)
+
+coreclr_test(
+    name = "case4",
+    srcs = ["case4.cs"],
+)
+
+coreclr_test(
+    name = "case5",
+    srcs = ["case5.cs"],
+)
+
+coreclr_test(
+    name = "case6",
+    srcs = ["case6.cs"],
+)
+
+coreclr_test(
+    name = "case7",
+    srcs = ["case7.cs"],
+)
+
+coreclr_test(
+    name = "case8",
+    srcs = ["case8.cs"],
+)
+
+coreclr_test(
+    name = "case9",
+    srcs = ["case9.cs"],
+)

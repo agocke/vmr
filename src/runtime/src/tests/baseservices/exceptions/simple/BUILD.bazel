@@ -1,0 +1,37 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ILHelper",
+    srcs = ["ILHelper.il"],
+    pri = 1,
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "VT",
+    srcs = ["VT.il"],
+    pri = 1,
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "fault",
+    srcs = ["fault.il"],
+    pri = 1,
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "finally",
+    srcs = ["finally.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)

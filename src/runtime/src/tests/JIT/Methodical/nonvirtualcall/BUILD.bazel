@@ -11,6 +11,7 @@ il_coreclr_test(
     srcs = ["valuetype_r.il", "valuetype.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -18,6 +19,7 @@ il_coreclr_test(
     srcs = ["generics2_r.il", "generics2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -25,6 +27,7 @@ il_coreclr_test(
     srcs = ["valuetype_d.il", "valuetype.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -32,6 +35,7 @@ il_coreclr_test(
     srcs = ["generics_d.il", "generics.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -45,6 +49,7 @@ il_coreclr_test(
     srcs = ["generics_r.il", "generics.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -52,6 +57,7 @@ il_coreclr_test(
     srcs = ["delegate_d.il", "delegate.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -59,6 +65,7 @@ il_coreclr_test(
     srcs = ["classic_d.il", "classic.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -66,6 +73,7 @@ il_coreclr_test(
     srcs = ["classic_r.il", "classic.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -73,6 +81,7 @@ il_coreclr_test(
     srcs = ["delegate_r.il", "delegate.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -80,4 +89,5 @@ il_coreclr_test(
     srcs = ["generics2_d.il", "generics2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

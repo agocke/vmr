@@ -13,11 +13,9 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.Sockets",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     os_targeted = "unix",
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     srcs = glob(
         ["src/System/**/*.cs"],
         exclude = [
@@ -205,7 +203,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading.Overlapped:ref_System.Threading.Overlapped",
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
-            "//src/libraries/System.Console:ref_System.Console",
-],
+    ],
     supported_os_platforms = ["unix"],
 )

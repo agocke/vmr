@@ -3,9 +3,9 @@
 #           nethost (shared+static).
 
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_shared_library")
-load("//src/native:native_defs.bzl", "NATIVE_CONFIG_DEFINES")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_COPTS", "NATIVE_CONFIG_DEFINES")
 
-load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//:cc_defs.bzl", "PLATFORM_COPTS", "PLATFORM_DEFINES", "PLATFORM_LINKOPTS")
 
 package(default_visibility = ["//src/native/corehost:__subpackages__"])
 
@@ -14,9 +14,17 @@ package(default_visibility = ["//src/native/corehost:__subpackages__"])
 cc_library(
     name = "configure_headers",
     hdrs = select({
-        "@platforms//os:macos": [
-            "bazel/darwin-arm64/_version.c",
-            "bazel/darwin-arm64/configure.h",
+        "//:macos_arm64": [
+            "bazel/osx-arm64/_version.c",
+            "bazel/osx-arm64/configure.h",
+        ],
+        "//:macos_x64": [
+            "bazel/osx-x64/_version.c",
+            "bazel/osx-x64/configure.h",
+        ],
+        "@platforms//os:windows": [
+            "bazel/windows-x64/_version.c",
+            "bazel/windows-x64/configure.h",
         ],
         "//conditions:default": [
             "bazel/linux-glibc-x64/_version.c",
@@ -24,7 +32,9 @@ cc_library(
         ],
     }),
     strip_include_prefix = select({
-        "@platforms//os:macos": "bazel/darwin-arm64",
+        "//:macos_arm64": "bazel/osx-arm64",
+        "//:macos_x64": "bazel/osx-x64",
+        "@platforms//os:windows": "bazel/windows-x64",
         "//conditions:default": "bazel/linux-glibc-x64",
     }),
 )
@@ -32,20 +42,25 @@ cc_library(
 cc_library(
     name = "hostmisc_config",
     hdrs = select({
-        "@platforms//os:macos": ["bazel/darwin-arm64/config.h"],
+        "//:macos_arm64": ["bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["bazel/osx-x64/config.h"],
+        "@platforms//os:windows": ["bazel/windows-x64/config.h"],
         "//conditions:default": ["bazel/linux-glibc-x64/config.h"],
     }),
     strip_include_prefix = select({
-        "@platforms//os:macos": "bazel/darwin-arm64",
+        "//:macos_arm64": "bazel/osx-arm64",
+        "//:macos_x64": "bazel/osx-x64",
+        "@platforms//os:windows": "bazel/windows-x64",
         "//conditions:default": "bazel/linux-glibc-x64",
     }),
 )
 
 # --- Shared copts and defines for all corehost targets ---
 
-COREHOST_COPTS = [
-    "-fno-use-cxa-atexit",
-]
+COREHOST_COPTS = PLATFORM_COPTS + NATIVE_CONFIG_COPTS + select({
+    "@platforms//os:windows": [],
+    "//conditions:default": ["-fno-use-cxa-atexit"],
+})
 
 COREHOST_INCLUDES = [
     ".",
@@ -108,21 +123,32 @@ cc_library(
 cc_library(
     name = "hostmisc",
     srcs = [
-        "hostmisc/pal.unix.cpp",
         "hostmisc/trace.cpp",
         "hostmisc/utils.cpp",
         "fxr/fx_ver.cpp",
-    ],
+    ] + select({
+        "@platforms//os:windows": [
+            "hostmisc/pal.windows.cpp",
+            "hostmisc/longfile.windows.cpp",
+        ],
+        "//conditions:default": [
+            "hostmisc/pal.unix.cpp",
+        ],
+    }),
     hdrs = [
         "hostmisc/pal.h",
         "hostmisc/trace.h",
         "hostmisc/utils.h",
-    ],
+    ] + select({
+        "@platforms//os:windows": ["hostmisc/longfile.h"],
+        "//conditions:default": [],
+    }),
     copts = COREHOST_COPTS,
     includes = COREHOST_INCLUDES + ["hostmisc"],
     defines = COREHOST_DEFINES,
     local_defines = NATIVE_CONFIG_DEFINES,
     linkopts = select({
+        "@platforms//os:windows": ["advapi32.lib"],
         "@platforms//os:macos": [
             "-lpthread",
         ],
@@ -189,7 +215,8 @@ cc_library(
     ],
 )
 
-# --- Version script genrules for shared library exports ---
+# --- Version script genrules for shared library exports (Unix only) ---
+# On Windows, .def files are compiled directly into the DLL.
 
 genrule(
     name = "hostfxr_exports",
@@ -237,11 +264,15 @@ cc_shared_library(
     name = "hostfxr",
     shared_lib_name = select({
         "@platforms//os:macos": "libhostfxr.dylib",
+        "@platforms//os:windows": "hostfxr.dll",
         "//conditions:default": "libhostfxr.so",
     }),
-    user_link_flags = select({
+    user_link_flags = PLATFORM_LINKOPTS + select({
         "@platforms//os:macos": [
             "-Wl,-install_name,@rpath/libhostfxr.dylib",
+        ],
+        "@platforms//os:windows": [
+            "/DEF:$(location fxr/standalone/hostfxr.def)",
         ],
         "//conditions:default": [
             "-Wl,--version-script,$(location :hostfxr_exports)",
@@ -254,6 +285,7 @@ cc_shared_library(
     dynamic_deps = [],
     additional_linker_inputs = select({
         "@platforms//os:macos": [],
+        "@platforms//os:windows": ["fxr/standalone/hostfxr.def"],
         "//conditions:default": [":hostfxr_exports"],
     }),
 )
@@ -305,11 +337,15 @@ cc_shared_library(
     name = "hostpolicy",
     shared_lib_name = select({
         "@platforms//os:macos": "libhostpolicy.dylib",
+        "@platforms//os:windows": "hostpolicy.dll",
         "//conditions:default": "libhostpolicy.so",
     }),
-    user_link_flags = select({
+    user_link_flags = PLATFORM_LINKOPTS + select({
         "@platforms//os:macos": [
             "-Wl,-install_name,@rpath/libhostpolicy.dylib",
+        ],
+        "@platforms//os:windows": [
+            "/DEF:$(location hostpolicy/standalone/hostpolicy.def)",
         ],
         "//conditions:default": [
             "-Wl,--version-script,$(location :hostpolicy_exports)",
@@ -322,6 +358,7 @@ cc_shared_library(
     dynamic_deps = [],
     additional_linker_inputs = select({
         "@platforms//os:macos": [],
+        "@platforms//os:windows": ["hostpolicy/standalone/hostpolicy.def"],
         "//conditions:default": [":hostpolicy_exports"],
     }),
 )
@@ -340,7 +377,8 @@ cc_binary(
     includes = COREHOST_INCLUDES + ["fxr", "hostmisc", "apphost"],
     defines = COREHOST_DEFINES,
     local_defines = NATIVE_CONFIG_DEFINES,
-    linkopts = select({
+    linkopts = PLATFORM_LINKOPTS + select({
+        "@platforms//os:windows": [],
         "@platforms//os:macos": [],
         "//conditions:default": ["-Wl,-Bsymbolic"],
     }),
@@ -362,12 +400,19 @@ cc_binary(
         "apphost/bundle_marker.h",
         "apphost/standalone/hostfxr_resolver.cpp",
         "hostfxr_resolver.h",
-    ],
+    ] + select({
+        "@platforms//os:windows": [
+            "apphost/apphost.windows.cpp",
+            "apphost/apphost.windows.h",
+        ],
+        "//conditions:default": [],
+    }),
     copts = COREHOST_COPTS,
     includes = COREHOST_INCLUDES + ["fxr", "hostmisc", "apphost"],
     defines = COREHOST_DEFINES + ["FEATURE_APPHOST"],
     local_defines = NATIVE_CONFIG_DEFINES,
-    linkopts = select({
+    linkopts = PLATFORM_LINKOPTS + select({
+        "@platforms//os:windows": ["shell32.lib", "user32.lib"],
         "@platforms//os:macos": [],
         "//conditions:default": ["-Wl,-Bsymbolic"],
     }),
@@ -403,12 +448,14 @@ cc_shared_library(
     name = "nethost",
     shared_lib_name = select({
         "@platforms//os:macos": "libnethost.dylib",
+        "@platforms//os:windows": "nethost.dll",
         "//conditions:default": "libnethost.so",
     }),
-    user_link_flags = select({
+    user_link_flags = PLATFORM_LINKOPTS + select({
         "@platforms//os:macos": [
             "-Wl,-install_name,@rpath/libnethost.dylib",
         ],
+        "@platforms//os:windows": [],
         "//conditions:default": [
             "-Wl,-Bsymbolic",
             "-Wl,-soname,libnethost.so",

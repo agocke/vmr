@@ -14,11 +14,13 @@ cc_library(
 cc_library(
     name = "corerun_config",
     hdrs = select({
-        "@platforms//os:macos": ["corerun/bazel/darwin-arm64/config.h"],
+        "//:macos_arm64": ["corerun/bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["corerun/bazel/osx-x64/config.h"],
         "//conditions:default": ["corerun/bazel/linux-glibc-x64/config.h"],
     }),
     strip_include_prefix = select({
-        "@platforms//os:macos": "corerun/bazel/darwin-arm64",
+        "//:macos_arm64": "corerun/bazel/osx-arm64",
+        "//:macos_x64": "corerun/bazel/osx-x64",
         "//conditions:default": "corerun/bazel/linux-glibc-x64",
     }),
 )

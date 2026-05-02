@@ -1,15 +1,24 @@
-load("//:defs.bzl", "gen_resx_source")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
 load("//src/tests:live_test.bzl", "library_test")
 
 gen_resx_source(
     name = "gen_resx",
     out = "SR.g.cs",
-    assembly_name = "System.Net.WebSockets.Client",
+    assembly_name = "System.Net.WebSockets.Client.Tests",
+    resx_file = "//src/libraries/System.Net.WebSockets.Client:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Net.WebSockets.Client.Tests.SR.resources",
     resx_file = "//src/libraries/System.Net.WebSockets.Client:src/Resources/Strings.resx",
 )
 
 library_test(
     name = "System.Net.WebSockets.Client.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.Net.WebSockets.Client.Tests.SR.resources": "FxResources.System.Net.WebSockets.Client.Tests.SR.resources"},
+    additionalfiles = ["//src/libraries/System.Net.WebSockets.Client:src/Resources/Strings.resx"],
     srcs = glob(
         ["**/*.cs"],
         exclude = [
@@ -73,9 +82,9 @@ library_test(
         "@paket.main//xunit.abstractions",
         "@paket.main//xunit.extensibility.core",
     ],
-    nowarn = ["xUnit1015", "SYSLIB0014"],
+    nowarn = ["xUnit1015"],
     defines = ["NETSTANDARD"],
     data = ["@paket.main//system.net.testdata:content_files"],
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

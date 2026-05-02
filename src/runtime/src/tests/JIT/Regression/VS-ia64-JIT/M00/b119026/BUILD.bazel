@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["bug.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -12,4 +13,5 @@ coreclr_test(
     srcs = ["charbug.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

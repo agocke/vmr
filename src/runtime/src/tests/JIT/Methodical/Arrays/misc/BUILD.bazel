@@ -6,6 +6,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     env = {"DOTNET_TieredCompilation": "0"},
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -25,6 +26,7 @@ il_coreclr_test(
     srcs = ["selfref_r.il", "selfref.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -36,6 +38,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -43,6 +46,7 @@ il_coreclr_test(
     srcs = ["initializearray_enum_d.il", "initializearray_enum.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -69,6 +73,7 @@ il_coreclr_test(
     srcs = ["gcarr_d.il", "gcarr.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -95,6 +100,7 @@ il_coreclr_test(
     srcs = ["initializearray_enum_r.il", "initializearray_enum.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -113,6 +119,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -126,6 +133,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -139,6 +147,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -152,6 +161,7 @@ il_coreclr_test(
     srcs = ["selfref_d.il", "selfref.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(

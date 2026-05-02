@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "DynamicObjects",
+    srcs = ["DynamicObjects.cs"],
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

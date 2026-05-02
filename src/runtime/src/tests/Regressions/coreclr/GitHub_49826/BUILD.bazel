@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "test49826",
+    srcs = glob(["*.cs"]),
+    nullable = "enable",
+    pri = 1,
+    deps = [
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+    ],
+)

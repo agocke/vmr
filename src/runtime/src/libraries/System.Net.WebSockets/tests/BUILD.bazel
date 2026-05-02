@@ -1,15 +1,24 @@
-load("//:defs.bzl", "gen_resx_source")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
 load("//src/tests:live_test.bzl", "library_test")
 
 gen_resx_source(
     name = "gen_resx",
     out = "SR.g.cs",
-    assembly_name = "System.Net.WebSockets",
+    assembly_name = "System.Net.WebSockets.Tests",
+    resx_file = "//src/libraries/System.Net.WebSockets:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Net.WebSockets.Tests.SR.resources",
     resx_file = "//src/libraries/System.Net.WebSockets:src/Resources/Strings.resx",
 )
 
 library_test(
     name = "System.Net.WebSockets.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.Net.WebSockets.Tests.SR.resources": "FxResources.System.Net.WebSockets.Tests.SR.resources"},
+    additionalfiles = ["//src/libraries/System.Net.WebSockets:src/Resources/Strings.resx"],
     srcs = glob(["**/*.cs"]) + [
         "//src/libraries/Common/tests:System/Net/Configuration.cs",
         "//src/libraries/Common/tests:System/Net/Configuration.WebSockets.cs",
@@ -42,5 +51,5 @@ library_test(
         "@paket.main//xunit.extensibility.core",
     ],
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

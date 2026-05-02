@@ -31,6 +31,7 @@ coreclr_test(
     srcs = ["chaos65204782cs.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -39,4 +40,5 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )

@@ -1,0 +1,38 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "ECMA_SNK")
+
+exports_files([
+    "ref/System.Reflection.Context.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Reflection.Context",
+    srcs = [
+        "ref/System.Reflection.Context.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Reflection.Context",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    com_interface_generator = True,
+    keyfile = ECMA_SNK,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "NU5128", "CS1591"],
+    srcs = glob(["src/**/*.cs"]),
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    assembly_description = "Provides CustomReflectionContext to enable customized reflection contexts.",
+)
+
+ref_impl_pair(
+    name = "live_System.Reflection.Context",
+    ref = ":ref_System.Reflection.Context",
+    lib = ":impl_System.Reflection.Context",
+    visibility = ["//visibility:public"],
+)

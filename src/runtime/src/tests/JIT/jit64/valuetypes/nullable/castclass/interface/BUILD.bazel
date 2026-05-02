@@ -1,0 +1,181 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "castclass-interface001",
+    srcs = [
+        "castclass-interface001.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface002",
+    srcs = [
+        "castclass-interface002.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface003",
+    srcs = [
+        "castclass-interface003.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface004",
+    srcs = [
+        "castclass-interface004.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface005",
+    srcs = [
+        "castclass-interface005.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface006",
+    srcs = [
+        "castclass-interface006.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface007",
+    srcs = [
+        "castclass-interface007.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface008",
+    srcs = [
+        "castclass-interface008.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface009",
+    srcs = [
+        "castclass-interface009.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface010",
+    srcs = [
+        "castclass-interface010.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface011",
+    srcs = [
+        "castclass-interface011.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface012",
+    srcs = [
+        "castclass-interface012.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface013",
+    srcs = [
+        "castclass-interface013.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface014",
+    srcs = [
+        "castclass-interface014.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface015",
+    srcs = [
+        "castclass-interface015.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface016",
+    srcs = [
+        "castclass-interface016.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface017",
+    srcs = [
+        "castclass-interface017.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-interface018",
+    srcs = [
+        "castclass-interface018.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)

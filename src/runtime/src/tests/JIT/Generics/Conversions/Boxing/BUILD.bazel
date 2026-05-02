@@ -11,6 +11,7 @@ coreclr_test(
     srcs = ["box_unbox01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(

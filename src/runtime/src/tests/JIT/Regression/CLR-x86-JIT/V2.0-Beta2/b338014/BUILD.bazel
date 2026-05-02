@@ -4,4 +4,5 @@ coreclr_test(
     name = "b338014",
     srcs = ["vsw338014.cs"],
     pri = 1,
+    size = "medium",
 )

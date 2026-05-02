@@ -1,0 +1,2 @@
+# Exports Common test files for consumption by test projects in subdirectories.
+exports_files(glob(["Common/**/*.cs"]))

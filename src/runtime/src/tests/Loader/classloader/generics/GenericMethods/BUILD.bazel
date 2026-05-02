@@ -1,0 +1,197 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "GenericParams10k",
+    srcs = ["GenericParams10k.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "arity01",
+    srcs = ["arity01.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001",
+    srcs = ["method001.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001a",
+    srcs = ["method001a.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001b",
+    srcs = ["method001b.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001c",
+    srcs = ["method001c.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001d",
+    srcs = ["method001d.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001e",
+    srcs = ["method001e.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001f",
+    srcs = ["method001f.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001g",
+    srcs = ["method001g.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001h",
+    srcs = ["method001h.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001i",
+    srcs = ["method001i.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method001j",
+    srcs = ["method001j.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method002",
+    srcs = ["method002.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method003",
+    srcs = ["method003.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method004",
+    srcs = ["method004.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method005",
+    srcs = ["method005.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method006",
+    srcs = ["method006.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method007",
+    srcs = ["method007.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method008",
+    srcs = ["method008.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method009",
+    srcs = ["method009.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method010",
+    srcs = ["method010.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method011",
+    srcs = ["method011.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method012",
+    srcs = ["method012.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method013",
+    srcs = ["method013.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "method014",
+    srcs = ["method014.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "method015",
+    srcs = ["method015.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "method016",
+    srcs = ["method016.il"],
+    pri = 1,
+    size = "medium",
+)

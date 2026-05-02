@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["stress2_d.il", "stress2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["u_native_r.il", "u_native.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["array1_d.il", "array1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -26,6 +29,7 @@ il_coreclr_test(
     srcs = ["format_r.il", "format.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +37,7 @@ il_coreclr_test(
     srcs = ["longsig_r.il", "longsig.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -52,6 +57,7 @@ il_coreclr_test(
     srcs = ["native_d.il", "native.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -59,6 +65,7 @@ il_coreclr_test(
     srcs = ["native_r.il", "native.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -66,6 +73,7 @@ il_coreclr_test(
     srcs = ["stress2_r.il", "stress2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -73,6 +81,7 @@ il_coreclr_test(
     srcs = ["shortsig_r.il", "shortsig.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -80,6 +89,7 @@ il_coreclr_test(
     srcs = ["shortsig_d.il", "shortsig.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -87,6 +97,7 @@ il_coreclr_test(
     srcs = ["format_d.il", "format.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -94,6 +105,7 @@ il_coreclr_test(
     srcs = ["indcall_r.il", "indcall.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -107,6 +119,7 @@ il_coreclr_test(
     srcs = ["u_native_d.il", "u_native.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -120,6 +133,7 @@ il_coreclr_test(
     srcs = ["longsig_d.il", "longsig.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -127,6 +141,7 @@ il_coreclr_test(
     srcs = ["array2_r.il", "array2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -134,6 +149,7 @@ il_coreclr_test(
     srcs = ["array1_r.il", "array1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -147,4 +163,5 @@ il_coreclr_test(
     srcs = ["lcs_d.il", "lcs.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

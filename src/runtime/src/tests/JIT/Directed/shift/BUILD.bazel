@@ -4,12 +4,14 @@ coreclr_test(
     name = "uint8_r",
     srcs = ["uint8.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "int64_r",
     srcs = ["int64.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -18,6 +20,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -32,6 +35,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -39,6 +43,7 @@ il_coreclr_test(
     srcs = ["nativeint_d.il", "nativeint.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
@@ -46,6 +51,7 @@ coreclr_test(
     srcs = ["int32.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -54,6 +60,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -62,6 +69,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -70,6 +78,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -77,12 +86,14 @@ coreclr_test(
     srcs = ["uint8.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "int32_r",
     srcs = ["int32.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -90,6 +101,7 @@ coreclr_test(
     srcs = ["uint64.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -97,6 +109,7 @@ coreclr_test(
     srcs = ["uint8.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -104,6 +117,7 @@ il_coreclr_test(
     srcs = ["nativeuint_d.il", "nativeuint.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
@@ -112,6 +126,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -119,6 +134,7 @@ coreclr_test(
     srcs = ["uint32.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -127,12 +143,14 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "uint64_r",
     srcs = ["uint64.cs"],
     pri = 1,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -140,6 +158,7 @@ il_coreclr_test(
     srcs = ["int8_r.il", "int8.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -147,6 +166,7 @@ coreclr_test(
     srcs = ["uint16.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -155,18 +175,21 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
     name = "int32_cs_r",
     srcs = ["int32.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "uint8_cs_r",
     srcs = ["uint8.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -175,6 +198,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -183,12 +207,14 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "int16_cs_r",
     srcs = ["int16.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -196,6 +222,7 @@ coreclr_test(
     srcs = ["int64.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -203,6 +230,7 @@ coreclr_test(
     srcs = ["int32.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -211,6 +239,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -218,6 +247,7 @@ coreclr_test(
     srcs = ["uint64Opt.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -225,6 +255,7 @@ il_coreclr_test(
     srcs = ["int8_d.il", "int8.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
@@ -233,18 +264,21 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "uint32_cs_r",
     srcs = ["uint32.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "int16_r",
     srcs = ["int16.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -252,6 +286,7 @@ coreclr_test(
     srcs = ["int16.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -260,12 +295,14 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
     name = "uint16_r",
     srcs = ["uint16.cs"],
     pri = 1,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -273,12 +310,14 @@ il_coreclr_test(
     srcs = ["nativeint_r.il", "nativeint.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
     name = "uint32_r",
     srcs = ["uint32.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -287,6 +326,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -294,6 +334,7 @@ coreclr_test(
     srcs = ["int16.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -302,12 +343,14 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
     name = "uint16_cs_r",
     srcs = ["uint16.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -315,12 +358,14 @@ coreclr_test(
     srcs = ["uint32.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "uint64Opt_r",
     srcs = ["uint64Opt.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -329,6 +374,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -336,4 +382,5 @@ il_coreclr_test(
     srcs = ["nativeuint_r.il", "nativeuint.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

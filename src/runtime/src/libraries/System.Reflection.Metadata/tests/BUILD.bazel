@@ -1,4 +1,6 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.Reflection.Metadata.Tests",
@@ -25,10 +27,6 @@ library_test(
         "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.LoadLibraryEx.cs",
         "//src/libraries/Common:src/Microsoft/Win32/SafeHandles/SafeLibraryHandle.cs",
     ],
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     deps = [
         "//src/libraries/System.Reflection.Metadata:impl_System.Reflection.Metadata",
         "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
@@ -53,33 +51,17 @@ library_test(
     allow_unsafe_blocks = True,
     resources = glob(["Resources/**/*.dll", "Resources/**/*.exe", "Resources/**/*.mod", "Resources/**/*.winmd", "Resources/**/*.pdb", "Resources/**/*.snk", "Resources/**/*.obj"]),
     resource_logical_names = {
-        "IndexerWithByRefParam.dll": "System.Reflection.Metadata.Tests.Resources.Interop.IndexerWithByRefParam.dll",
-        "OtherAccessors.dll": "System.Reflection.Metadata.Tests.Resources.Interop.OtherAccessors.dll",
-        "Interop.Mock01.dll": "System.Reflection.Metadata.Tests.Resources.Interop.Interop.Mock01.dll",
-        "Interop.Mock01.Impl.dll": "System.Reflection.Metadata.Tests.Resources.Interop.Interop.Mock01.Impl.dll",
         "CPPClassLibrary2.obj": "System.Reflection.Metadata.Tests.Resources.Misc.CPPClassLibrary2.obj",
-        "Debug.dll": "System.Reflection.Metadata.Tests.Resources.Misc.Debug.dll",
-        "Deterministic.dll": "System.Reflection.Metadata.Tests.Resources.Misc.Deterministic.dll",
-        "EmptyType.dll": "System.Reflection.Metadata.Tests.Resources.Misc.EmptyType.dll",
         "KeyPair.snk": "System.Reflection.Metadata.Tests.Resources.Misc.KeyPair.snk",
-        "Members.dll": "System.Reflection.Metadata.Tests.Resources.Misc.Members.dll",
-        "SatelliteAssembly.resources.dll": "System.Reflection.Metadata.Tests.Resources.Misc.SatelliteAssembly.resources.dll",
-        "Signed.exe": "System.Reflection.Metadata.Tests.Resources.Misc.Signed.exe",
-        "NamespaceForwardedCS.dll": "System.Reflection.Metadata.Tests.Resources.Namespace.NamespaceForwardedCS.dll",
-        "NamespaceTests.dll": "System.Reflection.Metadata.Tests.Resources.Namespace.NamespaceTests.dll",
-        "AppCS.exe": "System.Reflection.Metadata.Tests.Resources.NetModule.AppCS.exe",
         "ModuleCS00.mod": "System.Reflection.Metadata.Tests.Resources.NetModule.ModuleCS00.mod",
         "ModuleCS01.mod": "System.Reflection.Metadata.Tests.Resources.NetModule.ModuleCS01.mod",
         "ModuleVB01.mod": "System.Reflection.Metadata.Tests.Resources.NetModule.ModuleVB01.mod",
-        "Documents.dll": "System.Reflection.Metadata.Tests.Resources.PortablePdbs.Documents.dll",
         "Documents.pdb": "System.Reflection.Metadata.Tests.Resources.PortablePdbs.Documents.pdb",
-        "Documents.Embedded.dll": "System.Reflection.Metadata.Tests.Resources.PortablePdbs.Documents.Embedded.dll",
         "Lib.winmd": "System.Reflection.Metadata.Tests.Resources.WinRT.Lib.winmd",
     },
-    nowarn = [
+    nowarn = MULTITARGET_NOWARN + [
         "CS0436",
-        "SYSLIB0037",
-    ],
+        "SYSLIB0037",  "NU1511"],
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

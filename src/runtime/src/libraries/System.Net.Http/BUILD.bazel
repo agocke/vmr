@@ -1,5 +1,10 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
 
+exports_files([
+    "src/ILLink/ILLink.Descriptors.LibraryBuild.xml",
+    "src/Resources/Strings.resx",
+] + glob(["src/**/*.cs"]))
+
 netcoreapp_ref_assembly(
     name = "ref_System.Net.Http",
     srcs = [
@@ -17,11 +22,9 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.Http",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     os_targeted = True,
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     srcs = glob(
         ["src/System/**/*.cs"],
         exclude = [
@@ -157,7 +160,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Collections:ref_System.Collections",
         "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
         "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
-        "//src/libraries/System.Console:ref_System.Console",
         "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
         "//src/libraries/System.Diagnostics.StackTrace:ref_System.Diagnostics.StackTrace",
         "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",

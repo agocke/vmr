@@ -1,17 +1,52 @@
-load("//:defs.bzl", "csharp_library")
+load("//:defs.bzl", "csharp_library", "gen_assembly_info", "gen_target_framework_attrs")
 
 exports_files(["PEReaderExtensions.cs"])
 
+gen_assembly_info(
+    name = "assemblyinfo_ILCompiler.Reflection.ReadyToRun",
+    out = "ILCompiler.Reflection.ReadyToRun.AssemblyInfo.cs",
+    assembly_name = "ILCompiler.Reflection.ReadyToRun",
+    assembly_version = "1.0.0.0",
+    cls_compliant = False,
+    is_aot_compatible = False,
+    include_serviceable = False,
+    include_description = False,
+    assembly_configuration = "Release",
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_ILCompiler.Reflection.ReadyToRun",
+    out = ".NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+    major_version = "8",
+    minor_version = "0",
+)
+
 csharp_library(
     name = "ILCompiler.Reflection.ReadyToRun",
+    msbuild_analyzer_config = "style",
+    include_default_ruleset = False,
+    skip_analyzers = True,
+    compiler_options = ["/warnaserror+:NU1605"],
     srcs = glob(["**/*.cs"]) + [
         "//src/coreclr/tools/Common:Internal/Runtime/CorConstants.cs",
         "//src/coreclr/tools/Common:Internal/Runtime/ModuleHeaders.cs",
         "//src/coreclr/tools/Common:Internal/Runtime/ReadyToRunConstants.cs",
         "//src/coreclr/tools/Common:Internal/Runtime/ReadyToRunInstructionSet.cs",
         "//src/coreclr/tools/Common:Pgo/PgoFormat.cs",
+        ":assemblyinfo_ILCompiler.Reflection.ReadyToRun",
+        ":tfmattrs_ILCompiler.Reflection.ReadyToRun",
     ],
-    compiler_options = ["/unsafe"],
-    target_frameworks = ["net10.0"],
+    allow_unsafe_blocks = True,
+    nowarn = ["1591", "8002", "NU1701"],
+    analyzers = [
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+    ],
+    target_frameworks = ["net8.0"],
+    deps = [
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.reflection.metadata",
+        "@paket.main//system.runtime.compilerservices.unsafe",
+    ],
     visibility = ["//visibility:public"],
 )

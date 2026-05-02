@@ -1,0 +1,52 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ServiceProcess.ServiceController",
+    srcs = [
+        "ref/System.ServiceProcess.ServiceController.cs",
+        "ref/System.ServiceProcess.ServiceController.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Diagnostics.EventLog:ref_System.Diagnostics.EventLog",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.ServiceProcess.ServiceController",
+    include_editorconfig = False,
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_ServiceController",
+    pnse_ref_srcs = [
+        "ref/System.ServiceProcess.ServiceController.cs",
+        "ref/System.ServiceProcess.ServiceController.netcoreapp.cs",
+    ],
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Diagnostics.EventLog:ref_System.Diagnostics.EventLog",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    analyzers = [
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    com_interface_generator = True,
+    supported_os_platforms_short = ["windows"],
+    nullable = "enable",
+    nowarn = MULTITARGET_NOWARN + ["nullable", "CA1865", "CA2249", "CP0003", "CS1591"],
+    allow_unsafe_blocks = True,
+)
+
+ref_impl_pair(
+    name = "live_System.ServiceProcess.ServiceController",
+    ref = ":ref_System.ServiceProcess.ServiceController",
+    lib = ":impl_System.ServiceProcess.ServiceController",
+    visibility = ["//visibility:public"],
+)

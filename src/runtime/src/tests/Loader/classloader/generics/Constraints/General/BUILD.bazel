@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "FunctionPointerConstraints",
+    srcs = ["FunctionPointerConstraints.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ManyGenConstraints",
+    srcs = ["ManyGenConstraints.cs"],
+    pri = 1,
+    size = "medium",
+)

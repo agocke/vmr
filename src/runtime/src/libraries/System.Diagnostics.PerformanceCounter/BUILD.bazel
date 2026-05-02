@@ -1,0 +1,52 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "ref/System.Diagnostics.PerformanceCounter.cs",
+    "ref/System.Diagnostics.PerformanceCounter.netcoreapp.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Diagnostics.PerformanceCounter",
+    srcs = [
+        "ref/System.Diagnostics.PerformanceCounter.cs",
+        "ref/System.Diagnostics.PerformanceCounter.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Diagnostics.PerformanceCounter",
+    keyfile = OPEN_SNK,
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_PerfCounters",
+    pnse_ref_srcs = [
+        "ref/System.Diagnostics.PerformanceCounter.cs",
+        "ref/System.Diagnostics.PerformanceCounter.netcoreapp.cs",
+    ],
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    allow_unsafe_blocks = True,
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms_short = ["windows"],
+    nullable = "disable",
+)
+
+ref_impl_pair(
+    name = "live_System.Diagnostics.PerformanceCounter",
+    ref = ":ref_System.Diagnostics.PerformanceCounter",
+    lib = ":impl_System.Diagnostics.PerformanceCounter",
+    visibility = ["//visibility:public"],
+)

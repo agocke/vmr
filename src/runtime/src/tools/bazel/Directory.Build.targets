@@ -1,0 +1,3 @@
+<Project>
+  <!-- Empty: prevent root Directory.Build.targets from applying to bazel tools. -->
+</Project>

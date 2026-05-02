@@ -13,6 +13,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Collections.NonGeneric",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         # Match MSBuild source file order (Compile items in csproj order)
         "//src/libraries/System.Collections.NonGeneric:src/System/Collections/CaseInsensitiveComparer.cs",

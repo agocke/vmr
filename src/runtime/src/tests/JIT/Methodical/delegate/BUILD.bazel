@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["_simpleoddpower_d.il", "_simpleoddpower.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,4 +13,5 @@ il_coreclr_test(
     srcs = ["_simpleoddpower_r.il", "_simpleoddpower.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

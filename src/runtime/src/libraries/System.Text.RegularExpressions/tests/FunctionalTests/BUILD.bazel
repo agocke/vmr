@@ -1,4 +1,6 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.Text.RegularExpressions.Tests",
@@ -42,11 +44,8 @@ library_test(
         "@paket.main//xunit.abstractions",
         "@paket.main//xunit.extensibility.core",
     ],
-    analyzers = [
-        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
-    ],
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
     data = ["@paket.main//system.text.regularexpressions.testdata:content_files"],
-    nowarn = ["xUnit2008", "SYSLIB0036", "SYSLIB1045", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nowarn = MULTITARGET_NOWARN + ["xUnit2008", "SYSLIB0036", "SYSLIB1045", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
     size = "large",
 )

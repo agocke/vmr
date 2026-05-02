@@ -1,21 +1,30 @@
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
+exports_files([
+    "System/Runtime/InteropServices/JavaScript/MarshalerType.cs",
+])
+
 # PNSE stub assembly — on non-browser platforms, all public API throws
 # PlatformNotSupportedException. Matches MSBuild's behavior.
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.InteropServices.JavaScript",
+    nowarn = ["CS1591"],
     pnse = True,
     pnse_message = "SR.SystemRuntimeInteropServicesJavaScript_PlatformNotSupported",
     pnse_ref_srcs = [
         "//src/libraries/System.Runtime.InteropServices.JavaScript:ref/System.Runtime.InteropServices.JavaScript.cs",
     ],
-    srcs = [],
+    srcs = [
+        "System.Runtime.InteropServices.JavaScript.SupportedOSPlatform.cs",
+    ],
     deps = [
-        "//src/libraries:ref_System.Runtime",
-        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
-        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+        "//src/libraries:impl_System.Runtime",
+        "//src/libraries/System.Threading:impl_System.Threading",
+        "//src/libraries/System.Threading.Channels:ref_System.Threading.Channels",
     ],
     resx_file = "Resources/Strings.resx",
     include_dll_safe_search_path = True,
-    nullable = "annotations",
+    jsimport_generator = True,
+    nullable = "enable",
 )

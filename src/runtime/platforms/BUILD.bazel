@@ -1,0 +1,11 @@
+# Platform definitions for cross-compilation.
+# Use with --platforms=//platforms:macos_arm64 to cross-compile from x64 to arm64.
+# These are NOT auto-registered as execution platforms.
+
+platform(
+    name = "macos_arm64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+)

@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["hugedim_d.il", "hugedim.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -24,6 +25,7 @@ il_coreclr_test(
     srcs = ["lcs_long_d.il", "lcs_long.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -37,4 +39,5 @@ il_coreclr_test(
     srcs = ["lcs_ulong_d.il", "lcs_ulong.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

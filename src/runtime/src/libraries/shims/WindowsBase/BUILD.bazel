@@ -1,8 +1,10 @@
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "SHAREDLIB1024_SNK")
 
 netcoreapp_impl_assembly(
     name = "impl_WindowsBase",
-    skip_cs1591 = True,
+    library_import_generator = False,
+    skip_locals_init = False,
     srcs = [
         "src/WindowsBase.cs",
     ],
@@ -12,6 +14,8 @@ netcoreapp_impl_assembly(
         "//src/libraries/shims/stubs:ref_System.IO.Packaging",
         "//src/libraries/shims/stubs:ref_System.Security.Permissions",
     ],
+    keyfile = SHAREDLIB1024_SNK,
+    generate_documentation_file = False,
     os_targeted = True,
     exclude_sr = True,
     assembly_version = "4.0.0.0",

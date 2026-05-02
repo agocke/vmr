@@ -1,7 +1,9 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.IO.FileSystem.Watcher.Tests",
+    defines = select({"@platforms//os:linux": ["LINUX", "LINUX1_0"], "//conditions:default": []}),
     srcs = glob(
         ["**/*.cs"],
     ) + [
@@ -16,10 +18,6 @@ library_test(
         "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.ResourceLimits.cs",
         "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
         "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
-    ],
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
     ],
     deps = [
         "//src/libraries/System.IO.FileSystem.Watcher:ref_System.IO.FileSystem.Watcher",
@@ -36,5 +34,5 @@ library_test(
     ],
     allow_unsafe_blocks = True,
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

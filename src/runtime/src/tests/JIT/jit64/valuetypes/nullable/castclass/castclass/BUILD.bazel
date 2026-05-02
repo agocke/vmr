@@ -1,0 +1,429 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "castclass001",
+    srcs = [
+        "castclass001.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass002",
+    srcs = [
+        "castclass002.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass003",
+    srcs = [
+        "castclass003.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass004",
+    srcs = [
+        "castclass004.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass005",
+    srcs = [
+        "castclass005.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass006",
+    srcs = [
+        "castclass006.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass007",
+    srcs = [
+        "castclass007.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass008",
+    srcs = [
+        "castclass008.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass009",
+    srcs = [
+        "castclass009.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass010",
+    srcs = [
+        "castclass010.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass011",
+    srcs = [
+        "castclass011.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass012",
+    srcs = [
+        "castclass012.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass013",
+    srcs = [
+        "castclass013.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass014",
+    srcs = [
+        "castclass014.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass015",
+    srcs = [
+        "castclass015.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass016",
+    srcs = [
+        "castclass016.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass017",
+    srcs = [
+        "castclass017.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass018",
+    srcs = [
+        "castclass018.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass019",
+    srcs = [
+        "castclass019.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass020",
+    srcs = [
+        "castclass020.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass021",
+    srcs = [
+        "castclass021.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass022",
+    srcs = [
+        "castclass022.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass023",
+    srcs = [
+        "castclass023.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass024",
+    srcs = [
+        "castclass024.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass025",
+    srcs = [
+        "castclass025.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass026",
+    srcs = [
+        "castclass026.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass027",
+    srcs = [
+        "castclass027.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass028",
+    srcs = [
+        "castclass028.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass029",
+    srcs = [
+        "castclass029.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass030",
+    srcs = [
+        "castclass030.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass031",
+    srcs = [
+        "castclass031.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass032",
+    srcs = [
+        "castclass032.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+)
+
+coreclr_test(
+    name = "castclass033",
+    srcs = [
+        "castclass033.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass034",
+    srcs = [
+        "castclass034.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass037",
+    srcs = [
+        "castclass037.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass038",
+    srcs = [
+        "castclass038.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass039",
+    srcs = [
+        "castclass039.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass040",
+    srcs = [
+        "castclass040.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass041",
+    srcs = [
+        "castclass041.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass042",
+    srcs = [
+        "castclass042.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass043",
+    srcs = [
+        "castclass043.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass044",
+    srcs = [
+        "castclass044.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass045",
+    srcs = [
+        "castclass045.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)

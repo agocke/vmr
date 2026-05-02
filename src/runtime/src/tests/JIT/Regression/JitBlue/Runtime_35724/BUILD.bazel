@@ -5,4 +5,5 @@ coreclr_test(
     srcs = ["Runtime_35724.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )

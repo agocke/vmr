@@ -1,0 +1,43 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "ECMA_SNK")
+
+exports_files(["ref/System.DirectoryServices.AccountManagement.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.DirectoryServices.AccountManagement",
+    srcs = ["ref/System.DirectoryServices.AccountManagement.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.DirectoryServices.AccountManagement",
+    keyfile = ECMA_SNK,
+    nowarn = MULTITARGET_NOWARN + ["CA1822", "CA1859", "CA2249", "CP0003", "IDE0059", "NU5128", "CS1591"],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    allow_unsafe_blocks = True,
+    pnse = True,
+    pnse_message = "SR.DirectoryServicesAccountManagement_PlatformNotSupported",
+    pnse_ref_srcs = ["ref/System.DirectoryServices.AccountManagement.cs"],
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms_short = ["windows"],
+    nullable = "disable",
+)
+
+ref_impl_pair(
+    name = "live_System.DirectoryServices.AccountManagement",
+    ref = ":ref_System.DirectoryServices.AccountManagement",
+    lib = ":impl_System.DirectoryServices.AccountManagement",
+    visibility = ["//visibility:public"],
+)

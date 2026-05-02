@@ -1,0 +1,72 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "BasicTest_DefaultMode",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BasicTest_DefaultMode_R2r",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BasicTest_QuickJitForLoopsOff",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BasicTest_QuickJitForLoopsOff_R2r",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BasicTest_QuickJitForLoopsOn",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BasicTest_QuickJitForLoopsOn_R2r",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BasicTest_QuickJitOff",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BasicTest_QuickJitOff_R2r",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BasicTest_QuickJitOn",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "BasicTest_QuickJitOn_R2r",
+    srcs = ["BasicTest.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "McjRecorderTimeoutBeforeStop",
+    srcs = ["McjRecorderTimeoutBeforeStop.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "TieredVtableMethodTests",
+    srcs = ["TieredVtableMethodTests.cs"],
+)

@@ -1,7 +1,11 @@
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files(["src/ILLink/ILLink.Descriptors.LibraryBuild.xml"])
 
 netcoreapp_impl_assembly(
     name = "impl_System.Private.Xml.Linq",
+    nowarn = ["CS1591"],
     srcs = glob(["src/System/**/*.cs"]) + [
         "//src/libraries/Common:src/System/Collections/Generic/EnumerableHelpers.cs",
         "//src/libraries/Common:src/System/Text/StringBuilderCache.cs",
@@ -17,4 +21,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading:ref_System.Threading",
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
     ],
+    keyfile = OPEN_SNK,
+    library_import_generator = False,
 )

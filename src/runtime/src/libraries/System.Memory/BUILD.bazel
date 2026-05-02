@@ -1,3 +1,4 @@
+load("//:defs.bzl", "OPEN_SNK")
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
 
 exports_files([
@@ -12,11 +13,13 @@ netcoreapp_ref_assembly(
     ],
     deps = [
         "//src/libraries:ref_System.Runtime",
-    ]
+    ],
+    keyfile = OPEN_SNK,
 )
 
 netcoreapp_impl_assembly(
     name = "impl_System.Memory",
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/SequencePosition.cs",
 
@@ -39,7 +42,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/Common:src/System/Buffers/ArrayBufferWriter.cs",
     ],
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
     ],
     allow_unsafe_blocks = True,
     partial_facade = True,
@@ -47,4 +50,5 @@ netcoreapp_impl_assembly(
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Memory",
     defines = [ "MAKE_ABW_PUBLIC" ],
+    keyfile = OPEN_SNK,
 )

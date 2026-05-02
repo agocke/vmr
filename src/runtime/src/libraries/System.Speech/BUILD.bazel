@@ -1,0 +1,68 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "SHAREDLIB1024_SNK")
+
+exports_files(["ref/System.Speech.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Speech",
+    srcs = ["ref/System.Speech.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Speech",
+    keyfile = SHAREDLIB1024_SNK,
+    include_editorconfig = False,
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_SystemSpeech",
+    pnse_ref_srcs = ["ref/System.Speech.cs"],
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    resources = [
+        "src/upstable_chs.upsmap",
+        "src/upstable_cht.upsmap",
+        "src/upstable_deu.upsmap",
+        "src/upstable_enu.upsmap",
+        "src/upstable_esp.upsmap",
+        "src/upstable_fra.upsmap",
+        "src/upstable_jpn.upsmap",
+    ],
+    resource_logical_names = {
+        "upstable_chs.upsmap": "upstable_chs.upsmap",
+        "upstable_cht.upsmap": "upstable_cht.upsmap",
+        "upstable_deu.upsmap": "upstable_deu.upsmap",
+        "upstable_enu.upsmap": "upstable_enu.upsmap",
+        "upstable_esp.upsmap": "upstable_esp.upsmap",
+        "upstable_fra.upsmap": "upstable_fra.upsmap",
+        "upstable_jpn.upsmap": "upstable_jpn.upsmap",
+    },
+    analyzers = [
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    com_interface_generator = True,
+    supported_os_platforms_short = ["windows"],
+    nullable = "disable",
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS0649", "CA1822", "CA1852", "IDE0059", "NU5128", "SA1129", "CS1591"],
+    allow_unsafe_blocks = True,
+)
+
+ref_impl_pair(
+    name = "live_System.Speech",
+    ref = ":ref_System.Speech",
+    lib = ":impl_System.Speech",
+    visibility = ["//visibility:public"],
+)

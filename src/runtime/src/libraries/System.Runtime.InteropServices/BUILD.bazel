@@ -1,15 +1,87 @@
 
-load("//:defs.bzl", "csharp_library")
+load("//:defs.bzl", "MSFT_SNK", "csharp_library", "gen_assembly_info", "gen_target_framework_attrs", "resgen")
 
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
 
 exports_files([
+    "gen/Common/UnreachableException.cs",
     "ref/System.Runtime.InteropServices.cs",
     "ref/System.Runtime.InteropServices.Forwards.cs",
 ])
 
+resgen(
+    name = "MicrosoftInteropSourceGenerationResources",
+    out = "FxResources.Microsoft.Interop.SourceGeneration.SR.resources",
+    resx_file = "gen/Common/Resources/Strings.resx",
+)
+
+# Assembly info for Microsoft.Interop.SourceGeneration
+gen_assembly_info(
+    name = "assemblyinfo_Microsoft.Interop.SourceGeneration",
+    out = "Microsoft.Interop.SourceGeneration.AssemblyInfo.cs",
+    assembly_name = "Microsoft.Interop.SourceGeneration",
+    assembly_version = "42.42.42.42",
+    cls_compliant = False,
+    is_trimmable = False,
+    is_aot_compatible = False,
+    include_neutral_resources_language = False,
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_Microsoft.Interop.SourceGeneration",
+    out = "SourceGeneration/.NETStandard,Version=v2.0.AssemblyAttributes.cs",
+    framework_type = "netstandard",
+    major_version = "2",
+    minor_version = "0",
+)
+
+# Assembly info for LibraryImportGenerator
+gen_assembly_info(
+    name = "assemblyinfo_LibraryImportGenerator",
+    out = "LibraryImportGenerator.AssemblyInfo.cs",
+    assembly_name = "Microsoft.Interop.LibraryImportGenerator",
+    assembly_version = "42.42.42.42",
+    cls_compliant = False,
+    is_trimmable = False,
+    is_aot_compatible = False,
+    include_neutral_resources_language = False,
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_LibraryImportGenerator",
+    out = "LibraryImportGenerator/.NETStandard,Version=v2.0.AssemblyAttributes.cs",
+    framework_type = "netstandard",
+    major_version = "2",
+    minor_version = "0",
+)
+
+# Assembly info for DownlevelLibraryImportGenerator
+gen_assembly_info(
+    name = "assemblyinfo_DownlevelLibraryImportGenerator",
+    out = "DownlevelLibraryImportGenerator.AssemblyInfo.cs",
+    assembly_name = "Microsoft.Interop.LibraryImportGenerator.Downlevel",
+    assembly_version = "42.42.42.42",
+    cls_compliant = False,
+    is_trimmable = False,
+    is_aot_compatible = False,
+    include_neutral_resources_language = False,
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_DownlevelLibraryImportGenerator",
+    out = "Downlevel/.NETStandard,Version=v2.0.AssemblyAttributes.cs",
+    framework_type = "netstandard",
+    major_version = "2",
+    minor_version = "0",
+)
+
 csharp_library(
     name = "Microsoft.Interop.SourceGeneration",
+    keyfile = MSFT_SNK,
+    compiler_options = ["/publicsign+"],
     srcs = glob(["gen/Microsoft.Interop.SourceGeneration/**/*.cs"]) + [
         "//src/libraries/System.Private.CoreLib:src/System/Diagnostics/CodeAnalysis/NullableAttributes.cs",
         "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
@@ -21,31 +93,52 @@ csharp_library(
         "//src/libraries/System.Private.CoreLib:src/System/Runtime/InteropServices/StringMarshalling.cs",
         "//src/libraries/System.Private.CoreLib:src/System/Runtime/InteropServices/Marshalling/MarshalMode.cs",
 
-        "//src/libraries/Common:src/Roslyn/DiagnosticDescriptorHelper.cs",
         "//src/libraries/Common:src/Roslyn/GetBestTypeByMetadataName.cs",
         "//src/libraries/Common:src/Roslyn/Hash.cs",
         "//src/libraries/Common:src/System/SR.cs",
 
         "tests/Common/MarshalDirection.cs",
         "gen/Common/UnreachableException.cs",
+        ":assemblyinfo_Microsoft.Interop.SourceGeneration",
+        ":tfmattrs_Microsoft.Interop.SourceGeneration",
     ],
     target_frameworks = ["netstandard2.0"],
     langversion = "preview",
-    nullable = "annotations",
+    nullable = "enable",
     allow_unsafe_blocks = True,
+    resources = [":MicrosoftInteropSourceGenerationResources"],
+    resource_logical_names = {
+        "FxResources.Microsoft.Interop.SourceGeneration.SR.resources": "FxResources.Microsoft.Interop.SourceGeneration.SR.resources",
+    },
     deps = [
         "@paket.main//microsoft.codeanalysis.common",
         "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//microsoft.codeanalysis.workspaces.common",
+        "@paket.main//microsoft.codeanalysis.csharp.workspaces",
         "@paket.main//system.collections.immutable",
         "@paket.main//system.memory",
+        "@paket.main//system.buffers",
+        "@paket.main//system.composition.attributedmodel",
+        "@paket.main//system.composition.convention",
+        "@paket.main//system.composition.hosting",
+        "@paket.main//system.composition.runtime",
+        "@paket.main//system.composition.typedparts",
+        "@paket.main//system.io.pipelines",
+        "@paket.illink//system.numerics.vectors",
+        "@paket.main//system.reflection.metadata",
+        "@paket.main//system.runtime.compilerservices.unsafe",
+        "@paket.main//system.threading.channels",
+        "@paket.illink//system.text.encoding.codepages",
+        "@paket.illink//system.threading.tasks.extensions",
     ],
-    nowarn = [
-        "CS3003",
-        # MSBuild does not generate XML docs for generator projects
-        "CS1572",
-        "CS1574",
-        "CS1734",
+    analyzers = [
+        "//:source_build_analyzers",
     ],
+    additionalfiles = glob(["gen/Common/Resources/*.resx"]),
+    msbuild_analyzer_config = "source",
+    include_syslib_warnaserror = False,
+    extra_editorconfig_content = "dotnet_diagnostic.RS1036.severity = none",
+    nowarn = ["nullable"],
     cls_compliant = False,
     defines = [ "MICROSOFT_INTEROP_SOURCEGENERATION", "BAZEL" ],
     visibility = ["//visibility:public"],
@@ -54,6 +147,8 @@ csharp_library(
 csharp_library(
     name = "LibraryImportGenerator",
     out = "Microsoft.Interop.LibraryImportGenerator",
+    keyfile = MSFT_SNK,
+    compiler_options = ["/publicsign+"],
     srcs = glob(["gen/LibraryImportGenerator/**/*.cs"]) + [
         "//src/libraries/System.Private.CoreLib:src/System/Diagnostics/CodeAnalysis/NullableAttributes.cs",
         "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
@@ -67,12 +162,15 @@ csharp_library(
         "gen/Common/FixAllContextExtensions.cs",
         "gen/Common/LibraryImportData.cs",
         "gen/Common/UnreachableException.cs",
+        ":assemblyinfo_LibraryImportGenerator",
+        ":tfmattrs_LibraryImportGenerator",
     ],
     target_frameworks = ["netstandard2.0"],
     langversion = "preview",
     cls_compliant = False,
-    nullable = "annotations",
-    defines = [ "MICROSOFT_INTEROP_SOURCEGENERATION", "BAZEL" ],
+    nullable = "enable",
+    allow_unsafe_blocks = True,
+    defines = ["BAZEL"],
     deps = [
         ":Microsoft.Interop.SourceGeneration",
         "@paket.main//microsoft.codeanalysis.common",
@@ -82,19 +180,37 @@ csharp_library(
         "@paket.main//system.composition.attributedmodel",
         "@paket.main//system.collections.immutable",
         "@paket.main//system.memory",
+        "@paket.main//system.composition.convention",
+        "@paket.main//system.composition.hosting",
+        "@paket.main//system.composition.runtime",
+        "@paket.main//system.composition.typedparts",
+        "@paket.main//system.buffers",
+        "@paket.main//system.io.pipelines",
+        "@paket.illink//system.numerics.vectors",
+        "@paket.main//system.reflection.metadata",
+        "@paket.main//system.runtime.compilerservices.unsafe",
+        "@paket.main//system.threading.channels",
+        "@paket.illink//system.text.encoding.codepages",
+        "@paket.illink//system.threading.tasks.extensions",
     ],
     resx_file = "gen/Common/Resources/Strings.resx",
-    nowarn = [
-        "CS3003",
-        # MSBuild does not generate XML docs for generator projects
-        "CS1574",
+    analyzers = [
+        "//:source_build_analyzers",
     ],
+    additionalfiles = glob(["gen/Common/Resources/*.resx"]),
+    msbuild_analyzer_config = "source",
+    editorconfig_name = "LibraryImportGenerator",
+    include_syslib_warnaserror = False,
+    extra_editorconfig_content = "dotnet_diagnostic.RS1036.severity = none",
+    nowarn = ["RS1038", "RS2008", "nullable"],
     visibility = ["//visibility:public"],
 )
 
 csharp_library(
     name = "ComInterfaceGenerator",
     out = "Microsoft.Interop.ComInterfaceGenerator",
+    keyfile = MSFT_SNK,
+    compiler_options = ["/publicsign+"],
     srcs = glob(["gen/ComInterfaceGenerator/**/*.cs"]) + [
         "//src/libraries/System.Private.CoreLib:src/System/Diagnostics/CodeAnalysis/NullableAttributes.cs",
         "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
@@ -118,7 +234,7 @@ csharp_library(
     target_frameworks = ["netstandard2.0"],
     langversion = "preview",
     cls_compliant = False,
-    nullable = "annotations",
+    nullable = "enable",
     allow_unsafe_blocks = True,
     defines = ["MICROSOFT_INTEROP_COMINTERFACEGENERATOR", "BAZEL"],
     deps = [
@@ -130,13 +246,79 @@ csharp_library(
         "@paket.main//system.composition.attributedmodel",
         "@paket.main//system.collections.immutable",
         "@paket.main//system.memory",
+        "@paket.main//system.composition.convention",
+        "@paket.main//system.composition.hosting",
+        "@paket.main//system.composition.runtime",
+        "@paket.main//system.composition.typedparts",
+        "@paket.main//system.buffers",
+        "@paket.main//system.io.pipelines",
+        "@paket.illink//system.numerics.vectors",
+        "@paket.main//system.reflection.metadata",
+        "@paket.main//system.runtime.compilerservices.unsafe",
+        "@paket.main//system.threading.channels",
+        "@paket.illink//system.text.encoding.codepages",
+        "@paket.illink//system.threading.tasks.extensions",
     ],
     resx_file = "gen/Common/Resources/Strings.resx",
-    nowarn = [
-        "CS3003",
-        # MSBuild does not generate XML docs for generator projects
-        "CS1574",
+    analyzers = [
+        "//:source_build_analyzers",
     ],
+    additionalfiles = glob(["gen/Common/Resources/*.resx"]),
+    msbuild_analyzer_config = "source",
+    editorconfig_name = "ComInterfaceGenerator",
+    include_syslib_warnaserror = False,
+    extra_editorconfig_content = "dotnet_diagnostic.RS1036.severity = none",
+    nowarn = ["RS1038", "RS2008", "nullable"],
+    visibility = ["//visibility:public"],
+)
+
+csharp_library(
+    name = "DownlevelLibraryImportGenerator",
+    out = "Microsoft.Interop.LibraryImportGenerator.Downlevel",
+    keyfile = MSFT_SNK,
+    compiler_options = ["/publicsign+"],
+    srcs = glob(["gen/DownlevelLibraryImportGenerator/**/*.cs"]) + [
+        "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
+
+        "//src/libraries/Common:src/Roslyn/DiagnosticDescriptorHelper.cs",
+        "//src/libraries/Common:src/Roslyn/GetBestTypeByMetadataName.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+
+        "gen/Common/OperationExtensions.cs",
+        "gen/Common/LibraryImportData.cs",
+        "gen/Common/UnreachableException.cs",
+        ":assemblyinfo_DownlevelLibraryImportGenerator",
+        ":tfmattrs_DownlevelLibraryImportGenerator",
+    ],
+    target_frameworks = ["netstandard2.0"],
+    langversion = "preview",
+    cls_compliant = False,
+    nullable = "enable",
+    allow_unsafe_blocks = True,
+    defines = ["BAZEL"],
+    deps = [
+        ":Microsoft.Interop.SourceGeneration",
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.memory",
+        "@paket.main//system.buffers",
+        "@paket.illink//system.numerics.vectors",
+        "@paket.main//system.reflection.metadata",
+        "@paket.main//system.runtime.compilerservices.unsafe",
+        "@paket.illink//system.text.encoding.codepages",
+        "@paket.illink//system.threading.tasks.extensions",
+    ],
+    resx_file = "gen/Common/Resources/Strings.resx",
+    analyzers = [
+        "//:source_build_analyzers",
+    ],
+    additionalfiles = glob(["gen/Common/Resources/*.resx"]),
+    msbuild_analyzer_config = "source",
+    editorconfig_name = "DownlevelLibraryImportGenerator",
+    include_syslib_warnaserror = False,
+    extra_editorconfig_content = "dotnet_diagnostic.RS1036.severity = none",
+    nowarn = ["RS1038", "RS2008", "nullable"],
     visibility = ["//visibility:public"],
 )
 
@@ -155,6 +337,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.InteropServices",
+    nowarn = ["CS1591"],
     partial_facade = True,
     srcs = [
         "src/System/Runtime/CompilerServices/IDispatchConstantAttribute.cs",
@@ -226,7 +409,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/Common:src/System/Obsoletions.cs",
     ],
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
         "//src/libraries/System.Collections.Concurrent:impl_System.Collections.Concurrent",
     ],
     allow_unsafe_blocks = True,

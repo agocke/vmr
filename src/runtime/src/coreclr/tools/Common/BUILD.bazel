@@ -1,1 +1,1 @@
-exports_files(glob(["**/*.cs"]))
+exports_files(glob(["**/*.cs"]) + ["TypeSystem/Common/Properties/Resources.resx"])

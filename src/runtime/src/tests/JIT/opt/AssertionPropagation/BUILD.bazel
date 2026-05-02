@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["DynBlkNullAssertions.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -12,6 +13,7 @@ coreclr_test(
     srcs = ["NullCheckAssertion2.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -26,6 +28,7 @@ coreclr_test(
     srcs = ["NullCheckAssertion1.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -34,6 +37,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -41,6 +45,7 @@ coreclr_test(
     srcs = ["NullCheckAssertion6.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -54,6 +59,7 @@ coreclr_test(
     srcs = ["NullCheckAssertion4.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -61,6 +67,7 @@ coreclr_test(
     srcs = ["NullCheckAssertion3.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -74,6 +81,7 @@ coreclr_test(
     srcs = ["NullCheckAssertion7.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -81,6 +89,7 @@ coreclr_test(
     srcs = ["TypeOfAssertion.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -94,6 +103,7 @@ coreclr_test(
     srcs = ["NullCheckAssertion5.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -101,6 +111,7 @@ coreclr_test(
     srcs = ["CopyProp.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -108,6 +119,7 @@ coreclr_test(
     srcs = ["ConstantProp.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(

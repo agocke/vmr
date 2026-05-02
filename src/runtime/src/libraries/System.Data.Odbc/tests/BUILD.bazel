@@ -1,0 +1,30 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Data.Odbc.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Windows-only
+            "ConnectionStrings.Windows.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/Interop/Unix/Interop.Odbc.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Data.Odbc:impl_System.Data.Odbc",
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries:ref_System.Threading.Tasks",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    os_targeted = "unix",
+    keyfile = OPEN_SNK,
+    # Requires ODBC drivers (libodbc) which are not available in the test environment.
+    tags = ["manual"],
+)

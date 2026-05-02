@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "ptrarray",
+    optimize = False,
+    srcs = ["ptrarray.cs"],
+    pri = 1,
+    size = "medium",
+)

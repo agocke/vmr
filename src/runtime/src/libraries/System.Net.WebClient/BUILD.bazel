@@ -1,4 +1,5 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
 
 exports_files(["ref/System.Net.WebClient.cs"])
 
@@ -20,6 +21,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.WebClient",
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Net/WebClient.cs",
         "//src/libraries/Common:src/System/Obsoletions.cs",
@@ -44,4 +46,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Web.HttpUtility:ref_System.Web.HttpUtility",
     ],
     unsupported_os_platforms = ["browser", "wasi"],
+    keyfile = OPEN_SNK,
+    library_import_generator = False,
 )

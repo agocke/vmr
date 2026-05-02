@@ -20,6 +20,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Reflection.DispatchProxy",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Reflection/DispatchProxy.cs",
         "src/System/Reflection/DispatchProxyGenerator.cs",
@@ -42,6 +44,7 @@ netcoreapp_impl_assembly(
 
 live_csharp_library(
     name = "live_System.Reflection.DispatchProxy",
+    generate_assembly_info = True,
     srcs = [
         "src/System/Reflection/DispatchProxy.cs",
         "src/System/Reflection/DispatchProxyGenerator.cs",

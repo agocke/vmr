@@ -4,7 +4,7 @@ bazel_dep(name = "rules_dotnet")
 git_override(
     module_name = "rules_dotnet",
     remote = "https://github.com/agocke/rules_dotnet.git",
-    commit = "0907edc64e9513aa9b4967fae6e3f887b82fb8dc",
+    commit = "e02dc11e69a60652b6ab6a1ca9cceeba0c615e29",
 )
 
 dotnet = use_extension("@rules_dotnet//dotnet:extensions.bzl", "dotnet")
@@ -18,10 +18,30 @@ main_extension = use_extension("//paket:paket.main_extension.bzl", "main_extensi
 use_repo(
     main_extension,
     "paket.main",
-    "nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102",
-    "nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26102.102",
-    "nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102",
+    "nuget.microsoft.codeanalysis.analyzers.v5.0.0-2.26170.102",
+    "nuget.microsoft.codeanalysis.bannedapianalyzers.v3.3.5-beta1.23270.2",
+    "nuget.microsoft.codeanalysis.csharp.codestyle.v4.14.0",
+    "nuget.microsoft.codeanalysis.netanalyzers.v10.0.106",
+    "nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26170.102",
+    "nuget.microsoft.dotnet.codeanalysis.v10.0.0-beta.26170.102",
+    "nuget.microsoft.dotnet.genfacades.v10.0.0-beta.26170.102",
+    "nuget.microsoft.dotnet.sharedframework.sdk.v10.0.0-beta.26170.102",
+    "nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26170.102",
+    "nuget.optimization.linux-arm64.mibc.runtime.v1.0.0-prerelease.26080.1",
+    "nuget.optimization.linux-x64.mibc.runtime.v1.0.0-prerelease.26080.1",
+    "nuget.staticcs.v0.2.0",
+    "nuget.stylecop.analyzers.unstable.v1.2.0.556",
     "nuget.system.private.runtime.unicodedata.v10.0.0-beta.25418.1",
+    "nuget.xunit.analyzers.v1.22.0",
+)
+
+illink_extension = use_extension("//paket:paket.illink_extension.bzl", "illink_extension")
+
+use_repo(
+    illink_extension,
+    "paket.illink",
+    "nuget.microsoft.codeanalysis.common.v4.14.0",
+    "nuget.microsoft.codeanalysis.csharp.v4.14.0",
 )
 
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")

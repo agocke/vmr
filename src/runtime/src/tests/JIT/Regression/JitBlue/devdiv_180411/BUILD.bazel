@@ -5,4 +5,5 @@ il_coreclr_test(
     srcs = ["devdiv_180411.il"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )

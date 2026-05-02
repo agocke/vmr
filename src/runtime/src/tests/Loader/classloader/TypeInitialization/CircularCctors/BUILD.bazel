@@ -1,0 +1,60 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "CircularCctorFourThreads",
+    srcs = ["CircularCctorFourThreads.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "CircularCctorFourThreadsBFI",
+    srcs = ["CircularCctorFourThreadsBFI.il"],
+)
+
+coreclr_test(
+    name = "CircularCctorThreeThreads01",
+    srcs = ["CircularCctorThreeThreads01.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "CircularCctorThreeThreads01BFI",
+    srcs = ["CircularCctorThreeThreads01BFI.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CircularCctorThreeThreads02",
+    srcs = ["CircularCctorThreeThreads02.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "CircularCctorThreeThreads02BFI",
+    srcs = ["CircularCctorThreeThreads02BFI.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CircularCctorThreeThreads03",
+    srcs = ["CircularCctorThreeThreads03.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "CircularCctorThreeThreads03BFI",
+    srcs = ["CircularCctorThreeThreads03BFI.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CircularCctorTwoThreadsThreeCC",
+    srcs = ["CircularCctorTwoThreadsThreeCC.cs"],
+)

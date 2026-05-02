@@ -1,8 +1,16 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.Security.Cryptography.Pkcs.Tests",
-    srcs = glob(["**/*.cs"]) + [
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Windows CNG key persistence tests
+            "EnvelopedCms/DecryptTests.KeyPersistence.cs",
+        ],
+    ) + [
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/MLDsa/MLDsaTestsData.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/MLDsa/MLDsaTestsData.Ietf.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/SlhDsa/SlhDsaTestData.cs",
@@ -29,7 +37,7 @@ library_test(
         "@paket.main//xunit.extensibility.core",
     ],
     allow_unsafe_blocks = True,
-    nowarn = ["SYSLIB0057", "SYSLIB5006"],
+    nowarn = MULTITARGET_NOWARN + ["SYSLIB0057", "SYSLIB5006"],
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

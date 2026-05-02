@@ -1,0 +1,177 @@
+name: Sync main → bazel-main
+
+on:
+  push:
+    branches: [ bazel-main ]
+  schedule:
+    - cron: '0 0 * * *'  # Daily
+  workflow_dispatch:
+    inputs:
+      skip_copilot_fix:
+        description: 'Skip Copilot SDK auto-fix job'
+        type: boolean
+        default: false
+      skip_equivalence:
+        description: 'Skip equivalence check'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: Sync Upstream
+    runs-on: ubuntu-latest
+    outputs:
+      has_new_commits: ${{ steps.run-sync.outputs.has_new_commits }}
+      sync_branch: ${{ steps.run-sync.outputs.sync_branch }}
+      classification: ${{ steps.run-sync.outputs.classification }}
+      pr_number: ${{ steps.run-sync.outputs.pr_number }}
+    steps:
+      - name: Checkout bazel-main branch
+        uses: actions/checkout@v5
+        with:
+          ref: bazel-main
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Mount Bazel cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/bazel-disk
+          key: bazel-sync-main-${{ hashFiles('MODULE.bazel', '.bazelrc') }}-${{ github.sha }}
+          restore-keys: |
+            bazel-sync-main-${{ hashFiles('MODULE.bazel', '.bazelrc') }}-
+            bazel-sync-main-
+
+      - name: Install Paket
+        run: dotnet tool install -g paket --add-source https://api.nuget.org/v3/index.json
+
+      - name: Generate App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.SYNC_APP_ID }}
+          private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+
+      - name: Run sync
+        id: run-sync
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_PR_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: >-
+          chmod +x src/tools/bazel/sync-upstream.sh src/tools/bazel/detect-upstream-changes.sh &&
+          src/tools/bazel/sync-upstream.sh
+          --repo "${{ github.repository }}"
+          --upstream-ref main
+          --base-branch bazel-main
+          --output-file "$GITHUB_OUTPUT"
+
+  copilot-fix:
+    name: Copilot Auto-Fix
+    needs: sync
+    if: >-
+      needs.sync.result == 'success' &&
+      needs.sync.outputs.has_new_commits == 'true' &&
+      (needs.sync.outputs.classification == 'build-changes' || needs.sync.outputs.classification == 'conflict') &&
+      github.event.inputs.skip_copilot_fix != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout sync branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.sync.outputs.sync_branch }}
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Run change detection
+        run: >-
+          chmod +x src/tools/bazel/detect-upstream-changes.sh &&
+          src/tools/bazel/detect-upstream-changes.sh origin/bazel-main HEAD
+          --report-file /tmp/sync-report.md || true
+
+      - name: Run Copilot auto-fix
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          if [[ ! -f /tmp/sync-report.md ]]; then
+            echo "No report file — skipping auto-fix."
+            exit 0
+          fi
+          cd src/tools/bazel
+          if dotnet run CopilotFixSync.cs -- /tmp/sync-report.md; then
+            cd "$GITHUB_WORKSPACE"
+            if ! git diff --quiet; then
+              echo "Copilot produced changes:"
+              git diff --stat
+              git add -A
+              git commit -m "Auto-fix BUILD.bazel files for upstream sync
+
+          Applied by Copilot SDK based on detection report.
+
+          Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+              git push
+            else
+              echo "Copilot produced no changes."
+            fi
+          else
+            echo "::warning::CopilotFixSync.cs failed."
+          fi
+
+  equivalence-check:
+    name: Equivalence Check
+    needs: sync
+    if: needs.sync.result == 'success' && github.event.inputs.skip_equivalence != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout bazel-main branch
+        uses: actions/checkout@v5
+        with:
+          ref: bazel-main
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -qq -y clang-18 lld libkrb5-dev liblttng-ust-dev
+
+      - name: Mount Bazel cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/bazel-disk
+          key: bazel-equiv-main-${{ hashFiles('MODULE.bazel', '.bazelrc') }}-${{ github.sha }}
+          restore-keys: |
+            bazel-equiv-main-${{ hashFiles('MODULE.bazel', '.bazelrc') }}-
+            bazel-equiv-main-
+
+      - name: Run equivalence check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          chmod +x src/tools/bazel/equivalence-check.sh &&
+          src/tools/bazel/equivalence-check.sh
+          --repo "${{ github.repository }}"
+          --bazel-disk-cache ~/.cache/bazel-disk

@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Avx512F_VL_Vector128_r",
+    srcs = [
+        "Program.Avx512F_VL_Vector128.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+)
+
+coreclr_test(
+    name = "Avx512F_VL_Vector128_ro",
+    srcs = [
+        "Program.Avx512F_VL_Vector128.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+    optimize = True,
+)

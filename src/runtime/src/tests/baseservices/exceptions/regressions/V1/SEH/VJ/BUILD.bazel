@@ -1,0 +1,85 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "ExternalException",
+    srcs = ["ExternalException.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "HandlerException",
+    srcs = ["HandlerException.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "MultipleException",
+    srcs = ["MultipleException.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NestedEx1",
+    srcs = ["NestedEx1.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NestedEx2",
+    srcs = ["NestedEx2.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NestedException",
+    srcs = ["NestedException.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NormalException",
+    srcs = ["NormalException.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RecursiveException",
+    srcs = ["RecursiveException.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TryCatch",
+    srcs = ["TryCatch.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TryCatchFinally",
+    srcs = ["TryCatchFinally.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UserException",
+    srcs = ["UserException.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UserExceptionThread",
+    srcs = ["UserExceptionThread.cs"],
+    pri = 1,
+    size = "medium",
+)

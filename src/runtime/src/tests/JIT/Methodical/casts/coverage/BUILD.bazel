@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["isinst_ldloc_r.il", "isinst_ldloc.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["isinst_ldarg_d.il", "isinst_ldarg.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -25,6 +27,7 @@ il_coreclr_test(
     srcs = ["ldnull_r.il", "ldnull.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -32,6 +35,7 @@ il_coreclr_test(
     srcs = ["isinst_ldarg_r.il", "isinst_ldarg.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -57,6 +61,7 @@ il_coreclr_test(
     srcs = ["isinst_calli_r.il", "isinst_calli.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -82,6 +87,7 @@ il_coreclr_test(
     srcs = ["isinst_call_d.il", "isinst_call.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -89,6 +95,7 @@ il_coreclr_test(
     srcs = ["isinst_calli_d.il", "isinst_calli.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -96,6 +103,7 @@ il_coreclr_test(
     srcs = ["isinst_ldloc_d.il", "isinst_ldloc.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -109,6 +117,7 @@ il_coreclr_test(
     srcs = ["ldnull_d.il", "ldnull.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -116,4 +125,5 @@ il_coreclr_test(
     srcs = ["isinst_call_r.il", "isinst_call.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

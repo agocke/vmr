@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "enum",
+    srcs = ["enum.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "rank1array",
+    srcs = ["rank1array.il"],
+    pri = 1,
+    size = "medium",
+)

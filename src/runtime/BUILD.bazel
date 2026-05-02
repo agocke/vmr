@@ -1,17 +1,136 @@
 load("@rules_dotnet//dotnet:defs.bzl", "import_library")
 load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load("//eng/bazel:runtime_archive.bzl", "runtime_staging")
+load("//eng/bazel:runtime_archive.bzl", "runtime_archive", "runtime_staging")
 load("//eng/bazel:runtime_layout.bzl", "runtime_layout")
 load("//eng/bazel:version.bzl", "PRODUCT_VERSION", "PRODUCT_VERSION_FULL")
+load(
+    "//:defs.bzl",
+    "BANNEDAPI_ANALYZERS_REPO",
+    "CODEANALYSIS_ANALYZERS_REPO",
+    "CODEANALYSIS_CSHARP_CODESTYLE_REPO",
+    "CODEANALYSIS_NETANALYZERS_REPO",
+    "DOTNET_CODEANALYSIS_REPO",
+    "MIBC_FILES",
+    "STATICCS_REPO",
+    "STYLECOP_ANALYZERS_UNSTABLE_REPO",
+    "XUNIT_ANALYZERS_REPO",
+)
+load(
+    "//:framework_r2r.bzl",
+    "FRAMEWORK_ASSEMBLY_LABELS",
+    "R2R_ASSEMBLIES",
+    "framework_crossgen_targets",
+    "framework_illink_targets",
+)
 
 exports_files([
+    ".editorconfig",
     "artifacts/obj/coreclr/System.Private.CoreLib/linux.x64.Debug/System.Private.CoreLib.Strings.resources",
     "artifacts/obj/coreclr/System.Private.CoreLib/osx.arm64.Debug/System.Private.CoreLib.Strings.resources",
     "LICENSE.TXT",
     "THIRD-PARTY-NOTICES.TXT",
 ])
+
+source_analyzer_config_files = [
+    ".editorconfig",
+    "//eng:CodeAnalysis.src.globalconfig",
+    "//src/tools/bazel:analysislevel_11_default.globalconfig",
+    "//src/tools/bazel:analysislevelstyle_default.globalconfig",
+]
+
+# Variant without .editorconfig for facade/shim assemblies whose MSBuild
+# project doesn't emit a root .editorconfig analyzerconfig entry.
+source_analyzer_config_files_no_editorconfig = [
+    "//eng:CodeAnalysis.src.globalconfig",
+    "//src/tools/bazel:analysislevel_11_default.globalconfig",
+    "//src/tools/bazel:analysislevelstyle_default.globalconfig",
+]
+
+filegroup(
+    name = "source_analyzer_configs",
+    srcs = source_analyzer_config_files,
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "source_analyzer_configs_no_editorconfig",
+    srcs = source_analyzer_config_files_no_editorconfig,
+    visibility = ["//visibility:public"],
+)
+
+test_analyzer_config_files = [
+    ".editorconfig",
+    "//eng:CodeAnalysis.test.globalconfig",
+    "//src/tools/bazel:analysislevel_11_default.globalconfig",
+    "//src/tools/bazel:analysislevelstyle_default.globalconfig",
+]
+
+filegroup(
+    name = "test_analyzer_configs",
+    srcs = test_analyzer_config_files,
+    visibility = ["//visibility:public"],
+)
+
+source_build_analyzer_files = [
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.Analyzers.dll".format(CODEANALYSIS_ANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.Analyzers.dll".format(CODEANALYSIS_ANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/Microsoft.CodeAnalysis.NetAnalyzers.dll".format(CODEANALYSIS_NETANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll".format(CODEANALYSIS_NETANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.CodeStyle.dll".format(CODEANALYSIS_CSHARP_CODESTYLE_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.dll".format(CODEANALYSIS_CSHARP_CODESTYLE_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CodeStyle.dll".format(CODEANALYSIS_CSHARP_CODESTYLE_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CodeStyle.Fixes.dll".format(CODEANALYSIS_CSHARP_CODESTYLE_REPO),
+    "@{}//:analyzers/Microsoft.DotNet.CodeAnalysis.dll".format(DOTNET_CODEANALYSIS_REPO),
+    "@{}//:analyzers/dotnet/cs/StyleCop.Analyzers.dll".format(STYLECOP_ANALYZERS_UNSTABLE_REPO),
+    "@{}//:analyzers/dotnet/cs/StyleCop.Analyzers.CodeFixes.dll".format(STYLECOP_ANALYZERS_UNSTABLE_REPO),
+]
+
+import_library(
+    name = "source_build_analyzers",
+    library_name = "SourceBuildAnalyzers",
+    refs = source_build_analyzer_files,
+    libs = source_build_analyzer_files,
+    visibility = ["//visibility:public"],
+)
+
+xunit_test_analyzer_files = [
+    "@{}//:analyzers/dotnet/cs/xunit.analyzers.dll".format(XUNIT_ANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/xunit.analyzers.fixes.dll".format(XUNIT_ANALYZERS_REPO),
+]
+
+import_library(
+    name = "xunit_test_analyzers",
+    library_name = "XunitTestAnalyzers",
+    refs = xunit_test_analyzer_files,
+    libs = xunit_test_analyzer_files,
+    visibility = ["//visibility:public"],
+)
+
+staticcs_analyzer_files = [
+    "@{}//:analyzers/dotnet/cs/StaticCs.Analyzers.dll".format(STATICCS_REPO),
+]
+
+import_library(
+    name = "staticcs_analyzers",
+    library_name = "StaticCsAnalyzers",
+    refs = staticcs_analyzer_files,
+    libs = staticcs_analyzer_files,
+    visibility = ["//visibility:public"],
+)
+
+bannedapi_analyzer_files = [
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.BannedApiAnalyzers.dll".format(BANNEDAPI_ANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.BannedApiAnalyzers.dll".format(BANNEDAPI_ANALYZERS_REPO),
+]
+
+import_library(
+    name = "bannedapi_analyzers",
+    library_name = "BannedApiAnalyzers",
+    refs = bannedapi_analyzer_files,
+    libs = bannedapi_analyzer_files,
+    visibility = ["//visibility:public"],
+)
 
 # ── Per-component build configuration flags ──────────────────────────
 # These replace the legacy --define runtime_debug=1 mechanism with modern
@@ -20,13 +139,13 @@ exports_files([
 # Set via command line:  --//:clr_config=release  --//:libs_config=release
 # Or via .bazelrc:       --config=clr_release     --config=libs_release
 #
-# CoreCLR configuration: debug (default), checked, or release.
+# CoreCLR configuration: checked (default), debug, or release.
 #   debug   = assertions + debug defines + no optimization
 #   checked = assertions + debug defines + release optimization (-O2)
 #   release = no assertions + NDEBUG + release optimization
 string_flag(
     name = "clr_config",
-    build_setting_default = "debug",
+    build_setting_default = "checked",
     visibility = ["//visibility:public"],
 )
 
@@ -34,6 +153,40 @@ string_flag(
 string_flag(
     name = "libs_config",
     build_setting_default = "debug",
+    visibility = ["//visibility:public"],
+)
+
+# CI mode: when "true", enables deterministic source paths (/pathmap)
+# matching MSBuild's ContinuousIntegrationBuild=true behavior.
+string_flag(
+    name = "ci",
+    build_setting_default = "false",
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "ci_build",
+    flag_values = {"//:ci": "true"},
+    visibility = ["//visibility:public"],
+)
+
+# ── Platform config_settings ─────────────────────────────────────────
+# Compound OS × CPU settings for platform-specific code paths.
+config_setting(
+    name = "macos_arm64",
+    constraint_values = ["@platforms//os:macos", "@platforms//cpu:arm64"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "macos_x64",
+    constraint_values = ["@platforms//os:macos", "@platforms//cpu:x86_64"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_x64",
+    constraint_values = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
     visibility = ["//visibility:public"],
 )
 
@@ -53,6 +206,32 @@ config_setting(
 config_setting(
     name = "clr_release",
     flag_values = {"//:clr_config": "release"},
+    visibility = ["//visibility:public"],
+)
+
+# Compound config_settings: CLR config × Windows.
+# Used by CLR_CONFIG_COPTS and NATIVE_CONFIG_COPTS to select MSVC flags
+# (/O2, /MT, /MTd) vs GCC/Clang flags (-O2).  These are more specific
+# than the base clr_* settings, so Bazel picks them when both match
+# (on Windows).
+config_setting(
+    name = "clr_debug_windows",
+    flag_values = {"//:clr_config": "debug"},
+    constraint_values = ["@platforms//os:windows"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "clr_checked_windows",
+    flag_values = {"//:clr_config": "checked"},
+    constraint_values = ["@platforms//os:windows"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "clr_release_windows",
+    flag_values = {"//:clr_config": "release"},
+    constraint_values = ["@platforms//os:windows"],
     visibility = ["//visibility:public"],
 )
 
@@ -80,6 +259,15 @@ config_setting(
 config_setting(
     name = "debug_mode",
     values = {"compilation_mode": "dbg"},
+    visibility = ["//visibility:public"],
+)
+
+# Opt mode detection: matches -c opt (--compilation_mode=opt).
+# rules_dotnet defines DEBUG for fastbuild and dbg, but not opt.
+# Use this to conditionally include deps needed only under #if DEBUG.
+config_setting(
+    name = "opt_mode",
+    values = {"compilation_mode": "opt"},
     visibility = ["//visibility:public"],
 )
 
@@ -117,6 +305,44 @@ runtime_layout(
     }),
 )
 
+# ── ILLink trimming + crossgen2 R2R for all framework assemblies ─────
+# Generates illink_<Name> and crossgen_<Name> targets for each assembly
+# in the runtime pack.  ILLink-trimmed assemblies that are NOT in the
+# R2R list still get trimmed but skip crossgen2.
+framework_illink_targets()
+
+framework_crossgen_targets(
+    clrjit = select({
+        "//:macos_arm64": "//src/coreclr/jit:libclrjit.so",
+        "//:macos_x64": "//src/coreclr/jit:libclrjit_unix_x64_x64.so",
+        "//conditions:default": "//src/coreclr/jit:libclrjit_unix_x64_x64.so",
+    }),
+    jitinterface = select({
+        "//:macos_arm64": "//src/coreclr/tools/aot/jitinterface:libjitinterface_arm64_dylib",
+        "//:macos_x64": "//src/coreclr/tools/aot/jitinterface:libjitinterface_x64_dylib",
+        "//conditions:default": "//src/coreclr/tools/aot/jitinterface:libjitinterface_x64.so",
+    }),
+    mibc = MIBC_FILES,
+    native_crossgen2 = "//src/coreclr/tools/aot/crossgen2:crossgen2-publish",
+    target_arch = select({
+        "@platforms//cpu:arm64": "arm64",
+        "//conditions:default": "x64",
+    }),
+    target_os = select({
+        "@platforms//os:macos": "osx",
+        "//conditions:default": "linux",
+    }),
+)
+
+# Filegroup collecting all processed framework assemblies:
+# - R2R assemblies get crossgen2 output
+# - Non-R2R assemblies get ILLink-trimmed output
+filegroup(
+    name = "framework_processed",
+    srcs = [":crossgen_" + name for name in R2R_ASSEMBLIES] +
+           [":illink_" + name for name in FRAMEWORK_ASSEMBLY_LABELS.keys() if name not in R2R_ASSEMBLIES],
+)
+
 # ── Runtime archive (tar.gz) matching MSBuild packs output ───────────
 # Produces dotnet-runtime-{version}-{rid}.tar.gz with the same file
 # layout as:  ./build.sh packs -rc Release -lc Release
@@ -125,9 +351,17 @@ runtime_layout(
 #   ./compare-runtime-packs.sh \
 #     artifacts/packages/Debug/Shipping/dotnet-runtime-*-linux-x64.tar.gz \
 #     bazel-bin/dotnet-runtime-*-linux-x64.tar.gz
+# Version string for the runtime archive, respecting CI mode.
+# In CI mode (--config=ci), uses "10.0.4-ci" to match MSBuild's CI output.
+# Otherwise uses the default label from version.bzl (e.g. "10.0.4-dev").
+RUNTIME_VERSION = select({
+    "//:ci_build": PRODUCT_VERSION + "-ci",
+    "//conditions:default": PRODUCT_VERSION_FULL,
+})
+
 runtime_staging(
     name = "runtime_staging",
-    version = PRODUCT_VERSION_FULL,
+    version = RUNTIME_VERSION,
     root_files = [
         "//src/native/corehost:dotnet",
     ],
@@ -155,10 +389,8 @@ runtime_staging(
         "//conditions:default": [],
     }) + [
         "//src/coreclr/debug:createdump",
+        "//src/coreclr/pal:libcoreclrtraceptprovider.so",
     ] + select({
-        "@platforms//os:linux": ["//src/coreclr/pal:libcoreclrtraceptprovider.so"],
-        "//conditions:default": [],
-    }) + select({
         "@platforms//os:macos": [
             "//src/coreclr/dlls/mscordac:libmscordaccore_dylib",
             "//src/coreclr/dlls/mscordbi:libmscordbi_dylib",
@@ -169,58 +401,30 @@ runtime_staging(
         ],
     }),
     framework_managed_files = [
-        "//src/libraries:impl_netcoreapp",
-        # ── Shim assemblies (type-forwarding facades) ──
-        "//src/libraries/shims/Microsoft.VisualBasic:impl_Microsoft.VisualBasic",
-        "//src/libraries/shims/System:impl_System",
-        "//src/libraries/shims/System.ComponentModel.DataAnnotations:impl_System.ComponentModel.DataAnnotations",
-        "//src/libraries/shims/System.Configuration:impl_System.Configuration",
-        "//src/libraries/shims/System.Core:impl_System.Core",
-        "//src/libraries/shims/System.Data:impl_System.Data",
-        "//src/libraries/shims/System.Drawing:impl_System.Drawing",
-        "//src/libraries/shims/System.IO.Compression.FileSystem:impl_System.IO.Compression.FileSystem",
-        "//src/libraries/shims/System.Net:impl_System.Net",
-        "//src/libraries/shims/System.Numerics:impl_System.Numerics",
-        "//src/libraries/shims/System.Runtime.Serialization:impl_System.Runtime.Serialization",
-        "//src/libraries/shims/System.Security:impl_System.Security",
-        "//src/libraries/shims/System.ServiceModel.Web:impl_System.ServiceModel.Web",
-        "//src/libraries/shims/System.ServiceProcess:impl_System.ServiceProcess",
-        "//src/libraries/shims/System.Transactions:impl_System.Transactions",
-        "//src/libraries/shims/System.Web:impl_System.Web",
-        "//src/libraries/shims/System.Windows:impl_System.Windows",
-        "//src/libraries/shims/System.Xml:impl_System.Xml",
-        "//src/libraries/shims/System.Xml.Linq:impl_System.Xml.Linq",
-        "//src/libraries/shims/System.Xml.Serialization:impl_System.Xml.Serialization",
-        "//src/libraries/shims/WindowsBase:impl_WindowsBase",
-        # ── Platform-specific libraries (PNSE stubs on Linux) ──
-        "//src/libraries/Microsoft.VisualBasic.Core/src:impl_Microsoft.VisualBasic.Core",
-        "//src/libraries/System.IO.Pipes.AccessControl/src:impl_System.IO.Pipes.AccessControl",
-        "//src/libraries/System.Net.Quic:impl_System.Net.Quic",
-        "//src/libraries/System.Runtime.InteropServices.JavaScript/src:impl_System.Runtime.InteropServices.JavaScript",
-        "//src/libraries/System.Threading.AccessControl/src:impl_System.Threading.AccessControl",
+        # ILLink-trimmed + crossgen2 R2R processed framework assemblies.
+        # This replaces the raw impl_netcoreapp + shim + platform-specific
+        # labels — all assemblies flow through illink_trim, and R2R
+        # assemblies additionally go through crossgen_assembly.
+        ":framework_processed",
     ] + select({
         "@platforms//os:linux": [
             "//src/coreclr/System.Private.CoreLib:crossgen_System.Private.CoreLib",
         ],
         "//conditions:default": [],
     }),
-    # Assemblies in impl_netcoreapp that are NOT part of the runtime pack.
+    # Assemblies in impl_netcoreapp that are NOT part of the runtime pack
+    # are already excluded from FRAMEWORK_ASSEMBLY_LABELS, so no
+    # exclude_managed_files needed for the processed assemblies.
+    # However, System.Private.CoreLib is added separately (R2R'd by its
+    # own crossgen_corelib rule), so exclude it from the processed set.
     exclude_managed_files = [
-        "Microsoft.Extensions.Primitives.dll",
-        "System.CodeDom.dll",
-        "System.Formats.Cbor.dll",
-        "System.Formats.Nrbf.dll",
-        "System.Resources.Extensions.dll",
-        "System.Security.Cryptography.Pkcs.dll",
-        "System.Security.Cryptography.Xml.dll",
-        "System.Threading.RateLimiting.dll",
+        "System.Private.CoreLib.dll",
     ],
     # The R2R CoreLib overwrites the IL version from impl_netcoreapp.
     rename_files = {
         "System.Private.CoreLib.r2r.dll": "System.Private.CoreLib.dll",
     },
     framework_data_files = [
-        "//eng/bazel/data:Microsoft.NETCore.App.deps.json",
         "//eng/bazel/data:Microsoft.NETCore.App.runtimeconfig.json",
     ],
 )
@@ -228,20 +432,48 @@ runtime_staging(
 LINUX_RID = "linux-x64"
 MACOS_RID = "osx-arm64"
 
-pkg_tar(
-    name = "runtime_archive_linux",
-    out = "dotnet-runtime-" + PRODUCT_VERSION_FULL + "-" + LINUX_RID + ".tar.gz",
+# ── Generate deps.json from the actual assembled DLLs ────────────────
+# Runs the GenerateDepsFile tool over the staging directory to produce a
+# deps.json with real assembly/file versions and the full RID fallback
+# graph — matching the output of MSBuild's GenerateSharedFrameworkDepsFile
+# task from Microsoft.DotNet.SharedFramework.Sdk.
+genrule(
+    name = "generate_deps_json",
     srcs = [":runtime_staging"],
-    strip_prefix = "runtime_staging",
-    extension = "tar.gz",
+    outs = ["Microsoft.NETCore.App.deps.json"],
+    tools = ["//src/tools/bazel/GenerateDepsFile"],
+    cmd = "$(location //src/tools/bazel/GenerateDepsFile) " +
+        "$(location :runtime_staging)/shared/Microsoft.NETCore.App/" + RUNTIME_VERSION + " " +
+        select({
+            "@platforms//os:macos": MACOS_RID,
+            "//conditions:default": LINUX_RID,
+        }) + " " +
+        RUNTIME_VERSION + " " +
+        "$$PWD/eng/bazel/data/RuntimeIdentifierGraph.json " +
+        "$@",
 )
 
-pkg_tar(
+# ── Build the runtime archive with correct permissions ────────────────
+# Bazel tree artifacts enforce 555 permissions. This rule copies the
+# staging directory, sets correct permissions (644 for data/DLLs, 755 for
+# executables and shared libraries), injects the generated deps.json, and
+# creates a tar.gz archive matching the MSBuild packs output.
+runtime_archive(
+    name = "runtime_archive_linux",
+    version = RUNTIME_VERSION,
+    rid = LINUX_RID,
+    staging = ":runtime_staging",
+    deps_json = ":generate_deps_json",
+    native_lib_pattern = '-name "*.so"',
+)
+
+runtime_archive(
     name = "runtime_archive_macos",
-    out = "dotnet-runtime-" + PRODUCT_VERSION_FULL + "-" + MACOS_RID + ".tar.gz",
-    srcs = [":runtime_staging"],
-    strip_prefix = "runtime_staging",
-    extension = "tar.gz",
+    version = RUNTIME_VERSION,
+    rid = MACOS_RID,
+    staging = ":runtime_staging",
+    deps_json = ":generate_deps_json",
+    native_lib_pattern = '-name "*.dylib"',
 )
 
 alias(

@@ -26,6 +26,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.Requests",
+    com_interface_generator = True,
     os_targeted = "unix",
     srcs = glob(
         ["src/System/**/*.cs"],
@@ -60,7 +61,7 @@ netcoreapp_impl_assembly(
     }),
     resx_file = "src/Resources/Strings.resx",
     allow_unsafe_blocks = True,
-    nowarn = ["SYSLIB0014"],
+    nowarn = ["CS1591", "SYSLIB0014"],
     deps = [
         "//src/libraries:ref_Microsoft.Win32.Primitives",
         "//src/libraries:ref_System.Runtime",

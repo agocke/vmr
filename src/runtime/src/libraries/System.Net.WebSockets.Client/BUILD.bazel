@@ -19,6 +19,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.WebSockets.Client",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Net/WebSockets/ClientWebSocket.cs",
         "src/System/Net/WebSockets/ClientWebSocketDeflateConstants.cs",

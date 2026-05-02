@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "tracing_common",
+    srcs = [
+        "Assert.cs",
+        "EtlFile.cs",
+        "NetPerfFile.cs",
+        "TraceConfiguration.cs",
+    ],
+)

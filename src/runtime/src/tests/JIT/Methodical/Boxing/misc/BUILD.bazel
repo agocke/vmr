@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["concurgc_d.il", "concurgc.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -24,6 +25,7 @@ il_coreclr_test(
     srcs = ["enum_d.il", "enum.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -43,6 +45,7 @@ il_coreclr_test(
     srcs = ["concurgc_r.il", "concurgc.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(

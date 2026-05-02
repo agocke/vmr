@@ -78,6 +78,7 @@ coreclr_test(
         ":itest9",
         ":itest10",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -98,6 +99,7 @@ coreclr_test(
         ":itest9",
         ":itest10",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -116,6 +118,7 @@ coreclr_test(
         ":itest9",
         ":itest10",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -136,4 +139,5 @@ coreclr_test(
         ":itest9",
         ":itest10",
     ],
+    size = "medium",
 )

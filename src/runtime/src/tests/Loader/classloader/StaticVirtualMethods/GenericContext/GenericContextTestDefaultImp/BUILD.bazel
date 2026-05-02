@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "GenericContextCommonAndImplementationDefaultImp",
+    srcs = ["GenericContextCommonAndImplementationDefaultImp.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

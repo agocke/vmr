@@ -16,6 +16,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Threading",
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Threading/Barrier.cs",
         "src/System/Threading/CDSsyncETWBCLProvider.cs",
@@ -29,7 +30,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/Common:src/System/Obsoletions.cs",
     ],
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
     ],
     partial_facade = True,
     resx_file = "src/Resources/Strings.resx",

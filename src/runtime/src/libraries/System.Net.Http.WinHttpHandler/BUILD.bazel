@@ -1,0 +1,47 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files(["ref/System.Net.Http.WinHttpHandler.cs"] + glob(["src/**/*.cs"]) + glob(["tests/UnitTests/*.cs"]))
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.Http.WinHttpHandler",
+    srcs = ["ref/System.Net.Http.WinHttpHandler.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Net.Http.WinHttpHandler",
+    include_editorconfig = False,
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_WinHttpHandler",
+    pnse_ref_srcs = ["ref/System.Net.Http.WinHttpHandler.cs"],
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    analyzers = [
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    com_interface_generator = True,
+    supported_os_platforms_short = ["windows"],
+    allow_unsafe_blocks = True,
+)
+
+ref_impl_pair(
+    name = "live_System.Net.Http.WinHttpHandler",
+    ref = ":ref_System.Net.Http.WinHttpHandler",
+    lib = ":impl_System.Net.Http.WinHttpHandler",
+    visibility = ["//visibility:public"],
+)

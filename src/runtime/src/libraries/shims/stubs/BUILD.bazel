@@ -2,8 +2,11 @@ load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly")
 
 netcoreapp_ref_assembly(
     name = "ref_Microsoft.VisualBasic.Core",
-    srcs = ["//src/libraries/shims/bazel:Microsoft.VisualBasic.Core.ForwardedTypes.cs"],
-    deps = ["//src/libraries:ref_System.Runtime"],
+    srcs = ["//src/libraries:Microsoft.VisualBasic.Core/ref/Microsoft.VisualBasic.Core.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.IO.FileSystem.DriveInfo:ref_System.IO.FileSystem.DriveInfo",
+    ],
 )
 
 netcoreapp_ref_assembly(

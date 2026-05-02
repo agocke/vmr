@@ -1,0 +1,97 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Net.Primitives.UnitTests.Tests",
+    include_default_values = select({
+        "//:libs_debug": True,
+        "//conditions:default": False,
+    }),
+    resx_file = "//src/libraries/System.Net.Primitives:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Net.Primitives.UnitTests.Tests.SR.resources",
+    resx_file = "//src/libraries/System.Net.Primitives:src/Resources/Strings.resx",
+)
+
+library_test(
+    name = "System.Net.Primitives.UnitTests.Tests",
+    defines = ["SYSTEM_NET_PRIMITIVES_DLL"],
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "Fakes/IPv4AddressHelper.cs",
+            "Fakes/IPv6AddressHelper.cs",
+        ],
+    ) + [
+        # Production source files
+        "//src/libraries/System.Net.Primitives:src/System/Net/CookieCollection.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/Cookie.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/CookieContainer.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/Sockets/SocketError.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/IPAddress.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/EndPoint.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/Sockets/AddressFamily.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/IPEndPoint.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/SocketException.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/SocketException.Unix.cs",
+        "//src/libraries/System.Net.Primitives:src/System/Net/IPAddressParser.cs",
+        # Common source files
+        "//src/libraries/Common:src/System/Net/IPv4AddressHelper.Common.cs",
+        "//src/libraries/Common:src/System/Net/IPv6AddressHelper.Common.cs",
+        "//src/libraries/Common:src/System/Net/CookieComparer.cs",
+        "//src/libraries/Common:src/System/Net/CookieFields.cs",
+        "//src/libraries/Common:src/System/Net/CookieParser.cs",
+        "//src/libraries/Common:src/System/Net/SocketAddress.cs",
+        "//src/libraries/Common:src/System/HexConverter.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/Common:src/System/Net/IPEndPointExtensions.cs",
+        "//src/libraries/Common:src/System/Net/SocketAddressExtensions.cs",
+        "//src/libraries/Common:src/System/Net/HttpKnownHeaderNames.cs",
+        "//src/libraries/Common:src/System/Net/IPAddressParserStatics.cs",
+        "//src/libraries/Common:src/System/Net/TcpValidationHelpers.cs",
+        "//src/libraries/Common:src/System/Net/UriScheme.cs",
+        "//src/libraries/Common:src/System/Text/StringBuilderCache.cs",
+        "//src/libraries/Common:src/System/Net/Logging/NetEventSource.Common.cs",
+        "//src/libraries/Common:src/System/Net/InternalException.cs",
+        "//src/libraries/Common:src/System/NotImplemented.cs",
+        "//src/libraries/Common:src/Interop/Windows/WinSock/Interop.ErrorCodes.cs",
+        # Unix/browser platform files
+        "//src/libraries/Common:src/System/Net/NetworkInformation/InterfaceInfoPal.Unix.cs",
+        "//src/libraries/Common:src/System/Net/SocketAddressPal.Unix.cs",
+        "//src/libraries/Common:src/System/Net/Sockets/SocketErrorPal.Unix.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SocketAddress.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.InterfaceNameToIndex.cs",
+        # SR support
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
+    ],
+    deps = [
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    additionalfiles = ["//src/libraries/System.Net.Primitives:src/Resources/Strings.resx"],
+    resources = [":strings_resx"],
+    resource_logical_names = {
+        "FxResources.System.Net.Primitives.UnitTests.Tests.SR.resources": "FxResources.System.Net.Primitives.UnitTests.Tests.SR.resources",
+    },
+    nowarn = ["169", "649"],
+    os_targeted = "unix",
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)

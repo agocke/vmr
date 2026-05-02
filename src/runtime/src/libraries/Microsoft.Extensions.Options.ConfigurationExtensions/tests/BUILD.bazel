@@ -1,0 +1,34 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "ASPNETCORE_SNK")
+
+exports_files(glob(["Common/**/*.cs"]))
+
+library_test(
+    name = "Microsoft.Extensions.Options.ConfigurationExtensions.UnitTests",
+    srcs = [
+        "Common/ConfigurationExtensionsTests.cs",
+        "Common/FakeConfigurationProvider.cs",
+        "Common/FakeConfigurationSource.cs",
+        "Common/FakeOptions.cs",
+        "Common/OptionsBuilderConfigurationExtensionsTests.cs",
+    ],
+    deps = [
+        "//src/libraries/Microsoft.Extensions.Options.ConfigurationExtensions:impl_Microsoft.Extensions.Options.ConfigurationExtensions",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration.Binder:impl_Microsoft.Extensions.Configuration.Binder",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection:ref_Microsoft.Extensions.DependencyInjection",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    nullable = "enable",
+    keyfile = ASPNETCORE_SNK,
+)

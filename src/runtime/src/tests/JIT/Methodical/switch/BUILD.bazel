@@ -6,6 +6,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -14,6 +15,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -29,6 +31,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -37,6 +40,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -52,6 +56,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -60,6 +65,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -68,6 +74,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -76,6 +83,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -84,4 +92,5 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )

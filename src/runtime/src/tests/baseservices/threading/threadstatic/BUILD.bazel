@@ -1,0 +1,48 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "ThreadStatic01",
+    srcs = ["threadstatic01.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ThreadStatic02",
+    srcs = ["threadstatic02.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ThreadStatic03",
+    srcs = ["threadstatic03.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ThreadStatic05",
+    srcs = ["threadstatic05.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ThreadStatic06",
+    srcs = ["threadstatic06.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "threadstatic07",
+    srcs = ["threadstatic07.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "threadstatic08",
+    srcs = ["threadstatic08.cs"],
+)

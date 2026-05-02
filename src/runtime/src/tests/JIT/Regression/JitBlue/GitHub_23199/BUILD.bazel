@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["GitHub_23199_Target_32Bit.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -12,4 +13,5 @@ coreclr_test(
     srcs = ["GitHub_23199_Target_64Bit.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )

@@ -1,3 +1,4 @@
+load("//:defs.bzl", "ECMA_SNK")
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
 
 netcoreapp_ref_assembly(
@@ -12,11 +13,9 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.Compression",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     os_targeted = "unix",
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     srcs = [
         # Common interop (all platforms)
         "//src/libraries/Common:src/Interop/Interop.zlib.cs",
@@ -95,7 +94,8 @@ netcoreapp_impl_assembly(
     ],
     resx_file = "src/Resources/Strings.resx",
     supported_os_platforms = ["unix"],
-)
+    keyfile = ECMA_SNK,
+    )
 
 ref_impl_pair(
     name = "live_System.IO.Compression",

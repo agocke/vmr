@@ -1,3 +1,27 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "ref_impl_pair")
+
 exports_files([
     "ref/System.Threading.AccessControl.cs",
+    "ref/System.Threading.AccessControl.Extensions.cs",
 ])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading.AccessControl",
+    srcs = [
+        "ref/System.Threading.AccessControl.cs",
+        "ref/System.Threading.AccessControl.Extensions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+ref_impl_pair(
+    name = "live_System.Threading.AccessControl",
+    ref = ":ref_System.Threading.AccessControl",
+    lib = "//src/libraries/System.Threading.AccessControl/src:impl_System.Threading.AccessControl",
+    visibility = ["//visibility:public"],
+)

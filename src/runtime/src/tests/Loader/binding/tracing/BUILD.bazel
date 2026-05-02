@@ -1,0 +1,25 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "AssemblyToLoadDependency",
+    srcs = ["AssemblyToLoadDependency.cs"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "BinderTracingTest.Basic",
+    srcs = [
+        "BinderTracingTest.Basic.cs",
+        "BinderTracingTest.DefaultProbing.cs",
+    ],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "BinderTracingTest.ResolutionFlow",
+    srcs = [
+        "BinderTracingTest.EventHandlers.cs",
+        "BinderTracingTest.ResolutionFlow.cs",
+    ],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

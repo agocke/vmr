@@ -5,10 +5,13 @@ coreclr_test(
     srcs = ["GitHub_19243.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "GitHub_19243_r",
+    optimize = False,
     srcs = ["GitHub_19243.cs"],
     pri = 1,
+    size = "medium",
 )

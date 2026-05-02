@@ -6,6 +6,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -14,12 +15,14 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
     name = "cmp_int32_r",
     srcs = ["cmp_int32.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -27,4 +30,5 @@ coreclr_test(
     srcs = ["cmp_int32.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )

@@ -1,0 +1,59 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "ref/System.Data.OleDb.cs",
+    "ref/System.Data.OleDb.Manual.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Data.OleDb",
+    srcs = [
+        "ref/System.Data.OleDb.cs",
+        "ref/System.Data.OleDb.Manual.cs",
+    ],
+    nowarn = ["CS0618"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Transactions.Local:ref_System.Transactions.Local",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Data.OleDb",
+    keyfile = OPEN_SNK,
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_OleDb",
+    pnse_ref_srcs = [
+        "ref/System.Data.OleDb.cs",
+        "ref/System.Data.OleDb.Manual.cs",
+    ],
+    srcs = [],
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS0618", "CS3016", "CA2249", "SYSLIB0004", "CS1591"],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    allow_unsafe_blocks = True,
+    include_editorconfig = False,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Transactions.Local:ref_System.Transactions.Local",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    resources = ["src/Resources/System.Data.OleDb.OleDbMetaData.xml"],
+    resource_logical_names = {"System.Data.OleDb.OleDbMetaData.xml": "System.Data.OleDb.OleDbMetaData.xml"},
+    supported_os_platforms_short = ["windows"],
+)
+
+ref_impl_pair(
+    name = "live_System.Data.OleDb",
+    ref = ":ref_System.Data.OleDb",
+    lib = ":impl_System.Data.OleDb",
+    visibility = ["//visibility:public"],
+)

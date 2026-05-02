@@ -5,4 +5,5 @@ coreclr_test(
     srcs = ["R3Contention.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

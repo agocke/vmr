@@ -11,11 +11,9 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.MemoryMappedFiles",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     os_targeted = "unix",
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     srcs = [
         "src/Microsoft/Win32/SafeMemoryMappedFileHandle.cs",
         "src/Microsoft/Win32/SafeMemoryMappedViewHandle.cs",

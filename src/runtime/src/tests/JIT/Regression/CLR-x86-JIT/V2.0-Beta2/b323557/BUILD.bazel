@@ -5,10 +5,12 @@ il_coreclr_test(
     srcs = ["b323557_d.il", "b323557.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
     name = "b323557_r",
     srcs = ["b323557_r.il", "b323557.il"],
     pri = 1,
+    size = "medium",
 )

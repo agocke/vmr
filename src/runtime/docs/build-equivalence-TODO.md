@@ -25,10 +25,21 @@ Tracked by `compare-bazel.sh`. Run with `--skip-build` after a baseline build.
 - [x] Filter SDK-generated AssemblyAttributes.cs
 - [x] Skip analyzer comparison (Bazel doesn't wire analyzers yet)
 
-## Already fixed (rules_dotnet)
+## Already fixed (Bazel BUILD files)
 
 - [x] Add NETCOREAPP define for net5.0+ targets
 - [x] Filter NETSTANDARD*_OR_GREATER for non-netstandard targets
+- [x] Decouple `skip_locals_init` from `exclude_sr` in `impl_assembly` macro —
+  SkipLocalsInit.cs is now added for all `IsNETCoreAppSrc` assemblies regardless
+  of whether they have a resx file
+- [x] Remove CP0003 from `MULTITARGET_NOWARN` — CP0003 (NuGet packaging compat)
+  only applies to source assemblies, not tests; now added per-assembly
+- [x] Add `MULTITARGET_NOWARN + ["CP0003"]` to 11 multi-target OOB libraries
+  missing CA1510-CA1513/CA1845-CA1847 nowarns from MSBuild's Directory.Build.targets
+- [x] Add `skip_locals_init = False` to 60 shim/facade assemblies that are not
+  `IsNETCoreAppSrc` in MSBuild
+- [x] Remove debug-only `System.Console` reference from System.Net.Security and
+  System.Security.Cryptography BUILD files (MSBuild only includes it in Debug config)
 
 ---
 
@@ -39,7 +50,8 @@ Tracked by `compare-bazel.sh`. Run with `--skip-build` after a baseline build.
 - **SkipLocalsInit.cs** (20 assemblies): MSBuild includes `Common/src/SkipLocalsInit.cs`
   via Directory.Build.targets. Bazel targets don't include it.
   **Fix**: Add SkipLocalsInit.cs to Bazel srcs for each affected library, or add it
-  as a default common source in the `netcoreapp_impl_assembly` macro.
+  as a default common source in the `impl_assembly` macro (controlled by
+  `skip_locals_init`; `netcoreapp_impl_assembly` defaults it to True).
 
 - **Forwards.cs missing** (11 assemblies): MSBuild generates type-forwarder files via
   GenAPI. Bazel doesn't generate Forwards.cs for these assemblies.

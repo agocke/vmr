@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "InterfacesLib",
+    srcs = ["InterfacesLib.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NoVarianceCheckForStaticMethods",
+    srcs = ["NoVarianceCheckForStaticMethods.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

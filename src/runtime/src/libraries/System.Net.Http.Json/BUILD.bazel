@@ -1,4 +1,11 @@
-load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "src/Resources/Strings.resx",
+    "src/System/Net/Http/Json/TranscodingReadStream.cs",
+    "src/System/Net/Http/Json/TranscodingWriteStream.cs",
+])
 
 netcoreapp_ref_assembly(
     name = "ref_System.Net.Http.Json",
@@ -16,7 +23,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.Http.Json",
-    multitarget = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
     srcs = [
         "src/System/Net/Http/Json/HttpClientJsonExtensions.Get.AsyncEnumerable.cs",
         "src/System/Net/Http/Json/HttpClientJsonExtensions.cs",
@@ -44,4 +51,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Text.Json:ref_System.Text.Json",
     ],
     assembly_description = "Provides extension methods for System.Net.Http.HttpClient and System.Net.Http.HttpContent that perform automatic serialization and deserialization using System.Text.Json.\n\nCommonly Used Types:\nSystem.Net.Http.Json.HttpClientJsonExtensions\nSystem.Net.Http.Json.HttpContentJsonExtensions\nSystem.Net.Http.Json.JsonContent",
+    keyfile = OPEN_SNK,
+    library_import_generator = False,
 )

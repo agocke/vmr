@@ -65,11 +65,13 @@ cc_library(
 cc_library(
     name = "pal_config",
     hdrs = select({
-        "@platforms//os:macos": ["src/bazel/darwin-arm64/config.h"],
+        "//:macos_arm64": ["src/bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["src/bazel/osx-x64/config.h"],
         "//conditions:default": ["src/bazel/linux-glibc-x64/config.h"],
     }),
     strip_include_prefix = select({
-        "@platforms//os:macos": "src/bazel/darwin-arm64",
+        "//:macos_arm64": "src/bazel/osx-arm64",
+        "//:macos_x64": "src/bazel/osx-x64",
         "//conditions:default": "src/bazel/linux-glibc-x64",
     }),
 )
@@ -145,27 +147,35 @@ _PAL_SOURCES = [
 ]
 
 _PAL_ASM_SOURCES = select({
-    "@platforms//os:macos": [
-        "src/arch/arm64/context.S",
+    "@platforms//cpu:arm64": [
         "src/arch/arm64/context2.S",
         "src/arch/arm64/debugbreak.S",
-        "src/arch/arm64/dispatchexceptionwrapper.S",
         "src/arch/arm64/exceptionhelper.S",
     ],
-    "//conditions:default": [
+    "@platforms//cpu:x86_64": [
         "src/arch/amd64/context2.S",
         "src/arch/amd64/debugbreak.S",
         "src/arch/amd64/exceptionhelper.S",
-        "src/arch/amd64/callsignalhandlerwrapper.S",
     ],
 })
 
+# Apple uses mach exceptions + context.S + dispatchexceptionwrapper.S
+# Non-Apple uses signal handlers + callsignalhandlerwrapper.S
 _PAL_PLATFORM_SOURCES = select({
-    "@platforms//os:macos": [
+    "//:macos_arm64": [
+        "src/arch/arm64/context.S",
+        "src/arch/arm64/dispatchexceptionwrapper.S",
+        "src/exception/machexception.cpp",
+        "src/exception/machmessage.cpp",
+    ],
+    "//:macos_x64": [
+        "src/arch/amd64/context.S",
+        "src/arch/amd64/dispatchexceptionwrapper.S",
         "src/exception/machexception.cpp",
         "src/exception/machmessage.cpp",
     ],
     "//conditions:default": [
+        "src/arch/amd64/callsignalhandlerwrapper.S",
         "src/arch/amd64/signalhandlerhelper.cpp",
     ],
 })
@@ -173,7 +183,8 @@ _PAL_PLATFORM_SOURCES = select({
 cc_library(
     name = "coreclrpal",
     srcs = _PAL_SOURCES + _PAL_ASM_SOURCES + _PAL_PLATFORM_SOURCES + select({
-        "@platforms//os:macos": ["src/bazel/darwin-arm64/config.h"],
+        "//:macos_arm64": ["src/bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["src/bazel/osx-x64/config.h"],
         "//conditions:default": ["src/bazel/linux-glibc-x64/config.h"],
     }) + glob(
         [
@@ -190,8 +201,8 @@ cc_library(
         ],
         allow_empty = True,
     ) + select({
-        "@platforms//os:macos": glob(["src/arch/arm64/*.h"], allow_empty = True),
-        "//conditions:default": glob(["src/arch/amd64/*.h"], allow_empty = True),
+        "@platforms//cpu:arm64": glob(["src/arch/arm64/*.h"], allow_empty = True),
+        "@platforms//cpu:x86_64": glob(["src/arch/amd64/*.h"], allow_empty = True),
     }),
     textual_hdrs = [
         "src/exception/seh-unwind.cpp",
@@ -221,8 +232,8 @@ cc_library(
         "inc/rt",
         "src/safecrt",
     ] + select({
-        "@platforms//os:macos": ["src/arch/arm64"],
-        "//conditions:default": ["src/arch/amd64"],
+        "@platforms//cpu:arm64": ["src/arch/arm64"],
+        "@platforms//cpu:x86_64": ["src/arch/amd64"],
     }),
     defines = PLATFORM_DEFINES + [
         # PAL-specific
@@ -276,7 +287,8 @@ cc_library(
         ],
         allow_empty = True,
     ) + select({
-        "@platforms//os:macos": ["src/bazel/darwin-arm64/config.h"],
+        "//:macos_arm64": ["src/bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["src/bazel/osx-x64/config.h"],
         "//conditions:default": ["src/bazel/linux-glibc-x64/config.h"],
     }),
     copts = CLR_CONFIG_COPTS + [
@@ -289,7 +301,8 @@ cc_library(
         "src/safecrt",
         "../inc",
     ] + select({
-        "@platforms//os:macos": ["src/bazel/darwin-arm64"],
+        "//:macos_arm64": ["src/bazel/osx-arm64"],
+        "//:macos_x64": ["src/bazel/osx-x64"],
         "//conditions:default": ["src/bazel/linux-glibc-x64"],
     }),
     defines = PLATFORM_DEFINES + [
@@ -362,7 +375,8 @@ cc_library(
         "@platforms//os:macos": ["src/exception/compact_unwind_encoding.h"],
         "//conditions:default": [],
     }) + select({
-        "@platforms//os:macos": ["src/bazel/darwin-arm64/config.h"],
+        "//:macos_arm64": ["src/bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["src/bazel/osx-x64/config.h"],
         "//conditions:default": ["src/bazel/linux-glibc-x64/config.h"],
     }) + glob(
         [

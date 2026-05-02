@@ -1137,7 +1137,6 @@ coreclr_files = [
     "System/Text/SpanLineEnumerator.cs",
     "System/Text/SpanRuneEnumerator.cs",
     "System/Text/StringBuilder.cs",
-    "System/Text/StringBuilder.Debug.cs",
     "System/Text/StringRuneEnumerator.cs",
     "System/Text/TranscodingStream.cs",
     "System/Text/TrimType.cs",
