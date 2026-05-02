@@ -1,0 +1,29 @@
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-libraries/nuget/v3/index.json
+source https://api.nuget.org/v3/index.json
+
+storage: none
+framework: net10.0
+
+nuget Basic.Reference.Assemblies.Net20 1.8.3
+nuget Basic.Reference.Assemblies.Net40 1.8.3
+nuget Basic.Reference.Assemblies.Net461 1.8.3
+nuget Basic.Reference.Assemblies.Net70 1.8.3
+nuget Basic.Reference.Assemblies.NetStandard20 1.8.3
+nuget Castle.Core 4.4.0
+nuget DiffPlex 1.7.2
+nuget ICSharpCode.Decompiler 9.1.0.7988
+nuget Microsoft.Build.Locator 1.10.2
+nuget Microsoft.CodeAnalysis.VisualBasic 4.11.0
+nuget Microsoft.DiaSymReader.Converter.Xml 1.1.0-beta2-22302-02
+nuget Microsoft.ILVerification 9.0.7
+nuget Microsoft.Metadata.Visualizer 2.0.0-beta1.25425.3
+nuget Moq 4.10.1
+nuget Newtonsoft.Json 13.0.3
+nuget xunit.abstractions 2.0.3
+nuget xunit.assert 2.9.2
+nuget xunit.combinatorial 1.6.24
+nuget xunit.extensibility.core 2.9.2
+nuget xunit.extensibility.execution 2.9.2

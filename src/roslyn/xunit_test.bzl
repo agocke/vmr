@@ -77,6 +77,7 @@ def _compile_csharp_library(ctx, tfm):
         compiler_options = ctx.attr.compiler_options,
         override_debug = False,
         ref_assembly = False,
+        pathmap = ctx.attr.pathmap if hasattr(ctx.attr, "pathmap") else {},
         is_windows = ctx.target_platform_has_constraint(
             ctx.attr._windows_constraint[platform_common.ConstraintValueInfo],
         ),
