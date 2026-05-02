@@ -32,17 +32,16 @@ jobs:
 
       - name: Sync sources
         run: |
-          # Remove existing runtime sources (preserving .git-related metadata)
+          # Replace src/runtime entirely with the rbz clone contents
           rm -rf src/runtime
-          # Copy fresh sources from rbz
           cp -a /tmp/rbz src/runtime
-          # Remove the .git directory from the copy
           rm -rf src/runtime/.git
 
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+          git add -A
+          if git diff --quiet HEAD; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
@@ -55,7 +54,6 @@ jobs:
         run: |
           BRANCH="auto/sync-runtime"
           git checkout -B "$BRANCH"
-          git add -A
           COMMIT_SHA=$(git -C /tmp/rbz rev-parse --short HEAD)
           git commit -m "Sync runtime sources from agocke/rbz@${COMMIT_SHA}"
           git push -f origin "$BRANCH"
