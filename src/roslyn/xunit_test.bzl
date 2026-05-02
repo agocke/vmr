@@ -75,6 +75,7 @@ def _compile_csharp_library(ctx, tfm):
         is_language_specific_analyzer = False,
         analyzer_configs = ctx.files.analyzer_configs if hasattr(ctx.attr, "analyzer_configs") else [],
         compiler_options = ctx.attr.compiler_options,
+        pathmap = ctx.attr.pathmap,
         override_debug = False,
         ref_assembly = False,
         is_windows = ctx.target_platform_has_constraint(
