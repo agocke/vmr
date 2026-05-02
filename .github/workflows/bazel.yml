@@ -55,5 +55,7 @@ jobs:
       - name: Test
         run: |
           bazel test --disk_cache=~/.cache/bazel-disk \
+            --config=${{ matrix.config }} \
             //src/roslyn/src/Compilers/CSharp/Test/Syntax:Microsoft.CodeAnalysis.CSharp.Syntax.UnitTests \
-            --test_timeout=300
+            --test_timeout=300 \
+            --test_output=errors
