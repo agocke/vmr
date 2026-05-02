@@ -14,13 +14,13 @@ jobs:
         include:
           - os: ubuntu-latest
             name: Linux release
-            config: clr_release
+            config: release
           - os: ubuntu-latest
             name: Linux checked
             config: clr_checked
           - os: macos-latest
             name: macOS release
-            config: clr_release
+            config: release
 
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
