@@ -81,7 +81,7 @@
     {
       "packageVersion": null,
       "path": "runtime",
-      "remoteUri": "https://github.com/agocke/runtime",
+      "remoteUri": "https://github.com/agocke/rbz",
       "commitSha": "63a6779e8a693cd28b629df4440d997aa72a3e08"
     },
     {
