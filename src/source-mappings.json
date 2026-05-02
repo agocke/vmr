@@ -79,7 +79,7 @@
         },
         {
             "name": "runtime",
-            "defaultRemote": "https://github.com/agocke/rbz"
+            "defaultRemote": "https://github.com/dotnet/runtime"
         },
         {
             "name": "scenario-tests",
