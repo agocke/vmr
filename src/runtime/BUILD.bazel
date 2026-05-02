@@ -389,8 +389,10 @@ runtime_staging(
         "//conditions:default": [],
     }) + [
         "//src/coreclr/debug:createdump",
-        "//src/coreclr/pal:libcoreclrtraceptprovider.so",
     ] + select({
+        "@platforms//os:linux": ["//src/coreclr/pal:libcoreclrtraceptprovider.so"],
+        "//conditions:default": [],
+    }) + select({
         "@platforms//os:macos": [
             "//src/coreclr/dlls/mscordac:libmscordaccore_dylib",
             "//src/coreclr/dlls/mscordbi:libmscordbi_dylib",
