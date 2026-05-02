@@ -2,10 +2,40 @@
 
 exports_files(["run_xunit_test.sh.tpl"])
 
+# Generate a runtimeconfig.json that targets net10.0 (with Major
+# rollforward) so xunit.console.dll can be loaded by the .NET 10
+# runtime.  The package's stock runtimeconfig targets netcoreapp1.0
+# without rollForward, so it will not load on modern runtimes.
+genrule(
+    name = "xunit_console_runtimeconfig",
+    outs = ["xunit.console.runtimeconfig.json"],
+    cmd = """cat > $@ <<'EOF'
+{
+  "runtimeOptions": {
+    "tfm": "net10.0",
+    "rollForward": "Major",
+    "framework": {
+      "name": "Microsoft.NETCore.App",
+      "version": "10.0.0"
+    },
+    "configProperties": {
+      "System.Reflection.Metadata.MetadataUpdater.IsSupported": false
+    }
+  }
+}
+EOF
+""",
+)
+
 filegroup(
     name = "xunit_console_runner",
     srcs = [
-        "@dotnet_runtime//eng:xunit_console_runner",
+        ":xunit.console.runtimeconfig.json",
+        "@nuget.xunit.runner.console.v2.9.2//:tools/netcoreapp1.0/xunit.console.dll",
+        "@nuget.xunit.runner.console.v2.9.2//:tools/netcoreapp1.0/xunit.console.deps.json",
+        "@nuget.xunit.runner.console.v2.9.2//:tools/netcoreapp1.0/xunit.abstractions.dll",
+        "@nuget.xunit.runner.console.v2.9.2//:tools/netcoreapp1.0/xunit.runner.reporters.netcoreapp10.dll",
+        "@nuget.xunit.runner.console.v2.9.2//:tools/netcoreapp1.0/xunit.runner.utility.netcoreapp10.dll",
     ],
     visibility = ["//src/roslyn:__subpackages__"],
 )

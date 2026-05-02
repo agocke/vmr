@@ -93,7 +93,11 @@ def _roslyn_xunit_test_impl(ctx):
 
     # Copy xunit console runner files next to test DLL
     xunit_console_dll = None
+    copied_basenames = {}
     for f in ctx.files._xunit_runner:
+        if f.basename in copied_basenames:
+            continue
+        copied_basenames[f.basename] = True
         dst = ctx.actions.declare_file(
             "%s/%s/%s" % (ctx.label.name, tfm, f.basename),
         )
@@ -115,7 +119,6 @@ def _roslyn_xunit_test_impl(ctx):
         fail("xunit.console.dll not found in xunit runner files")
 
     # Copy transitive runtime deps next to test DLL
-    copied_basenames = {}
     transitive_runtime_deps = runtime_provider.deps.to_list()
     for dep in transitive_runtime_deps:
         for lib in dep.libs:

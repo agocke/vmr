@@ -292,6 +292,7 @@ NUGET
       xunit.abstractions (>= 2.0.3)
     xunit.extensibility.execution (2.9.2)
       xunit.extensibility.core (2.9.2)
+    xunit.runner.console (2.9.2)
   remote: https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json
     Microsoft.DiaSymReader (3.0.0-beta.25570.101)
     Microsoft.DiaSymReader.Converter.Xml (1.1.0-beta2-22302-02)

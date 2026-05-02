@@ -23,7 +23,11 @@ roslyn_extension = use_extension(
     "//src/roslyn/paket:paket.main_extension.bzl",
     "roslyn_extension",
 )
-use_repo(roslyn_extension, "roslyn_paket")
+use_repo(
+    roslyn_extension,
+    "roslyn_paket",
+    "nuget.xunit.runner.console.v2.9.2",
+)
 
 # ── Shared dependencies ────────────────────────────────────────────
 bazel_dep(name = "rules_dotnet")

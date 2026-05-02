@@ -24,3 +24,4 @@ nuget xunit.assert 2.9.2
 nuget xunit.combinatorial 1.6.24
 nuget xunit.extensibility.core 2.9.2
 nuget xunit.extensibility.execution 2.9.2
+nuget xunit.runner.console 2.9.2
