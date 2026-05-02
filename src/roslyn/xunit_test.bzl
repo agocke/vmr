@@ -162,6 +162,25 @@ def _roslyn_xunit_test_impl(ctx):
     )
     additional_runfiles.append(runtimeconfig)
 
+    # Copy xunit.runner.json next to the test DLL so xunit.console picks it
+    # up.  Roslyn's config disables parallelizeTestCollections (required by
+    # SyntaxNodeCache and other static caches that are not thread-safe).
+    xunit_runner_json_src = ctx.file._xunit_runner_config
+    xunit_runner_json_dst = ctx.actions.declare_file(
+        "%s/%s/xunit.runner.json" % (ctx.label.name, tfm),
+    )
+    ctx.actions.run_shell(
+        inputs = [xunit_runner_json_src],
+        outputs = [xunit_runner_json_dst],
+        command = "cp -f \"$1\" \"$2\"",
+        arguments = [xunit_runner_json_src.path, xunit_runner_json_dst.path],
+        mnemonic = "CopyFile",
+        progress_message = "Copying xunit.runner.json",
+        use_default_shell_env = True,
+        execution_requirements = COPY_EXECUTION_REQUIREMENTS,
+    )
+    additional_runfiles.append(xunit_runner_json_dst)
+
     # Create launcher script - use dotnet from toolchain
     toolchain = get_toolchain(ctx)
     dotnet_runtime_files = toolchain.dotnetinfo.runtime_files
@@ -216,6 +235,11 @@ _roslyn_xunit_test = rule(
                 doc = "The xunit console runner files",
                 default = "//src/roslyn:xunit_console_runner",
                 allow_files = True,
+            ),
+            "_xunit_runner_config": attr.label(
+                doc = "The xunit.runner.json config",
+                default = "//src/roslyn:eng/config/xunit.runner.json",
+                allow_single_file = True,
             ),
             "_bash_runfiles": attr.label(
                 doc = "Bash runfiles library",

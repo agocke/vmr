@@ -1,6 +1,18 @@
 # Roslyn root package
 
-exports_files(["run_xunit_test.sh.tpl"])
+exports_files([
+    "run_xunit_test.sh.tpl",
+    "eng/config/xunit.runner.json",
+])
+
+# xunit configuration shared by all Roslyn tests.  Critically sets
+# parallelizeTestCollections=false because Roslyn's SyntaxNodeCache (and
+# similar shared static caches) are not thread-safe across collections.
+filegroup(
+    name = "xunit_runner_config",
+    srcs = ["eng/config/xunit.runner.json"],
+    visibility = ["//src/roslyn:__subpackages__"],
+)
 
 # Generate a runtimeconfig.json that targets net10.0 (with Major
 # rollforward) so xunit.console.dll can be loaded by the .NET 10
