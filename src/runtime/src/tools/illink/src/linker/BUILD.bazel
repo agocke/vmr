@@ -1,0 +1,124 @@
+load("//:defs.bzl", "SHAREDLIB1024_SNK", "csharp_binary", "csharp_library", "resgen")
+
+# Generate compiled resource from Strings.resx.
+# The source accessor is already provided by Resources/Strings.Designer.cs.
+resgen(
+    name = "resgen_illink",
+    out = "Mono.Linker.Resources.Strings.resources",
+    resx_file = "Resources/Strings.resx",
+)
+
+_COMMON_SRCS = glob(
+    ["**/*.cs"],
+    exclude = ["ref/**"],
+) + [
+    "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+    # ILLink.Shared sources (shared project, compiled inline)
+    "//src/tools/illink/src/ILLink.Shared:srcs",
+    "//src/tools/illink/src/ILLink.Shared:resx_shared_strings",
+]
+
+_COMMON_RESOURCES = [
+    ":resgen_illink",
+    "//src/tools/illink/src/ILLink.Shared:resgen_shared_strings",
+]
+
+_COMMON_RESOURCE_LOGICAL_NAMES = {
+    "Mono.Linker.Resources.Strings.resources": "Mono.Linker.Resources.Strings.resources",
+    "ILLink.Shared.SharedStrings.resources": "ILLink.Shared.SharedStrings.resources",
+}
+
+_COMMON_NOWARN = [
+    "CS1701",
+    "CS1702",
+    "CS1705",
+    "CS8500",
+    "CS8969",
+    "CA1866",
+    "CS0436",
+    "CP0003",
+    "IDE0060",
+    "IDE0100",
+    "NU5105",
+]
+
+# MSBuild uses /skipanalyzers+ for illink-family projects, meaning analyzers
+# are referenced but never executed. The comparison engine filters /skipanalyzers
+# as build infrastructure. We embed diagnostic suppressions in the generated
+# editorconfig (whose filename already matches MSBuild's) so Bazel's analyzers
+# don't fire errors that MSBuild never sees. global_level = 1 ensures these
+# overrides take precedence over CodeAnalysis.src.globalconfig (global_level 0).
+_SKIPANALYZERS_EDITORCONFIG_CONTENT = "\n".join([
+    "dotnet_diagnostic.CA1824.severity = none",
+    "dotnet_diagnostic.CA1852.severity = none",
+    "dotnet_diagnostic.IDE0073.severity = none",
+    "dotnet_diagnostic.SA1400.severity = none",
+    "dotnet_diagnostic.SA1633.severity = none",
+    "dotnet_diagnostic.SA0001.severity = none",
+    "dotnet_diagnostic.SYSLIB1054.severity = none",
+    "dotnet_style_require_accessibility_modifiers = omit_if_default:suggestion",
+])
+
+csharp_binary(
+    name = "illink",
+    include_runtime_async = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    srcs = _COMMON_SRCS,
+    out = "illink",
+    deps = [
+        "@paket.main//microsoft.dotnet.cecil",
+    ],
+    resources = _COMMON_RESOURCES,
+    resource_logical_names = _COMMON_RESOURCE_LOGICAL_NAMES,
+    defines = ["ILLINK"],
+    allow_unsafe_blocks = True,
+    cls_compliant = False,
+    nullable = "enable",
+    target_frameworks = ["net11.0"],
+    nowarn = _COMMON_NOWARN + ["CS1591", "NU5131"],
+    compiler_options = ["/warnaserror+:NU1605", "/publicsign+"],
+    additionalfiles = [
+        "BannedSymbols.txt",
+        "//src/tools/illink/src/ILLink.Shared:SharedStrings.resx",
+        "Resources/Strings.resx",
+    ],
+    extra_editorconfig_content = _SKIPANALYZERS_EDITORCONFIG_CONTENT,
+    keyfile = SHAREDLIB1024_SNK,
+    visibility = ["//visibility:public"],
+    analyzers = [
+        "//:source_build_analyzers",
+        "//:staticcs_analyzers",
+        "//:bannedapi_analyzers",
+    ],
+    msbuild_analyzer_config = "source",
+    editorconfig_name = "Mono.Linker",
+)
+
+# Library target for use as a dependency by tests and ILLink.Tasks.
+csharp_library(
+    name = "illink_lib",
+    srcs = _COMMON_SRCS,
+    out = "illink",
+    deps = [
+        "@paket.main//microsoft.dotnet.cecil",
+    ],
+    resources = _COMMON_RESOURCES,
+    resource_logical_names = _COMMON_RESOURCE_LOGICAL_NAMES,
+    defines = ["ILLINK"],
+    allow_unsafe_blocks = True,
+    cls_compliant = False,
+    nullable = "enable",
+    target_frameworks = ["net11.0"],
+    nowarn = _COMMON_NOWARN + ["CS1591", "NU5131"],
+    compiler_options = ["/publicsign+"],
+    extra_editorconfig_content = _SKIPANALYZERS_EDITORCONFIG_CONTENT,
+    keyfile = SHAREDLIB1024_SNK,
+    visibility = ["//src/tools/illink:__subpackages__"],
+    analyzers = [
+        "//:source_build_analyzers",
+        "//:staticcs_analyzers",
+        "//:bannedapi_analyzers",
+    ],
+    msbuild_analyzer_config = "source",
+    editorconfig_name = "Mono.Linker",
+)

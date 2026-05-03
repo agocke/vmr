@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Locals",
+    srcs = ["locals.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)

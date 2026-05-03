@@ -1,0 +1,241 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "iu2_d",
+    srcs = ["iu2_d.il", "iu2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i8u8_d",
+    srcs = ["i8u8_d.il", "i8u8.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ii4_r",
+    srcs = ["ii4_r.il", "ii4.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "objref_d",
+    srcs = ["objref_d.il", "objref.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ii1_r",
+    srcs = ["ii1_r.il", "ii1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4u1_r",
+    srcs = ["i4u1_r.il", "i4u1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i8u8_r",
+    srcs = ["i8u8_r.il", "i8u8.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ii2_r",
+    srcs = ["ii2_r.il", "ii2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ii1_d",
+    srcs = ["ii1_d.il", "ii1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "iu1_r",
+    srcs = ["iu1_r.il", "iu1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "iu1_d",
+    srcs = ["iu1_d.il", "iu1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ii2_d",
+    srcs = ["ii2_d.il", "ii2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4i1_d",
+    srcs = ["i4i1_d.il", "i4i1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "fr8_r",
+    srcs = ["fr8_r.il", "fr8.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4i1_r",
+    srcs = ["i4i1_r.il", "i4i1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4u2_r",
+    srcs = ["i4u2_r.il", "i4u2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "fr4_r",
+    srcs = ["fr4_r.il", "fr4.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4i2_r",
+    srcs = ["i4i2_r.il", "i4i2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4i2_d",
+    srcs = ["i4i2_d.il", "i4i2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4u2_d",
+    srcs = ["i4u2_d.il", "i4u2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "iu4_d",
+    srcs = ["iu4_d.il", "iu4.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "fr4_d",
+    srcs = ["fr4_d.il", "fr4.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "fr8_d",
+    srcs = ["fr8_d.il", "fr8.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4u4_d",
+    srcs = ["i4u4_d.il", "i4u4.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "iu4_r",
+    srcs = ["iu4_r.il", "iu4.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4u1_d",
+    srcs = ["i4u1_d.il", "i4u1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ii4_d",
+    srcs = ["ii4_d.il", "ii4.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "i4u4_r",
+    srcs = ["i4u4_r.il", "i4u4.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "iu2_r",
+    srcs = ["iu2_r.il", "iu2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "objref_r",
+    srcs = ["objref_r.il", "objref.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

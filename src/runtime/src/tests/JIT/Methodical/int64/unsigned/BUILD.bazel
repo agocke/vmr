@@ -1,0 +1,109 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ldc_mulovf_il_r",
+    srcs = ["ldc_mulovf_r.il", "ldc_mulovf.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ldc_mulovf_il_d",
+    srcs = ["ldc_mulovf_d.il", "ldc_mulovf.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "ldfld_mul_il_d",
+    srcs = ["ldfld_mul_d.il", "ldfld_mul.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldc_mul_il_d",
+    srcs = ["ldc_mul_d.il", "ldc_mul.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "muldiv_il_d",
+    srcs = ["muldiv_d.il", "muldiv.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "ldfld_mulovf_il_r",
+    srcs = ["ldfld_mulovf_r.il", "ldfld_mulovf.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ldsfld_mul_il_d",
+    srcs = ["ldsfld_mul_d.il", "ldsfld_mul.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "addsub_il_d",
+    srcs = ["addsub_d.il", "addsub.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "muldiv_il_r",
+    srcs = ["muldiv_r.il", "muldiv.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ldsfld_mulovf_il_d",
+    srcs = ["ldsfld_mulovf_d.il", "ldsfld_mulovf.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "addsub_il_r",
+    srcs = ["addsub_r.il", "addsub.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ldsfld_mul_il_r",
+    srcs = ["ldsfld_mul_r.il", "ldsfld_mul.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldsfld_mulovf_il_r",
+    srcs = ["ldsfld_mulovf_r.il", "ldsfld_mulovf.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ldc_mul_il_r",
+    srcs = ["ldc_mul_r.il", "ldc_mul.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldfld_mul_il_r",
+    srcs = ["ldfld_mul_r.il", "ldfld_mul.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldfld_mulovf_il_d",
+    srcs = ["ldfld_mulovf_d.il", "ldfld_mulovf.il"],
+    debug_type = "full",
+)

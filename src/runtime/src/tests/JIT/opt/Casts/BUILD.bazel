@@ -1,0 +1,36 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "tests",
+    srcs = ["tests.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "shared2",
+    srcs = ["shared2.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "IntCast",
+    srcs = ["IntCast.cs"],
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "castclass_valuetype",
+    srcs = ["castclass_valuetype.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "shared_Casts",
+    srcs = ["shared.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

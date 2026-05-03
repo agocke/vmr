@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "GitHub_42719_ro",
+    srcs = ["GitHub_42719_ro.il", "GitHub_42719.il"],
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "GitHub_42719_r",
+    srcs = ["GitHub_42719_r.il", "GitHub_42719.il"],
+)

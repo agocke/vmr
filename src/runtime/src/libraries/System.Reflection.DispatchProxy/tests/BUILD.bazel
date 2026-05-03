@@ -1,0 +1,56 @@
+load("//src/libraries:defs.bzl", "live_csharp_library")
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+live_csharp_library(
+    name = "System.Reflection.DispatchProxy.TestDependency",
+    include_runtime_async = False,
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Runtime.InteropServices.JavaScript:JSImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
+    srcs = [
+        "TestDependency/InternalsVisibleTo.cs",
+        "TestDependency/TestTypes.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Reflection.DispatchProxy:ref_System.Reflection.DispatchProxy",
+    ],
+    treat_warnings_as_errors = True,
+    warnings_not_as_errors = ["NU1901", "NU1902", "NU1903", "NU1904"],
+)
+
+library_test(
+    name = "System.Reflection.DispatchProxy.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "TestDependency/**",
+            "TrimmingTests/**",
+        ],
+    ),
+    deps = [
+        ":System.Reflection.DispatchProxy.TestDependency",
+        "//src/libraries/System.Reflection.DispatchProxy:ref_System.Reflection.DispatchProxy",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+)

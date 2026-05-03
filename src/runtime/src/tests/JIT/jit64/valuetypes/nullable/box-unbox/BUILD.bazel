@@ -1,0 +1,3 @@
+exports_files([
+    "structdef.cs",
+], visibility = ["//src/tests:__subpackages__"])

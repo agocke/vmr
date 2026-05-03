@@ -1,0 +1,133 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "CGRecurseAAA_r",
+    srcs = ["CGRecurseAAA.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseAAA_ro",
+    srcs = ["CGRecurseAAA.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseACC_r",
+    srcs = ["CGRecurseACC.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseACA_r",
+    srcs = ["CGRecurseACA.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseAAC_do",
+    srcs = ["CGRecurseAAC.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseACC_d",
+    srcs = ["CGRecurseACC.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseAAC_ro",
+    srcs = ["CGRecurseAAC.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseACC_ro",
+    srcs = ["CGRecurseACC.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseAAA_d",
+    srcs = ["CGRecurseAAA.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseACC_do",
+    srcs = ["CGRecurseACC.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseACA_do",
+    srcs = ["CGRecurseACA.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseACA_d",
+    srcs = ["CGRecurseACA.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseAAC_r",
+    srcs = ["CGRecurseAAC.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseAAC_d",
+    srcs = ["CGRecurseAAC.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseACA_ro",
+    srcs = ["CGRecurseACA.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CGRecurseAAA_do",
+    srcs = ["CGRecurseAAA.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)

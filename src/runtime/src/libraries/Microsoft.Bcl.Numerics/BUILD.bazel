@@ -1,0 +1,22 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "impl_assembly")
+
+impl_assembly(
+    name = "impl_Microsoft.Bcl.Numerics",
+    srcs = [
+        "src/Microsoft.Bcl.Numerics.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    interceptors_namespaces = "",
+    include_syslib_warnaserror = False,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "nullable"],
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:DownlevelLibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+    ],
+    exclude_sr = True,
+    library_import_generator = False,
+    jsimport_generator = False,
+    allow_unsafe_blocks = True,
+)

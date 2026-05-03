@@ -1,0 +1,10 @@
+# CoreCLR ildasm headers (used by other components like mscorpe).
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "ildasm_inc",
+    hdrs = ["dasmenum.hpp"],
+)

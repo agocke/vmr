@@ -1,0 +1,20 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "array_segment",
+    srcs = ["array_segment.cs"],
+)
+
+coreclr_test(
+    name = "case10",
+    srcs = ["case10.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "derivedExplicitClass",
+    srcs = ["derivedexplicitclass.cs"],
+    pri = 1,
+    size = "medium",
+)

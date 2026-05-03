@@ -1,0 +1,58 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Logging.Configuration.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Logging.Configuration",
+    srcs = [
+        "ref/Microsoft.Extensions.Logging.Configuration.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options.ConfigurationExtensions:ref_Microsoft.Extensions.Options.ConfigurationExtensions",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Logging.Configuration",
+    include_runtime_async = False,
+    event_source_generator = False,
+    analyzers = COMMON_GENERATOR_ANALYZERS + [
+        "//src/libraries/Microsoft.Extensions.Configuration.Binder:ConfigurationBinderSourceGeneration",
+    ],
+    interceptors_namespaces = ";Microsoft.Extensions.Configuration.Binder.SourceGeneration;Microsoft.Extensions.Validation.Generated",
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/Extensions/ProviderAliasUtilities/ProviderAliasUtilities.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration.Binder:ref_Microsoft.Extensions.Configuration.Binder",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/Microsoft.Extensions.Options.ConfigurationExtensions:ref_Microsoft.Extensions.Options.ConfigurationExtensions",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Logging.Configuration",
+    ref = ":ref_Microsoft.Extensions.Logging.Configuration",
+    lib = ":impl_Microsoft.Extensions.Logging.Configuration",
+    visibility = ["//visibility:public"],
+)

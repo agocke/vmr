@@ -1,0 +1,2 @@
+# classlibnative was deleted upstream — sources moved to src/coreclr/vm/
+package(default_visibility = ["//src/coreclr:__subpackages__"])

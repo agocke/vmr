@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "DevDiv_468732",
+    srcs = ["DevDiv_468732.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)

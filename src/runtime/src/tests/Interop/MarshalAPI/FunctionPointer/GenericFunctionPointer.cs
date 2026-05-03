@@ -68,7 +68,7 @@ public partial class FunctionPtr
     [InlineData(-1f)]
     [InlineData(42f)]
     [InlineData(60f)]
-    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", RuntimeTestModes.InterpreterActive)]
+    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", (RuntimeTestModes)0x400)]
     public static void RunGenericFunctionPointerTest(float inVal)
     {
         Console.WriteLine($"Running {nameof(RunGenericFunctionPointerTest)}...");
@@ -114,7 +114,7 @@ public partial class FunctionPtr
     }
 
     [ConditionalFact(typeof(FunctionPtr), nameof(CanRunInvalidGenericFunctionPointerTest))]
-    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", RuntimeTestModes.InterpreterActive)]
+    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", (RuntimeTestModes)0x400)]
     public static void RunInvalidGenericFunctionPointerTest()
     {
         Console.WriteLine($"Running {nameof(RunInvalidGenericFunctionPointerTest)}...");

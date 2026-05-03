@@ -1,0 +1,41 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "VectorMgdMgdArray_r",
+    srcs = ["VectorMgdMgdArray.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "VectorMgdMgdArray_ro",
+    srcs = ["VectorMgdMgdArray.cs"],
+    allow_unsafe_blocks = True,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "VectorMgdMgdStatic_r",
+    srcs = ["VectorMgdMgdStatic.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "VectorMgdMgdStatic_ro",
+    srcs = ["VectorMgdMgdStatic.cs"],
+    allow_unsafe_blocks = True,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "VectorMgdMgd_r",
+    srcs = ["VectorMgdMgd.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "VectorMgdMgd_ro",
+    srcs = ["VectorMgdMgd.cs"],
+    allow_unsafe_blocks = True,
+    optimize = True,
+    tags = ["JitOptimizationSensitive"],
+)

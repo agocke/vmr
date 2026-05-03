@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "thread-race_r",
+    srcs = ["thread-race.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/tests/Common:TestLibrary",
+    
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)

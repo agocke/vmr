@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+# rvastatic1-5 are disabled (DisableProjectBuild=true, rva_statics support #2451)
+
+il_coreclr_test(
+    name = "RVAOrderingTest",
+    srcs = ["RVAOrderingTest.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)

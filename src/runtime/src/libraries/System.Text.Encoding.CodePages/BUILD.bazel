@@ -1,0 +1,69 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/System.Text.Encoding.CodePages.cs",
+    "ref/System.Text.Encoding.CodePages.netcoreapp.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Text.Encoding.CodePages",
+    srcs = [
+        "ref/System.Text.Encoding.CodePages.cs",
+        "ref/System.Text.Encoding.CodePages.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Text.Encoding.CodePages",
+    include_runtime_async = False,
+    event_source_generator = True,
+    com_interface_generator = True,
+    srcs = [
+        "src/Microsoft/Win32/SafeHandles/SafeAllocHHandle.cs",
+        "src/System/Text/BaseCodePageEncoding.cs",
+        "src/System/Text/BaseCodePageEncoding.netcoreapp.cs",
+        "src/System/Text/CodePagesEncodingProvider.cs",
+        "src/System/Text/CodePagesEncodingProvider.Default.cs",
+        "src/System/Text/CodePagesEncodingProvider.netcoreapp.cs",
+        "src/System/Text/DBCSCodePageEncoding.cs",
+        "src/System/Text/DecoderBestFitFallback.cs",
+        "src/System/Text/DecoderFallbackBufferHelper.cs",
+        "src/System/Text/DecoderNLS.cs",
+        "src/System/Text/EUCJPEncoding.cs",
+        "src/System/Text/EncoderBestFitFallback.cs",
+        "src/System/Text/EncoderFallbackBufferHelper.cs",
+        "src/System/Text/EncoderNLS.cs",
+        "src/System/Text/EncodingByteBuffer.cs",
+        "src/System/Text/EncodingCharBuffer.cs",
+        "src/System/Text/EncodingNLS.cs",
+        "src/System/Text/EncodingTable.cs",
+        "src/System/Text/EncodingTable.Data.cs",
+        "src/System/Text/GB18030Encoding.cs",
+        "src/System/Text/ISCIIEncoding.cs",
+        "src/System/Text/ISO2022Encoding.cs",
+        "src/System/Text/SBCSCodePageEncoding.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    resources = ["src/Data/codepages.nlp"],
+    resource_logical_names = {"codepages.nlp": "codepages.nlp"},
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "NU5128", "CS1591"],
+    assembly_description = "Provides support for code-page based encodings, including Windows-1252, Shift-JIS, and GB2312.\n\nCommonly Used Types:\nSystem.Text.CodePagesEncodingProvider",
+)
+
+ref_impl_pair(
+    name = "live_System.Text.Encoding.CodePages",
+    ref = ":ref_System.Text.Encoding.CodePages",
+    lib = ":impl_System.Text.Encoding.CodePages",
+    visibility = ["//visibility:public"],
+)

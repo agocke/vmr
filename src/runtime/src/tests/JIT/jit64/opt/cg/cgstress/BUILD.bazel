@@ -1,0 +1,76 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "CgStress2_do",
+    srcs = ["CgStress2.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CgStress3_do",
+    srcs = ["CgStress3.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CgStress1_ro",
+    srcs = ["CgStress1.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CgStress2_d",
+    srcs = ["CgStress2.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "CgStress2_ro",
+    srcs = ["CgStress2.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CgStress3_r",
+    srcs = ["CgStress3.cs"],
+)
+
+coreclr_test(
+    name = "CgStress1_d",
+    srcs = ["CgStress1.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "CgStress1_r",
+    srcs = ["CgStress1.cs"],
+)
+
+coreclr_test(
+    name = "CgStress1_do",
+    srcs = ["CgStress1.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CgStress2_r",
+    srcs = ["CgStress2.cs"],
+)
+
+coreclr_test(
+    name = "CgStress3_ro",
+    srcs = ["CgStress3.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CgStress3_d",
+    srcs = ["CgStress3.cs"],
+    debug_type = "full",
+    optimize = False,
+)

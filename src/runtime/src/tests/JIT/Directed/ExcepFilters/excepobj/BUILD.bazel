@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "excepobj",
+    debug_type = "pdbonly",
+    optimize = True,
+    srcs = ["excepobj.il"],
+)

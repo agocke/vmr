@@ -1,0 +1,42 @@
+load("//:defs.bzl", "csharp_library")
+
+exports_files([
+    "ref/System.Runtime.InteropServices.JavaScript.cs",
+])
+
+csharp_library(
+    name = "JSImportGenerator",
+    out = "Microsoft.Interop.JavaScript.JSImportGenerator",
+    srcs = glob(["gen/JSImportGenerator/**/*.cs"]) + [
+        "//src/libraries/Common:src/Roslyn/DiagnosticDescriptorHelper.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Diagnostics/CodeAnalysis/NullableAttributes.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Index.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
+        "//src/libraries/System.Runtime.InteropServices:gen/Common/UnreachableException.cs",
+        "//src/libraries/System.Runtime.InteropServices.JavaScript/src:System/Runtime/InteropServices/JavaScript/MarshalerType.cs",
+    ],
+    target_frameworks = ["netstandard2.0"],
+    langversion = "preview",
+    cls_compliant = False,
+    nullable = "annotations",
+    allow_unsafe_blocks = True,
+    defines = ["JSIMPORTGENERATOR"],
+    deps = [
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//microsoft.codeanalysis.workspaces.common",
+        "@paket.main//microsoft.codeanalysis.csharp.workspaces",
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.memory",
+    ],
+    resx_file = "gen/JSImportGenerator/Resources/Strings.resx",
+    nowarn = [
+        "RS2008",
+        "RS1038",
+        # MSBuild does not generate XML docs for generator projects.
+        "CS1574",
+    ],
+    visibility = ["//visibility:public"],
+)

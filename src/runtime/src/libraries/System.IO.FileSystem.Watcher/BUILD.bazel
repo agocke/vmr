@@ -1,0 +1,107 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files(["ref/System.IO.FileSystem.Watcher.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.FileSystem.Watcher",
+    srcs = [
+        "ref/System.IO.FileSystem.Watcher.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.FileSystem.Watcher",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/HResults.cs",
+        "src/System/IO/ErrorEventArgs.cs",
+        "src/System/IO/ErrorEventHandler.cs",
+        "src/System/IO/FileSystemEventArgs.cs",
+        "src/System/IO/FileSystemEventHandler.cs",
+        "src/System/IO/FileSystemWatcher.cs",
+        "src/System/IO/InternalBufferOverflowException.cs",
+        "src/System/IO/NotifyFilters.cs",
+        "src/System/IO/RenamedEventArgs.cs",
+        "src/System/IO/RenamedEventHandler.cs",
+        "src/System/IO/WatcherChangeTypes.cs",
+        "src/System/IO/WaitForChangedResult.cs",
+
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/System/IO/PathInternal.CaseSensitivity.cs",
+        "//src/libraries/Common:src/System/IO/PathInternal.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ] + select({
+        "@platforms//os:linux": [
+            # Unix common
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Read.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+            "//src/libraries/Common:src/System/IO/PathInternal.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.PathConf.cs",
+
+            # Linux inotify
+            "src/System/IO/FileSystemWatcher.Linux.cs",
+            "//src/libraries/Common:src/Interop/Linux/System.Native/Interop.INotify.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Poll.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Poll.Structs.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+        ],
+        "@platforms//os:macos": [
+            # Unix common
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Read.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+            "//src/libraries/Common:src/System/IO/PathInternal.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.PathConf.cs",
+
+            # macOS FSEvents
+            "src/System/IO/FileSystemWatcher.OSX.cs",
+            "//src/libraries/System.Private.CoreLib:src/System/IO/FileSystem.Exists.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.DefaultPathBufferSize.cs",
+            "//src/libraries/Common:src/Interop/OSX/Interop.EventStream.cs",
+            "//src/libraries/Common:src/Interop/OSX/Interop.CoreFoundation.cs",
+            "//src/libraries/Common:src/Interop/OSX/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/OSX/Interop.RunLoop.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.RealPath.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.Span.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+
+            "//src/libraries/Common:src/Microsoft/Win32/SafeHandles/SafeCreateHandle.OSX.cs",
+            "//src/libraries/Common:src/Microsoft/Win32/SafeHandles/SafeEventStreamHandle.OSX.cs",
+            "//src/libraries/Common:src/System/Runtime/InteropServices/SpanOfCharAsUtf8StringMarshaller.cs",
+        ],
+    }),
+    deps = [
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Channels:ref_System.Threading.Channels",
+        "//src/libraries/System.Threading.Overlapped:ref_System.Threading.Overlapped",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    os_targeted = True,
+    supported_os_platforms = ["linux", "osx"],
+)
+
+ref_impl_pair(
+    name = "live_System.IO.FileSystem.Watcher",
+    ref = ":ref_System.IO.FileSystem.Watcher",
+    lib = ":impl_System.IO.FileSystem.Watcher",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,457 @@
+# CoreCLR JIT compiler — headers, clrjit_static OBJECT library, and
+# standalone JIT shared libraries (native + cross-target).
+# Matches CMake: src/coreclr/jit/CMakeLists.txt + jit/static/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "jit_headers",
+    hdrs = glob(
+        [
+            "*.h",
+            "*.hpp",
+            "*.def",
+            "jitstd/*.h",
+        ],
+        allow_empty = True,
+    ),
+)
+
+# -------------------------------------------------------------------------
+# Source lists (shared between clrjit_static and standalone JIT targets)
+# -------------------------------------------------------------------------
+
+# JIT_SOURCES — common compiler pipeline sources (architecture-independent).
+_JIT_COMMON_SOURCES = [
+    "abi.cpp",
+    "alloc.cpp",
+    "assertionprop.cpp",
+    "async.cpp",
+    "asyncanalysis.cpp",
+    "bitset.cpp",
+    "block.cpp",
+    "buildstring.cpp",
+    "codegencommon.cpp",
+    "codegenlinear.cpp",
+    "compiler.cpp",
+    "copyprop.cpp",
+    "debuginfo.cpp",
+    "disasm.cpp",
+    "earlyprop.cpp",
+    "ee_il_dll.cpp",
+    "eeinterface.cpp",
+    "emit.cpp",
+    "error.cpp",
+    "fgbasic.cpp",
+    "fgdiagnostic.cpp",
+    "fgehopt.cpp",
+    "fgflow.cpp",
+    "fginline.cpp",
+    "fgopt.cpp",
+    "fgprofile.cpp",
+    "fgprofilesynthesis.cpp",
+    "fgstmt.cpp",
+    "flowgraph.cpp",
+    "forwardsub.cpp",
+    "gcinfo.cpp",
+    "gentree.cpp",
+    "gschecks.cpp",
+    "hashbv.cpp",
+    "helperexpansion.cpp",
+    "hostallocator.cpp",
+    "hwintrinsic.cpp",
+    "ifconversion.cpp",
+    "importer.cpp",
+    "importercalls.cpp",
+    "importervectorization.cpp",
+    "indirectcalltransformer.cpp",
+    "inductionvariableopts.cpp",
+    "inline.cpp",
+    "inlinepolicy.cpp",
+    "instr.cpp",
+    "jitconfig.cpp",
+    "jiteh.cpp",
+    "jithashtable.cpp",
+    "jitmetadata.cpp",
+    "layout.cpp",
+    "lclmorph.cpp",
+    "lclvars.cpp",
+    "likelyclass.cpp",
+    "lir.cpp",
+    "liveness.cpp",
+    "loopcloning.cpp",
+    "lower.cpp",
+    "morph.cpp",
+    "morphblock.cpp",
+    "objectalloc.cpp",
+    "optcse.cpp",
+    "optimizebools.cpp",
+    "optimizemaskconversions.cpp",
+    "optimizer.cpp",
+    "patchpoint.cpp",
+    "phase.cpp",
+    "promotion.cpp",
+    "promotiondecomposition.cpp",
+    "promotionliveness.cpp",
+    "rangecheck.cpp",
+    "rangecheckcloning.cpp",
+    "rationalize.cpp",
+    "redundantbranchopts.cpp",
+    "regalloc.cpp",
+    "regset.cpp",
+    "scev.cpp",
+    "scopeinfo.cpp",
+    "segmentlist.cpp",
+    "sideeffects.cpp",
+    "sm.cpp",
+    "smdata.cpp",
+    "smweights.cpp",
+    "ssabuilder.cpp",
+    "ssarenamestate.cpp",
+    "stacklevelsetter.cpp",
+    "switchrecognition.cpp",
+    "treelifeupdater.cpp",
+    "utils.cpp",
+    "valuenum.cpp",
+]
+
+# JIT_NATIVE_TARGET_SOURCES — register allocation and GC encoding.
+_JIT_NATIVE_TARGET_SOURCES = [
+    "gcdecode.cpp",
+    "gcencode.cpp",
+    "lsra.cpp",
+    "lsrabuild.cpp",
+    "regMaskTPOps.cpp",
+    "unwind.cpp",
+]
+
+# Per-architecture source lists (JIT_AMD64_SOURCES, JIT_ARM64_SOURCES, etc.)
+_JIT_AMD64_SOURCES = _JIT_NATIVE_TARGET_SOURCES + [
+    "codegenxarch.cpp",
+    "emitxarch.cpp",
+    "hwintrinsicxarch.cpp",
+    "hwintrinsiccodegenxarch.cpp",
+    "lowerxarch.cpp",
+    "lsraxarch.cpp",
+    "simd.cpp",
+    "simdcodegenxarch.cpp",
+    "targetamd64.cpp",
+    "unwindamd64.cpp",
+]
+
+_JIT_ARM64_SOURCES = _JIT_NATIVE_TARGET_SOURCES + [
+    "codegenarmarch.cpp",
+    "codegenarm64.cpp",
+    "codegenarm64test.cpp",
+    "emitarm64.cpp",
+    "emitarm64sve.cpp",
+    "hwintrinsicarm64.cpp",
+    "hwintrinsiccodegenarm64.cpp",
+    "lowerarmarch.cpp",
+    "lsraarmarch.cpp",
+    "lsraarm64.cpp",
+    "simd.cpp",
+    "targetarm64.cpp",
+    "unwindarmarch.cpp",
+    "unwindarm64.cpp",
+]
+
+_JIT_ARM_SOURCES = _JIT_NATIVE_TARGET_SOURCES + [
+    "codegenarmarch.cpp",
+    "codegenarm.cpp",
+    "decomposelongs.cpp",
+    "emitarm.cpp",
+    "lowerarmarch.cpp",
+    "lsraarmarch.cpp",
+    "lsraarm.cpp",
+    "targetarm.cpp",
+    "unwindarmarch.cpp",
+]
+
+_JIT_I386_SOURCES = _JIT_NATIVE_TARGET_SOURCES + [
+    "codegenxarch.cpp",
+    "decomposelongs.cpp",
+    "emitxarch.cpp",
+    "hwintrinsicxarch.cpp",
+    "hwintrinsiccodegenxarch.cpp",
+    "lowerxarch.cpp",
+    "lsraxarch.cpp",
+    "simd.cpp",
+    "simdcodegenxarch.cpp",
+    "targetx86.cpp",
+    "unwindx86.cpp",
+]
+
+_JIT_WASM_SOURCES = [
+    "codegenwasm.cpp",
+    "emitwasm.cpp",
+    "fgwasm.cpp",
+    "lowerwasm.cpp",
+    "regallocwasm.cpp",
+    "registeropswasm.cpp",
+    "targetwasm.cpp",
+    "unwindwasm.cpp",
+]
+
+# -------------------------------------------------------------------------
+# Common copts and defines
+# -------------------------------------------------------------------------
+
+_JIT_COPTS = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+    "-include", "src/coreclr/jit/jitpch.h",
+    "-Wno-error",
+    "-Wno-endif-labels",
+    "-Wno-changes-meaning",
+    "-Wno-sizeof-pointer-div",
+    # emitarm64.h uses static_assert without message (C++17) in a C++11 build.
+    "-Wno-c++17-extensions",
+]
+
+_JIT_INCLUDES = [
+    ".",
+    "jitstd",
+]
+
+_JIT_DEFINES_BASE = [
+    "JIT_BUILD",
+]
+
+_JIT_SIMD_DEFINES = [
+    "FEATURE_SIMD",
+    "FEATURE_HW_INTRINSICS",
+    "FEATURE_MASKED_HW_INTRINSICS",
+]
+
+# -------------------------------------------------------------------------
+# clrjit_static — OBJECT library for linking into libcoreclr.so
+# -------------------------------------------------------------------------
+
+cc_library(
+    name = "clrjit_static",
+    srcs = _JIT_COMMON_SOURCES + select({
+        "@platforms//cpu:arm64": _JIT_ARM64_SOURCES,
+        "//conditions:default": _JIT_AMD64_SOURCES,
+    }),
+    textual_hdrs = ["smcommon.cpp"],
+    copts = _JIT_COPTS,
+    includes = _JIT_INCLUDES,
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES + _JIT_DEFINES_BASE + _JIT_SIMD_DEFINES,
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/jitshared:jitshared",
+    ],
+    alwayslink = True,
+    linkstatic = True,
+)
+
+# -------------------------------------------------------------------------
+# libclrjit.so — standalone JIT shared library (native linux-x64 target)
+# Matches CMake: create_standalone_jit(TARGET clrjit OS unix ARCH x64)
+# -------------------------------------------------------------------------
+
+# Textual header included by sm.cpp via #include "smcommon.cpp".
+# cc_binary does not support textual_hdrs, so we expose it via a header-only lib.
+cc_library(
+    name = "jit_textual_hdrs",
+    textual_hdrs = ["smcommon.cpp"],
+)
+
+cc_binary(
+    name = "libclrjit.so",
+    srcs = _JIT_COMMON_SOURCES + select({
+        "@platforms//cpu:arm64": _JIT_ARM64_SOURCES,
+        "//conditions:default": _JIT_AMD64_SOURCES,
+    }),
+    linkshared = True,
+    linkstatic = True,
+    copts = _JIT_COPTS + CLR_CONFIG_COPTS,
+    includes = _JIT_INCLUDES,
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES + _JIT_DEFINES_BASE + _JIT_SIMD_DEFINES + [
+        "FEATURE_NO_HOST",
+        "SELF_NO_HOST",
+        "JIT_STANDALONE_BUILD",
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-Wl,-install_name,@rpath/libclrjit.dylib",
+            "-Wl,-exported_symbols_list,$(location bazel/clrjit.exports.mac)",
+        ],
+        "//conditions:default": [
+            "-Wl,-Bsymbolic",
+            "-Wl,--version-script=$(location bazel/clrjit.exports)",
+        ],
+    }),
+    additional_linker_inputs = select({
+        "@platforms//os:macos": ["bazel/clrjit.exports.mac"],
+        "//conditions:default": ["bazel/clrjit.exports"],
+    }),
+    deps = [
+        ":jit_textual_hdrs",
+        "//src/coreclr/gcinfo",
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/jitshared:jitshared",
+        "//src/coreclr/utilcode:utilcodestaticnohost",
+        "//src/coreclr/dlls/mscorrc",
+        "//src/coreclr/pal:coreclrpal",
+        "//src/coreclr/minipal:coreclrminipal",
+        "//src/native/minipal",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# -------------------------------------------------------------------------
+# Cross-target standalone JIT shared libraries.
+# Built on linux-x64 host but targeting different architectures/OSes.
+# Matches CMake: create_standalone_jit() calls in src/coreclr/jit/CMakeLists.txt
+# -------------------------------------------------------------------------
+
+# Undefine global TARGET_* from .bazelrc and ABI defines propagated by deps
+# (CORECLR_DEFINES in utilcodestaticnohost). Each variant re-defines via copts.
+_CROSS_JIT_UNDEF_COPTS = [
+    "-UTARGET_64BIT",
+    "-UTARGET_AMD64",
+    "-UTARGET_UNIX",
+    "-UTARGET_LINUX",
+    "-UUNIX_AMD64_ABI",
+    "-UUNIX_AMD64_ABI_ITF",
+    "-UFEATURE_USE_ASM_GC_WRITE_BARRIERS",
+]
+
+_CROSS_JIT_DEFINES = _JIT_DEFINES_BASE + [
+    "FEATURE_NO_HOST",
+    "SELF_NO_HOST",
+    "JIT_STANDALONE_BUILD",
+]
+
+_CROSS_JIT_LINKOPTS = select({
+    "@platforms//os:macos": [],
+    "//conditions:default": [
+        "-Wl,-Bsymbolic",
+        "-Wl,--version-script=$(location bazel/clrjit.exports)",
+    ],
+})
+
+_CROSS_JIT_LINKER_INPUTS = select({
+    "@platforms//os:macos": [],
+    "//conditions:default": ["bazel/clrjit.exports"],
+})
+
+_CROSS_JIT_DEPS = [
+    ":jit_textual_hdrs",
+    "//src/coreclr/inc:coreclr_inc_headers_only",
+    "//src/coreclr/jitshared:jitshared",
+    "//src/coreclr/utilcode:utilcodestaticnohost",
+    "//src/coreclr/dlls/mscorrc",
+    "//src/coreclr/pal:coreclrpal",
+    "//src/coreclr/minipal:coreclrminipal",
+    "//src/native/minipal",
+]
+
+# --- clrjit_universal_arm64_x64 ---
+cc_binary(
+    name = "libclrjit_universal_arm64_x64.so",
+    includes = _JIT_INCLUDES,
+    srcs = _JIT_COMMON_SOURCES + _JIT_ARM64_SOURCES,
+    linkshared = True,
+    linkstatic = True,
+    copts = _JIT_COPTS + _CROSS_JIT_UNDEF_COPTS + [
+        "-DTARGET_64BIT",
+        "-DTARGET_ARM64",
+    ],
+    defines = _CROSS_JIT_DEFINES + _JIT_SIMD_DEFINES,
+    linkopts = _CROSS_JIT_LINKOPTS,
+    additional_linker_inputs = _CROSS_JIT_LINKER_INPUTS,
+    deps = _CROSS_JIT_DEPS + ["//src/coreclr/gcinfo:gcinfo_universal_arm64"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    visibility = ["//visibility:public"],
+)
+
+# --- clrjit_unix_x64_x64 ---
+cc_binary(
+    name = "libclrjit_unix_x64_x64.so",
+    includes = _JIT_INCLUDES,
+    srcs = _JIT_COMMON_SOURCES + _JIT_AMD64_SOURCES,
+    linkshared = True,
+    linkstatic = True,
+    copts = _JIT_COPTS + _CROSS_JIT_UNDEF_COPTS + [
+        "-DTARGET_64BIT",
+        "-DTARGET_AMD64",
+        "-DTARGET_UNIX",
+        "-DTARGET_UNIX_ANYOS",
+        "-DUNIX_AMD64_ABI",
+    ],
+    defines = _CROSS_JIT_DEFINES + _JIT_SIMD_DEFINES,
+    linkopts = _CROSS_JIT_LINKOPTS,
+    additional_linker_inputs = _CROSS_JIT_LINKER_INPUTS,
+    deps = _CROSS_JIT_DEPS + ["//src/coreclr/gcinfo:gcinfo_unix_x64"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    visibility = ["//visibility:public"],
+)
+
+# --- clrjit_win_x64_x64 ---
+cc_binary(
+    name = "libclrjit_win_x64_x64.so",
+    includes = _JIT_INCLUDES,
+    srcs = _JIT_COMMON_SOURCES + _JIT_AMD64_SOURCES,
+    linkshared = True,
+    linkstatic = True,
+    copts = _JIT_COPTS + _CROSS_JIT_UNDEF_COPTS + [
+        "-DTARGET_64BIT",
+        "-DTARGET_AMD64",
+        "-DTARGET_WINDOWS",
+    ],
+    defines = _CROSS_JIT_DEFINES + _JIT_SIMD_DEFINES,
+    linkopts = _CROSS_JIT_LINKOPTS,
+    additional_linker_inputs = _CROSS_JIT_LINKER_INPUTS,
+    deps = _CROSS_JIT_DEPS + ["//src/coreclr/gcinfo:gcinfo_win_x64"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    visibility = ["//visibility:public"],
+)
+
+# --- clrjit_universal_arm_x64 ---
+cc_binary(
+    name = "libclrjit_universal_arm_x64.so",
+    includes = _JIT_INCLUDES,
+    srcs = _JIT_COMMON_SOURCES + _JIT_ARM_SOURCES,
+    linkshared = True,
+    linkstatic = True,
+    copts = _JIT_COPTS + _CROSS_JIT_UNDEF_COPTS + [
+        "-DTARGET_ARM",
+        "-DARM_SOFTFP",
+        "-DCONFIGURABLE_ARM_ABI",
+    ],
+    defines = _CROSS_JIT_DEFINES,
+    linkopts = _CROSS_JIT_LINKOPTS,
+    additional_linker_inputs = _CROSS_JIT_LINKER_INPUTS,
+    deps = _CROSS_JIT_DEPS + ["//src/coreclr/gcinfo:gcinfo_universal_arm"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    visibility = ["//visibility:public"],
+)
+
+# --- clrjit_win_x86_x64 ---
+cc_binary(
+    name = "libclrjit_win_x86_x64.so",
+    includes = _JIT_INCLUDES,
+    srcs = _JIT_COMMON_SOURCES + _JIT_I386_SOURCES,
+    linkshared = True,
+    linkstatic = True,
+    copts = _JIT_COPTS + _CROSS_JIT_UNDEF_COPTS + [
+        "-DTARGET_X86",
+        "-DTARGET_WINDOWS",
+    ],
+    defines = _CROSS_JIT_DEFINES + _JIT_SIMD_DEFINES,
+    linkopts = _CROSS_JIT_LINKOPTS,
+    additional_linker_inputs = _CROSS_JIT_LINKER_INPUTS,
+    deps = _CROSS_JIT_DEPS + ["//src/coreclr/gcinfo:gcinfo_win_x86"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
+    visibility = ["//visibility:public"],
+)
+
+# NOTE: WASM cross-target JIT does not exist on release/10.0.
+# It was added in main branch. WASM JIT sources exist but are only
+# used when building on a WASM host target (mono browser builds).

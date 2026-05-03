@@ -1,0 +1,24 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net",
+    library_import_generator = False,
+    generate_documentation_file = False,
+    skip_locals_init = False,
+    srcs = [
+        "src/System.Net.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Net.NetworkInformation:ref_System.Net.NetworkInformation",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Requests:ref_System.Net.Requests",
+        "//src/libraries/System.Net.Sockets:ref_System.Net.Sockets",
+        "//src/libraries/System.Net.WebClient:ref_System.Net.WebClient",
+        "//src/libraries/System.Net.WebHeaderCollection:ref_System.Net.WebHeaderCollection",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/shims/stubs:ref_System.Security.Permissions",
+    ],
+    os_targeted = True,
+    exclude_sr = True,
+    assembly_version = "4.0.0.0",
+)

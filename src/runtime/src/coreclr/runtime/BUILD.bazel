@@ -1,0 +1,19 @@
+# CoreCLR shared runtime sources.
+# Sources here are compiled into both the VM (cee_wks_core) and standalone GC.
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "runtime_headers",
+    hdrs = glob(["*.h"]),
+)
+
+exports_files(
+    [
+        "CachedInterfaceDispatch.cpp",
+        "MiscNativeHelpers.cpp",
+        "SignalSafeThreadMap.cpp",
+    ] + glob(["**/*.S"]),
+)

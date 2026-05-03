@@ -1,0 +1,22 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Sha1_r",
+    srcs = [
+        "Program.Sha1.cs",
+        "//src/tests/JIT/HardwareIntrinsics/Arm/Shared:Helpers.cs",
+        "//src/tests/JIT/HardwareIntrinsics/Arm/Shared:Program.cs",
+    ],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "Sha1_ro",
+    srcs = [
+        "Program.Sha1.cs",
+        "//src/tests/JIT/HardwareIntrinsics/Arm/Shared:Helpers.cs",
+        "//src/tests/JIT/HardwareIntrinsics/Arm/Shared:Program.cs",
+    ],
+    optimize = True,
+    tags = ["manual"],  # Needs additional deps not yet available
+)

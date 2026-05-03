@@ -1,0 +1,245 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "badldsfld_d",
+    srcs = ["badldsfld_d.il", "badldsfld.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "subovfun1_Desktop_r",
+    srcs = ["subovfun1_r.il", "subovfun1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "subovfun1_Desktop_d",
+    srcs = ["subovfun1_d.il", "subovfun1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldfldstatic1_r",
+    srcs = ["ldfldstatic1_r.il", "ldfldstatic1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldvirtftnsideeffect_d",
+    srcs = ["ldvirtftnsideeffect_d.il", "ldvirtftnsideeffect.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "calli2_d",
+    srcs = ["calli2_d.il", "calli2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldfldr4_d",
+    srcs = ["ldfldr4_d.il", "ldfldr4.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "stfldstatic1_Desktop_r",
+    srcs = ["stfldstatic1_r.il", "stfldstatic1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "badtailcall_r",
+    srcs = ["badtailcall_r.il", "badtailcall.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "volatilldind_r",
+    srcs = ["volatilldind_r.il", "volatilldind.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ldelemnullarr2_r",
+    srcs = ["ldelemnullarr2_r.il", "ldelemnullarr2.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refanytype1_r",
+    srcs = ["refanytype1_r.il", "refanytype1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldelemnullarr2_d",
+    srcs = ["ldelemnullarr2_d.il", "ldelemnullarr2.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "ldvirtftnsideeffect_r",
+    srcs = ["ldvirtftnsideeffect_r.il", "ldvirtftnsideeffect.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "byrefsubbyref1_d",
+    srcs = ["byrefsubbyref1_d.il", "byrefsubbyref1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "badldsfld_r",
+    srcs = ["badldsfld_r.il", "badldsfld.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "byrefsubbyref1_r",
+    srcs = ["byrefsubbyref1_r.il", "byrefsubbyref1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "volatilstind_r",
+    srcs = ["volatilstind_r.il", "volatilstind.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refanytype1_d",
+    srcs = ["refanytype1_d.il", "refanytype1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldfldunboxedvt_r",
+    srcs = ["ldfldunboxedvt_r.il", "ldfldunboxedvt.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "badendfinally_r",
+    srcs = ["badendfinally_r.il", "badendfinally.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "stfldstatic1_Desktop_d",
+    srcs = ["stfldstatic1_d.il", "stfldstatic1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "badendfinally_d",
+    srcs = ["badendfinally_d.il", "badendfinally.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "nullsdarr_d",
+    srcs = ["nullsdarr_d.il", "nullsdarr.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "nullsdarr_r",
+    srcs = ["nullsdarr_r.il", "nullsdarr.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "ceeillegal_d",
+    srcs = ["ceeillegal_d.il", "ceeillegal.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "ldfldr4_r",
+    srcs = ["ldfldr4_r.il", "ldfldr4.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "calli2_r",
+    srcs = ["calli2_r.il", "calli2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "volatilstind_d",
+    srcs = ["volatilstind_d.il", "volatilstind.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "ldfldstatic1_d",
+    srcs = ["ldfldstatic1_d.il", "ldfldstatic1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldfldunboxedvt_d",
+    srcs = ["ldfldunboxedvt_d.il", "ldfldunboxedvt.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ceeillegal_r",
+    srcs = ["ceeillegal_r.il", "ceeillegal.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "badtailcall_d",
+    srcs = ["badtailcall_d.il", "badtailcall.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "volatilldind_d",
+    srcs = ["volatilldind_d.il", "volatilldind.il"],
+    debug_type = "full",
+)

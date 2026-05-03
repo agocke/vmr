@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "zeroInit01_small_",
+    srcs = ["zeroinit01_small.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "zeroinit01_large",
+    srcs = ["zeroinit01_large.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)

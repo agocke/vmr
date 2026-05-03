@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "IntMultiply",
+    srcs = ["IntMultiply.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "MultiplyLongOps",
+    srcs = ["MultiplyLongOps.cs"],
+    optimize = True,
+)

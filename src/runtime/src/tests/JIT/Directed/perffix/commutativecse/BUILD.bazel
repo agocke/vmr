@@ -1,0 +1,34 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "ccse_cs_d",
+    srcs = ["CCSE.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ccse_cs_ro",
+    srcs = ["CCSE.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ccse_cs_do",
+    srcs = ["CCSE.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ccse_cs_r",
+    srcs = ["CCSE.cs"],
+    pri = 1,
+    size = "medium",
+)

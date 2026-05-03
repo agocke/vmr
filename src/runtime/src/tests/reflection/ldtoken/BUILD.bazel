@@ -1,0 +1,20 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "byrefs",
+    srcs = ["byrefs.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldtokenmember",
+    srcs = ["ldtokenmember.il"],
+)
+
+il_coreclr_test(
+    name = "modifiers",
+    srcs = ["modifiers.il"],
+    pri = 1,
+    size = "medium",
+)

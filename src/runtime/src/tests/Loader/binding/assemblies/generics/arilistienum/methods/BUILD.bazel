@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "exceptions",
+    srcs = ["exceptions.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "methods",
+    srcs = ["methods.cs"],
+    pri = 1,
+    size = "medium",
+)

@@ -1,0 +1,53 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files(["ref/System.Diagnostics.FileVersionInfo.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Diagnostics.FileVersionInfo",
+    srcs = [
+        "ref/System.Diagnostics.FileVersionInfo.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Diagnostics.FileVersionInfo",
+    com_interface_generator = True,
+    os_targeted = "unix",
+    srcs = [
+        "src/System/Diagnostics/FileVersionInfo.cs",
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+    ] + select({
+        "@platforms//os:linux": [
+            "src/System/Diagnostics/FileVersionInfo.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+        ],
+        "@platforms//os:macos": [
+            "src/System/Diagnostics/FileVersionInfo.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+        ],
+    }),
+    deps = [
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    supported_os_platforms = ["unix"],
+)
+
+ref_impl_pair(
+    name = "live_System.Diagnostics.FileVersionInfo",
+    ref = ":ref_System.Diagnostics.FileVersionInfo",
+    lib = ":impl_System.Diagnostics.FileVersionInfo",
+    visibility = ["//visibility:public"],
+)

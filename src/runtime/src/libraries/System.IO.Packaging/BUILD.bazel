@@ -1,0 +1,42 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Packaging",
+    srcs = [
+        "ref/System.IO.Packaging.cs",
+        "ref/System.IO.Packaging.PackUriScheme.cs",
+        "ref/System.IO.Packaging.Serialization.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.IO.Packaging",
+    include_runtime_async = False,
+    event_source_generator = False,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.IO.Compression:ref_System.IO.Compression",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+)
+
+ref_impl_pair(
+    name = "live_System.IO.Packaging",
+    ref = ":ref_System.IO.Packaging",
+    lib = ":impl_System.IO.Packaging",
+    visibility = ["//visibility:public"],
+)

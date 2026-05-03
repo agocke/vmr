@@ -1,0 +1,46 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Security.Cryptography.Xml.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "KeyReferenceTest.cs",
+            "ReferenceListTest.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/Security/Cryptography/PlatformSupport.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/CngKeyWrapper.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Security.Cryptography.Xml:ref_System.Security.Cryptography.Xml",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Security.Cryptography.Pkcs:ref_System.Security.Cryptography.Pkcs",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XPath:ref_System.Xml.XPath",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Net.Sockets:ref_System.Net.Sockets",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    resources = glob(
+        ["*.xml"],
+        exclude = ["ILLink.Descriptors.xml"],
+    ),
+    nullable = "disable",
+    nowarn = MULTITARGET_NOWARN + ["SYSLIB0057"],
+    size = "large",
+    keyfile = OPEN_SNK,
+)

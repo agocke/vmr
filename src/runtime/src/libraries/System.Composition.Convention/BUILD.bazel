@@ -1,0 +1,35 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly")
+
+impl_assembly(
+    name = "impl_System.Composition.Convention",
+    include_runtime_async = False,
+    event_source_generator = False,
+    srcs = [
+        "src/System/Composition/Convention/ConventionBuilder.cs",
+        "src/System/Composition/Convention/ExportConventionBuilder.cs",
+        "src/System/Composition/Convention/ImportConventionBuilder.cs",
+        "src/System/Composition/Convention/ParameterImportConventionBuilder.cs",
+        "src/System/Composition/Convention/PartConventionBuilder.cs",
+        "src/System/Composition/Convention/PartConventionBuilderOfT.cs",
+
+        # Common linked files
+        "//src/libraries/Common:src/System/Composition/Diagnostics/CompositionTrace.cs",
+        "//src/libraries/Common:src/System/Composition/Diagnostics/CompositionTraceId.cs",
+        "//src/libraries/Common:src/System/Composition/Diagnostics/CompositionTraceSource.cs",
+        "//src/libraries/Common:src/System/Composition/Diagnostics/DebuggerTraceWriter.cs",
+        "//src/libraries/Common:src/System/Composition/Diagnostics/TraceWriter.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Composition.AttributedModel:impl_System.Composition.AttributedModel",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    nullable = "disable",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "nullable", "CS1591"],
+    is_trimmable = False,
+)

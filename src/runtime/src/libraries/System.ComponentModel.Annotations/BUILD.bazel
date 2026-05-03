@@ -1,0 +1,39 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ComponentModel.Annotations",
+    srcs = [
+        "ref/System.ComponentModel.Annotations.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.ComponentModel.Annotations",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
+    srcs = glob(["src/System/**/*.cs"]) + [
+        # Common sources
+        "//src/libraries/Common:src/System/NotImplemented.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    include_default_values = True,
+    deps = [
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)

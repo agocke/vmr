@@ -1,0 +1,65 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "interface_struct02",
+    srcs = ["interface_struct02.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct_instance01",
+    srcs = ["struct_instance01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "interface_struct01",
+    srcs = ["interface_struct01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "class_static01",
+    srcs = ["class_static01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "interface_class01",
+    srcs = ["interface_class01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "interface_class02",
+    srcs = ["interface_class02.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "class_instance01",
+    srcs = ["class_instance01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct_static01",
+    srcs = ["struct_static01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

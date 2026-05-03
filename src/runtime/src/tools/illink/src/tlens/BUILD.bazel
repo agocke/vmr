@@ -1,0 +1,16 @@
+load("@rules_dotnet//dotnet:defs.bzl", "csharp_binary")
+
+csharp_binary(
+    name = "tlens",
+    srcs = glob(["**/*.cs"]) + [
+        "//src/tools/illink/external:Mono.Options/Options.cs",
+    ],
+    out = "tlens",
+    deps = [
+        "@paket.main//microsoft.dotnet.cecil",
+    ],
+    nullable = "disable",
+    target_frameworks = ["net11.0"],
+    nowarn = ["CS1701", "CS8500", "CS8969"],
+    visibility = ["//visibility:public"],
+)

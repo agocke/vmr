@@ -1,0 +1,51 @@
+load("//src/libraries:defs.bzl",
+    "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ServiceModel.Syndication",
+    srcs = [
+        "ref/System.ServiceModel.Syndication.cs",
+        "ref/System.ServiceModel.Syndication.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Xml:ref_System.Runtime.Serialization.Xml",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.ServiceModel.Syndication",
+    include_runtime_async = False,
+    event_source_generator = False,
+    keyfile = OPEN_SNK,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nullable = "disable",
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "nullable", "CS1591"],
+    srcs = glob(["src/**/*.cs"]),
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Xml:ref_System.Runtime.Serialization.Xml",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.ServiceModel.Syndication",
+    ref = ":ref_System.ServiceModel.Syndication",
+    lib = ":impl_System.ServiceModel.Syndication",
+    visibility = ["//visibility:public"],
+)

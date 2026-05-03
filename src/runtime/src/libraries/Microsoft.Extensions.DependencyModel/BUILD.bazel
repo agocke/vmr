@@ -1,0 +1,50 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.DependencyModel.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.DependencyModel",
+    srcs = [
+        "ref/Microsoft.Extensions.DependencyModel.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.DependencyModel",
+    include_runtime_async = False,
+    event_source_generator = False,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    srcs = glob(
+        ["src/**/*.cs"],
+        exclude = [
+            "src/**/*.netstandard.cs",
+        ],
+    ) + [
+        "//src/libraries/System.Private.CoreLib:src/System/Numerics/Hashing/HashHelpers.cs",
+    ],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    internals_visible_to = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+        "//src/libraries/System.Text.Encodings.Web:ref_System.Text.Encodings.Web",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.DependencyModel",
+    ref = ":ref_Microsoft.Extensions.DependencyModel",
+    lib = ":impl_Microsoft.Extensions.DependencyModel",
+    visibility = ["//visibility:public"],
+)

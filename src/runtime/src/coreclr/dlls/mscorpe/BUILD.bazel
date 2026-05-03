@@ -1,0 +1,34 @@
+# CoreCLR mscorpe — metadata PE writer support.
+# Matches CMake: src/coreclr/dlls/mscorpe/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "mscorpe",
+    srcs = [
+        "ceefilegenwriter.cpp",
+        "ceefilegenwritertokens.cpp",
+        "iceefilegen.cpp",
+        "pewriter.cpp",
+    ],
+    hdrs = [
+        "pewriter.h",
+        "stdafx.h",
+    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-include", "src/coreclr/dlls/mscorpe/stdafx.h",
+    ],
+    includes = [".", "../../md/inc", "../../minipal"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES + [
+        "FEATURE_CORECLR",
+    ],
+    alwayslink = True,
+    deps = [
+        "//src/coreclr/ildasm:ildasm_inc",
+        "//src/coreclr/inc:coreclr_inc",
+    ],
+)

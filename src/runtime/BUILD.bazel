@@ -1,0 +1,505 @@
+load("@rules_dotnet//dotnet:defs.bzl", "import_library")
+load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("//eng/bazel:runtime_archive.bzl", "runtime_archive", "runtime_staging")
+load("//eng/bazel:runtime_layout.bzl", "runtime_layout")
+load("//eng/bazel:version.bzl", "PRODUCT_VERSION", "PRODUCT_VERSION_FULL")
+load(
+    "//:defs.bzl",
+    "BANNEDAPI_ANALYZERS_REPO",
+    "CODEANALYSIS_ANALYZERS_REPO",
+    "CODEANALYSIS_CSHARP_CODESTYLE_REPO",
+    "CODEANALYSIS_NETANALYZERS_REPO",
+    "DOTNET_CODEANALYSIS_REPO",
+    "MIBC_FILES",
+    "STATICCS_REPO",
+    "STYLECOP_ANALYZERS_UNSTABLE_REPO",
+    "XUNIT_ANALYZERS_REPO",
+)
+load(
+    "//:framework_r2r.bzl",
+    "FRAMEWORK_ASSEMBLY_LABELS",
+    "R2R_ASSEMBLIES",
+    "framework_crossgen_targets",
+    "framework_illink_targets",
+)
+
+exports_files([
+    ".editorconfig",
+    "artifacts/obj/coreclr/System.Private.CoreLib/linux.x64.Debug/System.Private.CoreLib.Strings.resources",
+    "artifacts/obj/coreclr/System.Private.CoreLib/osx.arm64.Debug/System.Private.CoreLib.Strings.resources",
+    "LICENSE.TXT",
+    "THIRD-PARTY-NOTICES.TXT",
+])
+
+source_analyzer_config_files = [
+    ".editorconfig",
+    "//eng:CodeAnalysis.src.globalconfig",
+    "//src/tools/bazel:analysislevel_11_default.globalconfig",
+    "//src/tools/bazel:analysislevelstyle_default.globalconfig",
+]
+
+# Variant without .editorconfig for facade/shim assemblies whose MSBuild
+# project doesn't emit a root .editorconfig analyzerconfig entry.
+source_analyzer_config_files_no_editorconfig = [
+    "//eng:CodeAnalysis.src.globalconfig",
+    "//src/tools/bazel:analysislevel_11_default.globalconfig",
+    "//src/tools/bazel:analysislevelstyle_default.globalconfig",
+]
+
+filegroup(
+    name = "source_analyzer_configs",
+    srcs = source_analyzer_config_files,
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "source_analyzer_configs_no_editorconfig",
+    srcs = source_analyzer_config_files_no_editorconfig,
+    visibility = ["//visibility:public"],
+)
+
+test_analyzer_config_files = [
+    ".editorconfig",
+    "//eng:CodeAnalysis.test.globalconfig",
+    "//src/tools/bazel:analysislevel_11_default.globalconfig",
+    "//src/tools/bazel:analysislevelstyle_default.globalconfig",
+]
+
+filegroup(
+    name = "test_analyzer_configs",
+    srcs = test_analyzer_config_files,
+    visibility = ["//visibility:public"],
+)
+
+source_build_analyzer_files = [
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.Analyzers.dll".format(CODEANALYSIS_ANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.Analyzers.dll".format(CODEANALYSIS_ANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/Microsoft.CodeAnalysis.NetAnalyzers.dll".format(CODEANALYSIS_NETANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll".format(CODEANALYSIS_NETANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.CodeStyle.dll".format(CODEANALYSIS_CSHARP_CODESTYLE_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.dll".format(CODEANALYSIS_CSHARP_CODESTYLE_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CodeStyle.dll".format(CODEANALYSIS_CSHARP_CODESTYLE_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CodeStyle.Fixes.dll".format(CODEANALYSIS_CSHARP_CODESTYLE_REPO),
+    "@{}//:analyzers/Microsoft.DotNet.CodeAnalysis.dll".format(DOTNET_CODEANALYSIS_REPO),
+    "@{}//:analyzers/dotnet/cs/StyleCop.Analyzers.dll".format(STYLECOP_ANALYZERS_UNSTABLE_REPO),
+    "@{}//:analyzers/dotnet/cs/StyleCop.Analyzers.CodeFixes.dll".format(STYLECOP_ANALYZERS_UNSTABLE_REPO),
+]
+
+import_library(
+    name = "source_build_analyzers",
+    library_name = "SourceBuildAnalyzers",
+    refs = source_build_analyzer_files,
+    libs = source_build_analyzer_files,
+    visibility = ["//visibility:public"],
+)
+
+xunit_test_analyzer_files = [
+    "@{}//:analyzers/dotnet/cs/xunit.analyzers.dll".format(XUNIT_ANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/xunit.analyzers.fixes.dll".format(XUNIT_ANALYZERS_REPO),
+]
+
+import_library(
+    name = "xunit_test_analyzers",
+    library_name = "XunitTestAnalyzers",
+    refs = xunit_test_analyzer_files,
+    libs = xunit_test_analyzer_files,
+    visibility = ["//visibility:public"],
+)
+
+staticcs_analyzer_files = [
+    "@{}//:analyzers/dotnet/cs/StaticCs.Analyzers.dll".format(STATICCS_REPO),
+]
+
+import_library(
+    name = "staticcs_analyzers",
+    library_name = "StaticCsAnalyzers",
+    refs = staticcs_analyzer_files,
+    libs = staticcs_analyzer_files,
+    visibility = ["//visibility:public"],
+)
+
+bannedapi_analyzer_files = [
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.BannedApiAnalyzers.dll".format(BANNEDAPI_ANALYZERS_REPO),
+    "@{}//:analyzers/dotnet/cs/Microsoft.CodeAnalysis.CSharp.BannedApiAnalyzers.dll".format(BANNEDAPI_ANALYZERS_REPO),
+]
+
+import_library(
+    name = "bannedapi_analyzers",
+    library_name = "BannedApiAnalyzers",
+    refs = bannedapi_analyzer_files,
+    libs = bannedapi_analyzer_files,
+    visibility = ["//visibility:public"],
+)
+
+# ── Per-component build configuration flags ──────────────────────────
+# These replace the legacy --define runtime_debug=1 mechanism with modern
+# Bazel string_flag build settings.
+#
+# Set via command line:  --//:clr_config=release  --//:libs_config=release
+# Or via .bazelrc:       --config=clr_release     --config=libs_release
+#
+# CoreCLR configuration: checked (default), debug, or release.
+#   debug   = assertions + debug defines + no optimization
+#   checked = assertions + debug defines + release optimization (-O2)
+#   release = no assertions + NDEBUG + release optimization
+string_flag(
+    name = "clr_config",
+    build_setting_default = "checked",
+    visibility = ["//visibility:public"],
+)
+
+# Libraries configuration: debug (default) or release.
+string_flag(
+    name = "libs_config",
+    build_setting_default = "debug",
+    visibility = ["//visibility:public"],
+)
+
+# CI mode: when "true", enables deterministic source paths (/pathmap)
+# matching MSBuild's ContinuousIntegrationBuild=true behavior.
+string_flag(
+    name = "ci",
+    build_setting_default = "false",
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "ci_build",
+    flag_values = {"//:ci": "true"},
+    visibility = ["//visibility:public"],
+)
+
+# ── Platform config_settings ─────────────────────────────────────────
+# Compound OS × CPU settings for platform-specific code paths.
+config_setting(
+    name = "macos_arm64",
+    constraint_values = ["@platforms//os:macos", "@platforms//cpu:arm64"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "macos_x64",
+    constraint_values = ["@platforms//os:macos", "@platforms//cpu:x86_64"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_x64",
+    constraint_values = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+    visibility = ["//visibility:public"],
+)
+
+# ── CoreCLR config_settings ──────────────────────────────────────────
+config_setting(
+    name = "clr_debug",
+    flag_values = {"//:clr_config": "debug"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "clr_checked",
+    flag_values = {"//:clr_config": "checked"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "clr_release",
+    flag_values = {"//:clr_config": "release"},
+    visibility = ["//visibility:public"],
+)
+
+# Compound config_settings: CLR config × Windows.
+# Used by CLR_CONFIG_COPTS and NATIVE_CONFIG_COPTS to select MSVC flags
+# (/O2, /MT, /MTd) vs GCC/Clang flags (-O2).  These are more specific
+# than the base clr_* settings, so Bazel picks them when both match
+# (on Windows).
+config_setting(
+    name = "clr_debug_windows",
+    flag_values = {"//:clr_config": "debug"},
+    constraint_values = ["@platforms//os:windows"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "clr_checked_windows",
+    flag_values = {"//:clr_config": "checked"},
+    constraint_values = ["@platforms//os:windows"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "clr_release_windows",
+    flag_values = {"//:clr_config": "release"},
+    constraint_values = ["@platforms//os:windows"],
+    visibility = ["//visibility:public"],
+)
+
+# ── Libraries config_settings ────────────────────────────────────────
+config_setting(
+    name = "libs_debug",
+    flag_values = {"//:libs_config": "debug"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "libs_release",
+    flag_values = {"//:libs_config": "release"},
+    visibility = ["//visibility:public"],
+)
+
+# Compiler detection: set --define compiler=clang in .bazelrc config:clang.
+config_setting(
+    name = "compiler_clang",
+    define_values = {"compiler": "clang"},
+    visibility = ["//visibility:public"],
+)
+
+# Debug mode detection: matches -c dbg (--compilation_mode=dbg).
+config_setting(
+    name = "debug_mode",
+    values = {"compilation_mode": "dbg"},
+    visibility = ["//visibility:public"],
+)
+
+# Opt mode detection: matches -c opt (--compilation_mode=opt).
+# rules_dotnet defines DEBUG for fastbuild and dbg, but not opt.
+# Use this to conditionally include deps needed only under #if DEBUG.
+config_setting(
+    name = "opt_mode",
+    values = {"compilation_mode": "opt"},
+    visibility = ["//visibility:public"],
+)
+
+# Legacy runtime_debug config_setting — kept for backward compatibility.
+# Prefer //:clr_debug or //:clr_checked for new code.
+config_setting(
+    name = "runtime_debug",
+    flag_values = {"//:clr_config": "debug"},
+    visibility = ["//visibility:public"],
+)
+
+# ── Assembled native runtime layout ──────────────────────────────────
+runtime_layout(
+    name = "runtime_native",
+    version = PRODUCT_VERSION,
+    root_files = [
+        "//src/native/corehost:dotnet",
+    ],
+    fxr_files = [
+        "//src/native/corehost:hostfxr",
+    ],
+    framework_files = select({
+        "@platforms//os:macos": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr_dylib"],
+        "//conditions:default": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr.so"],
+    }) + [
+        "//src/native/corehost:hostpolicy",
+        "//src/native/libs/System.Globalization.Native:System.Globalization.Native",
+        "//src/native/libs/System.IO.Compression.Native:System.IO.Compression.Native",
+        "//src/native/libs/System.IO.Ports.Native:System.IO.Ports.Native",
+        "//src/native/libs/System.Native:System.Native",
+        "//src/native/libs/System.Net.Security.Native:System.Net.Security.Native",
+    ] + select({
+        "@platforms//os:linux": ["//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl"],
+        "//conditions:default": [],
+    }),
+)
+
+# ── ILLink trimming for all framework assemblies ───────────────────────
+# Generates illink_<Name> targets for each assembly in the runtime pack.
+# Framework crossgen2 R2R targets are currently disabled in the default
+# root BUILD because several trimmed assemblies still hit crossgen2 type
+# resolution failures during wildcard sweeps.
+framework_illink_targets()
+
+# Filegroup collecting all processed framework assemblies:
+# - All framework assemblies use ILLink-trimmed output in the default root
+#   BUILD while framework crossgen2 generation remains disabled.
+filegroup(
+    name = "framework_processed",
+    srcs = [":illink_" + name for name in FRAMEWORK_ASSEMBLY_LABELS.keys()],
+)
+
+# ── Runtime archive (tar.gz) matching MSBuild packs output ───────────
+# Produces dotnet-runtime-{version}-{rid}.tar.gz with the same file
+# layout as:  ./build.sh packs -rc Release -lc Release
+#
+# Compare against MSBuild output with:
+#   ./compare-runtime-packs.sh \
+#     artifacts/packages/Debug/Shipping/dotnet-runtime-*-linux-x64.tar.gz \
+#     bazel-bin/dotnet-runtime-*-linux-x64.tar.gz
+# Version string for the runtime archive, respecting CI mode.
+# In CI mode (--config=ci), uses "10.0.4-ci" to match MSBuild's CI output.
+# Otherwise uses the default label from version.bzl (e.g. "10.0.4-dev").
+RUNTIME_VERSION = select({
+    "//:ci_build": PRODUCT_VERSION + "-ci",
+    "//conditions:default": PRODUCT_VERSION_FULL,
+})
+
+runtime_staging(
+    name = "runtime_staging",
+    version = RUNTIME_VERSION,
+    root_files = [
+        "//src/native/corehost:dotnet",
+    ],
+    license_files = {
+        "//:LICENSE.TXT": "LICENSE.txt",
+        "//:THIRD-PARTY-NOTICES.TXT": "ThirdPartyNotices.txt",
+    },
+    fxr_files = [
+        "//src/native/corehost:hostfxr",
+    ],
+    framework_native_files = select({
+        "@platforms//os:macos": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr_dylib"],
+        "//conditions:default": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr.so"],
+    }) + [
+        "//src/native/corehost:hostpolicy",
+        "//src/coreclr/jit:libclrjit.so",
+        "//src/coreclr/gc:clrgc",
+        "//src/coreclr/gc:clrgcexp",
+        "//src/native/libs/System.Globalization.Native:System.Globalization.Native",
+        "//src/native/libs/System.IO.Compression.Native:System.IO.Compression.Native",
+        "//src/native/libs/System.Native:System.Native",
+        "//src/native/libs/System.Net.Security.Native:System.Net.Security.Native",
+    ] + select({
+        "@platforms//os:linux": ["//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl"],
+        "//conditions:default": [],
+    }) + [
+        "//src/coreclr/debug:createdump",
+        "//src/coreclr/pal:libcoreclrtraceptprovider.so",
+    ] + select({
+        "@platforms//os:macos": [
+            "//src/coreclr/dlls/mscordac:libmscordaccore_dylib",
+            "//src/coreclr/dlls/mscordbi:libmscordbi_dylib",
+        ],
+        "//conditions:default": [
+            "//src/coreclr/dlls/mscordac:libmscordaccore.so",
+            "//src/coreclr/dlls/mscordbi:libmscordbi.so",
+        ],
+    }),
+    framework_managed_files = [
+        # ILLink-trimmed + crossgen2 R2R processed framework assemblies.
+        # This replaces the raw impl_netcoreapp + shim + platform-specific
+        # labels — all assemblies flow through illink_trim, and R2R
+        # assemblies additionally go through crossgen_assembly.
+        ":framework_processed",
+    ] + select({
+        "@platforms//os:linux": [
+            "//src/coreclr/System.Private.CoreLib:crossgen_System.Private.CoreLib",
+        ],
+        "//conditions:default": [],
+    }),
+    # Assemblies in impl_netcoreapp that are NOT part of the runtime pack
+    # are already excluded from FRAMEWORK_ASSEMBLY_LABELS, so no
+    # exclude_managed_files needed for the processed assemblies.
+    # However, System.Private.CoreLib is added separately (R2R'd by its
+    # own crossgen_corelib rule), so exclude it from the processed set.
+    exclude_managed_files = [
+        "System.Private.CoreLib.dll",
+    ],
+    # The R2R CoreLib overwrites the IL version from impl_netcoreapp.
+    rename_files = {
+        "System.Private.CoreLib.r2r.dll": "System.Private.CoreLib.dll",
+    },
+    framework_data_files = [
+        "//eng/bazel/data:Microsoft.NETCore.App.runtimeconfig.json",
+    ],
+)
+
+LINUX_RID = "linux-x64"
+MACOS_RID = "osx-arm64"
+
+# ── Generate deps.json from the actual assembled DLLs ────────────────
+# Runs the GenerateDepsFile tool over the staging directory to produce a
+# deps.json with real assembly/file versions and the full RID fallback
+# graph — matching the output of MSBuild's GenerateSharedFrameworkDepsFile
+# task from Microsoft.DotNet.SharedFramework.Sdk.
+genrule(
+    name = "generate_deps_json",
+    srcs = [":runtime_staging"],
+    outs = ["Microsoft.NETCore.App.deps.json"],
+    tools = ["//src/tools/bazel/GenerateDepsFile"],
+    cmd = "$(location //src/tools/bazel/GenerateDepsFile) " +
+        "$(location :runtime_staging)/shared/Microsoft.NETCore.App/" + RUNTIME_VERSION + " " +
+        select({
+            "@platforms//os:macos": MACOS_RID,
+            "//conditions:default": LINUX_RID,
+        }) + " " +
+        RUNTIME_VERSION + " " +
+        "$$PWD/eng/bazel/data/RuntimeIdentifierGraph.json " +
+        "$@",
+)
+
+# ── Build the runtime archive with correct permissions ────────────────
+# Bazel tree artifacts enforce 555 permissions. This rule copies the
+# staging directory, sets correct permissions (644 for data/DLLs, 755 for
+# executables and shared libraries), injects the generated deps.json, and
+# creates a tar.gz archive matching the MSBuild packs output.
+runtime_archive(
+    name = "runtime_archive_linux",
+    version = RUNTIME_VERSION,
+    rid = LINUX_RID,
+    staging = ":runtime_staging",
+    deps_json = ":generate_deps_json",
+    native_lib_pattern = '-name "*.so"',
+)
+
+runtime_archive(
+    name = "runtime_archive_macos",
+    version = RUNTIME_VERSION,
+    rid = MACOS_RID,
+    staging = ":runtime_staging",
+    deps_json = ":generate_deps_json",
+    native_lib_pattern = '-name "*.dylib"',
+)
+
+alias(
+    name = "runtime_archive",
+    actual = select({
+        "@platforms//os:macos": ":runtime_archive_macos",
+        "//conditions:default": ":runtime_archive_linux",
+    }),
+)
+
+# ── Core_Root: minimal runtime for JIT/coreclr tests ─────────────────
+# Uses impl_netcoreapp_minimal (~30 assemblies) instead of impl_netcoreapp
+# (~145 assemblies). This reduces cache invalidation: changes to libraries
+# like System.Net.Sockets, System.Xml, etc. won't invalidate JIT test cache.
+# Library tests use shared_testhost which references impl_netcoreapp directly.
+copy_to_directory(
+    name = "Core_Root",
+    out = "Core_Root",
+    srcs = [
+        "//src/coreclr/hosts:corerun",
+        "//src/native/libs/System.Native:System.Native",
+        "//src/native/libs/System.Globalization.Native:System.Globalization.Native",
+        "//src/libraries:impl_netcoreapp_minimal",
+    ] + select({
+        "@platforms//os:macos": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr_dylib"],
+        "//conditions:default": ["//src/coreclr/dlls/mscoree/coreclr:libcoreclr.so"],
+    }) + select({
+        "@platforms//os:linux": [
+            "//src/coreclr/System.Private.CoreLib:crossgen_System.Private.CoreLib",
+            "//src/native/libs/System.Security.Cryptography.Native:System.Security.Cryptography.Native.OpenSsl",
+        ],
+        "@platforms//os:macos": [],
+    }),
+    allow_overwrites = True,
+    replace_prefixes = {
+        "System.Private.CoreLib.r2r.dll": "System.Private.CoreLib.dll",
+    },
+    root_paths = [ "**" ],
+    visibility = ["//visibility:public"],
+)
+
+import_library(
+    name = "TargetingPack",
+    library_name = "xunit.abstractions",
+    refs = [
+        "artifacts/TargetingPack/xunit.assert.dll",
+        "artifacts/TargetingPack/xunit.abstractions.dll",
+        "artifacts/TargetingPack/xunit.core.dll",
+        "artifacts/TargetingPack/Microsoft.DotNet.XUnitExtensions.dll",
+    ],
+    visibility = ["//visibility:public"]
+)

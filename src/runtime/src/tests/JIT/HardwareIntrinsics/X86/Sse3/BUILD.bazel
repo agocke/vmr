@@ -1,0 +1,28 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Sse3_handwritten_r",
+    srcs = [
+        "HandwrittenProgram.cs",
+        "LoadAndDuplicateToVector128.cs",
+        "LoadDquVector128.cs",
+        "MoveAndDuplicate.cs",
+        "MoveHighAndDuplicate.cs",
+        "MoveLowAndDuplicate.cs",
+    ],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "Sse3_handwritten_ro",
+    srcs = [
+        "HandwrittenProgram.cs",
+        "LoadAndDuplicateToVector128.cs",
+        "LoadDquVector128.cs",
+        "MoveAndDuplicate.cs",
+        "MoveHighAndDuplicate.cs",
+        "MoveLowAndDuplicate.cs",
+    ],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

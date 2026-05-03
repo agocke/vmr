@@ -1,0 +1,159 @@
+# CoreCLR common headers — the central inc/ directory.
+# Nearly all coreclr components depend on this.
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DAC_DEFINES", "CORECLR_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "coreclr_inc",
+    hdrs = glob(
+        [
+            "*.h",
+            "*.inl",
+            "*.def",
+            "clr/**/*.h",
+            "llvm/*.h",
+            "llvm/*.def",
+        ],
+        allow_empty = True,
+    ) + ["mpl/type_list"],
+    textual_hdrs = glob(["*.cpp"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    defines = CORECLR_DEFINES,
+    includes = [
+        ".",
+        "llvm",  # macOS createdump uses #include <ELF.h>
+    ],
+    deps = [
+        "//src/coreclr:coreclr_inc",
+        "//src/coreclr/binder:binder_headers",
+        "//src/coreclr/debug:debug_inc",
+        "//src/coreclr/dlls:dlls_headers",
+        "//src/coreclr/gc:gc_headers",
+        "//src/coreclr/gcdump:gcdump_headers",
+        "//src/coreclr/hosts:hosts_inc",
+        "//src/coreclr/interpreter:interpreter_headers",
+        "//src/coreclr/jit:jit_headers",
+        "//src/coreclr/md:md_inc",
+        "//src/coreclr/minipal:coreclrminipal_headers",
+        "//src/coreclr/pal:pal_headers",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+        "//src/native:native_inc",
+        "//src/native/minipal",
+        "//eng/native:version_headers",
+    ],
+)
+
+# corguids — prebuilt GUID definition files (Unix: prebuilt .cpp from IDL).
+# Matches CMake: add_library_clr(corguids OBJECT ...) in src/coreclr/inc/CMakeLists.txt
+cc_library(
+    name = "corguids",
+    srcs = [
+        "//src/coreclr/pal:prebuilt/idl/clrdata_i.cpp",
+        "//src/coreclr/pal:prebuilt/idl/clrinternal_i.cpp",
+        "//src/coreclr/pal:prebuilt/idl/cordebug_i.cpp",
+        "//src/coreclr/pal:prebuilt/idl/corprof_i.cpp",
+        "//src/coreclr/pal:prebuilt/idl/corsym_i.cpp",
+        "//src/coreclr/pal:prebuilt/idl/dacdbi_i.cpp",
+        "//src/coreclr/pal:prebuilt/idl/sospriv_i.cpp",
+        "//src/coreclr/pal:prebuilt/idl/xclrdata_i.cpp",
+        "//src/coreclr/pal:prebuilt/idl/xcordebug_i.cpp",
+    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + ["-D_MIDL_USE_GUIDDEF_"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    alwayslink = True,
+    deps = [":coreclr_inc"],
+)
+
+# Lightweight header-only target for components that only need the inc/
+# header files without the full transitive dependency graph (e.g., PAL).
+cc_library(
+    name = "coreclr_inc_headers_only",
+    hdrs = glob(
+        [
+            "*.h",
+            "*.inl",
+            "*.def",
+            "clr/**/*.h",
+            "llvm/*.h",
+            "llvm/*.def",
+        ],
+        allow_empty = True,
+    ) + ["mpl/type_list"],
+    textual_hdrs = glob(["*.cpp"]),
+    includes = [
+        ".",
+        "llvm",
+    ],
+    deps = [
+        "//src/coreclr:coreclr_inc",
+        "//src/coreclr/minipal:coreclrminipal_headers",
+        "//src/coreclr/pal:pal_headers",
+        "//src/native:native_inc",
+        "//src/native/minipal",
+    ],
+)
+
+# DAC variant of coreclr_inc — same headers and deps but propagates
+# CORECLR_DAC_DEFINES (DACCESS_COMPILE, PROFILING_SUPPORTED_DATA) instead
+# of the WKS defines (PROFILING_SUPPORTED, FEATURE_PROFAPI_ATTACH_DETACH).
+cc_library(
+    name = "coreclr_inc_dac",
+    hdrs = glob(
+        [
+            "*.h",
+            "*.inl",
+            "*.def",
+            "clr/**/*.h",
+            "llvm/*.h",
+            "llvm/*.def",
+        ],
+        allow_empty = True,
+    ) + ["mpl/type_list"],
+    textual_hdrs = glob(["*.cpp"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    defines = CORECLR_DAC_DEFINES,
+    includes = [
+        ".",
+        "llvm",
+    ],
+    deps = [
+        "//src/coreclr:coreclr_inc",
+        "//src/coreclr/binder:binder_headers",
+        "//src/coreclr/debug:debug_inc",
+        "//src/coreclr/dlls:dlls_headers",
+        "//src/coreclr/gc:gc_headers",
+        "//src/coreclr/gcdump:gcdump_headers",
+        "//src/coreclr/hosts:hosts_inc",
+        "//src/coreclr/interpreter:interpreter_headers",
+        "//src/coreclr/jit:jit_headers",
+        "//src/coreclr/md:md_inc",
+        "//src/coreclr/minipal:coreclrminipal_headers",
+        "//src/coreclr/pal:pal_headers",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+        "//src/native:native_inc",
+        "//src/native/minipal",
+        "//eng/native:version_headers",
+    ],
+)
+
+# Filegroup of coreclr/inc headers for targets that need the files available
+# in the sandbox but do NOT want -Isrc/coreclr/inc on the include path
+# (e.g., NativeAOT, which has its own shadowing headers in Runtime/inc/).
+filegroup(
+    name = "coreclr_inc_files",
+    srcs = glob(
+        [
+            "*.h",
+            "*.inl",
+            "*.def",
+            "clr/**/*.h",
+        ],
+        allow_empty = True,
+    ),
+)

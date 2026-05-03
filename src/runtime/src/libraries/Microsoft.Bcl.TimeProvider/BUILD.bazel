@@ -1,0 +1,17 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly")
+
+impl_assembly(
+    name = "impl_Microsoft.Bcl.TimeProvider",
+    interceptors_namespaces = "",
+    srcs = [
+        "src/Microsoft.Bcl.TimeProvider.Forwards.cs",
+        "src/System/Threading/Tasks/TimeProviderTaskExtensions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Bcl.AsyncInterfaces:impl_Microsoft.Bcl.AsyncInterfaces",
+    ],
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    exclude_sr = True,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+)

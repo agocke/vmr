@@ -1,0 +1,34 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b50145",
+    srcs = ["b50145.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "b50145a",
+    srcs = ["b50145a.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "b50145c",
+    srcs = ["b50145c.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "b50145b",
+    srcs = ["b50145b.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

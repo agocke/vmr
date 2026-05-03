@@ -1,0 +1,62 @@
+load("//src/libraries:defs.bzl",
+    "live_csharp_library",
+    "netcoreapp_ref_assembly",
+    "netcoreapp_impl_assembly",
+)
+
+exports_files([
+    "ref/System.Reflection.DispatchProxy.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Reflection.DispatchProxy",
+    srcs = [
+        "ref/System.Reflection.DispatchProxy.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Reflection.DispatchProxy",
+    library_import_generator = False,
+    nowarn = [],
+    srcs = [
+        "src/System/Reflection/DispatchProxy.cs",
+        "src/System/Reflection/DispatchProxyGenerator.cs",
+        "//src/libraries/Common:src/System/Reflection/Emit/IgnoreAccessChecksToAttributeBuilder.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.Loader:ref_System.Runtime.Loader",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    allow_unsafe_blocks = True,
+    resx_file = "src/Resources/Strings.resx",
+)
+
+live_csharp_library(
+    name = "live_System.Reflection.DispatchProxy",
+    srcs = [
+        "src/System/Reflection/DispatchProxy.cs",
+        "src/System/Reflection/DispatchProxyGenerator.cs",
+        "//src/libraries/Common:src/System/Reflection/Emit/IgnoreAccessChecksToAttributeBuilder.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    allow_unsafe_blocks = True,
+    resx_file = "src/Resources/Strings.resx",
+    visibility = ["//visibility:public"],
+)

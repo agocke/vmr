@@ -707,7 +707,7 @@ public class ComVisibleServer
     /// <returns></returns>
     [ActiveIssue("Requires COM support, disabled on all Mono platforms", TestRuntimes.Mono)]
     [Fact]
-    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", RuntimeTestModes.InterpreterActive)]
+    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", (RuntimeTestModes)0x400)]
     public static void RunComVisibleTests()
     {
         int fooSuccessVal = 0;
@@ -1007,7 +1007,7 @@ public class ComVisibleServer
 
     [ActiveIssue("Requires COM support, disabled on all Mono platforms", TestRuntimes.Mono)]
     [Fact]
-    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", RuntimeTestModes.InterpreterActive)]
+    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", (RuntimeTestModes)0x400)]
     public static void RunTestsInALC()
     {
         TestLibrary.Utilities.ExecuteAndUnload(typeof(ComVisibleServer).Assembly.Location, nameof(ComVisibleServer), nameof(RunComVisibleTests));

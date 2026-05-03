@@ -1,0 +1,44 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Configuration.EnvironmentVariables.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Configuration.EnvironmentVariables",
+    srcs = [
+        "ref/Microsoft.Extensions.Configuration.EnvironmentVariables.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Configuration.EnvironmentVariables",
+    include_runtime_async = False,
+    event_source_generator = False,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    exclude_sr = True,
+    srcs = glob(["src/**/*.cs"]),
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/System.Collections:ref_System.Collections",
+    ],
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Configuration.EnvironmentVariables",
+    ref = ":ref_Microsoft.Extensions.Configuration.EnvironmentVariables",
+    lib = ":impl_Microsoft.Extensions.Configuration.EnvironmentVariables",
+    visibility = ["//visibility:public"],
+)

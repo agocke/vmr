@@ -1,0 +1,12 @@
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_library")
+
+csharp_library(
+    name = "AssemblyResolveTestApp",
+    keyfile = OPEN_SNK,
+    srcs = [
+        "Class1.cs",
+        "ClassesSample.cs",
+    ],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    visibility = ["//src/libraries/System.Runtime/tests:__subpackages__"],
+)

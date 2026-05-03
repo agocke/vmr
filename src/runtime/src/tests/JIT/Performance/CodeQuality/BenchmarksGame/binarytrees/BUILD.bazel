@@ -1,0 +1,22 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "binarytrees-6",
+    srcs = ["binarytrees-6.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "binarytrees-2",
+    srcs = ["binarytrees-2.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "binarytrees-5",
+    srcs = ["binarytrees-5.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

@@ -1,0 +1,127 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "A",
+    srcs = ["A.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "B",
+    srcs = ["B.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "C",
+    srcs = ["C.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "Dictionary",
+    srcs = ["Dictionary.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GenBaseType",
+    srcs = ["GenBaseType.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GenDerive1",
+    srcs = ["GenDerive1.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GenDerive2",
+    srcs = ["GenDerive2.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GenDerive3",
+    srcs = ["GenDerive3.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GenRetType",
+    srcs = ["GenRetType.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GenTestType",
+    srcs = ["GenTestType.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GenToNonGen1",
+    srcs = ["GenToNonGen1.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GenToNonGen2",
+    srcs = ["GenToNonGen2.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GenToNonGen3",
+    srcs = ["GenToNonGen3.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NonGenThroughGen1",
+    srcs = ["NonGenThroughGen1.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NonGenThroughGen2",
+    srcs = ["NonGenThroughGen2.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NonGenThroughGen3",
+    srcs = ["NonGenThroughGen3.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NonGenThroughGen4",
+    srcs = ["NonGenThroughGen4.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NonGenericDerived1",
+    srcs = ["NonGenericDerived1.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NonGenericDerived2",
+    srcs = ["NonGenericDerived2.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NonGenericDerived3",
+    srcs = ["NonGenericDerived3.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NonGenericDerived4",
+    srcs = ["NonGenericDerived4.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

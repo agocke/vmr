@@ -1,0 +1,34 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "PacketTracer",
+    srcs = [
+        "Program.cs",
+        "Camera.cs",
+        "Color.cs",
+        "ColorPacket.cs",
+        "Intersections.cs",
+        "LightPacket.cs",
+        "ObjectPacket.cs",
+        "ObjectPool.cs",
+        "PacketTracer.cs",
+        "PlanePacket.cs",
+        "ProducerConsumerCollectionBase.cs",
+        "RayPacket.cs",
+        "Scene.cs",
+        "SpherePacket.cs",
+        "Surface.cs",
+        "Surfaces.cs",
+        "Vector.cs",
+        "VectorPacket.cs",
+        "VectorMath.cs",
+    ],
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+    
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+    ],
+)

@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_1323",
+    srcs = ["GitHub_1323.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)

@@ -153,11 +153,8 @@ private:
     bool     LowerCallMemcmp(GenTreeCall* call, GenTree** next);
     bool     LowerCallMemset(GenTreeCall* call, GenTree** next);
     void     LowerCFGCall(GenTreeCall* call);
-#ifdef TARGET_WASM
-    void LowerPEPCall(GenTreeCall* call);
-#endif
-    void MovePutArgNodesUpToCall(GenTreeCall* call);
-    void MovePutArgUpToCall(GenTreeCall* call, GenTree* node);
+    void     MovePutArgNodesUpToCall(GenTreeCall* call);
+    void     MovePutArgUpToCall(GenTreeCall* call, GenTree* node);
 #ifndef TARGET_64BIT
     GenTree* DecomposeLongCompare(GenTree* cmp);
 #endif

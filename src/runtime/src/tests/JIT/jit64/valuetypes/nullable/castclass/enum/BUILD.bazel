@@ -1,0 +1,31 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "castclass-enum001",
+    srcs = [
+        "castclass-enum001.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-enum002",
+    srcs = [
+        "castclass-enum002.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-enum003",
+    srcs = [
+        "castclass-enum003.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)

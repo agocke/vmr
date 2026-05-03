@@ -1,0 +1,54 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Runtime_70802",
+    srcs = ["Runtime_70802.cs"],
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "Runtime_61040_4",
+    srcs = ["Runtime_61040_4.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_61040_3",
+    srcs = ["Runtime_61040_3.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "callandindir",
+    srcs = ["callandindir.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_61040_5",
+    srcs = ["Runtime_61040_5.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "Runtime_61040_2",
+    srcs = ["Runtime_61040_2.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_61040_1",
+    srcs = ["Runtime_61040_1.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "loops_with_eh",
+    srcs = ["loops_with_eh.cs"],
+    optimize = True,
+)

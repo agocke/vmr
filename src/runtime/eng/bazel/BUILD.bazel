@@ -1,0 +1,14 @@
+# Build rules for dotnet/runtime Bazel infrastructure.
+
+load(":version.bzl", "PRODUCT_VERSION")
+
+# Generate a .globalconfig that provides build_property.InformationalVersion
+# to the ProductVersionInfoGenerator source generator. This matches the
+# MSBuild build which passes InformationalVersion via CompilerVisibleProperty.
+genrule(
+    name = "product_version_globalconfig",
+    outs = ["ProductVersionInfo.globalconfig"],
+    cmd = """echo 'is_global = true
+build_property.InformationalVersion = {version}' > $@""".format(version = PRODUCT_VERSION),
+    visibility = ["//visibility:public"],
+)

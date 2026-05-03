@@ -1,0 +1,25 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_16065b",
+    srcs = ["GitHub_16065b.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CSEWithDoubleNegation",
+    srcs = ["CSEWithDoubleNegation.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "GitHub_16065a",
+    srcs = ["GitHub_16065a.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "NarrowStore",
+    srcs = ["NarrowStore.cs"],
+    optimize = True,
+)

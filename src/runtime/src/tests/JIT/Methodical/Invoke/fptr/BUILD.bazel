@@ -1,0 +1,171 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "valftn_t_d",
+    srcs = ["valftn_t_d.il", "valftn_t.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "virtftn_d",
+    srcs = ["virtftn_d.il", "virtftn.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "recurse_jmp_r",
+    srcs = ["recurse_jmp_r.il", "recurse_jmp.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "valftn_d",
+    srcs = ["valftn_d.il", "valftn.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "virtftn_t_d",
+    srcs = ["virtftn_t_d.il", "virtftn_t.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "recurse_tail_call_r",
+    srcs = ["recurse_tail_call_r.il", "recurse_tail_call.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "instftn_r",
+    srcs = ["instftn_r.il", "instftn.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "instftn_t_r",
+    srcs = ["instftn_t_r.il", "instftn_t.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "recurse_tail_calli_r",
+    srcs = ["recurse_tail_calli_r.il", "recurse_tail_calli.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "virtftn_t_r",
+    srcs = ["virtftn_t_r.il", "virtftn_t.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "valftn_t_r",
+    srcs = ["valftn_t_r.il", "valftn_t.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "recurse_calli_d",
+    srcs = ["recurse_calli_d.il", "recurse_calli.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "recurse_tail_call_d",
+    srcs = ["recurse_tail_call_d.il", "recurse_tail_call.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "recurse_calli_r",
+    srcs = ["recurse_calli_r.il", "recurse_calli.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ftn_t_r",
+    srcs = ["ftn_t_r.il", "ftn_t.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "recurse_tail_calli_d",
+    srcs = ["recurse_tail_calli_d.il", "recurse_tail_calli.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "recurse_jmpi_d",
+    srcs = ["recurse_jmpi_d.il", "recurse_jmpi.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "recurse_jmp_d",
+    srcs = ["recurse_jmp_d.il", "recurse_jmp.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "instftn_t_d",
+    srcs = ["instftn_t_d.il", "instftn_t.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "virtftn_r",
+    srcs = ["virtftn_r.il", "virtftn.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "instftn_d",
+    srcs = ["instftn_d.il", "instftn.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "recurse_jmpi_r",
+    srcs = ["recurse_jmpi_r.il", "recurse_jmpi.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ftn_t_d",
+    srcs = ["ftn_t_d.il", "ftn_t.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "valftn_r",
+    srcs = ["valftn_r.il", "valftn.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

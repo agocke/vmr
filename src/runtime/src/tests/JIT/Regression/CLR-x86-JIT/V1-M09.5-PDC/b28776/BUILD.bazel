@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b28776",
+    srcs = ["b28776.cs"],
+    debug_type = "pdbonly",
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)

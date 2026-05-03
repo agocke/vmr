@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Permutate",
+    srcs = ["Permutate.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

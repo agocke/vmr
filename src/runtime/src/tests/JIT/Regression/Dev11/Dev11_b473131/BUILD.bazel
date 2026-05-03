@@ -1,0 +1,46 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "b473131",
+    srcs = ["b473131.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "b473131_fld",
+    srcs = ["b473131_fld.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "b473131_intptr",
+    srcs = ["b473131_intptr.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "b473131_byte",
+    srcs = ["b473131_byte.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "b473131_struct",
+    srcs = ["b473131_struct.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)

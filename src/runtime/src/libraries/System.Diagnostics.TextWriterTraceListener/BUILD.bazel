@@ -1,0 +1,51 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Diagnostics.TextWriterTraceListener",
+    srcs = [
+        "ref/System.Diagnostics.TextWriterTraceListener.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Diagnostics.TextWriterTraceListener",
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Diagnostics/ConsoleTraceListener.cs",
+        "src/System/Diagnostics/DelimitedListTraceListener.cs",
+        "src/System/Diagnostics/TextWriterTraceListener.cs",
+        "src/System/Diagnostics/XmlWriterTraceListener.cs",
+    ],
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    deps = [
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries:ref_System.Diagnostics.Process",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Console:ref_System.Console",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+            "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+],
+    include_dll_safe_search_path = True,
+)
+
+ref_impl_pair(
+    name = "live_System.Diagnostics.TextWriterTraceListener",
+    ref = ":ref_System.Diagnostics.TextWriterTraceListener",
+    lib = ":impl_System.Diagnostics.TextWriterTraceListener",
+    visibility = ["//visibility:public"],
+)

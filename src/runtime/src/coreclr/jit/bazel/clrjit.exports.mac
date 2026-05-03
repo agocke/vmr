@@ -1,0 +1,5 @@
+_getJit
+_jitStartup
+_getLikelyClasses
+_getLikelyMethods
+_jitBuildString

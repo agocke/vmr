@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Accessor",
+    srcs = ["Accessor.cs"],
+)
+
+coreclr_test(
+    name = "CollectibleTLSStaticCollection",
+    srcs = ["CollectibleTLSStaticCollection.cs"],
+)

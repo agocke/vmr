@@ -1,0 +1,24 @@
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_library")
+
+csharp_library(
+    name = "LoaderLinkTest.Dynamic",
+    include_runtime_async = False,
+    srcs = ["SharedInterfaceImplementation.cs"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    keyfile = OPEN_SNK,
+    nullable = "annotations",
+    nowarn = [
+        "IL2121",
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+    ],
+    msbuild_analyzer_config = "style",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    deps = [
+        "//src/libraries/System.Runtime.Loader/tests/LoaderLinkTest.Shared",
+    ],
+    visibility = ["//src/libraries/System.Runtime.Loader/tests:__subpackages__"],
+)

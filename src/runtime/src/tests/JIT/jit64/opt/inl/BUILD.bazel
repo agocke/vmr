@@ -1,0 +1,35 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "inl001",
+    srcs = ["inl001.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "caninline_do",
+    srcs = ["caninline.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "caninline_d",
+    srcs = ["caninline.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "caninline_r",
+    srcs = ["caninline.cs"],
+)
+
+coreclr_test(
+    name = "caninline_ro",
+    srcs = ["caninline.cs"],
+    optimize = True,
+)

@@ -1,0 +1,56 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "ref/System.Net.ServerSentEvents.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.ServerSentEvents",
+    srcs = [
+        "ref/System.Net.ServerSentEvents.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.ServerSentEvents",
+    include_runtime_async = False,
+    event_source_generator = True,
+    keyfile = OPEN_SNK,
+    com_interface_generator = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = [
+        "src/System/Net/ServerSentEvents/Helpers.cs",
+        "src/System/Net/ServerSentEvents/PooledByteBufferWriter.cs",
+        "src/System/Net/ServerSentEvents/SseFormatter.cs",
+        "src/System/Net/ServerSentEvents/SseItem.cs",
+        "src/System/Net/ServerSentEvents/SseItemParser.cs",
+        "src/System/Net/ServerSentEvents/SseParser.cs",
+        "src/System/Net/ServerSentEvents/SseParser_1.cs",
+        "src/System/Net/ServerSentEvents/ThrowHelper.cs",
+
+        "//src/libraries/Common:src/System/Net/ArrayBuffer.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+    allow_unsafe_blocks = True,
+    resx_file = "src/Resources/Strings.resx",
+    assembly_description = "Provides a simple parser for server-sent events (SSE).\n\nCommonly Used Types:\nSystem.Net.ServerSentEvents.SseParser",
+)
+
+ref_impl_pair(
+    name = "live_System.Net.ServerSentEvents",
+    ref = ":ref_System.Net.ServerSentEvents",
+    lib = ":impl_System.Net.ServerSentEvents",
+    visibility = ["//visibility:public"],
+)

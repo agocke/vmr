@@ -1,0 +1,27 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly")
+
+impl_assembly(
+    name = "impl_System.Composition.TypedParts",
+    include_runtime_async = False,
+    event_source_generator = False,
+    srcs = glob(["src/**/*.cs"]) + [
+        # Linked from CoreLib shared sources
+        "//src/libraries/System.Private.CoreLib:src/System/Numerics/Hashing/HashHelpers.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Composition.AttributedModel:impl_System.Composition.AttributedModel",
+        "//src/libraries/System.Composition.Hosting:impl_System.Composition.Hosting",
+        "//src/libraries/System.Composition.Runtime:impl_System.Composition.Runtime",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    nullable = "disable",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "nullable", "CS1591"],
+    is_trimmable = False,
+    is_aot_compatible = False,
+)

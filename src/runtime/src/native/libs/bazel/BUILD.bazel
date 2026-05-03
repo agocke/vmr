@@ -1,0 +1,5 @@
+exports_files([
+    "osx-arm64/pal_config.h",
+    "osx-x64/pal_config.h",
+    "linux-glibc-x64/pal_config.h",
+])

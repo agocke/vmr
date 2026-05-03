@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Runtime_96591",
+    srcs = ["Runtime_96591.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "Runtime_96591_2",
+    srcs = ["Runtime_96591_2.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

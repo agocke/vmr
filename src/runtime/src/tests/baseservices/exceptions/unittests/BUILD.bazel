@@ -1,0 +1,185 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Baadbaad",
+    srcs = [
+        "Baadbaad.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "BaseClass",
+    srcs = [
+        "baseclass.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CollidedUnwind",
+    srcs = [
+        "CollidedUnwind.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "EHPatternTests",
+    srcs = ["EHPatternTests.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "GoryManagedPresent",
+    srcs = [
+        "GoryManagedPresent.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "GoryNativePast",
+    srcs = [
+        "GoryNativePast.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InnerFinally",
+    srcs = [
+        "innerfinally.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InnerFinallyAndCatch",
+    srcs = [
+        "InnerFinallyAndCatch.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Pending",
+    srcs = [
+        "Pending.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Recurse",
+    srcs = [
+        "Recurse.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RecursiveRethrow",
+    srcs = [
+        "RecursiveRethrow.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RecursiveThrowNew",
+    srcs = [
+        "RecursiveThrowNew.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RethrowAndFinally",
+    srcs = [
+        "rethrowandfinally.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ReturnFromCatch",
+    srcs = ["returnfromcatch.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StrSwitchFinally",
+    srcs = [
+        "StrSwitchFinally.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ThrowInCatch",
+    srcs = [
+        "throwincatch.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ThrowInFinally",
+    srcs = [
+        "throwinfinally.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ThrowInFinallyNestedInTry",
+    srcs = [
+        "ThrowInFinallyNestedInTry.cs",
+        "trace.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TryCatchInFinally",
+    srcs = [
+        "trace.cs",
+        "trycatchinfinally.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)

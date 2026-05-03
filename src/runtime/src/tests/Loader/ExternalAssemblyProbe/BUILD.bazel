@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "ExternalAssemblyProbe",
+    srcs = ["ExternalAssemblyProbe.cs"],
+    tags = ["manual"],  # Expects empty TRUSTED_PLATFORM_ASSEMBLIES
+)

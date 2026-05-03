@@ -1,0 +1,33 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly", "netcoreapp_ref_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Runtime.Numerics",
+    srcs = [
+        "ref/System.Runtime.Numerics.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Runtime.Numerics",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder_1.cs",
+        "//src/libraries/Common:src/System/Number.Formatting.Common.cs",
+        "//src/libraries/Common:src/System/Number.NumberBuffer.cs",
+        "//src/libraries/Common:src/System/Number.Parsing.Common.cs",
+        # Shared sources from CoreLib
+        "//src/libraries/System.Private.CoreLib:src/System/Buffers/Text/FormattingHelpers.CountDigits.cs",
+        "//src/libraries/Common:src/System/Collections/Generic/ValueListBuilder.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.Intrinsics:ref_System.Runtime.Intrinsics",
+    ],
+)

@@ -1,0 +1,27 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Reflection.TypeExtensions",
+    srcs = [
+        "ref/System.Reflection.TypeExtensions.cs",
+        "ref/System.Reflection.TypeExtensions.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ]
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Reflection.TypeExtensions",
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Reflection/TypeExtensions.cs",
+    ],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Reflection.TypeExtensions",
+    partial_facade = True,
+    resx_file = "src/Resources/Strings.resx",
+)

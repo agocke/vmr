@@ -81,7 +81,7 @@ namespace PInvokeTests
 
         [ActiveIssue("https://github.com/dotnet/runtimelab/issues/155: COM", typeof(Utilities), nameof(Utilities.IsNativeAot))]
         [Fact]
-        [Xunit.SkipOnCoreClrAttribute("Depends on COM behavior that is not correct in interpreter", RuntimeTestModes.InterpreterActive)]
+        [Xunit.SkipOnCoreClrAttribute("Depends on COM behavior that is not correct in interpreter", (RuntimeTestModes)0x400)]
         public static void TestSupportForICustomAdapter()
         {
             {

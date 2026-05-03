@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "InvalidCSharp",
+    srcs = ["InvalidCSharp.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "InvalidCSharpNegative",
+    srcs = ["InvalidCSharpNegative.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

@@ -1,0 +1,27 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/System.IO.Pipes.AccessControl.cs",
+    "ref/System.IO.Pipes.AccessControl.TypeForwards.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Pipes.AccessControl",
+    srcs = [
+        "ref/System.IO.Pipes.AccessControl.cs",
+        "ref/System.IO.Pipes.AccessControl.TypeForwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.IO.Pipes:ref_System.IO.Pipes",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+)
+
+ref_impl_pair(
+    name = "live_System.IO.Pipes.AccessControl",
+    ref = ":ref_System.IO.Pipes.AccessControl",
+    lib = "//src/libraries/System.IO.Pipes.AccessControl/src:impl_System.IO.Pipes.AccessControl",
+    visibility = ["//visibility:public"],
+)

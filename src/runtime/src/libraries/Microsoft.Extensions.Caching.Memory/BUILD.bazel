@@ -1,0 +1,59 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Caching.Memory.cs",
+    "ref/Microsoft.Extensions.Caching.Memory.net9.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Caching.Memory",
+    srcs = [
+        "ref/Microsoft.Extensions.Caching.Memory.cs",
+        "ref/Microsoft.Extensions.Caching.Memory.net9.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Caching.Abstractions:ref_Microsoft.Extensions.Caching.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Caching.Memory",
+    include_runtime_async = False,
+    event_source_generator = False,
+    allow_unsafe_blocks = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]),
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/Microsoft.Extensions.Caching.Abstractions:ref_Microsoft.Extensions.Caching.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Caching.Memory",
+    ref = ":ref_Microsoft.Extensions.Caching.Memory",
+    lib = ":impl_Microsoft.Extensions.Caching.Memory",
+    visibility = ["//visibility:public"],
+)

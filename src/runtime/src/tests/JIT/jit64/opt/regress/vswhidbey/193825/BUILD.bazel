@@ -1,0 +1,20 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "193825_udo",
+    srcs = ["repro.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "193825_uro",
+    srcs = ["repro.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)

@@ -1,0 +1,22 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Security",
+    library_import_generator = False,
+    generate_documentation_file = False,
+    skip_locals_init = False,
+    srcs = [
+        "src/System.Security.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.Cryptography.Pkcs:ref_System.Security.Cryptography.Pkcs",
+        "//src/libraries/shims/stubs:ref_System.Security.Cryptography.ProtectedData",
+        "//src/libraries/System.Security.Cryptography.Xml:ref_System.Security.Cryptography.Xml",
+        "//src/libraries/shims/stubs:ref_System.Security.Permissions",
+        "//src/libraries/shims/stubs:ref_System.Windows.Extensions",
+    ],
+    os_targeted = True,
+    exclude_sr = True,
+    assembly_version = "4.0.0.0",
+)

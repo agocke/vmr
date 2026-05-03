@@ -1,0 +1,35 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.Xml.ReaderWriter.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Xml.ReaderWriter",
+    srcs = [
+        "ref/System.Xml.ReaderWriter.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Xml.ReaderWriter",
+    nowarn = ["CS1591"],
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Private.Xml:impl_System.Private.Xml",
+    ],
+    partial_facade = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Xml.ReaderWriter",
+    exclude_sr = True,
+    include_dll_safe_search_path = False,
+    include_editorconfig = False,
+    library_import_generator = False,
+)

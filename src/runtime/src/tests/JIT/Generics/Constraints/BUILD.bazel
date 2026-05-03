@@ -1,0 +1,82 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "convert_static01",
+    srcs = ["Convert_static01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "transitive_static01",
+    srcs = ["Transitive_static01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Call_instance01_d",
+    srcs = ["Call_instance01.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Call_instance01_do",
+    srcs = ["Call_instance01.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "call_instance01",
+    srcs = ["Call_instance01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Call_instance01_ro",
+    srcs = ["Call_instance01.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "call_static01",
+    srcs = ["Call_static01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Call_instance01_r",
+    srcs = ["Call_instance01.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "transitive_instance01",
+    srcs = ["Transitive_instance01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "convert_instance01",
+    srcs = ["Convert_instance01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

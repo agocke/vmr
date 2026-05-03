@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "coreclr_merged_test")
+
+coreclr_merged_test(
+    name = "IL_Conformance",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/IL_Conformance/Convert:TestConvertFromIntegral",
+    ],
+)

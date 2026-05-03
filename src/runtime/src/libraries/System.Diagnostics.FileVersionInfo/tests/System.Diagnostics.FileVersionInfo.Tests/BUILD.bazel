@@ -1,0 +1,33 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Diagnostics.FileVersionInfo.Tests",
+    defines = select({"@platforms//os:linux": ["UNIX", "UNIX1_0"], "@platforms//os:macos": ["UNIX", "UNIX1_0"], "//conditions:default": []}),
+    srcs = glob(["*.cs"], exclude = [
+        "FileVersionInfoTest.Windows.cs",
+    ]) + [
+        "//src/libraries/Common/tests:System/IO/ReparsePointUtilities.cs",
+    ],
+    data = [
+        "NativeConsoleApp.exe",
+        "NativeLibrary.dll",
+        "SecondNativeLibrary.dll",
+        "//src/libraries/System.Diagnostics.FileVersionInfo/tests/System.Diagnostics.FileVersionInfo.TestAssembly:Assembly1.cs",
+        "//src/libraries/System.Diagnostics.FileVersionInfo/tests/System.Diagnostics.FileVersionInfo.TestAssembly:System.Diagnostics.FileVersionInfo.TestAssembly",
+    ],
+    deps = [
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    tags = ["no-sandbox"],
+    size = "large",
+    keyfile = OPEN_SNK,
+)

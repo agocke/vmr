@@ -1,0 +1,55 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Negative002",
+    srcs = ["Negative002.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Negative004",
+    srcs = ["Negative004.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Negative_ExplicitGen",
+    srcs = ["Negative_ExplicitGen.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Positive007",
+    srcs = ["Positive007.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Positive008",
+    srcs = ["Positive008.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Positive009",
+    srcs = ["Positive009.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Positive010",
+    srcs = ["Positive010.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "SelfRecursiveGenerics",
+    srcs = ["SelfRecursiveGenerics.cs"],
+)

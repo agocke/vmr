@@ -1,0 +1,738 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "struct6_4",
+    srcs = ["struct6_4.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "test1_misc",
+    srcs = ["test1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp2_2",
+    srcs = ["structfp2_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct2_2",
+    srcs = ["struct2_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret2_3",
+    srcs = ["structret2_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp4_1",
+    srcs = ["structfp4_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret2_2",
+    srcs = ["structret2_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret1_3",
+    srcs = ["structret1_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret4_3",
+    srcs = ["structret4_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ret_struct_test1",
+    srcs = ["ret_struct_test1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct8",
+    srcs = ["struct8.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "fgtest1",
+    srcs = ["fgtest1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp2_1",
+    srcs = ["structfp2_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret1_2",
+    srcs = ["structret1_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct3_5",
+    srcs = ["struct3_5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret5_1",
+    srcs = ["structret5_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "simple1",
+    srcs = ["simple1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct5_4",
+    srcs = ["struct5_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "fgtest2",
+    srcs = ["fgtest2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "9_and_alloca2",
+    srcs = ["9_and_alloca2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct7_1",
+    srcs = ["struct7_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct4_4",
+    srcs = ["struct4_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct3_2",
+    srcs = ["struct3_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct3",
+    srcs = ["struct3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct6_2",
+    srcs = ["struct6_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "eh1",
+    srcs = ["eh1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ret_struct_test4",
+    srcs = ["ret_struct_test4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret1_1",
+    srcs = ["structret1_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct9_2",
+    srcs = ["struct9_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct2_5",
+    srcs = ["struct2_5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret3_2",
+    srcs = ["structret3_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp1_3",
+    srcs = ["structfp1_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "test_noalloca",
+    srcs = ["test_noalloca.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct2",
+    srcs = ["struct2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct5_5",
+    srcs = ["struct5_5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp1_6",
+    srcs = ["structfp1_6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp2_4",
+    srcs = ["structfp2_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret5_2",
+    srcs = ["structret5_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret6_3",
+    srcs = ["structret6_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct5",
+    srcs = ["struct5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct1_4",
+    srcs = ["struct1_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp1_1",
+    srcs = ["structfp1_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct9",
+    srcs = ["struct9.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct5_2",
+    srcs = ["struct5_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp3_1",
+    srcs = ["structfp3_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "vbil",
+    srcs = ["vbil.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct1_2",
+    srcs = ["struct1_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct2_4",
+    srcs = ["struct2_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct6_5",
+    srcs = ["struct6_5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfpseh6_1",
+    srcs = ["structfpseh6_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "gc-pinned-code-motion",
+    srcs = ["gc-pinned-code-motion.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct1_5",
+    srcs = ["struct1_5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret4_1",
+    srcs = ["structret4_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfpseh5_1",
+    srcs = ["structfpseh5_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp6_1",
+    srcs = ["structfp6_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret2_1",
+    srcs = ["structret2_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret6_2",
+    srcs = ["structret6_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct2_5_2",
+    srcs = ["struct2_5_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret6_1",
+    srcs = ["structret6_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "alloca3",
+    srcs = ["alloca3.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct6",
+    srcs = ["struct6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structref1_1",
+    srcs = ["structref1_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp1_2",
+    srcs = ["structfp1_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structva1_1",
+    srcs = ["structva1_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp1_5",
+    srcs = ["structfp1_5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct3_4",
+    srcs = ["struct3_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct4",
+    srcs = ["struct4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret3_3",
+    srcs = ["structret3_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct4_5",
+    srcs = ["struct4_5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret3_1",
+    srcs = ["structret3_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "test3",
+    srcs = ["test3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "9param",
+    srcs = ["9param.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "148343",
+    srcs = ["148343.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp1_4",
+    srcs = ["structfp1_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret5_3",
+    srcs = ["structret5_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp2_3",
+    srcs = ["structfp2_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "test2_misc",
+    srcs = ["test2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct4_2",
+    srcs = ["struct4_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "gcparaminreg",
+    srcs = ["gcparaminreg.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct1",
+    srcs = ["struct1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structret4_2",
+    srcs = ["structret4_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "structfp5_1",
+    srcs = ["structfp5_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)

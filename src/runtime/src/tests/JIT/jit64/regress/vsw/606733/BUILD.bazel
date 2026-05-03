@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Bug606733",
+    srcs = ["Bug606733.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)

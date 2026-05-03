@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "n-body-3",
+    srcs = ["n-body-3.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

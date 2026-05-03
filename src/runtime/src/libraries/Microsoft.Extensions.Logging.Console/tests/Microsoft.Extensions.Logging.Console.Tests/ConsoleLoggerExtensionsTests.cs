@@ -380,7 +380,12 @@ namespace Microsoft.Extensions.Logging.Console.Test
                 )
                 .BuildServiceProvider();
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => serviceProvider.GetRequiredService<ILoggerProvider>());
+            var ex = Assert.ThrowsAny<Exception>(() => serviceProvider.GetRequiredService<ILoggerProvider>());
+            // ConfigurationBinder may use reflection (PropertyInfo.SetValue) which wraps
+            // setter exceptions in TargetInvocationException
+            if (ex is TargetInvocationException tie)
+                ex = tie.InnerException;
+            Assert.IsType<ArgumentOutOfRangeException>(ex);
         }
 
         [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsMultithreadingSupported))]

@@ -1,0 +1,75 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "ECMA_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Compression.ZipFile",
+    srcs = [
+        "ref/System.IO.Compression.ZipFile.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.IO.Compression:ref_System.IO.Compression",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.Compression.ZipFile",
+    keyfile = ECMA_SNK,
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
+    srcs = [
+        # Common files (all platforms)
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/System/IO/Archiving.Utils.cs",
+        "//src/libraries/Common:src/System/IO/PathInternal.CaseSensitivity.cs",
+
+        # Implementation sources
+        "src/System/IO/Compression/ZipFile.Create.cs",
+        "src/System/IO/Compression/ZipFile.Create.Async.cs",
+        "src/System/IO/Compression/ZipFile.Extract.cs",
+        "src/System/IO/Compression/ZipFile.Extract.Async.cs",
+        "src/System/IO/Compression/ZipFileExtensions.ZipArchive.Create.cs",
+        "src/System/IO/Compression/ZipFileExtensions.ZipArchive.Create.Async.cs",
+        "src/System/IO/Compression/ZipFileExtensions.ZipArchive.Extract.cs",
+        "src/System/IO/Compression/ZipFileExtensions.ZipArchive.Extract.Async.cs",
+        "src/System/IO/Compression/ZipFileExtensions.ZipArchiveEntry.Extract.cs",
+        "src/System/IO/Compression/ZipFileExtensions.ZipArchiveEntry.Extract.Async.cs",
+    ] + select({
+        "@platforms//os:linux": [
+            # Unix-specific files
+            "src/System/IO/Compression/ZipFile.Create.Unix.cs",
+            "src/System/IO/Compression/ZipFileExtensions.ZipArchive.Create.Unix.cs",
+            "//src/libraries/Common:src/System/IO/Compression/ZipArchiveEntryConstants.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+            "//src/libraries/Common:src/System/IO/Archiving.Utils.Unix.cs",
+        ],
+        "@platforms//os:macos": [
+            # Unix-specific files (shared with Linux)
+            "src/System/IO/Compression/ZipFile.Create.Unix.cs",
+            "src/System/IO/Compression/ZipFileExtensions.ZipArchive.Create.Unix.cs",
+            "//src/libraries/Common:src/System/IO/Compression/ZipArchiveEntryConstants.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+            "//src/libraries/Common:src/System/IO/Archiving.Utils.Unix.cs",
+        ],
+    }),
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.IO.Compression:ref_System.IO.Compression",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.IO.Compression.ZipFile",
+    ref = ":ref_System.IO.Compression.ZipFile",
+    lib = ":impl_System.IO.Compression.ZipFile",
+    visibility = ["//visibility:public"],
+)

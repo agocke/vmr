@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "TestConvertFromIntegral",
+    srcs = ["TestConvertFromIntegral.cs"],
+    pri = 1,
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Emit.Lightweight:ref_System.Reflection.Emit.Lightweight",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+    ],
+    size = "medium",
+)

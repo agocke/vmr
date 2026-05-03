@@ -1,0 +1,68 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Ports",
+    srcs = [
+        "ref/System.IO.Ports.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.IO.Ports",
+    include_runtime_async = False,
+    event_source_generator = False,
+    keyfile = OPEN_SNK,
+    os_targeted = "unix",
+    nullable = "disable",
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591", "nullable"],
+    defines = ["SERIAL_PORTS"],
+    include_dll_safe_search_path = True,
+    srcs = glob(
+        ["src/**/*.cs"],
+        exclude = [
+            "src/**/*.Win32.cs",
+            "src/**/*.Windows.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Poll.Structs.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.IO.Ports.Native/Interop.Serial.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.IO.Ports.Native/Interop.Termios.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Sockets:ref_System.Net.Sockets",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    analyzers = [
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    com_interface_generator = True,
+    allow_unsafe_blocks = True,
+    supported_os_platforms = ["unix"],
+)
+
+ref_impl_pair(
+    name = "live_System.IO.Ports",
+    ref = ":ref_System.IO.Ports",
+    lib = ":impl_System.IO.Ports",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,116 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ldloca_volatile",
+    srcs = ["ldloca.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "localloc_volatile",
+    srcs = ["localloc.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldind_stind_volatile",
+    srcs = ["ldind_stind.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "initobj_volatile",
+    srcs = ["initobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "cpblk_volatile",
+    srcs = ["cpblk.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "add_volatile",
+    srcs = ["add.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "array_tests_volatile",
+    srcs = ["array_tests.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "fielda_tests_volatile",
+    srcs = ["fielda_tests.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "field_tests_volatile",
+    srcs = ["field_tests.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldobj_volatile",
+    srcs = ["ldobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "initblk_volatile",
+    srcs = ["initblk.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "cpobj_volatile",
+    srcs = ["cpobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Box_Unbox_volatile",
+    srcs = ["Box_Unbox.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)

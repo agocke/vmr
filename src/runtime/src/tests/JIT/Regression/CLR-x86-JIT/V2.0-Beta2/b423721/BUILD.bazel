@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "c1",
+    srcs = ["c1.cs"],
+    compiler_options = ["/debug:full"],
+    visibility = ["//visibility:public"],
+)
+
+coreclr_test(
+    name = "b423721",
+    optimize = False,
+    srcs = ["b423721.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    deps = [":c1"],
+    size = "medium",
+)

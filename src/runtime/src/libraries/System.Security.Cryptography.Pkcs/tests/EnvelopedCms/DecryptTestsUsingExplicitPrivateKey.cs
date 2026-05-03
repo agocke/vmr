@@ -8,6 +8,7 @@ using Xunit;
 
 namespace System.Security.Cryptography.Pkcs.EnvelopedCmsTests.Tests
 {
+    [Trait("category", "RequiresKeychain")]
     public class DecryptTestsUsingExplicitPrivateKey : DecryptTests
     {
         public DecryptTestsUsingExplicitPrivateKey() : base(true) { }

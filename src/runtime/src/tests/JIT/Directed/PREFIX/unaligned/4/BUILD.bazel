@@ -1,0 +1,116 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ldind_stind_unaligned_4",
+    srcs = ["ldind_stind.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldloca_unaligned_4",
+    srcs = ["ldloca.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "array_tests_unaligned_4",
+    srcs = ["array_tests.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "add_unaligned_4",
+    srcs = ["add.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "fielda_tests_unaligned_4",
+    srcs = ["fielda_tests.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "cpobj_unaligned_4",
+    srcs = ["cpobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "cpblk_unaligned_4",
+    srcs = ["cpblk.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Box_Unbox_unaligned_4",
+    srcs = ["Box_Unbox.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "initobj_unaligned_4",
+    srcs = ["initobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldobj_unaligned_4",
+    srcs = ["ldobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "initblk_unaligned_4",
+    srcs = ["initblk.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "field_tests_unaligned_4",
+    srcs = ["field_tests.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "localloc_unaligned_4",
+    srcs = ["localloc.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)

@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "bug573840",
+    srcs = ["bug573840.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)

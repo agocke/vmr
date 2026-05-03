@@ -1,0 +1,26 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "UnitTest",
+    srcs = ["UnitTest.il"],
+)
+
+il_coreclr_test(
+    name = "UnitTest_TypeLoadException",
+    srcs = ["UnitTest.il"],
+)
+
+il_coreclr_test(
+    name = "UnsupportedScenario1",
+    srcs = ["UnsupportedScenario1.il"],
+)
+
+il_coreclr_test(
+    name = "UnsupportedScenario2",
+    srcs = ["UnsupportedScenario2.il"],
+)
+
+il_coreclr_test(
+    name = "UnsupportedScenario3",
+    srcs = ["UnsupportedScenario3.il"],
+)

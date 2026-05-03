@@ -1,0 +1,59 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Primitives.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Primitives",
+    srcs = [
+        "ref/Microsoft.Extensions.Primitives.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Primitives",
+    include_runtime_async = False,
+    event_source_generator = True,
+    allow_unsafe_blocks = True,
+    skip_locals_init = True,
+    com_interface_generator = True,
+    jsimport_generator = False,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = [
+        "//src/libraries/System.Private.CoreLib:src/System/Numerics/Hashing/HashHelpers.cs",
+        "//src/libraries/Common:src/Extensions/ChangeCallbackRegistrar.cs",
+        "//src/libraries/Common:src/Extensions/EmptyDisposable.cs",
+
+        "src/CancellationChangeToken.cs",
+        "src/ChangeToken.cs",
+        "src/CompositeChangeToken.cs",
+        "src/Extensions.cs",
+        "src/IChangeToken.cs",
+        "src/InplaceStringBuilder.cs",
+        "src/StringSegment.cs",
+        "src/StringSegmentComparer.cs",
+        "src/StringTokenizer.cs",
+        "src/StringValues.cs",
+        "src/ThrowHelper.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Primitives",
+    ref = ":ref_Microsoft.Extensions.Primitives",
+    lib = ":impl_Microsoft.Extensions.Primitives",
+    visibility = ["//visibility:public"],
+)

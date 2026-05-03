@@ -1,0 +1,57 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Class_ExplicitOverrideVirtualNewslot",
+    srcs = ["Class_ExplicitOverrideVirtualNewslot.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Class_ExplicitOverrideVirtualNewslotFinal",
+    srcs = ["Class_ExplicitOverrideVirtualNewslotFinal.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Class_ImplicitOverrideVirtualNewslot",
+    srcs = ["Class_ImplicitOverrideVirtualNewslot.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Class_ImplicitOverrideVirtualNewslotFinal",
+    srcs = ["Class_ImplicitOverrideVirtualNewslotFinal.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Struct_ExplicitOverrideVirtualNewslot",
+    srcs = ["Struct_ExplicitOverrideVirtualNewslot.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Struct_ExplicitOverrideVirtualNewslotFinal",
+    srcs = ["Struct_ExplicitOverrideVirtualNewslotFinal.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Struct_ImplicitOverrideVirtualNewslot",
+    srcs = ["Struct_ImplicitOverrideVirtualNewslot.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Struct_ImplicitOverrideVirtualNewslotFinal",
+    srcs = ["Struct_ImplicitOverrideVirtualNewslotFinal.cs"],
+    pri = 1,
+    size = "medium",
+)

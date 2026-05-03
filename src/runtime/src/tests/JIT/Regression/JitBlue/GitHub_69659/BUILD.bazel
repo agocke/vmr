@@ -1,0 +1,17 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_69659_1",
+    srcs = ["GitHub_69659_1.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "GitHub_69659_2",
+    srcs = ["GitHub_69659_2.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

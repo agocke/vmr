@@ -1,0 +1,17 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "DevDiv_278523_Target_32Bit",
+    srcs = ["DevDiv_278523_Target_32Bit.il"],
+    optimize = True,
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "DevDiv_278523_Target_64Bit",
+    srcs = ["DevDiv_278523_Target_64Bit.il"],
+    optimize = True,
+    pri = 1,
+    size = "medium",
+)

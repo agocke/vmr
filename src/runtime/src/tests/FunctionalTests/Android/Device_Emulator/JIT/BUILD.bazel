@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Android.Device_Emulator.JIT.Static.Test",
+    srcs = ["Program.cs"],
+    target_compatible_with = ["@platforms//os:android"],
+)
+
+coreclr_test(
+    name = "Android.Device_Emulator.JIT.Test",
+    srcs = ["Program.cs"],
+    target_compatible_with = ["@platforms//os:android"],
+)

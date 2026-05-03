@@ -1,0 +1,28 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "HandlerRefuses",
+    srcs = ["HandlerRefuses.cs"],
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "HandlerThrows",
+    srcs = ["HandlerThrows.cs"],
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)
+
+coreclr_test(
+    name = "UnhandledTrivial",
+    srcs = ["UnhandledTrivial.cs"],
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

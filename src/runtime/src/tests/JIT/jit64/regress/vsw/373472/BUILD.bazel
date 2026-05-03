@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "test_il",
+    srcs = ["test.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "test_373472",
+    srcs = ["test.cs"],
+    debug_type = "full",
+    optimize = False,
+)

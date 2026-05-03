@@ -1,0 +1,48 @@
+load("//src/libraries:defs.bzl",
+    "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Security.Cryptography.Cose",
+    srcs = [
+        "ref/System.Security.Cryptography.Cose.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Security.Cryptography.Cose",
+    include_runtime_async = False,
+    event_source_generator = False,
+    keyfile = OPEN_SNK,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/System/Experimentals.cs",
+        "//src/libraries/Common:src/System/HashCodeRandomization.cs",
+        "//src/libraries/Common:src/System/Memory/PointerMemoryManager.cs",
+        "//src/libraries/System.Formats.Cbor:src/System/Formats/Cbor/CborInitialByte.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Formats.Cbor:ref_System.Formats.Cbor",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+)
+
+ref_impl_pair(
+    name = "live_System.Security.Cryptography.Cose",
+    ref = ":ref_System.Security.Cryptography.Cose",
+    lib = ":impl_System.Security.Cryptography.Cose",
+    visibility = ["//visibility:public"],
+)

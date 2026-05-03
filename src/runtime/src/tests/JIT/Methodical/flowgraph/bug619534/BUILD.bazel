@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "twoEndFinallys_r",
+    srcs = ["twoEndFinallys.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ILStackAllocRepro",
+    srcs = ["ILStackAllocRepro.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

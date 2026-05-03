@@ -1,0 +1,104 @@
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "src/System/TermInfo.WellKnownStrings.cs",
+    "src/System/TermInfo.WellKnownNumbers.cs",
+    "src/System/TermInfo.Database.cs",
+    "src/System/TermInfo.cs",
+    "src/System/TermInfo.DatabaseFactory.cs",
+    "src/System/TerminalFormatStrings.cs",
+    "src/System/IO/KeyParser.cs",
+    "src/Resources/Strings.resx",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Console",
+    srcs = [
+        "ref/System.Console.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Console",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
+    os_targeted = "unix",
+    srcs = [
+        "src/System/Console.cs",
+        "src/System/ConsoleCancelEventArgs.cs",
+        "src/System/ConsoleColor.cs",
+        "src/System/ConsoleSpecialKey.cs",
+        "src/System/ConsoleKey.cs",
+        "src/System/ConsoleKeyInfo.cs",
+        "src/System/ConsoleModifiers.cs",
+        "src/System/IO/ConsoleStream.cs",
+        "src/System/IO/CachedConsoleStream.cs",
+        "src/System/IO/SyncTextReader.cs",
+        "src/System/IO/Error.cs",
+
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/System/NullableBool.cs",
+        "//src/libraries/Common:src/System/Text/ConsoleEncoding.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.AppendSpanFormattable.cs",
+    ] + selects.with_or({
+        ("@platforms//os:linux", "@platforms//os:macos"): [
+            "src/System/ConsolePal.Unix.cs",
+            "src/System/ConsolePal.Unix.ConsoleStream.cs",
+            "src/System/TerminalFormatStrings.cs",
+            "src/System/TermInfo.cs",
+            "src/System/TermInfo.WellKnownStrings.cs",
+            "src/System/TermInfo.Database.cs",
+            "src/System/TermInfo.DatabaseFactory.cs",
+            "src/System/TermInfo.WellKnownNumbers.cs",
+            "src/System/IO/StdInReader.cs",
+            "src/System/IO/SyncTextReader.Unix.cs",
+            "src/System/IO/KeyParser.cs",
+
+            "//src/libraries/System.Private.CoreLib:src/System/IO/PersistedFiles.Unix.cs",
+            "//src/libraries/System.Private.CoreLib:src/System/IO/PersistedFiles.Names.Unix.cs",
+
+            "//src/libraries/Common:src/System/Console/ConsoleUtils.cs",
+            "//src/libraries/Common:src/System/Text/EncodingHelper.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Close.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.FLock.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetControlCharacters.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.IsATty.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Open.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.OpenFlags.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Poll.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Poll.Structs.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetEUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPwUid.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SetTerminalInvalidationHandler.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SetSignalForBreak.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SNPrintF.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Read.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Write.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetWindowWidth.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.InitializeTerminalAndSignalHandling.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.ReadStdinUnbuffered.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.StdinReady.cs",
+        ]
+    }),
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    supported_os_platforms = ["unix"],
+)

@@ -1,0 +1,1 @@
+load("//src/tests:live_test.bzl", "coreclr_test")

@@ -1,0 +1,46 @@
+load("//:defs.bzl", "FILE_VERSION", "INFORMATIONAL_VERSION", "NETCOREAPP_TOOL_CURRENT", "csharp_binary")
+
+genrule(
+    name = "AssemblyInfo",
+    outs = ["AssemblyInfo.g.cs"],
+    cmd = """cat > $@ << 'EOF'
+[assembly: System.Reflection.AssemblyFileVersion(""" + '"' + FILE_VERSION + '"' + """)]
+[assembly: System.Reflection.AssemblyInformationalVersion(""" + '"' + INFORMATIONAL_VERSION + '"' + """)]
+EOF""",
+)
+
+csharp_binary(
+    name = "ilc",
+    include_runtime_async = False,
+    interceptors_namespaces = ";Microsoft.AspNetCore.Http.Generated;Microsoft.Extensions.Configuration.Binder.SourceGeneration;Microsoft.Extensions.Validation.Generated",
+    nowarn = ["1701", "1702", "8002", "IL2121", "NU1701", "NU5105"],
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = ["repro/**"],
+    ) + [
+        "//src/coreclr/tools/Common:CommandLineHelpers.cs",
+        "//src/coreclr/tools/Common:InstructionSetHelpers.cs",
+        "//src/coreclr/tools/Common:TypeSystem/IL/HelperExtensions.cs",
+        ":AssemblyInfo",
+    ],
+    compiler_options = ["/unsafe", "/warnaserror+:NU1605"],
+    deps = [
+        "//src/coreclr/tools/aot/ILCompiler.Compiler",
+        "//src/coreclr/tools/aot/ILCompiler.DependencyAnalysisFramework",
+        "//src/coreclr/tools/aot/ILCompiler.Diagnostics",
+        "//src/coreclr/tools/aot/ILCompiler.MetadataTransform",
+        "//src/coreclr/tools/aot/ILCompiler.RyuJit",
+        "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//microsoft.diasymreader",
+        "@paket.main//system.commandline",
+    ],
+    target_frameworks = [NETCOREAPP_TOOL_CURRENT],
+    visibility = ["//visibility:public"],
+    analyzers = [
+        "//:source_build_analyzers",
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+    ],
+    msbuild_analyzer_config = "source",
+    include_library_nowarn = False,
+    editorconfig_name = "ILCompiler_inbuild",
+)

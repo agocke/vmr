@@ -1,0 +1,50 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Except",
+    srcs = ["Except.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "FiltCatch",
+    srcs = ["FiltCatch.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "FiltFallThru",
+    srcs = ["FiltFallThru.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Filter",
+    srcs = ["Filter.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Finally",
+    srcs = ["Finally.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "NestedExcept",
+    srcs = ["NestedExcept.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "NestedFilt",
+    srcs = ["NestedFilt.il"],
+    pri = 1,
+    size = "medium",
+)

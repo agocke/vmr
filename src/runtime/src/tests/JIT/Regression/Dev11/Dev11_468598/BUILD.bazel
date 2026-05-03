@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Test_HndIndex_10_Reordered",
+    srcs = ["Test_HndIndex_10_Reordered.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "Test_HndIndex_10_Plain",
+    srcs = ["Test_HndIndex_10_Plain.il"],
+    debug_type = "full",
+    optimize = False,
+)

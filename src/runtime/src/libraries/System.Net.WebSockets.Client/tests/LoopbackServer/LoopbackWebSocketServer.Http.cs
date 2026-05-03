@@ -105,6 +105,8 @@ namespace System.Net.WebSockets.Client.Tests
             Func<WebSocketRequestData, CancellationToken, Task> loopbackServerFunc,
             Options options,
             CancellationToken cancellationToken)
+            // AcceptConnectionAsync doesn't observe the cancellation token, so wrap
+            // with WaitAsync to unblock if the client exits before connecting.
             => http11server.AcceptConnectionAsync(
                 async connection =>
                 {
@@ -115,7 +117,7 @@ namespace System.Net.WebSockets.Client.Tests
                         cancellationToken).ConfigureAwait(false);
 
                     await loopbackServerFunc(requestData, cancellationToken).ConfigureAwait(false);
-                });
+                }).WaitAsync(cancellationToken);
 
         private static async Task ProcessHttp2WebSocketRequest(
             Http2LoopbackServer http2Server,

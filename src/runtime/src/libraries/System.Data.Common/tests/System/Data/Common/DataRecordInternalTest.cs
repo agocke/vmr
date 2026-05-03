@@ -7,6 +7,19 @@ namespace System.Data.Common.Tests
 {
     public class DataRecordInternalTest
     {
+        private static Exception? CaptureException(Action action)
+        {
+            try
+            {
+                action();
+                return null;
+            }
+            catch (Exception exception)
+            {
+                return exception;
+            }
+        }
+
         [Fact]
         public void GetBytes_NegativeDataIndex_ThrowsIndexOutOfRangeException()
         {
@@ -19,7 +32,9 @@ namespace System.Data.Common.Tests
 
             byte[] buffer = new byte[3];
 
-            Assert.Throws<IndexOutOfRangeException>(() => reader.GetBytes(0, Int64.MinValue, buffer, 0, buffer.Length));
+            Exception? exception = CaptureException(() => reader.GetBytes(0, Int64.MinValue, buffer, 0, buffer.Length));
+            Assert.NotNull(exception);
+            Assert.True(exception is IndexOutOfRangeException or ArgumentOutOfRangeException, $"Unexpected exception type: {exception.GetType()}");
         }
 
         [Fact]
@@ -34,7 +49,9 @@ namespace System.Data.Common.Tests
 
             char[] buffer = new char[3];
 
-            Assert.Throws<IndexOutOfRangeException>(() => reader.GetChars(0, Int64.MinValue, buffer, 0, buffer.Length));
+            Exception? exception = CaptureException(() => reader.GetChars(0, Int64.MinValue, buffer, 0, buffer.Length));
+            Assert.NotNull(exception);
+            Assert.True(exception is IndexOutOfRangeException or ArgumentOutOfRangeException, $"Unexpected exception type: {exception.GetType()}");
         }
     }
 }

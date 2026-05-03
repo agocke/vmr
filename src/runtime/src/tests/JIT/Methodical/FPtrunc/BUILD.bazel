@@ -1,0 +1,49 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "convr4d_r",
+    srcs = ["convr4d_r.il", "convr4d.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "convX_r",
+    srcs = ["convX_r.il", "convX.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "convr8d_d",
+    srcs = ["convr8d_d.il", "convr8d.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "convX_d",
+    srcs = ["convX_d.il", "convX.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "convr4d_d",
+    srcs = ["convr4d_d.il", "convr4d.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "convr8d_r",
+    srcs = ["convr8d_r.il", "convr8d.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

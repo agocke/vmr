@@ -1,0 +1,431 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "box-unbox001",
+    srcs = [
+        "box-unbox001.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox002",
+    srcs = [
+        "box-unbox002.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox003",
+    srcs = [
+        "box-unbox003.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox004",
+    srcs = [
+        "box-unbox004.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox005",
+    srcs = [
+        "box-unbox005.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox006",
+    srcs = [
+        "box-unbox006.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox007",
+    srcs = [
+        "box-unbox007.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox008",
+    srcs = [
+        "box-unbox008.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox009",
+    srcs = [
+        "box-unbox009.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox010",
+    srcs = [
+        "box-unbox010.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox011",
+    srcs = [
+        "box-unbox011.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox012",
+    srcs = [
+        "box-unbox012.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox013",
+    srcs = [
+        "box-unbox013.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox014",
+    srcs = [
+        "box-unbox014.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox015",
+    srcs = [
+        "box-unbox015.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox016",
+    srcs = [
+        "box-unbox016.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox017",
+    srcs = [
+        "box-unbox017.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox018",
+    srcs = [
+        "box-unbox018.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox019",
+    srcs = [
+        "box-unbox019.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox020",
+    srcs = [
+        "box-unbox020.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox021",
+    srcs = [
+        "box-unbox021.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox022",
+    srcs = [
+        "box-unbox022.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox023",
+    srcs = [
+        "box-unbox023.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox024",
+    srcs = [
+        "box-unbox024.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox025",
+    srcs = [
+        "box-unbox025.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox026",
+    srcs = [
+        "box-unbox026.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox027",
+    srcs = [
+        "box-unbox027.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox028",
+    srcs = [
+        "box-unbox028.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox029",
+    srcs = [
+        "box-unbox029.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox030",
+    srcs = [
+        "box-unbox030.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox031",
+    srcs = [
+        "box-unbox031.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox032",
+    srcs = [
+        "box-unbox032.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox033",
+    srcs = [
+        "box-unbox033.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox034",
+    srcs = [
+        "box-unbox034.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox037",
+    srcs = [
+        "box-unbox037.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox038",
+    srcs = [
+        "box-unbox038.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox039",
+    srcs = [
+        "box-unbox039.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox040",
+    srcs = [
+        "box-unbox040.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox041",
+    srcs = [
+        "box-unbox041.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox042",
+    srcs = [
+        "box-unbox042.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox043",
+    srcs = [
+        "box-unbox043.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox044",
+    srcs = [
+        "box-unbox044.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox045",
+    srcs = [
+        "box-unbox045.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)

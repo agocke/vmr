@@ -1,0 +1,31 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "box-unbox-enum001",
+    srcs = [
+        "box-unbox-enum001.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox-enum002",
+    srcs = [
+        "box-unbox-enum002.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box-unbox-enum003",
+    srcs = [
+        "box-unbox-enum003.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/box-unbox:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)

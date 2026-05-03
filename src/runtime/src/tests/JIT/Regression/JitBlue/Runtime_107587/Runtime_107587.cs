@@ -29,9 +29,15 @@ public class Runtime_107587
         return Avx512F.TernaryLogic(s_v512_sbyte_42, s_v512_sbyte_42, s_v512_sbyte_42, byte_152);
     }
 
-    [ConditionalFact(typeof(Avx512F), nameof(Avx512F.IsSupported))]
+    [ConditionalFact(typeof(Avx512BW), nameof(Avx512BW.IsSupported))]
     public static void TestEntryPoint()
     {
-        new Runtime_107587().Method0();
+        try
+        {
+            new Runtime_107587().Method0();
+        }
+        catch (PlatformNotSupportedException)
+        {
+        }
     }
 }

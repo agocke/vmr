@@ -1,0 +1,44 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "chaos56200037cs_o",
+    srcs = ["chaos56200037cs.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "chaos55915408cs",
+    srcs = ["chaos55915408cs.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "chaos56200037cs",
+    srcs = ["chaos56200037cs.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "chaos55915408cs_o",
+    srcs = ["chaos55915408cs.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "chaos65204782cs",
+    srcs = ["chaos65204782cs.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "chaos65204782cs_o",
+    srcs = ["chaos65204782cs.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)

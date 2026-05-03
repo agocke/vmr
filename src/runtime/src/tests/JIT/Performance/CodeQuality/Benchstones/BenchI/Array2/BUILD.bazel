@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Array2",
+    srcs = ["Array2.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

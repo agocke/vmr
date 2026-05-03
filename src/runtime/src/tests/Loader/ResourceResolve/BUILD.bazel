@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ManifestResourceAssemblyRef",
+    srcs = ["ManifestResourceAssemblyRef.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "ResourceAssembly",
+    srcs = glob(["*.cs"]),
+    tags = ["manual"],  # Needs additional deps not yet available
+)

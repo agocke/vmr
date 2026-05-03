@@ -1,0 +1,163 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Test_CSharp_Peer_4",
+    srcs = ["Test_CSharp_Peer_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Base_3",
+    srcs = ["Generic_Test_CSharp_Base_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Test_CSharp_Base_2",
+    srcs = ["Test_CSharp_Base_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Base_6",
+    srcs = ["Generic_Test_CSharp_Base_6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Base_4",
+    srcs = ["Generic_Test_CSharp_Base_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Test_CSharp_Base_1",
+    srcs = ["Test_CSharp_Base_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Test_CSharp_Base_4",
+    srcs = ["Test_CSharp_Base_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Peer_2",
+    srcs = ["Generic_Test_CSharp_Peer_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Test_CSharp_Peer_2",
+    srcs = ["Test_CSharp_Peer_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Test_CSharp_Peer_3",
+    srcs = ["Test_CSharp_Peer_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Test_CSharp_Base_3",
+    srcs = ["Test_CSharp_Base_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Base_2",
+    srcs = ["Generic_Test_CSharp_Base_2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Peer_6",
+    srcs = ["Generic_Test_CSharp_Peer_6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Base_1",
+    srcs = ["Generic_Test_CSharp_Base_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Test_CSharp_Peer_1",
+    srcs = ["Test_CSharp_Peer_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Peer_1",
+    srcs = ["Generic_Test_CSharp_Peer_1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Peer_3",
+    srcs = ["Generic_Test_CSharp_Peer_3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Generic_Test_CSharp_Peer_4",
+    srcs = ["Generic_Test_CSharp_Peer_4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)

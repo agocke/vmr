@@ -1,0 +1,467 @@
+# Corehost Bazel build.
+# Produces: dotnet (exe), apphost (exe), hostfxr (shared), hostpolicy (shared),
+#           nethost (shared+static).
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_shared_library")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_COPTS", "NATIVE_CONFIG_DEFINES")
+
+load("//:cc_defs.bzl", "PLATFORM_COPTS", "PLATFORM_DEFINES", "PLATFORM_LINKOPTS")
+
+package(default_visibility = ["//src/native/corehost:__subpackages__"])
+
+# --- Generated config headers ---
+
+cc_library(
+    name = "configure_headers",
+    hdrs = select({
+        "//:macos_arm64": [
+            "bazel/osx-arm64/_version.c",
+            "bazel/osx-arm64/configure.h",
+        ],
+        "//:macos_x64": [
+            "bazel/osx-x64/_version.c",
+            "bazel/osx-x64/configure.h",
+        ],
+        "@platforms//os:windows": [
+            "bazel/windows-x64/_version.c",
+            "bazel/windows-x64/configure.h",
+        ],
+        "//conditions:default": [
+            "bazel/linux-glibc-x64/_version.c",
+            "bazel/linux-glibc-x64/configure.h",
+        ],
+    }),
+    strip_include_prefix = select({
+        "//:macos_arm64": "bazel/osx-arm64",
+        "//:macos_x64": "bazel/osx-x64",
+        "@platforms//os:windows": "bazel/windows-x64",
+        "//conditions:default": "bazel/linux-glibc-x64",
+    }),
+)
+
+cc_library(
+    name = "hostmisc_config",
+    hdrs = select({
+        "//:macos_arm64": ["bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["bazel/osx-x64/config.h"],
+        "@platforms//os:windows": ["bazel/windows-x64/config.h"],
+        "//conditions:default": ["bazel/linux-glibc-x64/config.h"],
+    }),
+    strip_include_prefix = select({
+        "//:macos_arm64": "bazel/osx-arm64",
+        "//:macos_x64": "bazel/osx-x64",
+        "@platforms//os:windows": "bazel/windows-x64",
+        "//conditions:default": "bazel/linux-glibc-x64",
+    }),
+)
+
+# --- Shared copts and defines for all corehost targets ---
+
+COREHOST_COPTS = PLATFORM_COPTS + NATIVE_CONFIG_COPTS + select({
+    "@platforms//os:windows": [],
+    "//conditions:default": ["-fno-use-cxa-atexit"],
+})
+
+COREHOST_INCLUDES = [
+    ".",
+    "..",
+]
+
+COREHOST_DEFINES = PLATFORM_DEFINES + [
+    "RAPIDJSON_HAS_CXX17",
+    "FALLBACK_OS_IS_SAME_AS_TARGET_OS",
+]
+
+# --- Common headers shared by multiple corehost targets ---
+
+cc_library(
+    name = "corehost_headers",
+    hdrs = [
+        "error_codes.h",
+        "host_interface.h",
+        "host_runtime_contract.h",
+        "hostfxr.h",
+        "hostpolicy.h",
+        "corehost_context_contract.h",
+        "coreclr_delegates.h",
+        "coreclr_resolver.h",
+        "roll_fwd_on_no_candidate_fx_option.h",
+        "fxr_resolver.h",
+        "bundle/info.h",
+        "bundle/header.h",
+        "bundle/reader.h",
+        "bundle/file_type.h",
+        "bundle/dir_utils.h",
+        "bundle/extractor.h",
+        "bundle/file_entry.h",
+        "bundle/manifest.h",
+        "bundle/runner.h",
+        "fxr/command_line.h",
+        "fxr/corehost_init.h",
+        "fxr/fx_muxer.h",
+        "fxr/fx_resolver.h",
+        "fxr/fx_ver.h",
+        "fxr/framework_info.h",
+        "fxr/host_context.h",
+        "fxr/hostpolicy_resolver.h",
+        "fxr/install_info.h",
+        "fxr/sdk_info.h",
+        "fxr/sdk_resolver.h",
+    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES,
+    defines = COREHOST_DEFINES,
+    visibility = [
+        "//src/coreclr:__subpackages__",
+        "//src/native/corehost:__subpackages__",
+    ],
+)
+
+# --- hostmisc (static library) ---
+# Platform abstraction: trace, utils, PAL, fx_ver.
+
+cc_library(
+    name = "hostmisc",
+    srcs = [
+        "hostmisc/trace.cpp",
+        "hostmisc/utils.cpp",
+        "fxr/fx_ver.cpp",
+    ] + select({
+        "@platforms//os:windows": [
+            "hostmisc/pal.windows.cpp",
+            "hostmisc/longfile.windows.cpp",
+        ],
+        "//conditions:default": [
+            "hostmisc/pal.unix.cpp",
+        ],
+    }),
+    hdrs = [
+        "hostmisc/pal.h",
+        "hostmisc/trace.h",
+        "hostmisc/utils.h",
+    ] + select({
+        "@platforms//os:windows": ["hostmisc/longfile.h"],
+        "//conditions:default": [],
+    }),
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["hostmisc"],
+    defines = COREHOST_DEFINES,
+    local_defines = NATIVE_CONFIG_DEFINES,
+    linkopts = select({
+        "@platforms//os:windows": ["advapi32.lib"],
+        "@platforms//os:macos": [
+            "-lpthread",
+        ],
+        "//conditions:default": [
+            "-ldl",
+            "-lpthread",
+        ],
+    }),
+    deps = [
+        ":configure_headers",
+        ":corehost_headers",
+        ":hostmisc_config",
+        "//eng/native:version_headers",
+        "//src/native/minipal",
+    ],
+)
+
+# --- fxr_resolver (interface library) ---
+# Resolves the hostfxr library at runtime.
+
+cc_library(
+    name = "fxr_resolver",
+    srcs = ["fxr_resolver.cpp"],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc"],
+    defines = COREHOST_DEFINES,
+    local_defines = NATIVE_CONFIG_DEFINES,
+    deps = [":hostmisc"],
+)
+
+# --- libhostcommon (static library) ---
+# JSON parsing, runtime config, bundle support.
+
+cc_library(
+    name = "hostcommon",
+    srcs = [
+        "json_parser.cpp",
+        "host_startup_info.cpp",
+        "roll_forward_option.cpp",
+        "fx_definition.cpp",
+        "fx_reference.cpp",
+        "version_compatibility_range.cpp",
+        "runtime_config.cpp",
+        "bundle/info.cpp",
+        "bundle/reader.cpp",
+        "bundle/header.cpp",
+    ],
+    hdrs = [
+        "json_parser.h",
+        "host_startup_info.h",
+        "roll_forward_option.h",
+        "fx_definition.h",
+        "fx_reference.h",
+        "version_compatibility_range.h",
+        "runtime_config.h",
+    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc"],
+    defines = COREHOST_DEFINES + ["EXPORT_SHARED_API"],
+    local_defines = NATIVE_CONFIG_DEFINES,
+    deps = [
+        ":hostmisc",
+        "//src/native/external/rapidjson",
+    ],
+)
+
+# --- Version script genrules for shared library exports (Unix only) ---
+# On Windows, .def files are compiled directly into the DLL.
+
+genrule(
+    name = "hostfxr_exports",
+    srcs = ["fxr/standalone/hostfxr_unixexports.src"],
+    outs = ["hostfxr.exports"],
+    cmd = "bash $(location //eng/native:generateversionscript.sh) $(location fxr/standalone/hostfxr_unixexports.src) > $@",
+    tools = ["//eng/native:generateversionscript.sh"],
+)
+
+genrule(
+    name = "hostpolicy_exports",
+    srcs = ["hostpolicy/standalone/hostpolicy_unixexports.src"],
+    outs = ["hostpolicy.exports"],
+    cmd = "bash $(location //eng/native:generateversionscript.sh) $(location hostpolicy/standalone/hostpolicy_unixexports.src) > $@",
+    tools = ["//eng/native:generateversionscript.sh"],
+)
+
+# --- hostfxr (shared library) ---
+# Framework resolver: SDK resolution, runtime initialization.
+
+cc_library(
+    name = "hostfxr_lib",
+    srcs = [
+        "fxr/command_line.cpp",
+        "fxr/corehost_init.cpp",
+        "fxr/hostfxr.cpp",
+        "fxr/fx_muxer.cpp",
+        "fxr/fx_resolver.cpp",
+        "fxr/fx_resolver.messages.cpp",
+        "fxr/framework_info.cpp",
+        "fxr/host_context.cpp",
+        "fxr/install_info.cpp",
+        "fxr/sdk_info.cpp",
+        "fxr/sdk_resolver.cpp",
+        "fxr/standalone/hostpolicy_resolver.cpp",
+    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc"],
+    defines = COREHOST_DEFINES + ["EXPORT_SHARED_API"],
+    local_defines = NATIVE_CONFIG_DEFINES,
+    deps = [":hostcommon"],
+)
+
+cc_shared_library(
+    name = "hostfxr",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libhostfxr.dylib",
+        "@platforms//os:windows": "hostfxr.dll",
+        "//conditions:default": "libhostfxr.so",
+    }),
+    user_link_flags = PLATFORM_LINKOPTS + select({
+        "@platforms//os:macos": [
+            "-Wl,-install_name,@rpath/libhostfxr.dylib",
+        ],
+        "@platforms//os:windows": [
+            "/DEF:$(location fxr/standalone/hostfxr.def)",
+        ],
+        "//conditions:default": [
+            "-Wl,--version-script,$(location :hostfxr_exports)",
+            "-Wl,-Bsymbolic",
+            "-Wl,-soname,libhostfxr.so",
+        ],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":hostfxr_lib"],
+    dynamic_deps = [],
+    additional_linker_inputs = select({
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": ["fxr/standalone/hostfxr.def"],
+        "//conditions:default": [":hostfxr_exports"],
+    }),
+)
+
+# --- hostpolicy (shared library) ---
+# Runtime policy: assembly loading, deps resolution.
+
+cc_library(
+    name = "hostpolicy_lib",
+    srcs = [
+        "hostpolicy/args.cpp",
+        "hostpolicy/breadcrumbs.cpp",
+        "hostpolicy/coreclr.cpp",
+        "hostpolicy/deps_entry.cpp",
+        "hostpolicy/deps_format.cpp",
+        "hostpolicy/deps_resolver.cpp",
+        "hostpolicy/hostpolicy_context.cpp",
+        "hostpolicy/hostpolicy.cpp",
+        "hostpolicy/hostpolicy_init.cpp",
+        "hostpolicy/shared_store.cpp",
+        "hostpolicy/version.cpp",
+        "hostpolicy/standalone/coreclr_resolver.cpp",
+        "bundle/dir_utils.cpp",
+        "bundle/extractor.cpp",
+        "bundle/file_entry.cpp",
+        "bundle/manifest.cpp",
+        "bundle/runner.cpp",
+    ],
+    hdrs = [
+        "hostpolicy/args.h",
+        "hostpolicy/breadcrumbs.h",
+        "hostpolicy/coreclr.h",
+        "hostpolicy/deps_entry.h",
+        "hostpolicy/deps_format.h",
+        "hostpolicy/deps_resolver.h",
+        "hostpolicy/hostpolicy_context.h",
+        "hostpolicy/hostpolicy_init.h",
+        "hostpolicy/shared_store.h",
+        "hostpolicy/version.h",
+    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc", "hostpolicy"],
+    defines = COREHOST_DEFINES + ["EXPORT_SHARED_API"],
+    local_defines = NATIVE_CONFIG_DEFINES,
+    deps = [":hostcommon"],
+)
+
+cc_shared_library(
+    name = "hostpolicy",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libhostpolicy.dylib",
+        "@platforms//os:windows": "hostpolicy.dll",
+        "//conditions:default": "libhostpolicy.so",
+    }),
+    user_link_flags = PLATFORM_LINKOPTS + select({
+        "@platforms//os:macos": [
+            "-Wl,-install_name,@rpath/libhostpolicy.dylib",
+        ],
+        "@platforms//os:windows": [
+            "/DEF:$(location hostpolicy/standalone/hostpolicy.def)",
+        ],
+        "//conditions:default": [
+            "-Wl,--version-script,$(location :hostpolicy_exports)",
+            "-Wl,-Bsymbolic",
+            "-Wl,-soname,libhostpolicy.so",
+        ],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":hostpolicy_lib"],
+    dynamic_deps = [],
+    additional_linker_inputs = select({
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": ["hostpolicy/standalone/hostpolicy.def"],
+        "//conditions:default": [":hostpolicy_exports"],
+    }),
+)
+
+# --- dotnet (executable) ---
+# The dotnet host CLI entry point.
+
+cc_binary(
+    name = "dotnet",
+    srcs = [
+        "corehost.cpp",
+        "apphost/standalone/hostfxr_resolver.cpp",
+        "hostfxr_resolver.h",
+    ],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc", "apphost"],
+    defines = COREHOST_DEFINES,
+    local_defines = NATIVE_CONFIG_DEFINES,
+    linkopts = PLATFORM_LINKOPTS + select({
+        "@platforms//os:windows": [],
+        "@platforms//os:macos": [],
+        "//conditions:default": ["-Wl,-Bsymbolic"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        ":fxr_resolver",
+        ":hostmisc",
+    ],
+)
+
+# --- apphost (executable) ---
+# Per-application host executable.
+
+cc_binary(
+    name = "apphost",
+    srcs = [
+        "corehost.cpp",
+        "apphost/bundle_marker.cpp",
+        "apphost/bundle_marker.h",
+        "apphost/standalone/hostfxr_resolver.cpp",
+        "hostfxr_resolver.h",
+    ] + select({
+        "@platforms//os:windows": [
+            "apphost/apphost.windows.cpp",
+            "apphost/apphost.windows.h",
+        ],
+        "//conditions:default": [],
+    }),
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc", "apphost"],
+    defines = COREHOST_DEFINES + ["FEATURE_APPHOST"],
+    local_defines = NATIVE_CONFIG_DEFINES,
+    linkopts = PLATFORM_LINKOPTS + select({
+        "@platforms//os:windows": ["shell32.lib", "user32.lib"],
+        "@platforms//os:macos": [],
+        "//conditions:default": ["-Wl,-Bsymbolic"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        ":fxr_resolver",
+        ":hostmisc",
+    ],
+)
+
+# --- nethost (shared + static library) ---
+# Public API for hosting .NET from native code.
+
+cc_library(
+    name = "nethost_lib",
+    srcs = ["nethost/nethost.cpp"],
+    hdrs = ["nethost/nethost.h"],
+    copts = COREHOST_COPTS,
+    includes = COREHOST_INCLUDES + ["fxr", "hostmisc"],
+    defines = COREHOST_DEFINES + [
+        "EXPORT_SHARED_API",
+        "FEATURE_LIBHOST",
+        "NETHOST_EXPORT",
+    ],
+    local_defines = NATIVE_CONFIG_DEFINES,
+    deps = [
+        ":fxr_resolver",
+        ":hostmisc",
+    ],
+)
+
+cc_shared_library(
+    name = "nethost",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libnethost.dylib",
+        "@platforms//os:windows": "nethost.dll",
+        "//conditions:default": "libnethost.so",
+    }),
+    user_link_flags = PLATFORM_LINKOPTS + select({
+        "@platforms//os:macos": [
+            "-Wl,-install_name,@rpath/libnethost.dylib",
+        ],
+        "@platforms//os:windows": [],
+        "//conditions:default": [
+            "-Wl,-Bsymbolic",
+            "-Wl,-soname,libnethost.so",
+        ],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":nethost_lib"],
+    dynamic_deps = [],
+)

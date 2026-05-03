@@ -1,0 +1,107 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+# NOTE: This test suite requires the System.Drawing.Common NuGet package
+# (Bitmap, Metafile, Icon, Drawing2D, Imaging etc.) which is not available
+# in the Bazel build. The target_compatible_with constraint ensures it is
+# skipped during builds.
+library_test(
+    name = "System.Runtime.Serialization.Formatters.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Windows-only
+            "FormatterServicesTests.Windows.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/Runtime/Serialization/Formatters/BinaryFormatterHelpers.cs",
+        "//src/libraries/Common/tests:System/NonRuntimeType.cs",
+        "//src/libraries/Common:src/System/Runtime/Serialization/SerializationGuard.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.CodeDom:impl_System.CodeDom",
+        "//src/libraries/System.ComponentModel.Composition:impl_System.ComponentModel.Composition",
+        "//src/libraries/System.Configuration.ConfigurationManager:impl_System.Configuration.ConfigurationManager",
+        "//src/libraries/System.Data.Odbc:impl_System.Data.Odbc",
+        "//src/libraries/System.Diagnostics.EventLog:impl_System.Diagnostics.EventLog",
+        "//src/libraries/System.DirectoryServices:impl_System.DirectoryServices",
+        "//src/libraries/System.DirectoryServices.AccountManagement:impl_System.DirectoryServices.AccountManagement",
+        "//src/libraries/System.DirectoryServices.Protocols:impl_System.DirectoryServices.Protocols",
+        "//src/libraries/System.IO.Packaging:impl_System.IO.Packaging",
+        "//src/libraries/System.Security.Permissions:impl_System.Security.Permissions",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.ComponentModel.Annotations:ref_System.ComponentModel.Annotations",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.Diagnostics.Contracts:ref_System.Diagnostics.Contracts",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/System.IO.IsolatedStorage:ref_System.IO.IsolatedStorage",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Sockets:ref_System.Net.Sockets",
+        "//src/libraries/System.Net.WebSockets:ref_System.Net.WebSockets",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+        "//src/libraries:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Channels:ref_System.Threading.Channels",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
+        "//src/libraries/System.Xml.XPath:ref_System.Xml.XPath",
+        "//src/libraries/System.Xml.XPath.XDocument:ref_System.Xml.XPath.XDocument",
+        "//src/libraries:ref_Microsoft.CSharp",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+    nowarn = [
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+    ],
+    assembly_version = "9.0.0.0",
+    size = "large",
+    target_compatible_with = ["@platforms//:incompatible"],
+)
+
+# Disabled.Tests: BinaryFormatter disabled switch test.
+# The EnableUnsafeBinaryFormatterSerialization switch is removed (i.e., not set)
+# so BinaryFormatter should be disabled by default. The Bazel runtimeconfig
+# already sets it to false, which achieves the same effect.
+library_test(
+    name = "System.Runtime.Serialization.Formatters.Disabled.Tests",
+    srcs = [
+        "Disabled/DisableBitTests.cs",
+        "TestConfiguration.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    nowarn = [
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+    ],
+    os_targeted = True,
+    keyfile = OPEN_SNK,
+    size = "medium",
+)

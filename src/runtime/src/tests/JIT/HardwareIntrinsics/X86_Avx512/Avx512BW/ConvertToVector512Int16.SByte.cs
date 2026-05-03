@@ -157,10 +157,19 @@ namespace JIT.HardwareIntrinsics.X86._Avx512BW.handwritten
 
         public void RunReflectionScenario_UnsafeRead()
         {
-            var result = typeof(Avx512BW).GetMethod(nameof(Avx512BW.ConvertToVector512Int16), new Type[] { typeof(Vector256<SByte>) })
-                                     .Invoke(null, new object[] {
-                                        Unsafe.Read<Vector256<SByte>>(_dataTable.inArrayPtr)
-                                     });
+            object result;
+            try
+            {
+                result = typeof(Avx512BW).GetMethod(nameof(Avx512BW.ConvertToVector512Int16), new Type[] { typeof(Vector256<SByte>) })
+                                         .Invoke(null, new object[] {
+                                            Unsafe.Read<Vector256<SByte>>(_dataTable.inArrayPtr)
+                                         });
+            }
+            catch (TargetInvocationException e) when (e.InnerException is PlatformNotSupportedException)
+            {
+                TestLibrary.TestFramework.LogInformation($"{nameof(Avx512BW)}.{nameof(Avx512BW.ConvertToVector512Int16)} reflection invocation is not supported on this runtime.");
+                return;
+            }
 
             Unsafe.Write(_dataTable.outArrayPtr, (Vector512<Int16>)(result));
             ValidateResult(_dataTable.inArrayPtr, _dataTable.outArrayPtr);
@@ -168,10 +177,19 @@ namespace JIT.HardwareIntrinsics.X86._Avx512BW.handwritten
 
         public void RunReflectionScenario_Load()
         {
-            var result = typeof(Avx512BW).GetMethod(nameof(Avx512BW.ConvertToVector512Int16), new Type[] { typeof(Vector256<SByte>) })
-                                     .Invoke(null, new object[] {
-                                        Avx.LoadVector256((SByte*)(_dataTable.inArrayPtr))
-                                     });
+            object result;
+            try
+            {
+                result = typeof(Avx512BW).GetMethod(nameof(Avx512BW.ConvertToVector512Int16), new Type[] { typeof(Vector256<SByte>) })
+                                         .Invoke(null, new object[] {
+                                            Avx.LoadVector256((SByte*)(_dataTable.inArrayPtr))
+                                         });
+            }
+            catch (TargetInvocationException e) when (e.InnerException is PlatformNotSupportedException)
+            {
+                TestLibrary.TestFramework.LogInformation($"{nameof(Avx512BW)}.{nameof(Avx512BW.ConvertToVector512Int16)} reflection invocation is not supported on this runtime.");
+                return;
+            }
 
             Unsafe.Write(_dataTable.outArrayPtr, (Vector512<Int16>)(result));
             ValidateResult(_dataTable.inArrayPtr, _dataTable.outArrayPtr);
@@ -179,10 +197,19 @@ namespace JIT.HardwareIntrinsics.X86._Avx512BW.handwritten
 
         public void RunReflectionScenario_LoadAligned()
         {
-            var result = typeof(Avx512BW).GetMethod(nameof(Avx512BW.ConvertToVector512Int16), new Type[] { typeof(Vector256<SByte>) })
-                                     .Invoke(null, new object[] {
-                                        Avx.LoadAlignedVector256((SByte*)(_dataTable.inArrayPtr))
-                                     });
+            object result;
+            try
+            {
+                result = typeof(Avx512BW).GetMethod(nameof(Avx512BW.ConvertToVector512Int16), new Type[] { typeof(Vector256<SByte>) })
+                                         .Invoke(null, new object[] {
+                                            Avx.LoadAlignedVector256((SByte*)(_dataTable.inArrayPtr))
+                                         });
+            }
+            catch (TargetInvocationException e) when (e.InnerException is PlatformNotSupportedException)
+            {
+                TestLibrary.TestFramework.LogInformation($"{nameof(Avx512BW)}.{nameof(Avx512BW.ConvertToVector512Int16)} reflection invocation is not supported on this runtime.");
+                return;
+            }
 
             Unsafe.Write(_dataTable.outArrayPtr, (Vector512<Int16>)(result));
             ValidateResult(_dataTable.inArrayPtr, _dataTable.outArrayPtr);

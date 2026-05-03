@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "NotSupported_r",
+    srcs = [
+        "Program.NotSupported.cs",
+        "//src/tests/JIT/HardwareIntrinsics/General/Shared:Program.cs",
+    ],
+)
+
+coreclr_test(
+    name = "NotSupported_ro",
+    srcs = [
+        "Program.NotSupported.cs",
+        "//src/tests/JIT/HardwareIntrinsics/General/Shared:Program.cs",
+    ],
+    optimize = True,
+)

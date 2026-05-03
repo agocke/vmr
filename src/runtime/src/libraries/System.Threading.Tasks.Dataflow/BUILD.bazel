@@ -1,0 +1,89 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "MSFT_SNK", "OPEN_SNK")
+
+exports_files([
+    "ref/System.Threading.Tasks.Dataflow.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading.Tasks.Dataflow",
+    srcs = [
+        "ref/System.Threading.Tasks.Dataflow.cs",
+        "ref/System.Threading.Tasks.Dataflow.netstandard21.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Threading.Tasks.Dataflow",
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    # MSBuild passes /doc but uses hand-written XML doc includes that reference
+    # external XmlDocs/*.xml files. Bazel sandboxing prevents the compiler from
+    # finding those files, so doc generation is disabled.
+    generate_documentation_file = False,
+    srcs = [
+        "src/Base/DataflowBlock.cs",
+        "src/Base/DataflowBlock.netstandard21.cs",
+        "src/Base/DataflowBlockOptions.cs",
+        "src/Base/DataflowLinkOptions.cs",
+        "src/Base/DataflowMessageHeader.cs",
+        "src/Base/DataflowMessageStatus.cs",
+        "src/Base/IDataflowBlock.cs",
+        "src/Base/IPropagatorBlock.cs",
+        "src/Base/IReceivableSourceBlock.cs",
+        "src/Base/ISourceBlock.cs",
+        "src/Base/ITargetBlock.cs",
+        "src/Blocks/ActionBlock.cs",
+        "src/Blocks/BatchBlock.cs",
+        "src/Blocks/BatchedJoinBlock.cs",
+        "src/Blocks/BroadcastBlock.cs",
+        "src/Blocks/BufferBlock.cs",
+        "src/Blocks/JoinBlock.cs",
+        "src/Blocks/TransformBlock.cs",
+        "src/Blocks/TransformManyBlock.cs",
+        "src/Blocks/TransformManyBlock.netstandard21.cs",
+        "src/Blocks/WriteOnceBlock.cs",
+        "src/Internal/ActionOnDispose.cs",
+        "src/Internal/Common.cs",
+        "src/Internal/DataflowEtwProvider.cs",
+        "src/Internal/EnumerableDebugView.cs",
+        "src/Internal/IDebuggerDisplay.cs",
+        "src/Internal/ImmutableArray.cs",
+        "src/Internal/Padding.cs",
+        "src/Internal/QueuedMap.cs",
+        "src/Internal/ReorderingBuffer.cs",
+        "src/Internal/SourceCore.cs",
+        "src/Internal/SpscTargetCore.cs",
+        "src/Internal/TargetCore.cs",
+        "src/Internal/TargetRegistry.cs",
+
+        "//src/libraries/Common:src/Internal/Padding.cs",
+        "//src/libraries/Common:src/System/Collections/Concurrent/IProducerConsumerQueue.cs",
+        "//src/libraries/Common:src/System/Collections/Concurrent/MultiProducerMultiConsumerQueue.cs",
+        "//src/libraries/Common:src/System/Collections/Concurrent/SingleProducerSingleConsumerQueue.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    keyfile = MSFT_SNK,
+    library_import_generator = False,
+    assembly_description = "TPL Dataflow promotes actor/agent-oriented designs through primitives for in-process message passing, dataflow, and pipelining. TDF builds upon the APIs and scheduling infrastructure provided by the Task Parallel Library (TPL), and integrates with the language support for asynchrony provided by C#, Visual Basic, and F#.\n\nCommonly Used Types:\nSystem.Threading.Tasks.Dataflow.ActionBlock<TInput>\nSystem.Threading.Tasks.Dataflow.BatchBlock<T>\nSystem.Threading.Tasks.Dataflow.BatchedJoinBlock<T1, T2>\nSystem.Threading.Tasks.Dataflow.BatchedJoinBlock<T1, T2, T3>\nSystem.Threading.Tasks.Dataflow.BroadcastBlock<T>\nSystem.Threading.Tasks.Dataflow.BufferBlock<T>\nSystem.Threading.Tasks.Dataflow.DataflowBlock\nSystem.Threading.Tasks.Dataflow.JoinBlock<T1, T2>\nSystem.Threading.Tasks.Dataflow.JoinBlock<T1, T2, T3>\nSystem.Threading.Tasks.Dataflow.TransformBlock<TInput, TOutput>\nSystem.Threading.Tasks.Dataflow.TransformManyBlock<TInput, TOutput>\nSystem.Threading.Tasks.Dataflow.WriteOnceBlock<T>",
+)
+
+ref_impl_pair(
+    name = "live_System.Threading.Tasks.Dataflow",
+    ref = ":ref_System.Threading.Tasks.Dataflow",
+    lib = ":impl_System.Threading.Tasks.Dataflow",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,57 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Diagnostics.cs",
+    "src/Metrics/Configuration/MetricsConfigureOptions.cs",
+    "src/Metrics/DebugConsoleMetricListener.cs",
+    "src/Metrics/ListenerSubscription.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Diagnostics",
+    srcs = [
+        "ref/Microsoft.Extensions.Diagnostics.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:ref_Microsoft.Extensions.Diagnostics.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Diagnostics",
+    include_runtime_async = False,
+    event_source_generator = False,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/System/Diagnostics/DiagnosticsHelper.cs",
+    ],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:ref_Microsoft.Extensions.Diagnostics.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/Microsoft.Extensions.Options.ConfigurationExtensions:ref_Microsoft.Extensions.Options.ConfigurationExtensions",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Console:ref_System.Console",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Diagnostics",
+    ref = ":ref_Microsoft.Extensions.Diagnostics",
+    lib = ":impl_Microsoft.Extensions.Diagnostics",
+    visibility = ["//visibility:public"],
+)

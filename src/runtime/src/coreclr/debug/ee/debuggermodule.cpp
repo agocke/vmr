@@ -166,7 +166,9 @@ DebuggerModule *DebuggerModuleTable::GetModule(Module* module)
     CONTRACTL_END;
 
     _ASSERTE(module != NULL);
+#ifndef DACCESS_COMPILE
     _ASSERTE(ThreadHoldsLock());
+#endif
 
     DebuggerModuleEntry *entry
       = (DebuggerModuleEntry *) Find(HASH(module), KEY(module));
@@ -185,7 +187,9 @@ DebuggerModule *DebuggerModuleTable::GetFirstModule(HASHFIND *info)
     }
     CONTRACTL_END;
 
+#ifndef DACCESS_COMPILE
     _ASSERTE(ThreadHoldsLock());
+#endif
 
     DebuggerModuleEntry *entry = (DebuggerModuleEntry *) FindFirstEntry(info);
     if (entry == NULL)
@@ -203,7 +207,9 @@ DebuggerModule *DebuggerModuleTable::GetNextModule(HASHFIND *info)
     }
     CONTRACTL_END;
 
+#ifndef DACCESS_COMPILE
     _ASSERTE(ThreadHoldsLock());
+#endif
 
     DebuggerModuleEntry *entry = (DebuggerModuleEntry *) FindNextEntry(info);
     if (entry == NULL)

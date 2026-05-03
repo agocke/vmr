@@ -1,0 +1,6296 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "coreclr_merged_test")
+
+coreclr_test(
+    name = "FPAddConst_r",
+    srcs = ["FPAddConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ne1_do",
+    srcs = ["Ne1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UModConst_do",
+    srcs = ["UModConst.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ArrayExc_r",
+    srcs = ["ArrayExc.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "NotAndNeg_r",
+    srcs = ["NotAndNeg.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeInt1_d",
+    srcs = ["JTrueNeInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5001_do",
+    srcs = ["LocallocCnstB5001.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayJagged_do",
+    srcs = ["ArrayJagged.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array3_ro",
+    srcs = ["Array3.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5_PSP_ro",
+    srcs = ["LocallocCnstB5_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeFP_d",
+    srcs = ["JTrueLeFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ge1_ro",
+    srcs = ["Ge1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CnsLng1_do",
+    srcs = ["CnsLng1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvI2F_r",
+    srcs = ["FPConvI2F.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblSubConst_d",
+    srcs = ["DblSubConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructInstMethod_ro",
+    srcs = ["StructInstMethod.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2I_ro",
+    srcs = ["FPConvF2I.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMath_do",
+    srcs = ["FPMath.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtFP_ro",
+    srcs = ["JTrueGtFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAdd_do",
+    srcs = ["DblAdd.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LongArgsAndReturn_ro",
+    srcs = ["LongArgsAndReturn.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDivConst_do",
+    srcs = ["DblDivConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAddConst_ro",
+    srcs = ["FPAddConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "div2_d",
+    srcs = ["div2.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "DblArea_d",
+    srcs = ["DblArea.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtFP_do",
+    srcs = ["JTrueLtFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Xor1_d",
+    srcs = ["Xor1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "div1_r",
+    srcs = ["div1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "div1_d",
+    srcs = ["div1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqFP_r",
+    srcs = ["JTrueEqFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAdd_ro",
+    srcs = ["FPAdd.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvDbl2Lng_r",
+    srcs = ["FPConvDbl2Lng.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NegRMW_r",
+    srcs = ["NegRMW.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSmall_d",
+    srcs = ["FPSmall.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InstanceCalls_r",
+    srcs = ["InstanceCalls.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDivConst_r",
+    srcs = ["DblDivConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5001_r",
+    srcs = ["LocallocCnstB5001.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NotAndNeg_do",
+    srcs = ["NotAndNeg.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul2_r",
+    srcs = ["mul2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeDbl_do",
+    srcs = ["JTrueLeDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocB_N_r",
+    srcs = ["LocallocB_N.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtFP_r",
+    srcs = ["JTrueGtFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CnsLng1_ro",
+    srcs = ["CnsLng1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqDbl_d",
+    srcs = ["JTrueEqDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeFP_d",
+    srcs = ["JTrueNeFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Unbox_d",
+    srcs = ["Unbox.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructReturn_d",
+    srcs = ["StructReturn.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Gcd_ro",
+    srcs = ["Gcd.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array3_r",
+    srcs = ["Array3.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2I_d",
+    srcs = ["FPConvF2I.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblSubConst_r",
+    srcs = ["DblSubConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CnsBool_r",
+    srcs = ["CnsBool.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblCall2_r",
+    srcs = ["DblCall2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array1_r",
+    srcs = ["Array1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDist_do",
+    srcs = ["DblDist.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDist_r",
+    srcs = ["FPDist.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Switch_r",
+    srcs = ["Switch.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Unbox_ro",
+    srcs = ["Unbox.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "SubRef_r",
+    srcs = ["SubRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeFP_ro",
+    srcs = ["JTrueNeFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul3_ro",
+    srcs = ["mul3.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "IntArraySum_d",
+    srcs = ["IntArraySum.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array1_do",
+    srcs = ["Array1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ObjAlloc_d",
+    srcs = ["ObjAlloc.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSubConst_do",
+    srcs = ["FPSubConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblSub_r",
+    srcs = ["DblSub.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB117_PSP_d",
+    srcs = ["LocallocCnstB117_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB1_ro",
+    srcs = ["LocallocCnstB1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2Lng_r",
+    srcs = ["FPConvF2Lng.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Add1_d",
+    srcs = ["Add1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSub_d",
+    srcs = ["FPSub.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeFP_ro",
+    srcs = ["JTrueGeFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NestedCall_d",
+    srcs = ["NestedCall.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DivConst_d",
+    srcs = ["DivConst.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "Unbox_do",
+    srcs = ["Unbox.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "rem1_d",
+    srcs = ["rem1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblCall2_d",
+    srcs = ["DblCall2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocLarge_do",
+    srcs = ["LocallocLarge.cs"],
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = ["//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+)
+
+coreclr_test(
+    name = "JTrueLtFP_r",
+    srcs = ["JTrueLtFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblFillArray_do",
+    srcs = ["DblFillArray.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array4_r",
+    srcs = ["Array4.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LngConv_r",
+    srcs = ["LngConv.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Jmp1_r",
+    srcs = ["Jmp1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocLarge_d",
+    srcs = ["LocallocLarge.cs"],
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    deps = ["//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+)
+
+coreclr_test(
+    name = "Call1_do",
+    srcs = ["Call1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPArea_ro",
+    srcs = ["FPArea.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NegRMW_do",
+    srcs = ["NegRMW.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Add1_r",
+    srcs = ["Add1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Lt1_d",
+    srcs = ["Lt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UDivConst_ro",
+    srcs = ["UDivConst.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "NotAndNeg_d",
+    srcs = ["NotAndNeg.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UDivConst_do",
+    srcs = ["UDivConst.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Sub1_d",
+    srcs = ["Sub1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocB_N_PSP_r",
+    srcs = ["LocallocB_N_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ModConst_do",
+    srcs = ["ModConst.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "LocallocCnstB5001_PSP_d",
+    srcs = ["LocallocCnstB5001_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDist_r",
+    srcs = ["DblDist.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InitObj_r",
+    srcs = ["InitObj.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UDivConst_r",
+    srcs = ["UDivConst.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5_PSP_do",
+    srcs = ["LocallocCnstB5_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB1_PSP_do",
+    srcs = ["LocallocCnstB1_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Lt1_ro",
+    srcs = ["Lt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPArea_r",
+    srcs = ["FPArea.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ge1_do",
+    srcs = ["Ge1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayObj_do",
+    srcs = ["ArrayObj.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtInt1_r",
+    srcs = ["JTrueLtInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAvg2_ro",
+    srcs = ["FPAvg2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Lt1_r",
+    srcs = ["Lt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "XorRef_do",
+    srcs = ["XorRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblRem_ro",
+    srcs = ["DblRem.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeDbl_d",
+    srcs = ["JTrueGeDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPCall1_ro",
+    srcs = ["FPCall1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "And1_d",
+    srcs = ["And1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblNeg_ro",
+    srcs = ["DblNeg.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructFldAddr_r",
+    srcs = ["StructFldAddr.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgAnd1_r",
+    srcs = ["AsgAnd1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDivConst_d",
+    srcs = ["FPDivConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Swap_do",
+    srcs = ["Swap.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSubConst_d",
+    srcs = ["FPSubConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "divref_r",
+    srcs = ["divref.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblFillArray_r",
+    srcs = ["DblFillArray.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "div2_ro",
+    srcs = ["div2.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ArrayMD1_ro",
+    srcs = ["ArrayMD1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPError_do",
+    srcs = ["FPError.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMul_d",
+    srcs = ["FPMul.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblSub_do",
+    srcs = ["DblSub.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPRoots_do",
+    srcs = ["FPRoots.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeDbl_do",
+    srcs = ["JTrueGeDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblVar_r",
+    srcs = ["DblVar.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPArray_ro",
+    srcs = ["FPArray.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RecursiveTailCall_r",
+    srcs = ["RecursiveTailCall.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "div2_do",
+    srcs = ["div2.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "FPAvg6_ro",
+    srcs = ["FPAvg6.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Lt1_do",
+    srcs = ["Lt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeInt1_ro",
+    srcs = ["JTrueNeInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5_PSP_d",
+    srcs = ["LocallocCnstB5_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblFillArray_ro",
+    srcs = ["DblFillArray.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AndRef_ro",
+    srcs = ["AndRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB117_PSP_r",
+    srcs = ["LocallocCnstB117_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Le1_ro",
+    srcs = ["Le1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "IntConv_do",
+    srcs = ["IntConv.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array2_d",
+    srcs = ["Array2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticValueField_ro",
+    srcs = ["StaticValueField.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Localloc_d",
+    srcs = ["Localloc.cs"],
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "LeftShift_do",
+    srcs = ["LeftShift.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Gcd_d",
+    srcs = ["Gcd.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "And1_ro",
+    srcs = ["And1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "And1_r",
+    srcs = ["And1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "IntArraySum_ro",
+    srcs = ["IntArraySum.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Args4_ro",
+    srcs = ["Args4.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FiboRec_ro",
+    srcs = ["FiboRec.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocB_N_ro",
+    srcs = ["LocallocB_N.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAvg2_ro",
+    srcs = ["DblAvg2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ne1_d",
+    srcs = ["Ne1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FactorialRec_do",
+    srcs = ["FactorialRec.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array2_ro",
+    srcs = ["Array2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAvg6_r",
+    srcs = ["FPAvg6.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPCall2_d",
+    srcs = ["FPCall2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UDivConst_d",
+    srcs = ["UDivConst.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "struct16args_d",
+    srcs = ["struct16args.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtFP_d",
+    srcs = ["JTrueGtFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMul_do",
+    srcs = ["FPMul.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeDbl_ro",
+    srcs = ["JTrueNeDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblArea_do",
+    srcs = ["DblArea.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDivConst_r",
+    srcs = ["FPDivConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Rotate_r",
+    srcs = ["Rotate.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPCall2_ro",
+    srcs = ["FPCall2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB117_PSP_ro",
+    srcs = ["LocallocCnstB117_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqInt1_do",
+    srcs = ["JTrueEqInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Jmp1_d",
+    srcs = ["Jmp1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblCall2_do",
+    srcs = ["DblCall2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAddConst_r",
+    srcs = ["DblAddConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayObj_ro",
+    srcs = ["ArrayObj.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticCalls_d",
+    srcs = ["StaticCalls.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblVar_d",
+    srcs = ["DblVar.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgAnd1_ro",
+    srcs = ["AsgAnd1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtInt1_ro",
+    srcs = ["JTrueGtInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Le1_do",
+    srcs = ["Le1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeDbl_r",
+    srcs = ["JTrueNeDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqDbl_ro",
+    srcs = ["JTrueEqDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "SubRef_d",
+    srcs = ["SubRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPArea_do",
+    srcs = ["FPArea.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblNeg_do",
+    srcs = ["DblNeg.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Gt1_ro",
+    srcs = ["Gt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ind1_r",
+    srcs = ["Ind1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Call1_ro",
+    srcs = ["Call1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "div2_r",
+    srcs = ["div2.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "Sub1_do",
+    srcs = ["Sub1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeFP_d",
+    srcs = ["JTrueGeFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Add1_do",
+    srcs = ["Add1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAdd_r",
+    srcs = ["FPAdd.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeFP_do",
+    srcs = ["JTrueNeFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Call1_r",
+    srcs = ["Call1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LeftShift_d",
+    srcs = ["LeftShift.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "div1_do",
+    srcs = ["div1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Localloc_ro",
+    srcs = ["Localloc.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "DblAdd_ro",
+    srcs = ["DblAdd.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAvg6_d",
+    srcs = ["DblAvg6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AndRef_d",
+    srcs = ["AndRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDist_d",
+    srcs = ["FPDist.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB117_ro",
+    srcs = ["LocallocCnstB117.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ne1_r",
+    srcs = ["Ne1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblArray_do",
+    srcs = ["DblArray.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblMulConst_d",
+    srcs = ["DblMulConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblRoots_do",
+    srcs = ["DblRoots.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ind1_ro",
+    srcs = ["Ind1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Or1_d",
+    srcs = ["Or1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrue1_r",
+    srcs = ["JTrue1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDivConst_do",
+    srcs = ["FPDivConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtFP_d",
+    srcs = ["JTrueLtFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "OpMembersOfStructLocal_do",
+    srcs = ["OpMembersOfStructLocal.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayMD2_r",
+    srcs = ["ArrayMD2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array1_ro",
+    srcs = ["Array1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Gt1_r",
+    srcs = ["Gt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblRoots_d",
+    srcs = ["DblRoots.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblMul_do",
+    srcs = ["DblMul.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "BinaryRMW_d",
+    srcs = ["BinaryRMW.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Shift_ro",
+    srcs = ["Shift.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPRem_ro",
+    srcs = ["FPRem.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPRem_r",
+    srcs = ["FPRem.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticValueField_do",
+    srcs = ["StaticValueField.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "BinaryRMW_ro",
+    srcs = ["BinaryRMW.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDist_ro",
+    srcs = ["FPDist.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocB_N_PSP_ro",
+    srcs = ["LocallocB_N_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAvg2_d",
+    srcs = ["FPAvg2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FactorialRec_r",
+    srcs = ["FactorialRec.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAvg2_r",
+    srcs = ["DblAvg2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticValueField_r",
+    srcs = ["StaticValueField.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ind1_do",
+    srcs = ["Ind1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblFillArray_d",
+    srcs = ["DblFillArray.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqDbl_r",
+    srcs = ["JTrueEqDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtDbl_do",
+    srcs = ["JTrueLtDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayMD2_ro",
+    srcs = ["ArrayMD2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Eq1_do",
+    srcs = ["Eq1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LongArgsAndReturn_d",
+    srcs = ["LongArgsAndReturn.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDiv_r",
+    srcs = ["FPDiv.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayMD1_d",
+    srcs = ["ArrayMD1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAvg2_r",
+    srcs = ["FPAvg2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2F_d",
+    srcs = ["FPConvF2F.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocB_N_d",
+    srcs = ["LocallocB_N.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocB_N_PSP_d",
+    srcs = ["LocallocB_N_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NotRMW_d",
+    srcs = ["NotRMW.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Args4_do",
+    srcs = ["Args4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LngConv_ro",
+    srcs = ["LngConv.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2F_do",
+    srcs = ["FPConvF2F.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Gt1_do",
+    srcs = ["Gt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPNeg_d",
+    srcs = ["FPNeg.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Xor1_ro",
+    srcs = ["Xor1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblMul_d",
+    srcs = ["DblMul.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgXor1_d",
+    srcs = ["AsgXor1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblSubConst_do",
+    srcs = ["DblSubConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeInt1_ro",
+    srcs = ["JTrueLeInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5001_PSP_ro",
+    srcs = ["LocallocCnstB5001_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAddConst_do",
+    srcs = ["FPAddConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPRem_d",
+    srcs = ["FPRem.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CastThenBinop",
+    srcs = ["CastThenBinop.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "NegRMW_d",
+    srcs = ["NegRMW.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAvg2_d",
+    srcs = ["DblAvg2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB117_d",
+    srcs = ["LocallocCnstB117.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InitObj_d",
+    srcs = ["InitObj.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblCall2_ro",
+    srcs = ["DblCall2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB1_PSP_d",
+    srcs = ["LocallocCnstB1_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Rotate_d",
+    srcs = ["Rotate.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblSub_ro",
+    srcs = ["DblSub.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul3_d",
+    srcs = ["mul3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Or1_ro",
+    srcs = ["Or1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FactorialRec_ro",
+    srcs = ["FactorialRec.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array3_do",
+    srcs = ["Array3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NestedCall_r",
+    srcs = ["NestedCall.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDist_do",
+    srcs = ["FPDist.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPCall2_do",
+    srcs = ["FPCall2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Xor1_do",
+    srcs = ["Xor1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblRem_d",
+    srcs = ["DblRem.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Args5_ro",
+    srcs = ["Args5.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPRoots_r",
+    srcs = ["FPRoots.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Gcd_do",
+    srcs = ["Gcd.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5001_PSP_r",
+    srcs = ["LocallocCnstB5001_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeInt1_r",
+    srcs = ["JTrueNeInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RightShiftRef_do",
+    srcs = ["RightShiftRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB117_PSP_do",
+    srcs = ["LocallocCnstB117_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtInt1_r",
+    srcs = ["JTrueGtInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticCalls_r",
+    srcs = ["StaticCalls.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeInt1_do",
+    srcs = ["JTrueNeInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Unbox_r",
+    srcs = ["Unbox.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "XorRef_d",
+    srcs = ["XorRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeDbl_d",
+    srcs = ["JTrueLeDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPNeg_r",
+    srcs = ["FPNeg.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeDbl_r",
+    srcs = ["JTrueLeDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Sub1_r",
+    srcs = ["Sub1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayMD1_do",
+    srcs = ["ArrayMD1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvI2F_d",
+    srcs = ["FPConvI2F.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMulConst_ro",
+    srcs = ["FPMulConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UModConst_r",
+    srcs = ["UModConst.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "Eq1_ro",
+    srcs = ["Eq1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgAnd1_d",
+    srcs = ["AsgAnd1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSubConst_r",
+    srcs = ["FPSubConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPFillArray_r",
+    srcs = ["FPFillArray.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5_ro",
+    srcs = ["LocallocCnstB5.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Jmp1_do",
+    srcs = ["Jmp1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPVar_r",
+    srcs = ["FPVar.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul1_d",
+    srcs = ["mul1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DivConst_do",
+    srcs = ["DivConst.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "FPAvg2_do",
+    srcs = ["FPAvg2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CnsBool_d",
+    srcs = ["CnsBool.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Switch_do",
+    srcs = ["Switch.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayExc_d",
+    srcs = ["ArrayExc.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "ArrayObj_d",
+    srcs = ["ArrayObj.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ModConst_ro",
+    srcs = ["ModConst.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "JTrueNeDbl_do",
+    srcs = ["JTrueNeDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtFP_ro",
+    srcs = ["JTrueLtFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPNeg_ro",
+    srcs = ["FPNeg.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RecursiveTailCall_do",
+    srcs = ["RecursiveTailCall.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqInt1_d",
+    srcs = ["JTrueEqInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtDbl_d",
+    srcs = ["JTrueGtDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblArea_ro",
+    srcs = ["DblArea.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ge1_d",
+    srcs = ["Ge1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAdd_d",
+    srcs = ["FPAdd.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NegRMW_ro",
+    srcs = ["NegRMW.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgAdd1_r",
+    srcs = ["AsgAdd1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul2_ro",
+    srcs = ["mul2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DivConst_r",
+    srcs = ["DivConst.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "DblDivConst_ro",
+    srcs = ["DblDivConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct16args_do",
+    srcs = ["struct16args.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAvg6_ro",
+    srcs = ["DblAvg6.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtDbl_d",
+    srcs = ["JTrueLtDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB32_Loop_r",
+    srcs = ["LocallocCnstB32_Loop.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructFldAddr_d",
+    srcs = ["StructFldAddr.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array4_do",
+    srcs = ["Array4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayMD2_do",
+    srcs = ["ArrayMD2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPFillArray_ro",
+    srcs = ["FPFillArray.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrue1_d",
+    srcs = ["JTrue1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct16args_ro",
+    srcs = ["struct16args.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgOr1_do",
+    srcs = ["AsgOr1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Shift_d",
+    srcs = ["Shift.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ModConst_d",
+    srcs = ["ModConst.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "FPError_d",
+    srcs = ["FPError.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Shift_r",
+    srcs = ["Shift.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeInt1_do",
+    srcs = ["JTrueLeInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtDbl_r",
+    srcs = ["JTrueGtDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "OpMembersOfStructLocal_d",
+    srcs = ["OpMembersOfStructLocal.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FactorialRec_d",
+    srcs = ["FactorialRec.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSub_do",
+    srcs = ["FPSub.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RightShiftRef_d",
+    srcs = ["RightShiftRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPNeg_do",
+    srcs = ["FPNeg.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocB_N_do",
+    srcs = ["LocallocB_N.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblMulConst_ro",
+    srcs = ["DblMulConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMath_ro",
+    srcs = ["FPMath.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RecursiveTailCall_ro",
+    srcs = ["RecursiveTailCall.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructReturn_r",
+    srcs = ["StructReturn.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblArray_r",
+    srcs = ["DblArray.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Call1_d",
+    srcs = ["Call1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AndRef_r",
+    srcs = ["AndRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ModConst_r",
+    srcs = ["ModConst.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "DblAvg2_do",
+    srcs = ["DblAvg2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "OrRef_ro",
+    srcs = ["OrRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAvg6_do",
+    srcs = ["DblAvg6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB32_Loop_d",
+    srcs = ["LocallocCnstB32_Loop.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtInt1_do",
+    srcs = ["JTrueLtInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAddConst_do",
+    srcs = ["DblAddConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "addref_d",
+    srcs = ["addref.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgXor1_do",
+    srcs = ["AsgXor1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB32_Loop_ro",
+    srcs = ["LocallocCnstB32_Loop.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAdd_do",
+    srcs = ["FPAdd.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NotRMW_r",
+    srcs = ["NotRMW.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "divref_ro",
+    srcs = ["divref.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDiv_d",
+    srcs = ["FPDiv.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMath_r",
+    srcs = ["FPMath.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "IntConv_d",
+    srcs = ["IntConv.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "addref_ro",
+    srcs = ["addref.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AndRef_do",
+    srcs = ["AndRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblMul_r",
+    srcs = ["DblMul.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FibLoop_ro",
+    srcs = ["FibLoop.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RightShiftRef_ro",
+    srcs = ["RightShiftRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMath_d",
+    srcs = ["FPMath.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LeftShift_r",
+    srcs = ["LeftShift.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblNeg_r",
+    srcs = ["DblNeg.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "rem1_r",
+    srcs = ["rem1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAvg6_do",
+    srcs = ["FPAvg6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructFldAddr_do",
+    srcs = ["StructFldAddr.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CnsBool_do",
+    srcs = ["CnsBool.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array2_do",
+    srcs = ["Array2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "OpMembersOfStructLocal_ro",
+    srcs = ["OpMembersOfStructLocal.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Localloc_r",
+    srcs = ["Localloc.cs"],
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "JTrueLeInt1_d",
+    srcs = ["JTrueLeInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDiv_do",
+    srcs = ["FPDiv.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeFP_ro",
+    srcs = ["JTrueLeFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "rem1_do",
+    srcs = ["rem1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB1_PSP_ro",
+    srcs = ["LocallocCnstB1_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayJagged_ro",
+    srcs = ["ArrayJagged.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSubConst_ro",
+    srcs = ["FPSubConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgSub1_r",
+    srcs = ["AsgSub1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPError_ro",
+    srcs = ["FPError.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqInt1_r",
+    srcs = ["JTrueEqInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblMul_ro",
+    srcs = ["DblMul.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPFillArray_do",
+    srcs = ["FPFillArray.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB32_Loop_do",
+    srcs = ["LocallocCnstB32_Loop.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgOr1_r",
+    srcs = ["AsgOr1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct16args_r",
+    srcs = ["struct16args.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Args4_r",
+    srcs = ["Args4.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FibLoop_do",
+    srcs = ["FibLoop.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InstanceCalls_ro",
+    srcs = ["InstanceCalls.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgAdd1_ro",
+    srcs = ["AsgAdd1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeDbl_ro",
+    srcs = ["JTrueGeDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayObj_r",
+    srcs = ["ArrayObj.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMul_ro",
+    srcs = ["FPMul.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvDbl2Lng_d",
+    srcs = ["FPConvDbl2Lng.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NotRMW_do",
+    srcs = ["NotRMW.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPVar_d",
+    srcs = ["FPVar.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAvg6_r",
+    srcs = ["DblAvg6.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgOr1_ro",
+    srcs = ["AsgOr1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtDbl_ro",
+    srcs = ["JTrueGtDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDiv_ro",
+    srcs = ["FPDiv.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2Lng_do",
+    srcs = ["FPConvF2Lng.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2I_do",
+    srcs = ["FPConvF2I.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LeftShift_ro",
+    srcs = ["LeftShift.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Args5_do",
+    srcs = ["Args5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul4_ro",
+    srcs = ["mul4.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblArray_d",
+    srcs = ["DblArray.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPRem_do",
+    srcs = ["FPRem.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ge1_r",
+    srcs = ["Ge1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPCall2_r",
+    srcs = ["FPCall2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgSub1_ro",
+    srcs = ["AsgSub1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Rotate_ro",
+    srcs = ["Rotate.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2F_r",
+    srcs = ["FPConvF2F.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ObjAlloc_do",
+    srcs = ["ObjAlloc.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul4_r",
+    srcs = ["mul4.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblMulConst_r",
+    srcs = ["DblMulConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "divref_d",
+    srcs = ["divref.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Xor1_r",
+    srcs = ["Xor1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB1_d",
+    srcs = ["LocallocCnstB1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqFP_do",
+    srcs = ["JTrueEqFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Or1_do",
+    srcs = ["Or1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeInt1_do",
+    srcs = ["JTrueGeInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvDbl2Lng_ro",
+    srcs = ["FPConvDbl2Lng.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2I_r",
+    srcs = ["FPConvF2I.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array4_d",
+    srcs = ["Array4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5001_PSP_do",
+    srcs = ["LocallocCnstB5001_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5_r",
+    srcs = ["LocallocCnstB5.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "And1_do",
+    srcs = ["And1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblVar_ro",
+    srcs = ["DblVar.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPVar_do",
+    srcs = ["FPVar.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgAnd1_do",
+    srcs = ["AsgAnd1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "IntConv_ro",
+    srcs = ["IntConv.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructInstMethod_d",
+    srcs = ["StructInstMethod.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructInstMethod_r",
+    srcs = ["StructInstMethod.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "OpMembersOfStructLocal_r",
+    srcs = ["OpMembersOfStructLocal.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NestedCall_do",
+    srcs = ["NestedCall.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5001_ro",
+    srcs = ["LocallocCnstB5001.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructInstMethod_do",
+    srcs = ["StructInstMethod.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructFldAddr_ro",
+    srcs = ["StructFldAddr.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InitObj_do",
+    srcs = ["InitObj.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPRoots_d",
+    srcs = ["FPRoots.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeInt1_ro",
+    srcs = ["JTrueGeInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ne1_ro",
+    srcs = ["Ne1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Switch_d",
+    srcs = ["Switch.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqFP_ro",
+    srcs = ["JTrueEqFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Or1_r",
+    srcs = ["Or1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Jmp1_ro",
+    srcs = ["Jmp1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblArea_r",
+    srcs = ["DblArea.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayJagged_d",
+    srcs = ["ArrayJagged.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UModConst_d",
+    srcs = ["UModConst.cs"],
+    debug_type = "full",
+    optimize = False,
+)
+
+coreclr_test(
+    name = "DblCall1_ro",
+    srcs = ["DblCall1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Gt1_d",
+    srcs = ["Gt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAddConst_d",
+    srcs = ["DblAddConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Rotate_do",
+    srcs = ["Rotate.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul4_d",
+    srcs = ["mul4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeDbl_d",
+    srcs = ["JTrueNeDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeFP_do",
+    srcs = ["JTrueGeFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAddConst_ro",
+    srcs = ["DblAddConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Add1_ro",
+    srcs = ["Add1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Eq1_d",
+    srcs = ["Eq1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPCall1_do",
+    srcs = ["FPCall1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Shift_do",
+    srcs = ["Shift.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "XorRef_r",
+    srcs = ["XorRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblVar_do",
+    srcs = ["DblVar.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Le1_d",
+    srcs = ["Le1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPArea_d",
+    srcs = ["FPArea.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2Lng_ro",
+    srcs = ["FPConvF2Lng.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul3_do",
+    srcs = ["mul3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgXor1_ro",
+    srcs = ["AsgXor1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDist_ro",
+    srcs = ["DblDist.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeInt1_r",
+    srcs = ["JTrueGeInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul4_do",
+    srcs = ["mul4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "OrRef_r",
+    srcs = ["OrRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul1_ro",
+    srcs = ["mul1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FiboRec_do",
+    srcs = ["FiboRec.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAvg6_d",
+    srcs = ["FPAvg6.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "SubRef_do",
+    srcs = ["SubRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DivConst_ro",
+    srcs = ["DivConst.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "StaticValueField_d",
+    srcs = ["StaticValueField.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeFP_r",
+    srcs = ["JTrueLeFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RecursiveTailCall_d",
+    srcs = ["RecursiveTailCall.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblCall1_do",
+    srcs = ["DblCall1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "rem1_ro",
+    srcs = ["rem1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Sub1_ro",
+    srcs = ["Sub1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Swap_ro",
+    srcs = ["Swap.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocLarge_ro",
+    srcs = ["LocallocLarge.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = ["//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+)
+
+coreclr_test(
+    name = "AsgSub1_d",
+    srcs = ["AsgSub1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "BinaryRMW_r",
+    srcs = ["BinaryRMW.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDiv_ro",
+    srcs = ["DblDiv.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvDbl2Lng_do",
+    srcs = ["FPConvDbl2Lng.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InstanceCalls_d",
+    srcs = ["InstanceCalls.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructReturn_do",
+    srcs = ["StructReturn.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAdd_d",
+    srcs = ["DblAdd.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "divref_do",
+    srcs = ["divref.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPAddConst_d",
+    srcs = ["FPAddConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeDbl_ro",
+    srcs = ["JTrueLeDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgAdd1_do",
+    srcs = ["AsgAdd1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDiv_do",
+    srcs = ["DblDiv.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InitObj_ro",
+    srcs = ["InitObj.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtInt1_d",
+    srcs = ["JTrueLtInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqFP_d",
+    srcs = ["JTrueEqFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StructReturn_ro",
+    srcs = ["StructReturn.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "SubRef_ro",
+    srcs = ["SubRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblRem_do",
+    srcs = ["DblRem.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul3_r",
+    srcs = ["mul3.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LongArgsAndReturn_r",
+    srcs = ["LongArgsAndReturn.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayExc_do",
+    srcs = ["ArrayExc.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "LocallocCnstB1_do",
+    srcs = ["LocallocCnstB1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Ind1_d",
+    srcs = ["Ind1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Localloc_do",
+    srcs = ["Localloc.cs"],
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "LocallocCnstB1_PSP_r",
+    srcs = ["LocallocCnstB1_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "addref_do",
+    srcs = ["addref.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul2_d",
+    srcs = ["mul2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeInt1_d",
+    srcs = ["JTrueGeInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocLarge_r",
+    srcs = ["LocallocLarge.cs"],
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    deps = ["//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+)
+
+coreclr_test(
+    name = "DblDiv_d",
+    srcs = ["DblDiv.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayMD2_d",
+    srcs = ["ArrayMD2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "div1_ro",
+    srcs = ["div1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CnsLng1_r",
+    srcs = ["CnsLng1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblCall1_r",
+    srcs = ["DblCall1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeDbl_r",
+    srcs = ["JTrueGeDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NotAndNeg_ro",
+    srcs = ["NotAndNeg.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgAdd1_d",
+    srcs = ["AsgAdd1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CnsLng1_d",
+    srcs = ["CnsLng1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "XorRef_ro",
+    srcs = ["XorRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Switch_ro",
+    srcs = ["Switch.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblAdd_r",
+    srcs = ["DblAdd.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPArray_do",
+    srcs = ["FPArray.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDiv_r",
+    srcs = ["DblDiv.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMulConst_d",
+    srcs = ["FPMulConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDist_d",
+    srcs = ["DblDist.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPVar_ro",
+    srcs = ["FPVar.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocB_N_PSP_do",
+    srcs = ["LocallocB_N_PSP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NestedCall_ro",
+    srcs = ["NestedCall.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array2_r",
+    srcs = ["Array2.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FiboRec_r",
+    srcs = ["FiboRec.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrue1_ro",
+    srcs = ["JTrue1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "addref_r",
+    srcs = ["addref.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPDivConst_ro",
+    srcs = ["FPDivConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblSub_d",
+    srcs = ["DblSub.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Args5_d",
+    srcs = ["Args5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Swap_d",
+    srcs = ["Swap.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Eq1_r",
+    srcs = ["Eq1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGeFP_r",
+    srcs = ["JTrueGeFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMul_r",
+    srcs = ["FPMul.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtInt1_ro",
+    srcs = ["JTrueLtInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ObjAlloc_ro",
+    srcs = ["ObjAlloc.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblRem_r",
+    srcs = ["DblRem.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB117_r",
+    srcs = ["LocallocCnstB117.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPFillArray_d",
+    srcs = ["FPFillArray.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueNeFP_r",
+    srcs = ["JTrueNeFP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "BinaryRMW_do",
+    srcs = ["BinaryRMW.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayJagged_r",
+    srcs = ["ArrayJagged.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvI2F_ro",
+    srcs = ["FPConvI2F.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtDbl_ro",
+    srcs = ["JTrueLtDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblRoots_ro",
+    srcs = ["DblRoots.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5_PSP_r",
+    srcs = ["LocallocCnstB5_PSP.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayExc_ro",
+    srcs = ["ArrayExc.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "AsgSub1_do",
+    srcs = ["AsgSub1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrue1_do",
+    srcs = ["JTrue1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "OrRef_do",
+    srcs = ["OrRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblArray_ro",
+    srcs = ["DblArray.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSmall_r",
+    srcs = ["FPSmall.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgXor1_r",
+    srcs = ["AsgXor1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FibLoop_r",
+    srcs = ["FibLoop.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ObjAlloc_r",
+    srcs = ["ObjAlloc.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSmall_ro",
+    srcs = ["FPSmall.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMulConst_do",
+    srcs = ["FPMulConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ArrayMD1_r",
+    srcs = ["ArrayMD1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "IntArraySum_do",
+    srcs = ["IntArraySum.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvI2F_do",
+    srcs = ["FPConvI2F.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array1_d",
+    srcs = ["Array1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul2_do",
+    srcs = ["mul2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Swap_r",
+    srcs = ["Swap.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2Lng_d",
+    srcs = ["FPConvF2Lng.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPMulConst_r",
+    srcs = ["FPMulConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPRoots_ro",
+    srcs = ["FPRoots.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "InstanceCalls_do",
+    srcs = ["InstanceCalls.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Args4_d",
+    srcs = ["Args4.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblCall1_d",
+    srcs = ["DblCall1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblMulConst_do",
+    srcs = ["DblMulConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLtDbl_r",
+    srcs = ["JTrueLtDbl.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblRoots_r",
+    srcs = ["DblRoots.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblSubConst_ro",
+    srcs = ["DblSubConst.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPArray_d",
+    srcs = ["FPArray.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "OrRef_d",
+    srcs = ["OrRef.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPArray_r",
+    srcs = ["FPArray.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB117_do",
+    srcs = ["LocallocCnstB117.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticCalls_do",
+    srcs = ["StaticCalls.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPConvF2F_ro",
+    srcs = ["FPConvF2F.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtDbl_do",
+    srcs = ["JTrueGtDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array4_ro",
+    srcs = ["Array4.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FiboRec_d",
+    srcs = ["FiboRec.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CnsBool_ro",
+    srcs = ["CnsBool.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NotRMW_ro",
+    srcs = ["NotRMW.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeInt1_r",
+    srcs = ["JTrueLeInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RightShiftRef_r",
+    srcs = ["RightShiftRef.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtFP_do",
+    srcs = ["JTrueGtFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LngConv_do",
+    srcs = ["LngConv.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtInt1_d",
+    srcs = ["JTrueGtInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LongArgsAndReturn_do",
+    srcs = ["LongArgsAndReturn.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5001_d",
+    srcs = ["LocallocCnstB5001.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FibLoop_d",
+    srcs = ["FibLoop.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB1_r",
+    srcs = ["LocallocCnstB1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPError_r",
+    srcs = ["FPError.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "UModConst_ro",
+    srcs = ["UModConst.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Le1_r",
+    srcs = ["Le1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Args5_r",
+    srcs = ["Args5.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPCall1_d",
+    srcs = ["FPCall1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblDivConst_d",
+    srcs = ["DblDivConst.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5_do",
+    srcs = ["LocallocCnstB5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueLeFP_do",
+    srcs = ["JTrueLeFP.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqInt1_ro",
+    srcs = ["JTrueEqInt1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueGtInt1_do",
+    srcs = ["JTrueGtInt1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LngConv_d",
+    srcs = ["LngConv.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Array3_d",
+    srcs = ["Array3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Gcd_r",
+    srcs = ["Gcd.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "AsgOr1_d",
+    srcs = ["AsgOr1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LocallocCnstB5_d",
+    srcs = ["LocallocCnstB5.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DblNeg_d",
+    srcs = ["DblNeg.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "JTrueEqDbl_do",
+    srcs = ["JTrueEqDbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPCall1_r",
+    srcs = ["FPCall1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul1_r",
+    srcs = ["mul1.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "IntArraySum_r",
+    srcs = ["IntArraySum.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSmall_do",
+    srcs = ["FPSmall.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSub_r",
+    srcs = ["FPSub.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "IntConv_r",
+    srcs = ["IntConv.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "FPSub_ro",
+    srcs = ["FPSub.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticCalls_ro",
+    srcs = ["StaticCalls.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "mul1_do",
+    srcs = ["mul1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_merged_test(
+    name = "JIT.CodeGenBringUpTests_d",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/CodeGenBringUpTests:Add1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:And1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:AndRef_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Args4_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Args5_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Array1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Array2_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Array3_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Array4_d",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayExc_d",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayJagged_d",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayMD1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayMD2_d",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayObj_d",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgAdd1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgAnd1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgOr1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgSub1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgXor1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:BinaryRMW_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Call1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:CnsBool_d",
+        "//src/tests/JIT/CodeGenBringUpTests:CnsLng1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAddConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAdd_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblArea_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblArray_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAvg2_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAvg6_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblCall1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblCall2_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDist_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDivConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDiv_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblFillArray_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblMulConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblMul_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblNeg_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblRem_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblRoots_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblSubConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblSub_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DblVar_d",
+        "//src/tests/JIT/CodeGenBringUpTests:DivConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Eq1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAddConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAdd_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPArea_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPArray_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAvg2_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAvg6_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPCall1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPCall2_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvDbl2Lng_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2F_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2I_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2Lng_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvI2F_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDist_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDivConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDiv_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPError_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPFillArray_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMath_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMulConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMul_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPNeg_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPRem_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPRoots_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSmall_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSubConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSub_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FPVar_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FactorialRec_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FibLoop_d",
+        "//src/tests/JIT/CodeGenBringUpTests:FiboRec_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Gcd_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Ge1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Gt1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Ind1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:InitObj_d",
+        "//src/tests/JIT/CodeGenBringUpTests:InstanceCalls_d",
+        "//src/tests/JIT/CodeGenBringUpTests:IntArraySum_d",
+        "//src/tests/JIT/CodeGenBringUpTests:IntConv_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrue1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqDbl_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqFP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqInt1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeDbl_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeFP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeInt1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtDbl_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtFP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtInt1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeDbl_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeFP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeInt1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtDbl_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtFP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtInt1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeDbl_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeFP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeInt1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Jmp1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Le1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LeftShift_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LngConv_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocB_N_PSP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocB_N_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB117_PSP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB117_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB1_PSP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB32_Loop_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5001_PSP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5001_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5_PSP_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocLarge_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Localloc_d",
+        "//src/tests/JIT/CodeGenBringUpTests:LongArgsAndReturn_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Lt1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:ModConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Ne1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:NegRMW_d",
+        "//src/tests/JIT/CodeGenBringUpTests:NestedCall_d",
+        "//src/tests/JIT/CodeGenBringUpTests:NotAndNeg_d",
+        "//src/tests/JIT/CodeGenBringUpTests:NotRMW_d",
+        "//src/tests/JIT/CodeGenBringUpTests:ObjAlloc_d",
+        "//src/tests/JIT/CodeGenBringUpTests:OpMembersOfStructLocal_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Or1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:OrRef_d",
+        "//src/tests/JIT/CodeGenBringUpTests:RecursiveTailCall_d",
+        "//src/tests/JIT/CodeGenBringUpTests:RightShiftRef_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Rotate_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Shift_d",
+        "//src/tests/JIT/CodeGenBringUpTests:StaticCalls_d",
+        "//src/tests/JIT/CodeGenBringUpTests:StaticValueField_d",
+        "//src/tests/JIT/CodeGenBringUpTests:StructFldAddr_d",
+        "//src/tests/JIT/CodeGenBringUpTests:StructInstMethod_d",
+        "//src/tests/JIT/CodeGenBringUpTests:StructReturn_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Sub1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:SubRef_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Swap_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Switch_d",
+        "//src/tests/JIT/CodeGenBringUpTests:UDivConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:UModConst_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Unbox_d",
+        "//src/tests/JIT/CodeGenBringUpTests:Xor1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:XorRef_d",
+        "//src/tests/JIT/CodeGenBringUpTests:addref_d",
+        "//src/tests/JIT/CodeGenBringUpTests:div1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:div2_d",
+        "//src/tests/JIT/CodeGenBringUpTests:divref_d",
+        "//src/tests/JIT/CodeGenBringUpTests:mul1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:mul2_d",
+        "//src/tests/JIT/CodeGenBringUpTests:mul3_d",
+        "//src/tests/JIT/CodeGenBringUpTests:mul4_d",
+        "//src/tests/JIT/CodeGenBringUpTests:rem1_d",
+        "//src/tests/JIT/CodeGenBringUpTests:struct16args_d",
+    ],
+)
+
+coreclr_merged_test(
+    name = "JIT.CodeGenBringUpTests_ro",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/CodeGenBringUpTests:Add1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:And1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:AndRef_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Args4_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Args5_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Array1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Array2_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Array3_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Array4_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayExc_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayJagged_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayMD1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayMD2_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayObj_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgAdd1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgAnd1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgOr1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgSub1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgXor1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:BinaryRMW_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Call1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:CnsBool_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:CnsLng1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAddConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAdd_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblArea_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblArray_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAvg2_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAvg6_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblCall1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblCall2_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDist_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDivConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDiv_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblFillArray_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblMulConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblMul_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblNeg_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblRem_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblRoots_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblSubConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblSub_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DblVar_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:DivConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Eq1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAddConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAdd_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPArea_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPArray_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAvg2_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAvg6_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPCall1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPCall2_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvDbl2Lng_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2F_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2I_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2Lng_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvI2F_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDist_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDivConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDiv_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPError_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPFillArray_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMath_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMulConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMul_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPNeg_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPRem_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPRoots_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSmall_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSubConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSub_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FPVar_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FactorialRec_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FibLoop_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:FiboRec_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Gcd_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Ge1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Gt1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Ind1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:InitObj_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:InstanceCalls_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:IntArraySum_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:IntConv_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrue1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqDbl_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqFP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqInt1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeDbl_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeFP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeInt1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtDbl_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtFP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtInt1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeDbl_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeFP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeInt1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtDbl_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtFP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtInt1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeDbl_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeFP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeInt1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Jmp1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Le1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LeftShift_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LngConv_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocB_N_PSP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocB_N_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB117_PSP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB117_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB1_PSP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB32_Loop_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5001_PSP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5001_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5_PSP_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocLarge_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Localloc_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:LongArgsAndReturn_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Lt1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:ModConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Ne1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:NegRMW_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:NestedCall_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:NotAndNeg_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:NotRMW_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:ObjAlloc_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:OpMembersOfStructLocal_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Or1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:OrRef_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:RecursiveTailCall_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:RightShiftRef_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Rotate_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Shift_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:StaticCalls_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:StaticValueField_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:StructFldAddr_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:StructInstMethod_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:StructReturn_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Sub1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:SubRef_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Swap_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Switch_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:UDivConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:UModConst_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Unbox_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:Xor1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:XorRef_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:addref_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:div1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:div2_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:divref_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:mul1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:mul2_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:mul3_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:mul4_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:rem1_ro",
+        "//src/tests/JIT/CodeGenBringUpTests:struct16args_ro",
+    ],
+)
+
+coreclr_merged_test(
+    name = "JIT.CodeGenBringUpTests_do",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/CodeGenBringUpTests:Add1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:And1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:AndRef_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Args4_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Args5_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Array1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Array2_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Array3_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Array4_do",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayExc_do",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayJagged_do",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayMD1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayMD2_do",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayObj_do",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgAdd1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgAnd1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgOr1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgSub1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgXor1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:BinaryRMW_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Call1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:CnsBool_do",
+        "//src/tests/JIT/CodeGenBringUpTests:CnsLng1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAddConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAdd_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblArea_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblArray_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAvg2_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAvg6_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblCall1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblCall2_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDist_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDivConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDiv_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblFillArray_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblMulConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblMul_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblNeg_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblRem_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblRoots_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblSubConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblSub_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DblVar_do",
+        "//src/tests/JIT/CodeGenBringUpTests:DivConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Eq1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAddConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAdd_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPArea_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPArray_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAvg2_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAvg6_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPCall1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPCall2_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvDbl2Lng_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2F_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2I_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2Lng_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvI2F_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDist_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDivConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDiv_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPError_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPFillArray_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMath_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMulConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMul_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPNeg_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPRem_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPRoots_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSmall_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSubConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSub_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FPVar_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FactorialRec_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FibLoop_do",
+        "//src/tests/JIT/CodeGenBringUpTests:FiboRec_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Gcd_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Ge1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Gt1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Ind1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:InitObj_do",
+        "//src/tests/JIT/CodeGenBringUpTests:InstanceCalls_do",
+        "//src/tests/JIT/CodeGenBringUpTests:IntArraySum_do",
+        "//src/tests/JIT/CodeGenBringUpTests:IntConv_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrue1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqDbl_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqFP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqInt1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeDbl_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeFP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeInt1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtDbl_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtFP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtInt1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeDbl_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeFP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeInt1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtDbl_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtFP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtInt1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeDbl_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeFP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeInt1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Jmp1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Le1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LeftShift_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LngConv_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocB_N_PSP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocB_N_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB117_PSP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB117_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB1_PSP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB32_Loop_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5001_PSP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5001_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5_PSP_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocLarge_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Localloc_do",
+        "//src/tests/JIT/CodeGenBringUpTests:LongArgsAndReturn_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Lt1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:ModConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Ne1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:NegRMW_do",
+        "//src/tests/JIT/CodeGenBringUpTests:NestedCall_do",
+        "//src/tests/JIT/CodeGenBringUpTests:NotAndNeg_do",
+        "//src/tests/JIT/CodeGenBringUpTests:NotRMW_do",
+        "//src/tests/JIT/CodeGenBringUpTests:ObjAlloc_do",
+        "//src/tests/JIT/CodeGenBringUpTests:OpMembersOfStructLocal_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Or1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:OrRef_do",
+        "//src/tests/JIT/CodeGenBringUpTests:RecursiveTailCall_do",
+        "//src/tests/JIT/CodeGenBringUpTests:RightShiftRef_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Rotate_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Shift_do",
+        "//src/tests/JIT/CodeGenBringUpTests:StaticCalls_do",
+        "//src/tests/JIT/CodeGenBringUpTests:StaticValueField_do",
+        "//src/tests/JIT/CodeGenBringUpTests:StructFldAddr_do",
+        "//src/tests/JIT/CodeGenBringUpTests:StructInstMethod_do",
+        "//src/tests/JIT/CodeGenBringUpTests:StructReturn_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Sub1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:SubRef_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Swap_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Switch_do",
+        "//src/tests/JIT/CodeGenBringUpTests:UDivConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:UModConst_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Unbox_do",
+        "//src/tests/JIT/CodeGenBringUpTests:Xor1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:XorRef_do",
+        "//src/tests/JIT/CodeGenBringUpTests:addref_do",
+        "//src/tests/JIT/CodeGenBringUpTests:div1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:div2_do",
+        "//src/tests/JIT/CodeGenBringUpTests:divref_do",
+        "//src/tests/JIT/CodeGenBringUpTests:mul1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:mul2_do",
+        "//src/tests/JIT/CodeGenBringUpTests:mul3_do",
+        "//src/tests/JIT/CodeGenBringUpTests:mul4_do",
+        "//src/tests/JIT/CodeGenBringUpTests:rem1_do",
+        "//src/tests/JIT/CodeGenBringUpTests:struct16args_do",
+    ],
+)
+
+coreclr_merged_test(
+    name = "JIT.CodeGenBringUpTests_r",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/CodeGenBringUpTests:Add1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:And1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:AndRef_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Args4_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Args5_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Array1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Array2_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Array3_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Array4_r",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayExc_r",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayJagged_r",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayMD1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayMD2_r",
+        "//src/tests/JIT/CodeGenBringUpTests:ArrayObj_r",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgAdd1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgAnd1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgOr1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgSub1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:AsgXor1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:BinaryRMW_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Call1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:CastThenBinop",
+        "//src/tests/JIT/CodeGenBringUpTests:CnsBool_r",
+        "//src/tests/JIT/CodeGenBringUpTests:CnsLng1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAddConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAdd_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblArea_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblArray_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAvg2_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblAvg6_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblCall1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblCall2_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDist_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDivConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblDiv_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblFillArray_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblMulConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblMul_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblNeg_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblRem_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblRoots_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblSubConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblSub_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DblVar_r",
+        "//src/tests/JIT/CodeGenBringUpTests:DivConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Eq1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAddConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAdd_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPArea_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPArray_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAvg2_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPAvg6_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPCall1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPCall2_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvDbl2Lng_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2F_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2I_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvF2Lng_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPConvI2F_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDist_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDivConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPDiv_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPError_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPFillArray_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMath_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMulConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPMul_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPNeg_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPRem_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPRoots_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSmall_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSubConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPSub_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FPVar_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FactorialRec_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FibLoop_r",
+        "//src/tests/JIT/CodeGenBringUpTests:FiboRec_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Gcd_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Ge1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Gt1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Ind1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:InitObj_r",
+        "//src/tests/JIT/CodeGenBringUpTests:InstanceCalls_r",
+        "//src/tests/JIT/CodeGenBringUpTests:IntArraySum_r",
+        "//src/tests/JIT/CodeGenBringUpTests:IntConv_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrue1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqDbl_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqFP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueEqInt1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeDbl_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeFP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGeInt1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtDbl_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtFP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueGtInt1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeDbl_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeFP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLeInt1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtDbl_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtFP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueLtInt1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeDbl_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeFP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:JTrueNeInt1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Jmp1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Le1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LeftShift_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LngConv_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocB_N_PSP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocB_N_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB117_PSP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB117_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB1_PSP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB32_Loop_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5001_PSP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5001_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5_PSP_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocCnstB5_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LocallocLarge_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Localloc_r",
+        "//src/tests/JIT/CodeGenBringUpTests:LongArgsAndReturn_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Lt1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:ModConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Ne1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:NegRMW_r",
+        "//src/tests/JIT/CodeGenBringUpTests:NestedCall_r",
+        "//src/tests/JIT/CodeGenBringUpTests:NotAndNeg_r",
+        "//src/tests/JIT/CodeGenBringUpTests:NotRMW_r",
+        "//src/tests/JIT/CodeGenBringUpTests:ObjAlloc_r",
+        "//src/tests/JIT/CodeGenBringUpTests:OpMembersOfStructLocal_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Or1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:OrRef_r",
+        "//src/tests/JIT/CodeGenBringUpTests:RecursiveTailCall_r",
+        "//src/tests/JIT/CodeGenBringUpTests:RightShiftRef_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Rotate_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Shift_r",
+        "//src/tests/JIT/CodeGenBringUpTests:StaticCalls_r",
+        "//src/tests/JIT/CodeGenBringUpTests:StaticValueField_r",
+        "//src/tests/JIT/CodeGenBringUpTests:StructFldAddr_r",
+        "//src/tests/JIT/CodeGenBringUpTests:StructInstMethod_r",
+        "//src/tests/JIT/CodeGenBringUpTests:StructReturn_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Sub1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:SubRef_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Swap_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Switch_r",
+        "//src/tests/JIT/CodeGenBringUpTests:UDivConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:UModConst_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Unbox_r",
+        "//src/tests/JIT/CodeGenBringUpTests:Xor1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:XorRef_r",
+        "//src/tests/JIT/CodeGenBringUpTests:addref_r",
+        "//src/tests/JIT/CodeGenBringUpTests:div1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:div2_r",
+        "//src/tests/JIT/CodeGenBringUpTests:divref_r",
+        "//src/tests/JIT/CodeGenBringUpTests:mul1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:mul2_r",
+        "//src/tests/JIT/CodeGenBringUpTests:mul3_r",
+        "//src/tests/JIT/CodeGenBringUpTests:mul4_r",
+        "//src/tests/JIT/CodeGenBringUpTests:rem1_r",
+        "//src/tests/JIT/CodeGenBringUpTests:struct16args_r",
+    ],
+)

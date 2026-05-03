@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "b426654",
+    srcs = ["b426654.il"],
+    debug_type = "full",
+)

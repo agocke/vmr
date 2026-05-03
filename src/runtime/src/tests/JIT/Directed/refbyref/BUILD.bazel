@@ -1,0 +1,81 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "refpinned2iu_d",
+    srcs = ["refpinned2iu_d.il", "refpinned2iu.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ref2byref_r",
+    srcs = ["ref2byref_r.il", "ref2byref.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "byrefconvert_r",
+    srcs = ["byrefconvert_r.il", "byrefconvert.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "byref2iu_d",
+    srcs = ["byref2iu_d.il", "byref2iu.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "byrefconvert_d",
+    srcs = ["byrefconvert_d.il", "byrefconvert.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refpinned2iu_r",
+    srcs = ["refpinned2iu_r.il", "refpinned2iu.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ref2byref_d",
+    srcs = ["ref2byref_d.il", "ref2byref.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ref2iu_d",
+    srcs = ["ref2iu_d.il", "ref2iu.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "byref2iu_r",
+    srcs = ["byref2iu_r.il", "byref2iu.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ref2iu_r",
+    srcs = ["ref2iu_r.il", "ref2iu.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

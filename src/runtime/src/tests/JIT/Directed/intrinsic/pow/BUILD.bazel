@@ -1,0 +1,109 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "pow1",
+    srcs = ["pow1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow3_cs_do",
+    srcs = ["pow3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow3_cs_ro",
+    srcs = ["pow3.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow2_cs_r",
+    srcs = ["pow2.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow2_cs_d",
+    srcs = ["pow2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow2_cs_do",
+    srcs = ["pow2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow3_cs_r",
+    srcs = ["pow3.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow2_cs_ro",
+    srcs = ["pow2.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow0_cs_ro",
+    srcs = ["pow0.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow0_cs_do",
+    srcs = ["pow0.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow3_cs_d",
+    srcs = ["pow3.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow0_cs_d",
+    srcs = ["pow0.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "pow0_cs_r",
+    srcs = ["pow0.cs"],
+    pri = 1,
+    size = "medium",
+)

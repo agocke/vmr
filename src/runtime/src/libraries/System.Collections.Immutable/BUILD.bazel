@@ -1,0 +1,51 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "src/System/Polyfills.cs",
+    "src/System/Collections/Frozen/String/Hashing.cs",
+    "src/System/Collections/Frozen/String/KeyAnalyzer.cs",
+    "src/Validation/Requires.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Collections.Immutable",
+    srcs = [
+        "ref/System.Collections.Immutable.cs",
+        "ref/System.Collections.Immutable.netcoreapp.cs",
+        # net9 only
+        "ref/System.Collections.Immutable.net9.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Collections.Immutable",
+    include_runtime_async = False,
+    event_source_generator = True,
+    com_interface_generator = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    srcs = glob([
+        "src/System/**/*.cs",
+        "src/Validation/**/*.cs",
+    ]) + [
+        # CoreLibSharedDir files
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/HashHelpers.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/DebugViewDictionaryItem.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/IDictionaryDebugView.cs",
+        # CommonPath files
+        "//src/libraries/Common:src/System/Runtime/Versioning/NonVersionableAttribute.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    assembly_description = "This package provides collections that are thread safe and guaranteed to never change their contents, also known as immutable collections. Like strings, any methods that perform modifications will not change the existing instance but instead return a new instance. For efficiency reasons, the implementation uses a sharing mechanism to ensure that newly created instances share as much data as possible with the previous instance while ensuring that operations have a predictable time complexity.\n\nThe System.Collections.Immutable library is built-in as part of the shared framework in .NET Runtime. The package can be installed when you need to use it in other target frameworks.",
+)

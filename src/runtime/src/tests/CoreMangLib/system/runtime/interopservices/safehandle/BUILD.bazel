@@ -1,0 +1,23 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "SafeHandleDangerousAddRef_PSC",
+    srcs = ["safehandledangerousaddref.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "SafeHandleDangerousRelease_PSC",
+    srcs = ["safehandledangerousrelease.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)

@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "svm_diamondshape_d",
+    srcs = ["svm_diamondshape.il"],
+)
+
+il_coreclr_test(
+    name = "svm_diamondshape_r",
+    srcs = ["svm_diamondshape.il"],
+)

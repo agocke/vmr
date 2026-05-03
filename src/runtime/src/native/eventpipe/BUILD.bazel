@@ -1,0 +1,86 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+# EventPipe and DiagnosticServer for linux-x64
+#
+# These are INTERFACE libraries in CMake — the source files are not compiled
+# here but by the consuming runtime (CoreCLR, Mono, or NativeAOT), each of
+# which provides its own ep-rt.h / ds-rt.h implementation.
+#
+# In Bazel, we expose:
+#   - filegroups for source files (consumers add to their own srcs)
+#   - a cc_library for headers and include paths
+
+# Sources for dn-eventpipe (EventPipe core)
+filegroup(
+    name = "dn-eventpipe-srcs",
+    srcs = [
+        "ep.c",
+        "ep-block.c",
+        "ep-buffer.c",
+        "ep-buffer-manager.c",
+        "ep-config.c",
+        "ep-event.c",
+        "ep-event-instance.c",
+        "ep-event-payload.c",
+        "ep-event-source.c",
+        "ep-file.c",
+        "ep-json-file.c",
+        "ep-metadata-generator.c",
+        "ep-provider.c",
+        "ep-sample-profiler.c",
+        "ep-session.c",
+        "ep-session-provider.c",
+        "ep-stack-contents.c",
+        "ep-stream.c",
+        "ep-string.c",
+        "ep-thread.c",
+    ],
+    visibility = ["//src:__subpackages__"],
+)
+
+# Sources for dn-diagnosticserver (DiagnosticServer core)
+filegroup(
+    name = "dn-diagnosticserver-srcs",
+    srcs = [
+        "ds-dump-protocol.c",
+        "ds-eventpipe-protocol.c",
+        "ds-ipc.c",
+        "ds-portable-rid.c",
+        "ds-process-protocol.c",
+        "ds-profiler-protocol.c",
+        "ds-protocol.c",
+        "ds-server.c",
+    ],
+    visibility = ["//src:__subpackages__"],
+)
+
+# Sources for dn-diagnosticserver-pal (platform abstraction)
+# On linux-x64 (not mobile, not Windows, not WebSocket): uses TCP socket PAL
+filegroup(
+    name = "dn-diagnosticserver-pal-srcs",
+    srcs = [
+        "ds-ipc-pal-socket.c",
+    ],
+    visibility = ["//src:__subpackages__"],
+)
+
+# Headers for eventpipe and diagnosticserver.
+# Consumers depend on this to get include paths and the generated config header.
+cc_library(
+    name = "eventpipe-headers",
+    hdrs = glob(["*.h"]) + select({
+        "//:macos_arm64": glob(["bazel/osx-arm64/*.h"]),
+        "//:macos_x64": glob(["bazel/osx-x64/*.h"]),
+        "//conditions:default": glob(["bazel/linux-glibc-x64/*.h"]),
+    }),
+    includes = ["."] + select({
+        "//:macos_arm64": ["bazel/osx-arm64"],
+        "//:macos_x64": ["bazel/osx-x64"],
+        "//conditions:default": ["bazel/linux-glibc-x64"],
+    }),
+    visibility = ["//src:__subpackages__"],
+    deps = [
+        "//src/native/containers:dn-containers",
+        "//src/native/minipal",
+    ],
+)

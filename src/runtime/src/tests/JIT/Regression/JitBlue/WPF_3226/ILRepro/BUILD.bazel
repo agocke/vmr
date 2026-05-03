@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "WPF_3226_il",
+    srcs = ["WPF_3226_il.il"],
+    optimize = True,
+)

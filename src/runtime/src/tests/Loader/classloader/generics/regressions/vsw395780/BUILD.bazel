@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "testExplicitOverride",
+    srcs = ["testExplicitOverride.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "testExplicitOverride2",
+    srcs = ["testExplicitOverride2.il"],
+    pri = 1,
+    size = "medium",
+)

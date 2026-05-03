@@ -1,0 +1,36 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "StaticsProblem1",
+    srcs = ["StaticsProblem1.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticsProblem2",
+    srcs = ["StaticsProblem2.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticsProblem3",
+    srcs = ["StaticsProblem3.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticsProblem4",
+    srcs = ["StaticsProblem4.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "StaticsProblem5",
+    srcs = ["StaticsProblem5.cs"],
+    pri = 1,
+    size = "medium",
+)

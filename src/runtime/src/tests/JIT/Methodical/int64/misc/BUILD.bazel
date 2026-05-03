@@ -1,0 +1,39 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "binop_il_r",
+    srcs = ["binop_r.il", "binop.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "longmul",
+    srcs = ["longmul.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "binop_il_d",
+    srcs = ["binop_d.il", "binop.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "box_il_d",
+    srcs = ["box_d.il", "box.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "box_il_r",
+    srcs = ["box_r.il", "box.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

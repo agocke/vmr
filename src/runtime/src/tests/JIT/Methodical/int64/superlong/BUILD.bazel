@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "superlong_il_r",
+    srcs = ["superlong_r.il", "superlong.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "superlong_il_d",
+    srcs = ["superlong_d.il", "superlong.il"],
+    debug_type = "full",
+)

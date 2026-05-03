@@ -1,0 +1,77 @@
+
+load(
+    "//:defs.bzl",
+    "csharp_library"
+)
+
+exports_files([
+    "ref/System.Private.CoreLib.ExtraApis.cs",
+    "ref/System.Private.CoreLib.ManualShimTypeForwards.cs",
+    "src/Resources/Strings.resx",
+])
+exports_files(glob(["src/**/*.cs"]))
+
+csharp_library(
+    name = "System.Private.CoreLib.Generators",
+    srcs = [
+        "gen/IntrinsicsInSystemPrivateCoreLibAnalyzer.cs",
+        "gen/NativeRuntimeEventSourceGenerator.cs",
+        "gen/ProductVersionInfoGenerator.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
+        "//src/libraries/Common:src/System/Collections/Generic/ValueListBuilder.cs",
+        "//src/libraries/Common:src/System/Collections/Generic/ValueListBuilder.Pop.cs",
+    ],
+    target_frameworks = ["netstandard2.0"],
+    langversion = "preview",
+    nullable = "annotations",
+    allow_unsafe_blocks = True,
+    deps = [
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.memory",
+        "@paket.main//system.buffers",
+    ],
+    nowarn = [
+        "CS3001",
+        "CS3003",
+        "CS3021",
+        # MSBuild does not generate XML docs for generator projects
+        "CS1572",
+        "CS1574",
+        "CS1734",
+        # Nullable warnings from IntrinsicsInSystemPrivateCoreLibAnalyzer.cs (#nullable enable)
+        "CS8600",
+        "CS8602",
+        "CS8604",
+    ],
+    defines = [ "MICROSOFT_INTEROP_SOURCEGENERATION", "BAZEL" ],
+    visibility = ["//visibility:public"],
+)
+
+# EventSourceGenerator — separate Roslyn source generator that MSBuild delivers
+# via the local targeting pack to source library and test projects.
+csharp_library(
+    name = "EventSourceGenerator",
+    out = "EventSourceGenerator",
+    srcs = [
+        "gen/EventSourceGenerator.cs",
+        "gen/EventSourceGenerator.Emitter.cs",
+        "gen/EventSourceGenerator.Parser.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
+    ],
+    target_frameworks = ["netstandard2.0"],
+    langversion = "preview",
+    deps = [
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.memory",
+        "@paket.main//system.buffers",
+    ],
+    nowarn = [
+        "CS3001",
+    ],
+    nullable = "annotations",
+    visibility = ["//visibility:public"],
+)

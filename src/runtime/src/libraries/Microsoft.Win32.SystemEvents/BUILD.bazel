@@ -1,0 +1,40 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files(["ref/Microsoft.Win32.SystemEvents.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Win32.SystemEvents",
+    srcs = ["ref/Microsoft.Win32.SystemEvents.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Win32.SystemEvents",
+    include_runtime_async = False,
+    event_source_generator = False,
+    keyfile = OPEN_SNK,
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_SystemEvents",
+    pnse_ref_srcs = ["ref/Microsoft.Win32.SystemEvents.cs"],
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    allow_unsafe_blocks = True,
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms_short = ["windows"],
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Win32.SystemEvents",
+    ref = ":ref_Microsoft.Win32.SystemEvents",
+    lib = ":impl_Microsoft.Win32.SystemEvents",
+    visibility = ["//visibility:public"],
+)

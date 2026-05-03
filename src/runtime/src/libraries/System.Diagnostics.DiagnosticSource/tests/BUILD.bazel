@@ -1,0 +1,104 @@
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Diagnostics.DiagnosticSource.Tests",
+    resx_file = "Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Diagnostics.DiagnosticSource.Tests.SR.resources",
+    resx_file = "Resources/Strings.resx",
+)
+
+library_test(
+    name = "System.Diagnostics.DiagnosticSource.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.Diagnostics.DiagnosticSource.Tests.SR.resources": "FxResources.System.Diagnostics.DiagnosticSource.Tests.SR.resources"},
+    nowarn = MULTITARGET_NOWARN + ["NU1511"],
+    # MSBuild csproj sets <NoWarn>NU1511</NoWarn> which REPLACES inherited warnings,
+    # so only Arcade SDK nowarns survive (not the full Directory.Build.props set).
+    replace_library_nowarns = [
+        "CS1701",
+        "CS1702",
+        "NU5105",
+    ],
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "TrimmingTests/**",
+            "MetricOuterLoopTests/**",
+            "TestWithConfigSwitches/**",
+            # .NET Framework only
+            "HttpHandlerDiagnosticListenerTests.cs",
+            "ActivityDateTimeTests.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/Diagnostics/DebuggerAttributes.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/DsesSamplerBuilder.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/RateLimiter.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Helpers.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/Aggregator.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/AggregatorStore.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/Base2ExponentialHistogramAggregator.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/CircularBufferBuckets.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/ExponentialHistogramAggregator.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/LastValueAggregator.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/ObjectSequence.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/ObjectSequence.netcore.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/StringSequence.cs",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Metrics/StringSequence.netcore.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
+    ],
+    deps = [
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries:ref_System.Threading.Tasks",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    additionalfiles = ["Resources/Strings.resx"],
+    defines = [
+        "MEMORYMARSHAL_SUPPORT",
+        "OS_ISBROWSER_SUPPORT",
+    ],
+    keyfile = OPEN_SNK,
+    size = "large",
+)
+
+# Switches test: reuses ActivityTests.cs with hierarchical Activity ID format switch.
+library_test(
+    name = "System.Diagnostics.DiagnosticSource.Switches.Tests",
+    srcs = ["TestWithConfigSwitches/ActivityTests.cs"],
+    deps = [
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    runtimeconfig_properties = {
+        "System.Diagnostics.DefaultActivityIdFormatIsHierarchial": "true",
+    },
+    keyfile = OPEN_SNK,
+    size = "medium",
+)

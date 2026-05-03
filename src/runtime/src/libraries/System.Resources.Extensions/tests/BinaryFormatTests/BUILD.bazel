@@ -1,0 +1,72 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Resources.Extensions",
+    resx_file = "//src/libraries/System.Resources.Extensions:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "TestResources",
+    out = "TestResources.resources",
+    resx_file = "TestResources.resx",
+)
+
+# NOTE: This test suite requires the System.Drawing.Common NuGet package
+# which is not available in the Bazel build.
+# The target_compatible_with constraint ensures it is skipped during builds.
+library_test(
+    name = "System.Resources.Extensions.BinaryFormat.Tests",
+    srcs = glob(["**/*.cs"]) + [
+        "//src/libraries/Common/tests:Tests/TheoryDataExtensions.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Numerics/Hashing/HashHelpers.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/TypeNameComparer.cs",
+        "//src/libraries/System.Formats.Nrbf:src/System/Formats/Nrbf/PrimitiveType.cs",
+        "//src/libraries/System.Formats.Nrbf:src/System/Formats/Nrbf/BinaryType.cs",
+        ":gen_resx",
+    ] + [
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.IParseState.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.ITypeResolver.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.Options.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.ParseState.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.TypeResolver.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/ArrayRecordDeserializer.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/ArrayUpdater.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/ClassRecordDeserializer.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/ClassRecordFieldInfoDeserializer.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/ClassRecordSerializationInfoDeserializer.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/Deserializer.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/FieldValueUpdater.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/IDeserializer.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/ObjectRecordDeserializer.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/PendingSerializationInfo.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/SerializationInfoValueUpdater.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/Deserializer/ValueUpdater.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/SerializationEvents.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/SerializationExtensions.cs",
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/BinaryFormat/SerializationInfoExtensions.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Resources.Extensions:impl_System.Resources.Extensions",
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Formats.Nrbf:ref_System.Formats.Nrbf",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    resources = [":TestResources"],
+    resource_logical_names = {
+        "TestResources.resources": "TestResources.resources",
+    },
+    keyfile = OPEN_SNK,
+    target_compatible_with = ["@platforms//:incompatible"],
+)

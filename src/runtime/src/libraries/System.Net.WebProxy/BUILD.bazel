@@ -1,0 +1,39 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.WebProxy",
+    srcs = [
+        "ref/System.Net.WebProxy.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.WebProxy",
+    nowarn = [],
+    srcs = [
+        "src/System/Net/IWebProxyScript.cs",
+        "src/System/Net/WebProxy.cs",
+        "src/System/Net/WebProxy.NonWasm.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    exclude_sr = True,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.NameResolution:ref_System.Net.NameResolution",
+        "//src/libraries/System.Net.NetworkInformation:ref_System.Net.NetworkInformation",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    keyfile = OPEN_SNK,
+    com_interface_generator = True,
+)

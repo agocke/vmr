@@ -1,0 +1,53 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Hosting.Abstractions.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Hosting.Abstractions",
+    srcs = [
+        "ref/Microsoft.Extensions.Hosting.Abstractions.cs",
+    ],
+    nowarn = ["CS0618"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:ref_Microsoft.Extensions.Diagnostics.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:ref_Microsoft.Extensions.FileProviders.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Hosting.Abstractions",
+    include_runtime_async = False,
+    event_source_generator = True,
+    allow_unsafe_blocks = True,
+    skip_locals_init = True,
+    library_import_generator = False,
+    jsimport_generator = False,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:ref_Microsoft.Extensions.Diagnostics.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:ref_Microsoft.Extensions.FileProviders.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Hosting.Abstractions",
+    ref = ":ref_Microsoft.Extensions.Hosting.Abstractions",
+    lib = ":impl_Microsoft.Extensions.Hosting.Abstractions",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Test6_FriendPriInterface",
+    srcs = ["Test6_FriendPriInterface.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "Test6_supplier",
+    srcs = ["Test6_supplier.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

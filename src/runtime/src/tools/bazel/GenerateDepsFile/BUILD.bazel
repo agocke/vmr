@@ -1,0 +1,9 @@
+load("//:defs.bzl", "csharp_binary")
+
+csharp_binary(
+    name = "GenerateDepsFile",
+    srcs = ["GenerateDepsFile.cs"],
+    nullable = "enable",
+    target_frameworks = ["net11.0"],
+    visibility = ["//visibility:public"],
+)

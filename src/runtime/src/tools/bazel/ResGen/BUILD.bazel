@@ -1,0 +1,18 @@
+
+load("//:defs.bzl", "csharp_binary")
+
+csharp_binary(
+    name = "ResGen",
+    srcs = glob(["*.cs"]),
+    deps = [
+        "@paket.main//system.resources.extensions",
+    ],
+    nowarn = [
+        "CS1701",
+        # MSBuild does not generate XML docs for tool projects
+        "CS1572",
+    ],
+    nullable = "annotations",
+    target_frameworks = [ "net11.0" ],
+    visibility = ["//visibility:public"],
+)

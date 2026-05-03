@@ -1,0 +1,33 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Xml.XmlSerializer",
+    srcs = [
+        "ref/System.Xml.XmlSerializer.cs",
+        "ref/System.Xml.XmlSerializer.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Xml.XmlSerializer",
+    nowarn = ["CS1591"],
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Private.Xml:impl_System.Private.Xml",
+    ],
+    partial_facade = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Xml.XmlSerializer",
+    exclude_sr = True,
+    include_dll_safe_search_path = False,
+    include_editorconfig = False,
+    library_import_generator = False,
+)

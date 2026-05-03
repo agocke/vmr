@@ -1,0 +1,85 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "catchfinally_jmpind_r",
+    srcs = ["catchfinally_jmpind_r.il", "catchfinally_jmpind.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "catchfinally_tail_il_r",
+    srcs = ["catchfinally_tail_r.il", "catchfinally_tail.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "catchfinally_jmpind_d",
+    srcs = ["catchfinally_jmpind_d.il", "catchfinally_jmpind.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "catchfault_tail_r",
+    srcs = ["catchfault_tail_r.il", "catchfault_tail.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "catchfault_d",
+    srcs = ["catchfault_d.il", "catchfault.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "catchfault_jmp_d",
+    srcs = ["catchfault_jmp_d.il", "catchfault_jmp.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "catchfinally_jmp_d",
+    srcs = ["catchfinally_jmp_d.il", "catchfinally_jmp.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "catchfinally_ind_r",
+    srcs = ["catchfinally_ind_r.il", "catchfinally_ind.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "catchfault_tail_d",
+    srcs = ["catchfault_tail_d.il", "catchfault_tail.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "catchfinally_jmp_r",
+    srcs = ["catchfinally_jmp_r.il", "catchfinally_jmp.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "catchfault_r",
+    srcs = ["catchfault_r.il", "catchfault.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "catchfinally_ind_d",
+    srcs = ["catchfinally_ind_d.il", "catchfinally_ind.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "catchfinally_tail_il_d",
+    srcs = ["catchfinally_tail_d.il", "catchfinally_tail.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "catchfault_jmp_r",
+    srcs = ["catchfault_jmp_r.il", "catchfault_jmp.il"],
+    debug_type = "pdbonly",
+)

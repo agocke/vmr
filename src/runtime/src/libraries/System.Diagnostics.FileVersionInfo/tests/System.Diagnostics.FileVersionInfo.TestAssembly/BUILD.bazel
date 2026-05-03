@@ -1,0 +1,34 @@
+exports_files(["Assembly1.cs"])
+
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_binary")
+
+csharp_binary(
+    name = "System.Diagnostics.FileVersionInfo.TestAssembly",
+    include_runtime_async = False,
+    srcs = ["Assembly1.cs"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = [
+        "CS8500",
+        "CS8969",
+        "IDE0060",
+        "IDE0100",
+        "CS1705",
+        "NU5105",
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+        "IL2121",
+        "1701",
+        "1702",
+    ],
+    nullable = "annotations",
+    visibility = ["//src/libraries/System.Diagnostics.FileVersionInfo/tests:__subpackages__"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)

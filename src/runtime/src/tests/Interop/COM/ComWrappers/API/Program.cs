@@ -1148,7 +1148,7 @@ namespace ComWrappersTests
         [ActiveIssue("Not supported on Mono", TestRuntimes.Mono)]
         [Fact]
         [PlatformSpecific(TestPlatforms.Windows)] // COM apartments are Windows-specific
-        [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", RuntimeTestModes.InterpreterActive)]
+        [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", (RuntimeTestModes)0x400)]
         public unsafe void CrossApartmentQueryInterface_NoDeadlock()
         {
             Console.WriteLine($"Running {nameof(CrossApartmentQueryInterface_NoDeadlock)}...");

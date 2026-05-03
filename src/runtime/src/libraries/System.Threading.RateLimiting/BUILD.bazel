@@ -1,0 +1,78 @@
+load("//src/libraries:defs.bzl",
+    "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "ref/System.Threading.RateLimiting.cs",
+    "ref/System.Threading.RateLimiting.Typeforwards.netcoreapp.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading.RateLimiting",
+    srcs = [
+        "ref/System.Threading.RateLimiting.cs",
+        "ref/System.Threading.RateLimiting.Typeforwards.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Threading.RateLimiting",
+    include_runtime_async = False,
+    event_source_generator = False,
+    keyfile = OPEN_SNK,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = [
+        "//src/libraries/Common:src/System/Collections/Generic/Deque.cs",
+
+        "src/System/Threading/RateLimiting/ChainedPartitionedRateLimiter.cs",
+        "src/System/Threading/RateLimiting/ChainedRateLimiter.cs",
+        "src/System/Threading/RateLimiting/ChainedRateLimiterShared.cs",
+        "src/System/Threading/RateLimiting/ChainedReplenishingRateLimiter.cs",
+        "src/System/Threading/RateLimiting/CombinedRateLimitLease.cs",
+        "src/System/Threading/RateLimiting/ConcurrencyLimiter.cs",
+        "src/System/Threading/RateLimiting/ConcurrencyLimiterOptions.cs",
+        "src/System/Threading/RateLimiting/DefaultPartitionedRateLimiter.cs",
+        "src/System/Threading/RateLimiting/FixedWindowRateLimiter.cs",
+        "src/System/Threading/RateLimiting/FixedWindowRateLimiterOptions.cs",
+        "src/System/Threading/RateLimiting/MetadataName.T.cs",
+        "src/System/Threading/RateLimiting/MetadataName.cs",
+        "src/System/Threading/RateLimiting/NoopLimiter.cs",
+        "src/System/Threading/RateLimiting/PartitionedRateLimiter.T.cs",
+        "src/System/Threading/RateLimiting/PartitionedRateLimiter.cs",
+        "src/System/Threading/RateLimiting/QueueProcessingOrder.cs",
+        "src/System/Threading/RateLimiting/RateLimitLease.cs",
+        "src/System/Threading/RateLimiting/RateLimitPartition.T.cs",
+        "src/System/Threading/RateLimiting/RateLimitPartition.cs",
+        "src/System/Threading/RateLimiting/RateLimiter.cs",
+        "src/System/Threading/RateLimiting/RateLimiterHelper.cs",
+        "src/System/Threading/RateLimiting/RateLimiterStatistics.cs",
+        "src/System/Threading/RateLimiting/ReplenishingRateLimiter.cs",
+        "src/System/Threading/RateLimiting/SlidingWindowRateLimiter.cs",
+        "src/System/Threading/RateLimiting/SlidingWindowRateLimiterOptions.cs",
+        "src/System/Threading/RateLimiting/System.Threading.RateLimiting.Typeforwards.netcoreapp.cs",
+        "src/System/Threading/RateLimiting/TimerAwaitable.cs",
+        "src/System/Threading/RateLimiting/TokenBucketRateLimiter.cs",
+        "src/System/Threading/RateLimiting/TokenBucketRateLimiterOptions.cs",
+        "src/System/Threading/RateLimiting/TranslatingLimiter.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.Threading.RateLimiting",
+    ref = ":ref_System.Threading.RateLimiting",
+    lib = ":impl_System.Threading.RateLimiting",
+    visibility = ["//visibility:public"],
+)

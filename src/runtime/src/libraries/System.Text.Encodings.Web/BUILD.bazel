@@ -1,0 +1,82 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "ref/System.Text.Encodings.Web.cs",
+    "src/System/Text/Encodings/Web/AllowedBmpCodePointsBitmap.cs",
+    "src/System/Text/Encodings/Web/AsciiByteMap.cs",
+    "src/System/Text/Encodings/Web/OptimizedInboxTextEncoder.Ascii.cs",
+    "src/System/Text/Encodings/Web/ScalarEscaperBase.cs",
+    "src/System/Text/Unicode/UnicodeHelpers.cs",
+    "src/System/Text/Unicode/UnicodeHelpers.generated.cs",
+    "src/System/ThrowHelper.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Text.Encodings.Web",
+    srcs = [
+        "ref/System.Text.Encodings.Web.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    allow_unsafe_blocks = True,
+    nowarn = ["CS3011"],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Text.Encodings.Web",
+    include_runtime_async = False,
+    event_source_generator = True,
+    keyfile = OPEN_SNK,
+    library_import_generator = False,
+    srcs = [
+        "src/System/IO/TextWriterExtensions.cs",
+        "src/System/Text/Encodings/Web/AllowedBmpCodePointsBitmap.cs",
+        "src/System/Text/Encodings/Web/AsciiByteMap.cs",
+        "src/System/Text/Encodings/Web/DefaultHtmlEncoder.cs",
+        "src/System/Text/Encodings/Web/DefaultJavaScriptEncoder.cs",
+        "src/System/Text/Encodings/Web/DefaultUrlEncoder.cs",
+        "src/System/Text/Encodings/Web/HtmlEncoder.cs",
+        "src/System/Text/Encodings/Web/JavaScriptEncoder.cs",
+        "src/System/Text/Encodings/Web/OptimizedInboxTextEncoder.Ascii.cs",
+        "src/System/Text/Encodings/Web/OptimizedInboxTextEncoder.cs",
+        "src/System/Text/Encodings/Web/ScalarEscaperBase.cs",
+        "src/System/Text/Encodings/Web/TextEncoder.cs",
+        "src/System/Text/Encodings/Web/TextEncoderSettings.cs",
+        "src/System/Text/Encodings/Web/ThrowHelper.cs",
+        "src/System/Text/Encodings/Web/UrlEncoder.cs",
+        "src/System/Text/Unicode/UnicodeHelpers.cs",
+        "src/System/Text/Unicode/UnicodeHelpers.generated.cs",
+        "src/System/Text/Unicode/UnicodeRange.cs",
+        "src/System/Text/Unicode/UnicodeRanges.cs",
+        "src/System/Text/Unicode/UnicodeRanges.generated.cs",
+        "src/System/ThrowHelper.cs",
+
+        # Shared sources from CoreLib (CoreLibSharedDir)
+        "//src/libraries/System.Private.CoreLib:src/System/Text/UnicodeDebug.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Text/UnicodeUtility.cs",
+
+        # Shared sources from Common (CommonPath)
+        "//src/libraries/Common:src/System/HexConverter.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Numerics.Vectors:ref_System.Numerics.Vectors",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.Intrinsics:ref_System.Runtime.Intrinsics",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS3011", "CS1591"],
+    include_dll_safe_search_path = False,
+    assembly_description = "Provides types for encoding and escaping strings for use in JavaScript, HyperText Markup Language (HTML), and uniform resource locators (URL).\n\nCommonly Used Types:\nSystem.Text.Encodings.Web.HtmlEncoder\nSystem.Text.Encodings.Web.UrlEncoder\nSystem.Text.Encodings.Web.JavaScriptEncoder",
+)
+
+ref_impl_pair(
+    name = "live_System.Text.Encodings.Web",
+    ref = ":ref_System.Text.Encodings.Web",
+    lib = ":impl_System.Text.Encodings.Web",
+    visibility = ["//visibility:public"],
+)

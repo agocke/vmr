@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b76267",
+    srcs = ["b76267.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    size = "medium",
+)

@@ -1,0 +1,91 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "InstrCnt1_Perf",
+    srcs = ["InstrCnt1.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "InstrCnt0",
+    srcs = ["InstrCnt0.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "LVNumCnt0",
+    srcs = ["LVNumCnt0.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "CodeSize1_Perf",
+    srcs = ["CodeSize1.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "LVRefCnt0",
+    srcs = ["LVRefCnt0.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "CodeSize0",
+    srcs = ["CodeSize0.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "LVRefCnt1_Perf",
+    srcs = ["LVRefCnt1.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "BBCnt0",
+    srcs = ["BBCnt0.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "LVNumCnt1_Perf",
+    srcs = ["LVNumCnt1.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "BBCnt1_Perf",
+    srcs = ["BBCnt1.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)

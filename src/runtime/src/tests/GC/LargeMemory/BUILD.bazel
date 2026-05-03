@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "largeobject",
+    srcs = ["largeobject.cs"],
+)
+
+coreclr_test(
+    name = "memcheck",
+    srcs = ["memcheck.cs"],
+)

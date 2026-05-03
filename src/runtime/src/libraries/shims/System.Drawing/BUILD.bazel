@@ -1,0 +1,22 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Drawing",
+    skip_locals_init = False,
+    srcs = [
+        "src/System.Drawing.cs",
+    ],
+    deps = [
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/shims/stubs:ref_System.Configuration.ConfigurationManager",
+        "//src/libraries/shims/stubs:ref_System.Drawing.Common",
+        "//src/libraries/shims/stubs:ref_System.Security.Permissions",
+    ],
+    os_targeted = True,
+    exclude_sr = True,
+    assembly_version = "4.0.0.0",
+    generate_documentation_file = False,
+    library_import_generator = False,
+)

@@ -114,7 +114,7 @@ namespace Microsoft.Interop
     public sealed class ByteBoolMarshaller : BoolMarshallerBase
     {
         /// <summary>
-        /// Constructor a <see cref="ByteBoolMarshaller" instance.
+        /// Constructor a <see cref="ByteBoolMarshaller" /> instance.
         /// </summary>
         /// <param name="signed">True if the byte should be signed, otherwise false</param>
         public ByteBoolMarshaller(bool signed)
@@ -132,7 +132,7 @@ namespace Microsoft.Interop
     public sealed class WinBoolMarshaller : BoolMarshallerBase
     {
         /// <summary>
-        /// Constructor a <see cref="WinBoolMarshaller" instance.
+        /// Constructor a <see cref="WinBoolMarshaller" /> instance.
         /// </summary>
         /// <param name="signed">True if the int should be signed, otherwise false</param>
         public WinBoolMarshaller(bool signed)

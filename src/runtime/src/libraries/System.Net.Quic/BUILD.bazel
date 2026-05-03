@@ -1,0 +1,49 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly", "netcoreapp_ref_assembly")
+load("//:defs.bzl", "MSFT_SNK")
+
+exports_files([
+    "src/System/Net/Quic/Internal/ResettableValueTaskSource.cs",
+    "src/System/Net/Quic/QuicDefaults.cs",
+    "src/System/Net/Quic/Interop/QUIC_SETTINGS.IEquattable.cs",
+    "src/System/Net/Quic/Interop/msquic.cs",
+    "src/System/Net/Quic/Interop/msquic_extensions.cs",
+    "src/System/Net/Quic/Interop/msquic_generated.cs",
+    "src/System/Net/Quic/Interop/msquic_generated_linux.cs",
+    "src/System/Net/Quic/Interop/msquic_generated_macos.cs",
+    "src/System/Net/Quic/Interop/msquic_generated_windows.cs",
+    "src/Resources/Strings.resx",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.Quic",
+    srcs = [
+        "ref/System.Net.Quic.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+)
+
+# PNSE/stub assembly — placeholder for the runtime pack.
+# On Linux, this library is either PlatformNotSupported or platform-specific.
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.Quic",
+    keyfile = MSFT_SNK,
+    com_interface_generator = True,
+    os_targeted = True,
+    srcs = ["//src/libraries/shims:System.Void.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+    exclude_sr = True,
+    nowarn = ["SYSLIB1054", "CS1591"],
+    supported_os_platforms = ["linux"],
+    include_dll_safe_search_path = True,
+)

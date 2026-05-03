@@ -1,0 +1,21 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "box_isinst_unbox",
+    srcs = ["box_isinst_unbox.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "box_unbox01",
+    srcs = ["box_unbox01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "box_isinst_br_nullable",
+    srcs = ["box_isinst_br_nullable.cs"],
+    optimize = True,
+)

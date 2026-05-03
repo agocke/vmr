@@ -1,0 +1,70 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "cprop001_do",
+    srcs = ["cprop001.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Dev10_844071",
+    srcs = ["Dev10_844071.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "cprop001_r",
+    srcs = ["cprop001.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "implicitDownConv",
+    srcs = ["implicitDownConv.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "cprop001_ro",
+    srcs = ["cprop001.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Dev10_884217_IL",
+    srcs = ["Dev10_884217_IL.il"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "cprop002",
+    srcs = ["cprop002.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "cprop001_d",
+    srcs = ["cprop001.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)

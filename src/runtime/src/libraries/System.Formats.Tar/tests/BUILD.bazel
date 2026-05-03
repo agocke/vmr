@@ -1,0 +1,83 @@
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+load("//src/tests:live_test.bzl", "library_test")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Formats.Tar.Tests",
+    resx_file = "//src/libraries/System.Formats.Tar:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Formats.Tar.Tests.SR.resources",
+    resx_file = "//src/libraries/System.Formats.Tar:src/Resources/Strings.resx",
+)
+
+library_test(
+    name = "System.Formats.Tar.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.Formats.Tar.Tests.SR.resources": "FxResources.System.Formats.Tar.Tests.SR.resources"},
+    defines = select({"@platforms//os:linux": ["UNIX", "UNIX1_0"], "@platforms//os:macos": ["UNIX", "UNIX1_0"], "//conditions:default": []}),
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Manual tests
+            "Manual/**",
+            # Windows-specific test files
+            "**/*.Windows.cs",
+        ],
+    ) + [
+        # Common test files
+        "//src/libraries/Common/tests:System/IO/TempDirectory.cs",
+        "//src/libraries/Common/tests:System/IO/ConnectedStreams.cs",
+        "//src/libraries/Common/tests:System/IO/ReparsePointUtilities.cs",
+        "//src/libraries/Common/tests:System/IO/WrappedStream.cs",
+        # ConnectedStreams.cs depends on StreamBuffer.cs which depends on MultiArrayBuffer.cs
+        "//src/libraries/Common:src/System/Net/ArrayBuffer.cs",
+        "//src/libraries/Common:src/System/Net/StreamBuffer.cs",
+        "//src/libraries/Common:src/System/Net/MultiArrayBuffer.cs",
+        # Common source files
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        # Unix interop files
+        "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.IOErrors.cs",
+        "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.DeviceFiles.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetEUid.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPwUid.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetGroupName.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Link.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.MkFifo.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+        # SR resource generation
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
+    ],
+    deps = [
+        "//src/libraries/System.Formats.Tar:ref_System.Formats.Tar",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.IO.Compression:ref_System.IO.Compression",
+        "//src/libraries/System.IO.Compression.ZipFile:ref_System.IO.Compression.ZipFile",
+        "//src/libraries/System.Net.Requests:ref_System.Net.Requests",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:TestUtilities",
+        "//src/libraries/Common/tests:StreamConformanceTests",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    additionalfiles = ["//src/libraries/System.Formats.Tar:src/Resources/Strings.resx"],
+    allow_unsafe_blocks = True,
+    data = ["@paket.main//system.formats.tar.testdata:content_files"],
+    size = "large",
+    keyfile = OPEN_SNK,
+)

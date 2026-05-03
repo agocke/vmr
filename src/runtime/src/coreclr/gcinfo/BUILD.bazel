@@ -1,0 +1,151 @@
+# GC info encoding and cross-architecture variants.
+# Matches CMake: src/coreclr/gcinfo/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+exports_files([
+    "gcinfodumper.cpp",
+    "gcinfohelpers.h",
+])
+
+# Common sources for all gcinfo variants.
+_GCINFO_ALLARCH_SOURCES = [
+    "arraylist.cpp",
+    "gcinfoencoder.cpp",
+    "simplerhash.cpp",
+]
+
+# Additional sources for x86 variants (gcdump).
+_GCINFO_I386_SOURCES = [
+    "//src/coreclr/gcdump:gcdump.cpp",
+    "//src/coreclr/gcdump:i386/gcdumpx86.cpp",
+]
+
+# HOST_* defines — matches the actual build host.
+_HOST_DEFINES = PLATFORM_DEFINES
+
+# Undefine TARGET_* defines that propagate from deps so cross-arch targets
+# get a clean slate. Each variant then re-defines its own TARGET_* via copts
+# (not defines, which would be ordered before -U).
+_CROSS_ARCH_UNDEF_COPTS = [
+    "-UTARGET_64BIT",
+    "-UTARGET_32BIT",
+    "-UTARGET_AMD64",
+    "-UTARGET_ARM64",
+    "-UTARGET_ARM",
+    "-UTARGET_X86",
+    "-UTARGET_UNIX",
+    "-UTARGET_LINUX",
+    "-UTARGET_APPLE",
+    "-UTARGET_OSX",
+    "-UUNIX_AMD64_ABI",
+]
+
+_CROSS_ARCH_DEPS = [
+    "//src/coreclr/inc:coreclr_inc_headers_only",
+    "//src/coreclr/jit:jit_headers",
+]
+
+# Native gcinfo (linux-x64 target) — inherits TARGET defines from coreclr_inc.
+cc_library(
+    name = "gcinfo",
+    srcs = _GCINFO_ALLARCH_SOURCES,
+    hdrs = glob(["*.h"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    local_defines = CLR_CONFIG_DEFINES,
+    includes = ["."],
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# -------------------------------------------------------------------------
+# Cross-architecture gcinfo variants for standalone JIT targets.
+# Each is compiled with HOST_AMD64 (build host) + custom TARGET_* defines.
+# Matches CMake: create_gcinfo_lib() calls in src/coreclr/gcinfo/CMakeLists.txt
+# -------------------------------------------------------------------------
+
+cc_library(
+    name = "gcinfo_universal_arm64",
+    srcs = _GCINFO_ALLARCH_SOURCES,
+    hdrs = glob(["*.h"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + _CROSS_ARCH_UNDEF_COPTS + [
+        "-DTARGET_64BIT",
+        "-DTARGET_ARM64",
+    ],
+    defines = _HOST_DEFINES,
+    includes = ["."],
+    deps = _CROSS_ARCH_DEPS,
+)
+
+cc_library(
+    name = "gcinfo_unix_x64",
+    srcs = _GCINFO_ALLARCH_SOURCES,
+    hdrs = glob(["*.h"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + _CROSS_ARCH_UNDEF_COPTS + [
+        "-DTARGET_64BIT",
+        "-DTARGET_AMD64",
+        "-DTARGET_UNIX",
+        "-DUNIX_AMD64_ABI",
+    ],
+    defines = _HOST_DEFINES,
+    includes = ["."],
+    deps = _CROSS_ARCH_DEPS,
+)
+
+cc_library(
+    name = "gcinfo_win_x64",
+    srcs = _GCINFO_ALLARCH_SOURCES,
+    hdrs = glob(["*.h"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + _CROSS_ARCH_UNDEF_COPTS + [
+        "-DTARGET_64BIT",
+        "-DTARGET_AMD64",
+        "-DTARGET_WINDOWS",
+    ],
+    defines = _HOST_DEFINES,
+    includes = ["."],
+    deps = _CROSS_ARCH_DEPS,
+)
+
+cc_library(
+    name = "gcinfo_universal_arm",
+    srcs = _GCINFO_ALLARCH_SOURCES,
+    hdrs = glob(["*.h"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + _CROSS_ARCH_UNDEF_COPTS + [
+        "-DTARGET_ARM",
+    ],
+    defines = _HOST_DEFINES,
+    includes = ["."],
+    deps = _CROSS_ARCH_DEPS,
+)
+
+cc_library(
+    name = "gcinfo_win_x86",
+    srcs = _GCINFO_ALLARCH_SOURCES + _GCINFO_I386_SOURCES,
+    hdrs = glob(["*.h"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + _CROSS_ARCH_UNDEF_COPTS + [
+        "-DTARGET_X86",
+        "-DTARGET_WINDOWS",
+    ],
+    defines = _HOST_DEFINES,
+    includes = ["."],
+    deps = _CROSS_ARCH_DEPS,
+)
+
+cc_library(
+    name = "gcinfo_unix_wasm",
+    srcs = _GCINFO_ALLARCH_SOURCES,
+    hdrs = glob(["*.h"]),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + _CROSS_ARCH_UNDEF_COPTS + [
+        "-DTARGET_WASM",
+        "-DTARGET_WASM32",
+        "-DTARGET_BROWSER",
+        "-DFEATURE_INTERPRETER",
+    ],
+    defines = _HOST_DEFINES,
+    includes = ["."],
+    deps = _CROSS_ARCH_DEPS,
+)

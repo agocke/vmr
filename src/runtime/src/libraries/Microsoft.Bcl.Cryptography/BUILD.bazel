@@ -1,0 +1,28 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly")
+
+exports_files([
+    "src/Resources/Strings.resx",
+    "src/System/Security/Cryptography/CngIdentifierExtensions.cs",
+])
+
+# For net11.0, this library is essentially a set of type forwarders plus
+# a thin X509CertificateKeyAccessors extension class.  The heavy ASN.1 /
+# PQC / X509Loader code is only compiled for older TFMs.
+impl_assembly(
+    name = "impl_Microsoft.Bcl.Cryptography",
+    include_runtime_async = False,
+    event_source_generator = False,
+    allow_unsafe_blocks = True,
+    srcs = [
+        "src/Microsoft.Bcl.Cryptography.Forwards.cs",
+        "src/System/Security/Cryptography/X509Certificates/X509CertificateKeyAccessors.cs",
+        "//src/libraries/Common:src/System/Experimentals.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "SYSLIB5006"],
+    exclude_sr = True,
+)

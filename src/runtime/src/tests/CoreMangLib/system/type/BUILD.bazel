@@ -1,0 +1,78 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "TypeEquals1",
+    srcs = ["typeequals1.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TypeEquals2",
+    srcs = ["typeequals2.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TypeGetHashCode",
+    srcs = ["typegethashcode.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TypeGetType1",
+    srcs = ["typegettype1.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TypeGetType2",
+    srcs = ["typegettype2.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TypeGetTypeFromHandle",
+    srcs = ["typegettypefromhandle.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TypeToString",
+    srcs = ["typetostring.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)

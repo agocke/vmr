@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "XposMatrix",
+    srcs = ["XposMatrix.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

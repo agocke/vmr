@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Overflow",
+    srcs = ["Overflow.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ModLength",
+    srcs = ["ModLength.cs"],
+    optimize = True,
+)

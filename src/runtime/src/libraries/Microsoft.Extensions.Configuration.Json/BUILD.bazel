@@ -1,0 +1,51 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Configuration.Json.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Configuration.Json",
+    srcs = [
+        "ref/Microsoft.Extensions.Configuration.Json.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration.FileExtensions:ref_Microsoft.Extensions.Configuration.FileExtensions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:ref_Microsoft.Extensions.FileProviders.Abstractions",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Configuration.Json",
+    include_runtime_async = False,
+    event_source_generator = False,
+    allow_unsafe_blocks = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]),
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration.FileExtensions:ref_Microsoft.Extensions.Configuration.FileExtensions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:ref_Microsoft.Extensions.FileProviders.Abstractions",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Configuration.Json",
+    ref = ":ref_Microsoft.Extensions.Configuration.Json",
+    lib = ":impl_Microsoft.Extensions.Configuration.Json",
+    visibility = ["//visibility:public"],
+)

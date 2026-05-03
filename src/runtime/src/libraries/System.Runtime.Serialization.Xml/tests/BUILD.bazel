@@ -1,0 +1,96 @@
+exports_files(glob(["**/*.cs"]))
+
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_library")
+
+csharp_library(
+    name = "SerializableAssembly",
+    include_runtime_async = False,
+    keyfile = OPEN_SNK,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    msbuild_analyzer_config = "style",
+    nowarn = ["1701", "1702", "1705", "8500", "8969", "IDE0060", "IDE0100", "IL2121", "NU5105", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
+    srcs = ["SerializationTypes.cs"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    treat_warnings_as_errors = True,
+    warnings_not_as_errors = ["NU1901", "NU1902", "NU1903", "NU1904"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Xml:ref_System.Runtime.Serialization.Xml",
+        "//src/libraries/System.Runtime.Serialization.Json:ref_System.Runtime.Serialization.Json",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+csharp_library(
+    name = "XsdExporterSerializationTypes",
+    out = "SerializationTypes",
+    keyfile = OPEN_SNK,
+    srcs = glob(["XsdDataContractExporterTests/SerializationTypes/*.cs"]),
+    defines = ["UseSeparateAssemblyNamespace", "HideTypesWithoutSerializableAttribute"],
+    nowarn = ["169", "414", "1701", "1702", "1705", "8500", "8969", "IDE0060", "IDE0100", "NU5105", "SYSLIB0050", "SYSLIB0051"],
+    compiler_options = ["/unsafe"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+library_test(
+    name = "System.Runtime.Serialization.Xml.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "SerializationTypes.cs",
+            "XsdDataContractExporterTests/SerializationTypes/**",
+            "Canonicalization/**",
+            "ReflectionOnly/**",
+            "TrimmingTests/**",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/IO/TempFile.cs",
+        "//src/libraries/Common/tests:System/Runtime/Serialization/DataContractSerializerHelper.cs",
+        "//src/libraries/Common/tests:System/Runtime/Serialization/Utils.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Xml:ref_System.Runtime.Serialization.Xml",
+        "//src/libraries/System.Runtime.Serialization.Json:ref_System.Runtime.Serialization.Json",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.CodeDom:ref_System.CodeDom",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+        "//src/libraries/Common/tests:TestUtilities",
+        ":SerializableAssembly",
+        ":XsdExporterSerializationTypes",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+    data = [":SerializableAssembly"],
+)

@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "dev11_13912",
+    optimize = False,
+    srcs = ["dev11_13912.cs"],
+    pri = 1,
+    size = "medium",
+)

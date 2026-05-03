@@ -1,0 +1,29 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Composition.TypedParts.Tests",
+    nowarn = MULTITARGET_NOWARN,
+    srcs = glob(["**/*.cs"]) + [
+        "//src/libraries/Common/tests:System/Diagnostics/DebuggerAttributes.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Composition.TypedParts:impl_System.Composition.TypedParts",
+        "//src/libraries/System.Composition.AttributedModel:impl_System.Composition.AttributedModel",
+        "//src/libraries/System.Composition.Convention:impl_System.Composition.Convention",
+        "//src/libraries/System.Composition.Hosting:impl_System.Composition.Hosting",
+        "//src/libraries/System.Composition.Runtime:impl_System.Composition.Runtime",
+        "//src/libraries:ref_System.Linq.Expressions",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel.Annotations:ref_System.ComponentModel.Annotations",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+)

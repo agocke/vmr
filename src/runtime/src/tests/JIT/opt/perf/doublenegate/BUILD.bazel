@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_57470",
+    srcs = ["GitHub_57470.cs"],
+)
+
+coreclr_test(
+    name = "doublenegate",
+    srcs = ["doublenegate.cs"],
+)

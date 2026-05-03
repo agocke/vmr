@@ -1,0 +1,67 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "CctorForWrite",
+    srcs = ["CctorForWrite.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CctorForWrite2",
+    srcs = ["CctorForWrite2.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "CctorOpenFile",
+    srcs = ["CctorOpenFile.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "CctorThrowInlinedStatic",
+    srcs = ["CctorThrowInlinedStatic.cs"],
+)
+
+il_coreclr_test(
+    name = "CctorThrowLDFTNStaticMethod",
+    srcs = ["CctorThrowLDFTNStaticMethod.il"],
+)
+
+coreclr_test(
+    name = "CctorThrowMethodAccess",
+    srcs = ["CctorThrowMethodAccess.cs"],
+)
+
+coreclr_test(
+    name = "CctorThrowStaticField",
+    srcs = ["CctorThrowStaticField.cs"],
+)
+
+il_coreclr_test(
+    name = "CctorThrowStaticFieldBFI",
+    srcs = ["CctorThrowStaticFieldBFI.il"],
+)
+
+il_coreclr_test(
+    name = "ResetGlobalFields",
+    srcs = ["ResetGlobalFields.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TypeLoadInitExcep",
+    srcs = ["TypeLoadInitExcep.cs"],
+)
+
+il_coreclr_test(
+    name = "TypeLoadInitExcepBFI",
+    srcs = ["TypeLoadInitExcepBFI.il"],
+)
+
+il_coreclr_test(
+    name = "UntrustedCodeBFI",
+    srcs = ["UntrustedCodeBFI.il"],
+)

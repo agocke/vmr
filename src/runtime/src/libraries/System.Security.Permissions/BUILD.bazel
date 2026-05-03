@@ -1,0 +1,65 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "ref/System.Security.Permissions.cs",
+    "ref/System.Security.Permissions.Forwards.cs",
+    "ref/System.Security.Permissions.netcoreapp.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Security.Permissions",
+    srcs = [
+        "ref/System.Security.Permissions.cs",
+        "ref/System.Security.Permissions.Forwards.cs",
+        "ref/System.Security.Permissions.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Windows.Extensions:ref_System.Windows.Extensions",
+    ],
+    nowarn = ["SYSLIB0003"],
+)
+
+impl_assembly(
+    name = "impl_System.Security.Permissions",
+    keyfile = OPEN_SNK,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "IDE0073", "nullable", "CS1591"],
+    partial_facade = True,
+    srcs = glob(["src/**/*.cs"]) + [
+        "ref/System.Security.Permissions.Forwards.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Windows.Extensions:ref_System.Windows.Extensions",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nullable = "disable",
+)
+
+ref_impl_pair(
+    name = "live_System.Security.Permissions",
+    ref = ":ref_System.Security.Permissions",
+    lib = ":impl_System.Security.Permissions",
+    visibility = ["//visibility:public"],
+)

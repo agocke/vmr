@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "dd116295",
+    srcs = ["dd116295.cs"],
+    pri = 1,
+    size = "medium",
+)

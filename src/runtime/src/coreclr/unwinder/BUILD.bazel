@@ -1,0 +1,88 @@
+# Stack unwinder.
+# Matches CMake: src/coreclr/unwinder/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DAC_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "unwinder_wks",
+    srcs = [
+        "baseunwinder.cpp",
+    ] + select({
+        "@platforms//cpu:arm64": [
+            "arm64/unwinder.cpp",
+        ],
+        "//conditions:default": [
+            "amd64/unwinder.cpp",
+        ],
+    }) + glob(
+        ["amd64/*.h", "arm64/*.h"],
+        allow_empty = True,
+    ),
+    hdrs = glob(
+        ["*.h"],
+        allow_empty = True,
+    ),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    # vm/ must be before coreclr_inc includes so that <common.h> resolves to vm/common.h
+    includes = [
+        "../vm",
+        ".",
+        "../debug/ee",
+        "../gc",
+        "../gcdump",
+        "../debug/daccess",
+        "../interop/inc",
+    ] + select({
+        "@platforms//cpu:arm64": ["../vm/arm64", "arm64"],
+        "//conditions:default": ["../vm/amd64", "amd64"],
+    }),
+    local_defines = CLR_CONFIG_DEFINES,
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc"],
+)
+
+# --- unwinder_dac (DAC variant) ---
+# Matches CMake: src/coreclr/unwinder/CMakeLists.txt  unwinder_dac target.
+# Same sources as unwinder_wks, compiled with DAC_COMPONENT + FEATURE_NO_HOST.
+cc_library(
+    name = "unwinder_dac",
+    srcs = [
+        "baseunwinder.cpp",
+    ] + select({
+        "@platforms//cpu:arm64": [
+            "arm64/unwinder.cpp",
+        ],
+        "//conditions:default": [
+            "amd64/unwinder.cpp",
+        ],
+    }) + glob(
+        ["amd64/*.h", "arm64/*.h"],
+        allow_empty = True,
+    ),
+    hdrs = glob(
+        ["*.h"],
+        allow_empty = True,
+    ),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    includes = [
+        "../vm",
+        ".",
+        "../debug/ee",
+        "../gc",
+        "../gcdump",
+        "../debug/daccess",
+        "../interop/inc",
+    ] + select({
+        "@platforms//cpu:arm64": ["../vm/arm64", "arm64"],
+        "//conditions:default": ["../vm/amd64", "amd64"],
+    }),
+    local_defines = CLR_CONFIG_DEFINES + [
+        "FEATURE_NO_HOST",
+    ],
+    defines = CORECLR_DAC_DEFINES,
+    alwayslink = True,
+    deps = ["//src/coreclr/inc:coreclr_inc_dac"],
+)

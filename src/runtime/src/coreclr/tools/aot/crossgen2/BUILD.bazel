@@ -1,0 +1,121 @@
+load("//:defs.bzl", "FILE_VERSION", "NETCOREAPP_MINIMUM", "NETCOREAPP_TOOL_CURRENT", "csharp_binary")
+load("//:defs.bzl", "gen_resx_source", "resgen")
+load("@rules_dotnet//dotnet:defs.bzl", "publish_binary")
+
+_CROSSGEN2_PUBLISH_EXTRA_ILC_ARGS = [
+    # Mirror crossgen2_publish.csproj + AotCompilerCommon.props feature/runtime
+    # switches that rules_dotnet's generic NativeAOT defaults do not model yet.
+    "--feature:Microsoft.Extensions.DependencyInjection.VerifyOpenGenericServiceTrimmability=true",
+    "--feature:System.ComponentModel.DefaultValueAttribute.IsSupported=false",
+    "--feature:System.ComponentModel.Design.IDesignerHost.IsSupported=false",
+    "--feature:System.ComponentModel.TypeConverter.EnableUnsafeBinaryFormatterInDesigntimeLicenseContextSerialization=false",
+    "--feature:System.ComponentModel.TypeDescriptor.IsComObjectDescriptorSupported=false",
+    "--feature:System.Data.DataSet.XmlSerializationIsSupported=false",
+    "--feature:System.Diagnostics.Tracing.EventSource.IsSupported=true",
+    "--feature:System.Globalization.PredefinedCulturesOnly=true",
+    "--feature:System.Net.Security.UseManagedNtlm=false",
+    "--feature:System.Net.SocketsHttpHandler.Http3Support=false",
+    "--feature:System.Reflection.Metadata.MetadataUpdater.IsSupported=false",
+    "--feature:System.Resources.ResourceManager.AllowCustomResourceTypes=false",
+    "--feature:System.Resources.UseSystemResourceKeys=false",
+    "--feature:System.Runtime.InteropServices.EnableConsumingManagedCodeFromNativeHosting=false",
+    "--feature:System.Runtime.InteropServices.EnableCppCLIHostActivation=false",
+    "--feature:System.Runtime.InteropServices.Marshalling.EnableGeneratedComInterfaceComImportInterop=false",
+    "--feature:System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization=false",
+    "--feature:System.StartupHookProvider.IsSupported=false",
+    "--feature:System.Text.Encoding.EnableUnsafeUTF7Encoding=false",
+    "--feature:System.Threading.Thread.EnableAutoreleasePool=false",
+    "--feature:System.Xml.XmlResolver.IsNetworkingEnabledByDefault=false",
+    "--runtimeknob:Microsoft.Extensions.DependencyInjection.VerifyOpenGenericServiceTrimmability=true",
+    "--runtimeknob:System.ComponentModel.DefaultValueAttribute.IsSupported=false",
+    "--runtimeknob:System.ComponentModel.Design.IDesignerHost.IsSupported=false",
+    "--runtimeknob:System.ComponentModel.TypeConverter.EnableUnsafeBinaryFormatterInDesigntimeLicenseContextSerialization=false",
+    "--runtimeknob:System.ComponentModel.TypeDescriptor.IsComObjectDescriptorSupported=false",
+    "--runtimeknob:System.Data.DataSet.XmlSerializationIsSupported=false",
+    "--runtimeknob:System.Diagnostics.Tracing.EventSource.IsSupported=true",
+    "--runtimeknob:System.GC.Server=true",
+    "--runtimeknob:System.Globalization.PredefinedCulturesOnly=true",
+    "--runtimeknob:System.Net.Security.UseManagedNtlm=false",
+    "--runtimeknob:System.Net.SocketsHttpHandler.Http3Support=false",
+    "--runtimeknob:System.Reflection.Metadata.MetadataUpdater.IsSupported=false",
+    "--runtimeknob:System.Resources.ResourceManager.AllowCustomResourceTypes=false",
+    "--runtimeknob:System.Resources.UseSystemResourceKeys=false",
+    "--runtimeknob:System.Runtime.InteropServices.EnableConsumingManagedCodeFromNativeHosting=false",
+    "--runtimeknob:System.Runtime.InteropServices.EnableCppCLIHostActivation=false",
+    "--runtimeknob:System.Runtime.InteropServices.Marshalling.EnableGeneratedComInterfaceComImportInterop=false",
+    "--runtimeknob:System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization=false",
+    "--runtimeknob:System.Runtime.TieredCompilation=false",
+    "--runtimeknob:System.StartupHookProvider.IsSupported=false",
+    "--runtimeknob:System.Text.Encoding.EnableUnsafeUTF7Encoding=false",
+    "--runtimeknob:System.Threading.Thread.EnableAutoreleasePool=false",
+    "--runtimeknob:System.Xml.XmlResolver.IsNetworkingEnabledByDefault=false",
+]
+
+genrule(
+    name = "AssemblyInfo",
+    outs = ["AssemblyInfo.g.cs"],
+    cmd = "echo '[assembly: System.Reflection.AssemblyFileVersion(\"" + FILE_VERSION + "\")]' > $@",
+)
+
+gen_resx_source(
+    name = "SR",
+    out = "SR.g.cs",
+    assembly_name = "crossgen2",
+    resource_name = "System.SR",
+    resx_file = "Properties/Resources.resx",
+)
+
+resgen(
+    name = "Resources",
+    out = "crossgen2_inbuild.Properties.Resources.resources",
+    resx_file = "Properties/Resources.resx",
+)
+
+csharp_binary(
+    name = "crossgen2",
+    include_runtime_async = False,
+    interceptors_namespaces = ";Microsoft.AspNetCore.Http.Generated;Microsoft.Extensions.Configuration.Binder.SourceGeneration;Microsoft.Extensions.Validation.Generated",
+    srcs = glob(["*.cs"]) + [
+        "//src/coreclr/tools/Common:CommandLineHelpers.cs",
+        "//src/coreclr/tools/Common:InstructionSetHelpers.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+        ":SR",
+        ":AssemblyInfo",
+    ],
+    resources = [":Resources"],
+    resource_logical_names = {
+        "crossgen2_inbuild.Properties.Resources.resources": "crossgen2_inbuild.Properties.Resources.resources",
+    },
+    compiler_options = ["/unsafe", "/warnaserror+:NU1605"],
+    deps = [
+        "//src/coreclr/tools/aot/ILCompiler.Diagnostics",
+        "//src/coreclr/tools/aot/ILCompiler.DependencyAnalysisFramework",
+        "//src/coreclr/tools/aot/ILCompiler.ReadyToRun",
+        "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//microsoft.diasymreader",
+        "@paket.main//system.commandline",
+    ],
+    target_frameworks = [NETCOREAPP_TOOL_CURRENT],
+    nowarn = ["1701", "1702", "8002", "CS8632", "IL2121", "NU1701", "NU5105"],
+    include_library_nowarn = False,
+    include_default_ruleset = False,
+    msbuild_analyzer_config = "style",
+    editorconfig_name = "crossgen2_inbuild",
+    is_aot_compatible = True,
+    visibility = ["//visibility:public"],
+)
+
+publish_binary(
+    name = "crossgen2-publish",
+    binary = ":crossgen2",
+    target_framework = NETCOREAPP_TOOL_CURRENT,
+    self_contained = True,
+    aot = True,
+    optimization_mode = "speed",
+    invariant_globalization = True,
+    server_gc = True,
+    eventpipe = True,
+    debug_symbols = True,
+    extra_ilc_args = _CROSSGEN2_PUBLISH_EXTRA_ILC_ARGS,
+    visibility = ["//visibility:public"],
+)

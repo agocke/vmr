@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "BilinearInterpol",
+    srcs = ["BilinearInterpol.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

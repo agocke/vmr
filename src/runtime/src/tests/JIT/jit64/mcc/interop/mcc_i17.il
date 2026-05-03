@@ -67,6 +67,7 @@
       .custom instance void [Microsoft.DotNet.XUnitExtensions]Xunit.PlatformSpecificAttribute::.ctor(valuetype [Microsoft.DotNet.XUnitExtensions]Xunit.TestPlatforms) = {
             int32 (1) // TestPlatforms.Windows
         }
+      .entrypoint
       .maxstack  1
 
     DoTest:

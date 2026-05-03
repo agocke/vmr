@@ -1,0 +1,56 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files(["src/Resources/Strings.resx"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.WebSockets.Client",
+    srcs = [
+        "ref/System.Net.WebSockets.Client.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.Net.WebSockets:ref_System.Net.WebSockets",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.WebSockets.Client",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Net/WebSockets/ClientWebSocket.cs",
+        "src/System/Net/WebSockets/ClientWebSocketDeflateConstants.cs",
+        "src/System/Net/WebSockets/ClientWebSocketOptions.cs",
+        "src/System/Net/WebSockets/HttpResponseHeadersReadOnlyCollection.cs",
+        "src/System/Net/WebSockets/WebSocketHandle.Managed.cs",
+        # Common sources
+        "//src/libraries/Common:src/System/Net/UriScheme.cs",
+        "//src/libraries/Common:src/System/Net/WebSockets/WebSocketValidate.cs",
+        "//src/libraries/Common:src/System/Net/HttpKnownHeaderNames.cs",
+        "//src/libraries/Common:src/System/Net/WebSockets/WebSocketDefaults.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.Net.WebHeaderCollection:ref_System.Net.WebHeaderCollection",
+        "//src/libraries/System.Net.WebSockets:ref_System.Net.WebSockets",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Channels:ref_System.Threading.Channels",
+    ],
+    unsupported_os_platforms = ["wasi"],
+)

@@ -1,5 +1,9 @@
 syntax: glob
 
+### Bazel ###
+/bazel-*
+/MODULE.bazel.lock
+
 ### VisualStudio ###
 
 # Tool Runtime Dir
@@ -380,3 +384,11 @@ test:.cs
 *.tempLog.xml
 *.testResults.xml
 *.testStats.csv
+
+# Bazel
+bazel-bin
+bazel-out
+bazel-runtime
+bazel-testlogs
+bazel-bazel-libs
+user.bazelrc

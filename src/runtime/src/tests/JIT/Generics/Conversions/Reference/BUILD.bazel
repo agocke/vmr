@@ -1,0 +1,59 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "gentonongen01",
+    srcs = ["GenToNonGen01.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "gentonongen03",
+    srcs = ["GenToNonGen03.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "nongentogen02",
+    srcs = ["NonGenToGen02.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "nongentogen01",
+    srcs = ["NonGenToGen01.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "nongentogen03",
+    srcs = ["NonGenToGen03.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "gentonongen02",
+    srcs = ["GenToNonGen02.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "gentogen03",
+    srcs = ["GenToGen03.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "gentogen01",
+    srcs = ["GenToGen01.cs"],
+    debug_type = "pdbonly",
+)
+
+coreclr_test(
+    name = "gentogen02",
+    srcs = ["GenToGen02.cs"],
+    debug_type = "pdbonly",
+)

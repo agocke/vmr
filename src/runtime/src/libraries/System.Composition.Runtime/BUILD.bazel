@@ -1,0 +1,26 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly")
+
+impl_assembly(
+    name = "impl_System.Composition.Runtime",
+    include_runtime_async = False,
+    event_source_generator = False,
+    srcs = [
+        "src/System/Composition/CompositionContext.cs",
+        "src/System/Composition/ExportFactoryOfT.cs",
+        "src/System/Composition/ExportFactoryOfTTMetadata.cs",
+        "src/System/Composition/ExportOfT.cs",
+        "src/System/Composition/Hosting/CompositionFailedException.cs",
+        "src/System/Composition/Hosting/Core/CompositionContract.cs",
+        "src/System/Composition/Runtime/Util/Formatters.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    nullable = "disable",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "nullable", "CS1591"],
+    is_aot_compatible = False,
+)

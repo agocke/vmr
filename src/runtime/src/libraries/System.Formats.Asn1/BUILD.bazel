@@ -1,0 +1,41 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Formats.Asn1",
+    srcs = [
+        "ref/System.Formats.Asn1.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+    ],
+    defines = [
+        "NET9_0_OR_GREATER",
+    ]
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Formats.Asn1",
+    include_runtime_async = False,
+    event_source_generator = True,
+    keyfile = OPEN_SNK,
+    com_interface_generator = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    defines = ["CP_NO_ZEROMEMORY"],
+    srcs = glob(["src/System/Formats/Asn1/**/*.cs"]) + [
+        "//src/libraries/Common:src/System/Security/Cryptography/CryptoPool.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+    ],
+    assembly_description = "Provides classes that can read and write the ASN.1 BER, CER, and DER data formats.",
+)

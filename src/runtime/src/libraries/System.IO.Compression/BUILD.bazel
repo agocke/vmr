@@ -1,0 +1,128 @@
+load("//:defs.bzl", "ECMA_SNK")
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "src/System/IO/Compression/DeflateZLib/ZLibException.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Compression",
+    srcs = [
+        "ref/System.IO.Compression.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.Compression",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
+    os_targeted = "unix",
+    srcs = [
+        # Common interop (all platforms)
+        "//src/libraries/Common:src/Interop/Interop.zlib.cs",
+        "//src/libraries/Common:src/Interop/Interop.Zstd.cs",
+
+        # Common ZLibNative files
+        "//src/libraries/Common:src/System/IO/Compression/ZLibNative.cs",
+        "//src/libraries/Common:src/System/IO/Compression/ZLibNative.CompressionLevel.cs",
+        "//src/libraries/Common:src/System/IO/Compression/ZLibNative.ZStream.cs",
+
+        # Common misc
+        "//src/libraries/Common:src/Microsoft/Win32/SafeHandles/SafeZstdHandle.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/Common:src/System/Net/ArrayBuffer.cs",
+
+        # Zip archive files (from SharedOpenSourcePath, but live in src/)
+        "src/System/IO/Compression/ZipArchive.cs",
+        "src/System/IO/Compression/ZipArchive.Async.cs",
+        "src/System/IO/Compression/ZipArchiveEntry.cs",
+        "src/System/IO/Compression/ZipArchiveEntry.Async.cs",
+        "src/System/IO/Compression/ZipArchiveMode.cs",
+        "src/System/IO/Compression/ZipBlocks.cs",
+        "src/System/IO/Compression/ZipBlocks.Async.cs",
+        "src/System/IO/Compression/ZipBlocks.FieldLengths.cs",
+        "src/System/IO/Compression/ZipBlocks.FieldLocations.cs",
+        "src/System/IO/Compression/ZipCustomStreams.cs",
+        "src/System/IO/Compression/ZipHelper.cs",
+        "src/System/IO/Compression/ZipHelper.Async.cs",
+        "src/System/IO/Compression/ZipCompressionMethod.cs",
+        "src/System/IO/Compression/ZipVersion.cs",
+
+        # DeflateManaged
+        "src/System/IO/Compression/DeflateManaged/BlockType.cs",
+        "src/System/IO/Compression/DeflateManaged/DeflateManagedStream.cs",
+        "src/System/IO/Compression/DeflateManaged/HuffmanTree.cs",
+        "src/System/IO/Compression/DeflateManaged/InflaterManaged.cs",
+        "src/System/IO/Compression/DeflateManaged/InflaterState.cs",
+        "src/System/IO/Compression/DeflateManaged/InputBuffer.cs",
+        "src/System/IO/Compression/DeflateManaged/MatchState.cs",
+        "src/System/IO/Compression/DeflateManaged/OutputWindow.cs",
+
+        # DeflateZLib
+        "src/System/IO/Compression/DeflateZLib/Deflater.cs",
+        "src/System/IO/Compression/DeflateZLib/DeflateStream.cs",
+        "src/System/IO/Compression/DeflateZLib/Inflater.cs",
+        "src/System/IO/Compression/DeflateZLib/ZLibException.cs",
+
+        # Compression types
+        "src/System/IO/Compression/CompressionFormat.cs",
+        "src/System/IO/Compression/CompressionLevel.cs",
+        "src/System/IO/Compression/CompressionMode.cs",
+        "src/System/IO/Compression/Crc32Helper.ZLib.cs",
+        "src/System/IO/Compression/DeflateDecoder.cs",
+        "src/System/IO/Compression/DeflateEncoder.cs",
+        "src/System/IO/Compression/GZipDecoder.cs",
+        "src/System/IO/Compression/GZipEncoder.cs",
+        "src/System/IO/Compression/GZipStream.cs",
+        "src/System/IO/Compression/PositionPreservingWriteOnlyStreamWrapper.cs",
+        "src/System/IO/Compression/ZLibDecoder.cs",
+        "src/System/IO/Compression/ZLibEncoder.cs",
+        "src/System/IO/Compression/ZLibCompressionOptions.cs",
+        "src/System/IO/Compression/ZLibStream.cs",
+        "src/System/IO/Compression/Zstandard/ZstandardCompressionOptions.cs",
+        "src/System/IO/Compression/Zstandard/ZstandardDecoder.cs",
+        "src/System/IO/Compression/Zstandard/ZstandardDictionary.cs",
+        "src/System/IO/Compression/Zstandard/ZstandardEncoder.cs",
+        "src/System/IO/Compression/Zstandard/ZstandardStream.Compress.cs",
+        "src/System/IO/Compression/Zstandard/ZstandardStream.Decompress.cs",
+        "src/System/IO/Compression/Zstandard/ZstandardStream.cs",
+        "src/System/IO/Compression/Zstandard/ZstandardUtils.cs",
+    ] + select({
+        "@platforms//os:linux": [
+            # Unix-specific files
+            "src/System/IO/Compression/ZipArchiveEntry.Unix.cs",
+            "//src/libraries/Common:src/System/IO/Compression/ZipArchiveEntryConstants.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.PathConf.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+        ],
+        "@platforms//os:macos": [
+            # Unix-specific files (shared with Linux)
+            "src/System/IO/Compression/ZipArchiveEntry.Unix.cs",
+            "//src/libraries/Common:src/System/IO/Compression/ZipArchiveEntryConstants.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.PathConf.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+        ],
+    }),
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms = ["unix"],
+    keyfile = ECMA_SNK,
+    )
+
+ref_impl_pair(
+    name = "live_System.IO.Compression",
+    ref = ":ref_System.IO.Compression",
+    lib = ":impl_System.IO.Compression",
+    visibility = ["//visibility:public"],
+)

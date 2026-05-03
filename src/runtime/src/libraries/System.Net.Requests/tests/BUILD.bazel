@@ -1,0 +1,71 @@
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+load("//src/tests:live_test.bzl", "library_test")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Net.Requests.Tests",
+    resx_file = "//src/libraries/System.Net.Requests:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Net.Requests.Tests.SR.resources",
+    resx_file = "//src/libraries/System.Net.Requests:src/Resources/Strings.resx",
+)
+
+library_test(
+    name = "System.Net.Requests.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.Net.Requests.Tests.SR.resources": "FxResources.System.Net.Requests.Tests.SR.resources"},
+    additionalfiles = ["//src/libraries/System.Net.Requests:src/Resources/Strings.resx"],
+    defines = ["NETSTANDARD"],
+    srcs = glob(["*.cs"]) + [
+        "//src/libraries/Common/tests:System/Net/Capability.Security.cs",
+        "//src/libraries/Common/tests:System/Net/Configuration.cs",
+        "//src/libraries/Common/tests:System/Net/Configuration.Certificates.cs",
+        "//src/libraries/Common/tests:System/Net/Configuration.Http.cs",
+        "//src/libraries/Common/tests:System/Net/Configuration.Security.cs",
+        "//src/libraries/Common/tests:System/Net/QuicLoad.cs",
+        "//src/libraries/Common/tests:System/Net/RemoteExecutorExtensions.cs",
+        "//src/libraries/Common/tests:System/Net/Http/LoopbackServer.cs",
+        "//src/libraries/Common/tests:System/Net/Http/LoopbackServer.AuthenticationHelpers.cs",
+        "//src/libraries/Common/tests:System/Net/Http/GenericLoopbackServer.cs",
+        "//src/libraries/Common/tests:System/Net/Http/TestHelper.cs",
+        "//src/libraries/Common/tests:System/Threading/Tasks/TaskTimeoutExtensions.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
+    ],
+    deps = [
+        "//src/libraries/System.Net.Requests:ref_System.Net.Requests",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.Net.Sockets:ref_System.Net.Sockets",
+        "//src/libraries/System.Net.WebSockets:ref_System.Net.WebSockets",
+        "//src/libraries/System.Net.WebHeaderCollection:ref_System.Net.WebHeaderCollection",
+        "//src/libraries/System.Net.WebProxy:ref_System.Net.WebProxy",
+        "//src/libraries/System.Net.NameResolution:ref_System.Net.NameResolution",
+        "//src/libraries/System.Net.Quic:ref_System.Net.Quic",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    nowarn = ["SYSLIB0014", "SYSLIB0011"],
+    data = ["@paket.main//system.net.testdata:content_files"],
+    size = "large",
+    keyfile = OPEN_SNK,
+)

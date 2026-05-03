@@ -1,0 +1,100 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+# zlib-ng built in ZLIB_COMPAT mode without runtime CPU detection
+# for linux-x64. Uses generic implementations only.
+
+# Generate zlib_name_mangling.h (empty prefix, compat mode)
+genrule(
+    name = "gen_zlib_name_mangling_h",
+    srcs = ["zlib_name_mangling.h.empty"],
+    outs = ["zlib_name_mangling.h"],
+    cmd = "cp $< $@",
+)
+
+# Generate zlib.h from template (replace @ZLIB_SYMBOL_PREFIX@ with empty)
+genrule(
+    name = "gen_zlib_h",
+    srcs = ["zlib.h.in"],
+    outs = ["zlib.h"],
+    cmd = "sed 's/@ZLIB_SYMBOL_PREFIX@//g' $< > $@",
+)
+
+# Generate zconf.h from template
+# On linux-x64: HAVE_UNISTD_H=1, NEED_PTRDIFF_T=0
+genrule(
+    name = "gen_zconf_h",
+    srcs = ["zconf.h.in"],
+    outs = ["zconf.h"],
+    cmd = "sed 's/#ifdef HAVE_UNISTD_H.*/#if 1    \\/* was set to #if 1 by configure\\/cmake\\/etc *\\//' $< > $@",
+)
+
+# Generate gzread.c from template (replace @ZLIB_SYMBOL_PREFIX@ with empty)
+genrule(
+    name = "gen_gzread_c",
+    srcs = ["gzread.c.in"],
+    outs = ["gzread.c"],
+    cmd = "sed 's/@ZLIB_SYMBOL_PREFIX@//g' $< > $@",
+)
+
+cc_library(
+    name = "zlib",
+    srcs = [
+        "adler32.c",
+        "compress.c",
+        "crc32.c",
+        "crc32_braid_comb.c",
+        "deflate.c",
+        "deflate_fast.c",
+        "deflate_huff.c",
+        "deflate_medium.c",
+        "deflate_quick.c",
+        "deflate_rle.c",
+        "deflate_slow.c",
+        "deflate_stored.c",
+        "functable.c",
+        "gzlib.c",
+        "gzwrite.c",
+        "infback.c",
+        "inflate.c",
+        "inftrees.c",
+        "insert_string.c",
+        "insert_string_roll.c",
+        "trees.c",
+        "uncompr.c",
+        "zutil.c",
+        # Generic arch implementations
+        "arch/generic/adler32_c.c",
+        "arch/generic/adler32_fold_c.c",
+        "arch/generic/chunkset_c.c",
+        "arch/generic/compare256_c.c",
+        "arch/generic/crc32_braid_c.c",
+        "arch/generic/crc32_fold_c.c",
+        "arch/generic/slide_hash_c.c",
+        # Generated sources
+        ":gen_gzread_c",
+    ] + glob([
+        "*.h",
+        "arch/generic/*.h",
+    ]),
+    hdrs = [
+        ":gen_zconf_h",
+        ":gen_zlib_h",
+        ":gen_zlib_name_mangling_h",
+    ],
+    copts = [
+        "-Wno-implicit-fallthrough",
+        "-Wno-unused-command-line-argument",
+        "-w",
+    ],
+    local_defines = [
+        "ZLIB_COMPAT",
+        "DISABLE_RUNTIME_CPU_DETECTION",
+        "_LARGEFILE64_SOURCE=1",
+        "__USE_LARGEFILE64",
+        "HAVE_UNISTD_H",
+        "HAVE_STDARG_H",
+        "WITH_GZFILEOP",
+    ],
+    includes = ["."],
+    visibility = ["//src/native:__subpackages__"],
+)

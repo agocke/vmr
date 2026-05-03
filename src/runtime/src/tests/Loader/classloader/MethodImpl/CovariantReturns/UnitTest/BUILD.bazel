@@ -1,0 +1,46 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "AttributeTesting",
+    srcs = ["AttributeTesting.il"],
+)
+
+il_coreclr_test(
+    name = "CompatibleWithTest",
+    srcs = ["CompatibleWithTest.il"],
+)
+
+il_coreclr_test(
+    name = "CompatibleWithTest_TypeLoadException",
+    srcs = ["CompatibleWithTest_TypeLoadException.il"],
+)
+
+il_coreclr_test(
+    name = "OverrideMoreDerivedReturn",
+    srcs = ["OverrideMoreDerivedReturn.il"],
+)
+
+coreclr_test(
+    name = "OverrideReabstracted",
+    srcs = ["OverrideReabstracted.cs"],
+)
+
+il_coreclr_test(
+    name = "UnitTest",
+    srcs = ["UnitTest.il"],
+)
+
+il_coreclr_test(
+    name = "UnitTestDelegates",
+    srcs = ["UnitTestDelegates.il"],
+)
+
+il_coreclr_test(
+    name = "UnitTest_GVM",
+    srcs = ["UnitTest_GVM.il"],
+)
+
+il_coreclr_test(
+    name = "UnitTest_GVM_TypeLoadException",
+    srcs = ["UnitTest_GVM_TypeLoadException.il"],
+)

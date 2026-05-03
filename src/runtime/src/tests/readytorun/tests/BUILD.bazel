@@ -1,0 +1,23 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "fieldgetter",
+    srcs = ["fieldgetter.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "generics",
+    srcs = ["generics.cs"],
+    pri = 1,
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "newarray",
+    srcs = ["newarray.cs"],
+    pri = 1,
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)

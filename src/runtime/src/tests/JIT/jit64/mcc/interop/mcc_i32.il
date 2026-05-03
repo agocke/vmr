@@ -110,6 +110,7 @@
             type([TestLibrary]TestLibrary.PlatformDetection)
             string[1] ('IsVarArgSupported')
         }
+      .entrypoint
       .maxstack  1
 
 

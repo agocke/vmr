@@ -1,0 +1,229 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "refloc_c_r",
+    srcs = ["refloc_c_r.il", "refloc_c.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refarg_i2_il_d",
+    srcs = ["refarg_i2_d.il", "refarg_i2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refloc_r8_r",
+    srcs = ["refloc_r8_r.il", "refloc_r8.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refloc_u2_r",
+    srcs = ["refloc_u2_r.il", "refloc_u2.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refarg_i4_il_d",
+    srcs = ["refarg_i4_d.il", "refarg_i4.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refloc_o_r",
+    srcs = ["refloc_o_r.il", "refloc_o.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refloc_o_d",
+    srcs = ["refloc_o_d.il", "refloc_o.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refarg_i2_il_r",
+    srcs = ["refarg_i2_r.il", "refarg_i2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refarg_f8_il_d",
+    srcs = ["refarg_f8_d.il", "refarg_f8.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refloc_i4_d",
+    srcs = ["refloc_i4_d.il", "refloc_i4.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refarg_s_il_d",
+    srcs = ["refarg_s_d.il", "refarg_s.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refloc_o2_r",
+    srcs = ["refloc_o2_r.il", "refloc_o2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refloc_c_d",
+    srcs = ["refloc_c_d.il", "refloc_c.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refloc_i1_r",
+    srcs = ["refloc_i1_r.il", "refloc_i1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refarg_c_il_d",
+    srcs = ["refarg_c_d.il", "refarg_c.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refarg_o_il_d",
+    srcs = ["refarg_o_d.il", "refarg_o.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refloc_o2_d",
+    srcs = ["refloc_o2_d.il", "refloc_o2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refarg_f4_il_d",
+    srcs = ["refarg_f4_d.il", "refarg_f4.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refarg_f8_il_r",
+    srcs = ["refarg_f8_r.il", "refarg_f8.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refloc_u2_d",
+    srcs = ["refloc_u2_d.il", "refloc_u2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refloc_i2_d",
+    srcs = ["refloc_i2_d.il", "refloc_i2.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refarg_i4_il_r",
+    srcs = ["refarg_i4_r.il", "refarg_i4.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refloc_i2_r",
+    srcs = ["refloc_i2_r.il", "refloc_i2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refloc_r4_d",
+    srcs = ["refloc_r4_d.il", "refloc_r4.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refloc_i1_d",
+    srcs = ["refloc_i1_d.il", "refloc_i1.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refloc_r8_d",
+    srcs = ["refloc_r8_d.il", "refloc_r8.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refloc_i4_r",
+    srcs = ["refloc_i4_r.il", "refloc_i4.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refarg_f4_il_r",
+    srcs = ["refarg_f4_r.il", "refarg_f4.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refarg_i1_il_r",
+    srcs = ["refarg_i1_r.il", "refarg_i1.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refarg_c_il_r",
+    srcs = ["refarg_c_r.il", "refarg_c.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refloc_r4_r",
+    srcs = ["refloc_r4_r.il", "refloc_r4.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "refarg_i1_il_d",
+    srcs = ["refarg_i1_d.il", "refarg_i1.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "refarg_s_il_r",
+    srcs = ["refarg_s_r.il", "refarg_s.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refarg_o_il_r",
+    srcs = ["refarg_o_r.il", "refarg_o.il"],
+    debug_type = "pdbonly",
+)

@@ -1,0 +1,45 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Collections.Specialized",
+    srcs = [
+        "ref/System.Collections.Specialized.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Collections.Specialized",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Collections/Specialized/BitVector32.cs",
+        "src/System/Collections/Specialized/HybridDictionary.cs",
+        "src/System/Collections/Specialized/IOrderedDictionary.cs",
+        "src/System/Collections/Specialized/ListDictionary.cs",
+        "src/System/Collections/Specialized/NameObjectCollectionBase.cs",
+        "src/System/Collections/Specialized/NameValueCollection.cs",
+        "src/System/Collections/Specialized/OrderedDictionary.cs",
+        "src/System/Collections/Specialized/StringCollection.cs",
+        "src/System/Collections/Specialized/StringDictionary.cs",
+
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/CompatibleComparer.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.Collections.Specialized",
+    ref = ":ref_System.Collections.Specialized",
+    lib = ":impl_System.Collections.Specialized",
+    visibility = ["//visibility:public"],
+)

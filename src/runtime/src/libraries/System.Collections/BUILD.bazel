@@ -1,0 +1,60 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.Collections.cs",
+    "ref/System.Collections.Concurrent.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Collections",
+    srcs = [
+        "ref/System.Collections.cs",
+        "ref/System.Collections.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Collections",
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Collections/ThrowHelper.cs",
+        "src/System/Collections/Generic/LinkedList.cs",
+        "src/System/Collections/Generic/OrderedDictionary.cs",
+        "src/System/Collections/Generic/OrderedDictionaryDebugView.cs",
+        "src/System/Collections/Generic/PriorityQueue.cs",
+        "src/System/Collections/Generic/PriorityQueueDebugView.cs",
+        "src/System/Collections/Generic/SortedDictionary.cs",
+        "src/System/Collections/Generic/SortedList.cs",
+        "src/System/Collections/Generic/SortedSet.cs",
+        "src/System/Collections/Generic/SortedSet.TreeSubSet.cs",
+        "src/System/Collections/Generic/SortedSetEqualityComparer.cs",
+        "src/System/Collections/Generic/Stack.cs",
+        "src/System/Collections/Generic/StackDebugView.cs",
+        "src/System/Collections/StructuralComparisons.cs",
+
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/DebugViewDictionaryItem.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ICollectionDebugView.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/IDictionaryDebugView.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/ObjectModel/CollectionHelpers.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/HashHelpers.cs",
+
+        "//src/libraries/Common:src/System/Collections/Generic/BitHelper.cs",
+        "//src/libraries/Common:src/System/Collections/Generic/EnumerableHelpers.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    allow_unsafe_blocks = True,
+    partial_facade = True,
+    resx_file = "src/Resources/Strings.resx",
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Collections",
+    defines = [
+        "SYSTEM_COLLECTIONS",
+        "NET8_0_OR_GREATER", # TODO: Fix in rules
+    ],
+)

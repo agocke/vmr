@@ -1,0 +1,81 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "unbox_il_d",
+    srcs = ["unbox_d.il", "unbox.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "unbox_il_r",
+    srcs = ["unbox_r.il", "unbox.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refanyval_il_d",
+    srcs = ["refanyval_d.il", "refanyval.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "refanyval_il_r",
+    srcs = ["refanyval_r.il", "refanyval.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mdarray_d",
+    srcs = ["mdarray_d.il", "mdarray.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "const_r",
+    srcs = ["const_r.il", "const.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mdarray_r",
+    srcs = ["mdarray_r.il", "mdarray.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldelema_d",
+    srcs = ["ldelema_d.il", "ldelema.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "ldelema_r",
+    srcs = ["ldelema_r.il", "ldelema.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "const_d",
+    srcs = ["const_d.il", "const.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)

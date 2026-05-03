@@ -1,0 +1,27 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Net.Http.Enterprise.Tests",
+    defines = ["UNIX", "UNIX1_0"],
+    srcs = glob(["*.cs"]) + [
+        "//src/libraries/Common/tests:System/Net/EnterpriseTests/EnterpriseTestConfiguration.cs",
+        "//src/libraries/Common/tests:System/Net/RemoteExecutorExtensions.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+    target_compatible_with = ["@platforms//os:linux"],
+)

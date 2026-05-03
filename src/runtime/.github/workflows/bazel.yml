@@ -1,0 +1,69 @@
+name: Bazel Build & Test
+
+on:
+  push:
+    branches: [ bazel, bazel-main ]
+  pull_request:
+    branches: [ bazel, bazel-main, bazel-mac ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: [self-hosted, Linux, X64]
+            name: Linux release
+            config: clr_release
+          - os: [self-hosted, Linux, X64]
+            name: Linux checked
+            config: clr_checked
+            libs_config: libs_release
+          - os: [self-hosted, macOS, X64]
+            name: macOS release
+            config: clr_release
+            libs_config: libs_release
+          - os: windows-latest
+            name: Windows host
+            config: clr_release
+            libs_config: libs_release
+            targets: //src/native/corehost:all
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y clang-18 lld libkrb5-dev liblttng-ust-dev libssl-dev
+
+      - name: Restore Bazel cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/bazel-disk
+          key: bazel-${{ runner.os }}-${{ matrix.config }}-${{ github.sha }}
+          restore-keys: |
+            bazel-${{ runner.os }}-${{ matrix.config }}-
+
+      - name: Build
+        run: bazel build ${{ matrix.targets || '//...' }} --config=${{ matrix.config }} ${{ matrix.libs_config && format('--config={0}', matrix.libs_config) || '' }} --disk_cache=~/.cache/bazel-disk
+
+      - name: Test
+        if: ${{ !matrix.targets && !matrix.skip_tests }}
+        run: bazel test //... --config=${{ matrix.config }} ${{ matrix.libs_config && format('--config={0}', matrix.libs_config) || '' }} --disk_cache=~/.cache/bazel-disk --test_output=errors
+
+      - name: Save Bazel cache
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/bazel-disk
+          key: bazel-${{ runner.os }}-${{ matrix.config }}-${{ github.sha }}

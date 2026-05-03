@@ -17,7 +17,7 @@ trim_trailing_whitespace = true
 charset = utf-8
 
 # Generated code
-[*{_AssemblyInfo.cs,.notsupported.cs,AsmOffsets.cs}]
+[*{_AssemblyInfo.cs,.notsupported.cs,AsmOffsets.cs,.ForwardedTypes.cs}]
 generated_code = true
 
 # C# files

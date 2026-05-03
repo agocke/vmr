@@ -1,0 +1,26 @@
+load("//:defs.bzl", "ECMA_SNK")
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Data",
+    keyfile = ECMA_SNK,
+    generate_documentation_file = False,
+    library_import_generator = False,
+    skip_locals_init = False,
+    srcs = [
+        "src/System.Data.cs",
+        "ref/System.Data.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Data.Common:impl_System.Data.Common",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+        "//src/libraries:impl_System.Runtime",
+        "//src/libraries/shims/stubs:ref_System.Data.Odbc",
+        "//src/libraries/shims/stubs:ref_System.Data.OleDb",
+        "//src/libraries/shims/stubs:ref_System.Data.SqlClient",
+        "//src/libraries/shims/stubs:ref_System.Security.Permissions",
+    ],
+    os_targeted = True,
+    exclude_sr = True,
+    assembly_version = "4.0.0.0",
+)

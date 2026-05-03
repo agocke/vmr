@@ -6,7 +6,8 @@
     <!-- xUnit2008 is about regexes and isn't appropriate in the test project for regexes -->
     <!-- SYSLIB0036 is about obsoletion of regex members -->
     <!-- SYSLIB1045 is for switching to GeneratedRegex -->
-    <NoWarn>$(NoWarn);xUnit2008;SYSLIB0036;SYSLIB1045</NoWarn>
+    <!-- CS1998: async methods without await in older SDK (pre-existing ancestor issue) -->
+    <NoWarn>$(NoWarn);xUnit2008;SYSLIB0036;SYSLIB1045;CS1998</NoWarn>
     <DebuggerSupport Condition="'$(DebuggerSupport)' == '' and '$(TargetOS)' == 'browser'">true</DebuggerSupport>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <IsHighAotMemoryUsageTest>true</IsHighAotMemoryUsageTest> <!-- to avoid OOMs with source generation in wasm: https://github.com/dotnet/runtime/pull/60701 -->

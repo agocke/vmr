@@ -1,0 +1,35 @@
+load("//:defs.bzl", "SHAREDLIB1024_SNK", "csharp_library")
+
+# Same suppressions as illink — MSBuild uses /skipanalyzers+ for ILLink.Tasks.
+_SKIPANALYZERS_EDITORCONFIG_CONTENT = "\n".join([
+    "dotnet_diagnostic.IDE0073.severity = none",
+    "dotnet_diagnostic.SA1400.severity = none",
+    "dotnet_diagnostic.SA1633.severity = none",
+    "dotnet_diagnostic.SA0001.severity = none",
+    "dotnet_style_require_accessibility_modifiers = omit_if_default:suggestion",
+])
+
+csharp_library(
+    name = "ILLink.Tasks",
+    include_runtime_async = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    srcs = glob(["*.cs"]),
+    out = "ILLink.Tasks",
+    deps = [
+        "//src/tools/illink/src/linker:illink_lib",
+        "@paket.main//microsoft.dotnet.cecil",
+        "@paket.main//microsoft.build.framework",
+        "@paket.main//microsoft.build.utilities.core",
+    ],
+    nullable = "disable",
+    target_frameworks = ["net11.0"],
+    nowarn = ["CS1591", "CS1701", "CS1702", "CS1705", "CS8500", "CS8969", "CP0003", "IDE0060", "IDE0100", "NU5105", "NU5128", "NU5129"],
+    compiler_options = ["/warnaserror+:NU1605", "/publicsign+"],
+    extra_editorconfig_content = _SKIPANALYZERS_EDITORCONFIG_CONTENT,
+    keyfile = SHAREDLIB1024_SNK,
+    visibility = ["//visibility:public"],
+    analyzers = [
+        "//:source_build_analyzers",
+    ],
+    msbuild_analyzer_config = "source",
+)

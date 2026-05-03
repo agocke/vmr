@@ -1,0 +1,26 @@
+# Headers for the GC dump utilities.
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "gcdump_headers",
+    hdrs = glob(["*.h"], allow_empty = True) + [
+        "//src/coreclr/gcinfo:gcinfohelpers.h",
+    ],
+    textual_hdrs = [
+        "gcdumpnonx86.cpp",
+        "//src/coreclr/gcinfo:gcinfodumper.cpp",
+        "//src/coreclr/vm:gcinfodecoder.cpp",
+    ],
+    includes = [
+        ".",
+        "../gcinfo",
+    ],
+)
+
+# Expose source files for cross-arch gcinfo_win_x86 variant.
+exports_files([
+    "gcdump.cpp",
+    "i386/gcdumpx86.cpp",
+])

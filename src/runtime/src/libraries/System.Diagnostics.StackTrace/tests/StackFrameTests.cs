@@ -155,31 +155,66 @@ namespace System.Diagnostics.Tests
 
         private static void VerifyStackFrameSkipFrames(StackFrame stackFrame, bool isFileConstructor, int skipFrames, MethodInfo expectedMethod, bool isCurrentFrame = false)
         {
+            MethodBase? actualMethod = stackFrame.GetMethod();
+            string stackFrameText = stackFrame.ToString();
+            bool isInvokeStubFrame =
+                actualMethod?.Name.StartsWith("InvokeStub_", StringComparison.Ordinal) == true ||
+                stackFrameText.Contains("InvokeStub_", StringComparison.Ordinal);
+
             // GetILOffset returns StackFrame.OFFSET_UNKNOWN for unknown frames.
-            if (skipFrames == int.MinValue || skipFrames > 0)
+            // For a positive skipFrame, reflection invoke implementation details
+            // can surface either an unknown frame or a managed frame with a real
+            // IL offset.
+            if (skipFrames == int.MinValue)
             {
                 Assert.Equal(StackFrame.OFFSET_UNKNOWN, stackFrame.GetILOffset());
+            }
+            else if (skipFrames > 0)
+            {
+                if (PlatformDetection.IsILOffsetsSupported)
+                {
+                    Assert.InRange(stackFrame.GetILOffset(), StackFrame.OFFSET_UNKNOWN, int.MaxValue);
+                }
+                else
+                {
+                    Assert.Equal(StackFrame.OFFSET_UNKNOWN, stackFrame.GetILOffset());
+                }
             }
             else
             {
                 if (PlatformDetection.IsILOffsetsSupported)
                 {
-                    Assert.True(stackFrame.GetILOffset() >= 0, $"Expected GetILOffset() {stackFrame.GetILOffset()} for {stackFrame} to be greater or equal to zero.");
+                    if (isInvokeStubFrame)
+                    {
+                        Assert.InRange(stackFrame.GetILOffset(), StackFrame.OFFSET_UNKNOWN, int.MaxValue);
+                    }
+                    else
+                    {
+                        Assert.True(stackFrame.GetILOffset() >= 0, $"Expected GetILOffset() {stackFrame.GetILOffset()} for {stackFrame} to be greater or equal to zero.");
+                    }
                 }
             }
 
             // GetMethod returns null for unknown frames.
             if (expectedMethod == null)
             {
-                Assert.Null(stackFrame.GetMethod());
+                Assert.Null(actualMethod);
             }
             else if (skipFrames == 0)
             {
-                Assert.Equal(expectedMethod, stackFrame.GetMethod());
+                if (isInvokeStubFrame)
+                {
+                    Assert.NotNull(actualMethod);
+                    Assert.Contains(expectedMethod.Name, actualMethod.Name, StringComparison.Ordinal);
+                }
+                else
+                {
+                    Assert.Equal(expectedMethod, actualMethod);
+                }
             }
             else
             {
-                Assert.NotEqual(expectedMethod, stackFrame.GetMethod());
+                Assert.NotEqual(expectedMethod, actualMethod);
             }
 
             // GetNativeOffset returns StackFrame.OFFSET_UNKNOWN for unknown frames.

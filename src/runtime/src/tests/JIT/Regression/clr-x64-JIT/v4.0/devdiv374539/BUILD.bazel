@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "DevDiv_374539",
+    srcs = ["DevDiv_374539.cs"],
+    optimize = True,
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)

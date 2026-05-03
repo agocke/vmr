@@ -34,7 +34,7 @@ public unsafe class ManagedPointers
     [ActiveIssue("Doesn't compile with LLVM AOT.", typeof(PlatformDetection), nameof(PlatformDetection.IsMonoAnyAOT))]
     [ActiveIssue("Function mismatch", TestPlatforms.Browser | TestPlatforms.iOS | TestPlatforms.tvOS | TestPlatforms.MacCatalyst)]
     [Fact]
-    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", RuntimeTestModes.InterpreterActive)]
+    [Xunit.SkipOnCoreClrAttribute("Depends on marshalled calli", (RuntimeTestModes)0x400)]
     public static void Validate_GeneratedILStubs_NullByRef()
     {
         Console.WriteLine($"Running {nameof(Validate_GeneratedILStubs_NullByRef)}...");

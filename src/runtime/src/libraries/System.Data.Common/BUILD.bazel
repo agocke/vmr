@@ -1,0 +1,73 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.Data.Common.cs",
+    "ref/System.Data.Common.Forwards.cs",
+    "ref/System.Data.Common.manual.cs",
+    "src/ILLink/ILLink.Descriptors.LibraryBuild.xml",
+    "src/ILLink/ILLink.Suppressions.LibraryBuild.xml",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Data.Common",
+    srcs = [
+        "ref/System.Data.Common.cs",
+        "ref/System.Data.Common.Forwards.cs",
+        "ref/System.Data.Common.manual.cs",
+    ],
+    nowarn = ["CS0618"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Transactions.Local:ref_System.Transactions.Local",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Data.Common",
+    analyzers = [
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    srcs = glob(["src/System/**/*.cs"]) + [
+        "src/System.Data.Common.TypeForwards.cs",
+        # CommonPath files
+        "//src/libraries/Common:src/System/LocalAppContextSwitches.Common.cs",
+        "//src/libraries/Common:src/System/Data/Common/AdapterUtil.cs",
+        "//src/libraries/Common:src/System/Data/Common/DbConnectionOptions.Common.cs",
+        "//src/libraries/Common:src/System/Data/Common/DbConnectionPoolKey.cs",
+        "//src/libraries/Common:src/System/Data/Common/MultipartIdentifier.cs",
+        "//src/libraries/Common:src/System/Data/Common/NameValuePair.cs",
+        "//src/libraries/Common:src/System/Data/Common/SQLResource.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    nowarn = [
+        "SYSLIB0038",
+        "CS1591",
+    ],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+        "//src/libraries:impl_System.Runtime",
+        "//src/libraries/System.Collections:impl_System.Collections",
+        "//src/libraries/System.Collections.NonGeneric:impl_System.Collections.NonGeneric",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:impl_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries:impl_System.Private.Uri",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Transactions.Local:ref_System.Transactions.Local",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+    ],
+)

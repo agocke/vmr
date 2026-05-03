@@ -1,0 +1,35 @@
+
+load("//src/libraries:defs.bzl",
+    "netcoreapp_ref_assembly",
+    "netcoreapp_impl_assembly",
+)
+
+exports_files([
+    "ref/System.Numerics.Vectors.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Numerics.Vectors",
+    srcs = [
+        "ref/System.Numerics.Vectors.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    allow_unsafe_blocks = True,
+    nowarn = ["CS9368"],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Numerics.Vectors",
+    include_editorconfig = False,
+    nowarn = ["CS1591"],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    partial_facade = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Numerics.Vectors",
+    exclude_sr = True,
+    allow_unsafe_blocks = True,
+)

@@ -1,0 +1,22 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "jitshared_headers",
+    hdrs = glob(["*.h"]),
+    strip_include_prefix = ".",
+    deps = [
+        "//src/native/minipal",
+    ],
+)
+
+cc_library(
+    name = "jitshared",
+    srcs = ["histogram.cpp"],
+    hdrs = glob(["*.h"]),
+    strip_include_prefix = ".",
+    deps = [
+        "//src/native/minipal",
+    ],
+)

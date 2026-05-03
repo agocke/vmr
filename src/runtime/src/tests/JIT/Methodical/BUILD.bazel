@@ -1,0 +1,175 @@
+load("//src/tests:live_test.bzl", "coreclr_merged_test")
+
+coreclr_merged_test(
+    name = "Methodical_d1",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/Methodical/cctor/misc:threads1_cs_d",
+        "//src/tests/JIT/Methodical/cctor/misc:threads2_cs_d",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise1_cs_d",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise1b_cs_d",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise2_cs_d",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise4_cs_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_byte_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_double_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_float_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_byte_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_double_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_float_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_int_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_long_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_obj_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_short_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_val_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_int_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_long_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_obj_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_short_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_val_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_byte_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_double_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_float_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_byte_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_double_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_float_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_int_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_long_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_obj_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_short_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_val_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_int_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_long_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_obj_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_short_1_d",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_val_1_d",
+    ],
+)
+
+coreclr_merged_test(
+    name = "Methodical_ro",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/Methodical/Arrays/misc:arrres_ro",
+        "//src/tests/JIT/Methodical/cctor/misc:threads1_cs_ro",
+        "//src/tests/JIT/Methodical/cctor/misc:threads2_cs_ro",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise1_cs_ro",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise1b_cs_ro",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise2_cs_ro",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise4_cs_ro",
+    ],
+)
+
+coreclr_merged_test(
+    name = "Methodical_others",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/Methodical/Boxing/boxunbox:KeepAliveBoxOpt",
+        "//src/tests/JIT/Methodical/stringintern:test1-xassem",
+        "//src/tests/JIT/Methodical/stringintern:test2-xassem",
+        "//src/tests/JIT/Methodical/stringintern:test4-xassem",
+    ],
+)
+
+coreclr_merged_test(
+    name = "Methodical_do",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/Methodical/Arrays/misc:arrres_do",
+        "//src/tests/JIT/Methodical/cctor/misc:threads1_cs_do",
+        "//src/tests/JIT/Methodical/cctor/misc:threads2_cs_do",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise1_cs_do",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise1b_cs_do",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise2_cs_do",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise4_cs_do",
+    ],
+)
+
+coreclr_merged_test(
+    name = "Methodical_d2",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/Methodical/Arrays/misc:arrres_d",
+    ],
+)
+
+coreclr_merged_test(
+    name = "Methodical_r1",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/Methodical/cctor/misc:threads1_cs_r",
+        "//src/tests/JIT/Methodical/cctor/misc:threads2_cs_r",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise1_cs_r",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise1b_cs_r",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise2_cs_r",
+        "//src/tests/JIT/Methodical/cctor/xassem:xprecise4_cs_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_byte_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_double_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_float_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_byte_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_double_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_float_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_int_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_long_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_obj_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_short_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_gc_val_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_int_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_long_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_obj_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_short_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:expl_val_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_byte_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_double_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_float_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_byte_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_double_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_float_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_int_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_long_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_obj_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_short_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_gc_val_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_int_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_long_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_obj_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_short_1_r",
+        "//src/tests/JIT/Methodical/explicit/coverage:seq_val_1_r",
+    ],
+)
+
+coreclr_merged_test(
+    name = "Methodical_r2",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/Methodical/Arrays/misc:arrres_r",
+        "//src/tests/JIT/Methodical/tailcall/Desktop:thread-race_r",
+    ],
+)

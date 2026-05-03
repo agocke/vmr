@@ -1,0 +1,66 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "FieldListByteNodeTypeMismatchX86",
+    srcs = ["FieldListByteNodeTypeMismatchX86.cs"],
+    allow_unsafe_blocks = True,
+    optimize = True,
+)
+
+coreclr_test(
+    name = "MisSizedStructs",
+    srcs = ["MisSizedStructs.cs"],
+    allow_unsafe_blocks = True,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "MisSizedStructs_ArmArch",
+    srcs = ["MisSizedStructs_ArmArch.cs"],
+    allow_unsafe_blocks = True,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SevenByteStruct",
+    srcs = ["SevenByteStruct.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "StructWithOverlappingFields",
+    srcs = ["StructWithOverlappingFields.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "TypeMismatchedArgs",
+    srcs = ["TypeMismatchedArgs.cs"],
+    allow_unsafe_blocks = True,
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "structfieldparam_r",
+    srcs = ["structfieldparam.cs"],
+    optimize = False,
+)
+
+coreclr_test(
+    name = "structfieldparam_ro",
+    srcs = ["structfieldparam.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "structreturn",
+    srcs = ["structreturn.cs"],
+    allow_unsafe_blocks = True,
+    debug_type = "pdbonly",
+    optimize = True
+)

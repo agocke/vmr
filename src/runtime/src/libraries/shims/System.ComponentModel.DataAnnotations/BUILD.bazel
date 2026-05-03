@@ -1,0 +1,20 @@
+load("//:defs.bzl", "SHAREDLIB1024_SNK")
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.ComponentModel.DataAnnotations",
+    keyfile = SHAREDLIB1024_SNK,
+    skip_locals_init = False,
+    srcs = [
+        "src/System.ComponentModel.DataAnnotations.cs",
+    ],
+    deps = [
+        "//src/libraries/System.ComponentModel.Annotations:ref_System.ComponentModel.Annotations",
+        "//src/libraries:ref_System.Runtime",
+    ],
+    os_targeted = True,
+    exclude_sr = True,
+    assembly_version = "4.0.0.0",
+    generate_documentation_file = False,
+    library_import_generator = False,
+)

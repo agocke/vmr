@@ -1,0 +1,28 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "271010",
+    srcs = ["271010.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "LargeObjectAlloc2",
+    srcs = ["LargeObjectAlloc2.cs"],
+)
+
+coreclr_test(
+    name = "delete_next_card_table",
+    srcs = ["delete_next_card_table.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "smalloom",
+    srcs = ["smalloom.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)

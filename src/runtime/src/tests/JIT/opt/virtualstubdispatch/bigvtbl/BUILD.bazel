@@ -1,0 +1,28 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "bigvtbl_cs_ro",
+    srcs = ["bigvtbl.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "bigvtbl_cs_do",
+    srcs = ["bigvtbl.cs"],
+    debug_type = "full",
+    optimize = True,
+)
+
+coreclr_test(
+    name = "bigvtbl_cs_r",
+    srcs = ["bigvtbl.cs"],
+)
+
+coreclr_test(
+    name = "bigvtbl_cs_d",
+    srcs = ["bigvtbl.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)

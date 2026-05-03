@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "tailcall",
+    srcs = ["tailcall.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "more_tailcalls",
+    srcs = ["more_tailcalls.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

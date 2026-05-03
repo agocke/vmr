@@ -1,0 +1,167 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "stress2_d",
+    srcs = ["stress2_d.il", "stress2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "u_native_r",
+    srcs = ["u_native_r.il", "u_native.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "array1_d",
+    srcs = ["array1_d.il", "array1.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "format_r",
+    srcs = ["format_r.il", "format.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "longsig_r",
+    srcs = ["longsig_r.il", "longsig.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "array2_d",
+    srcs = ["array2_d.il", "array2.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "array3_r",
+    srcs = ["array3_r.il", "array3.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "native_il_d",
+    srcs = ["native_d.il", "native.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "native_il_r",
+    srcs = ["native_r.il", "native.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "stress2_r",
+    srcs = ["stress2_r.il", "stress2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "shortsig_r",
+    srcs = ["shortsig_r.il", "shortsig.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "shortsig_d",
+    srcs = ["shortsig_d.il", "shortsig.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "format_d",
+    srcs = ["format_d.il", "format.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "indcall_r",
+    srcs = ["indcall_r.il", "indcall.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "indcall_d",
+    srcs = ["indcall_d.il", "indcall.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "u_native_d",
+    srcs = ["u_native_d.il", "u_native.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "lcs_r",
+    srcs = ["lcs_r.il", "lcs.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "longsig_d",
+    srcs = ["longsig_d.il", "longsig.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "array2_r",
+    srcs = ["array2_r.il", "array2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "array1_r",
+    srcs = ["array1_r.il", "array1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "array3_d",
+    srcs = ["array3_d.il", "array3.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "lcs_d",
+    srcs = ["lcs_d.il", "lcs.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)

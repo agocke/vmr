@@ -1,0 +1,28 @@
+# Root package for CoreCLR Bazel build.
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+exports_files(["generateredefinesfile.sh"])
+
+cc_library(
+    name = "coreclr_inc",
+    # Header-only target exposing shared CoreCLR include paths.
+    # Replaces the -Isrc/... copts that were in CORECLR_COPTS.
+    includes = [
+        "inc",
+        "pal/inc",
+        "pal/inc/rt",
+        "pal/src/safecrt",
+        "pal/prebuilt/inc",
+        "debug/inc",
+        "debug/inc/dump",
+        "md/inc",
+        "hosts/inc",
+        "interpreter",
+        "minipal",
+    ] + select({
+        "@platforms//cpu:arm64": ["debug/inc/arm64"],
+        "@platforms//cpu:x86_64": ["debug/inc/amd64"],
+    }),
+    visibility = ["//src/coreclr:__subpackages__"],
+)

@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "ConstraintsAndInheritance",
+    srcs = ["ConstraintsAndInheritance.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TestWithManyParams",
+    srcs = ["TestWithManyParams.cs"],
+    pri = 1,
+    size = "medium",
+)

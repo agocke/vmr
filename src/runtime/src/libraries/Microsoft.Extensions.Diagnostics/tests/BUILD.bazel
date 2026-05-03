@@ -1,0 +1,38 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "ASPNETCORE_SNK")
+
+library_test(
+    name = "Microsoft.Extensions.Diagnostics.Tests",
+    nowarn = MULTITARGET_NOWARN,
+    srcs = glob(["**/*.cs"]) + [
+        "//src/libraries/Microsoft.Extensions.Diagnostics:src/Metrics/Configuration/MetricsConfigureOptions.cs",
+        "//src/libraries/Microsoft.Extensions.Diagnostics:src/Metrics/DebugConsoleMetricListener.cs",
+        "//src/libraries/Microsoft.Extensions.Diagnostics:src/Metrics/ListenerSubscription.cs",
+    ],
+    deps = [
+        "//src/libraries/Microsoft.Extensions.Diagnostics:impl_Microsoft.Extensions.Diagnostics",
+        "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:ref_Microsoft.Extensions.Diagnostics.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection:ref_Microsoft.Extensions.DependencyInjection",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Physical:impl_Microsoft.Extensions.FileProviders.Physical",
+        "//src/libraries/Microsoft.Extensions.Configuration.FileExtensions:impl_Microsoft.Extensions.Configuration.FileExtensions",
+        "//src/libraries/Microsoft.Extensions.Hosting:impl_Microsoft.Extensions.Hosting",
+        "//src/libraries/Microsoft.Extensions.Hosting.Abstractions:impl_Microsoft.Extensions.Hosting.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/Microsoft.Extensions.Options.ConfigurationExtensions:ref_Microsoft.Extensions.Options.ConfigurationExtensions",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = ASPNETCORE_SNK,
+)

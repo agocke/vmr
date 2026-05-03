@@ -1,0 +1,4 @@
+exports_files([
+    "Microsoft.NETCore.App.runtimeconfig.json",
+    "RuntimeIdentifierGraph.json",
+])

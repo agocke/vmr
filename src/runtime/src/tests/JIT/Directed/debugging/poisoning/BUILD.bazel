@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "poison",
+    optimize = False,
+    srcs = ["poison.cs"],
+    debug_type = "pdbonly",
+    allow_unsafe_blocks = True,
+    deps = ["//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "boxing001",
+    srcs = ["boxing001.il"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)

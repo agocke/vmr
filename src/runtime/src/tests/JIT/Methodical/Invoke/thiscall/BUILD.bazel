@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "thisnull_d",
+    srcs = ["thisnull_d.il", "thisnull.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "thisnull_r",
+    srcs = ["thisnull_r.il", "thisnull.il"],
+    debug_type = "pdbonly",
+)

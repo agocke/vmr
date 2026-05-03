@@ -1,0 +1,22 @@
+load("//:defs.bzl", "ECMA_SNK")
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Xml",
+    keyfile = ECMA_SNK,
+    generate_documentation_file = False,
+    library_import_generator = False,
+    skip_locals_init = False,
+    srcs = [
+        "src/System.Xml.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+        "//src/libraries/System.Xml.XPath:ref_System.Xml.XPath",
+    ],
+    os_targeted = True,
+    exclude_sr = True,
+    assembly_version = "4.0.0.0",
+)

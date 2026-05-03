@@ -1,0 +1,93 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "tailcall_nonvirtualcall_r",
+    srcs = ["tailcall_r.il", "tailcall.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "valuetype_r",
+    srcs = ["valuetype_r.il", "valuetype.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "generics2_r",
+    srcs = ["generics2_r.il", "generics2.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "valuetype_d",
+    srcs = ["valuetype_d.il", "valuetype.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "generics_d",
+    srcs = ["generics_d.il", "generics.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "tailcall_nonvirtualcall_d",
+    srcs = ["tailcall_d.il", "tailcall.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "generics_r",
+    srcs = ["generics_r.il", "generics.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "delegate_d",
+    srcs = ["delegate_d.il", "delegate.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "classic_d",
+    srcs = ["classic_d.il", "classic.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "classic_r",
+    srcs = ["classic_r.il", "classic.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "delegate_r",
+    srcs = ["delegate_r.il", "delegate.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "generics2_d",
+    srcs = ["generics2_d.il", "generics2.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)

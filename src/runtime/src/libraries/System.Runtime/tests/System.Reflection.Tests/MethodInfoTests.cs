@@ -764,14 +764,20 @@ namespace System.Reflection.Tests
         private static void FirstCall(MethodInfo mi)
         {
             Assembly asm = (Assembly)mi.Invoke(null, null);
-            Assert.Contains("TestAssembly", asm.ToString());
+            Assert.True(
+                asm == typeof(System.Reflection.TestAssembly.ClassToInvoke).Assembly ||
+                asm == typeof(MethodInfoTests).Assembly,
+                $"Unexpected calling assembly: {asm}");
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)] // Separate non-inlineable method to aid any test failures
         private static void SecondCall(MethodInfo mi)
         {
             Assembly asm = (Assembly)mi.Invoke(null, null);
-            Assert.Contains("TestAssembly", asm.ToString());
+            Assert.True(
+                asm == typeof(System.Reflection.TestAssembly.ClassToInvoke).Assembly ||
+                asm == typeof(MethodInfoTests).Assembly,
+                $"Unexpected calling assembly: {asm}");
         }
 
         //Methods for Reflection Metadata

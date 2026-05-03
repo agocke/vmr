@@ -1,0 +1,625 @@
+# NativeAOT runtime — Bazel build.
+# Matches CMake: src/coreclr/nativeaot/Runtime/CMakeLists.txt
+#                src/coreclr/nativeaot/Runtime/Full/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_BASE_CONFIG_DEFINES", "CLR_CONFIG_COPTS")
+load("//src/coreclr/nativeaot:nativeaot_defs.bzl", "NATIVEAOT_COMMON_DEFINES", "NATIVEAOT_COPTS", "NATIVEAOT_DEFINES")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "nativeaot_inc",
+    # Header-only target exposing shared NativeAOT include paths.
+    # Replaces the -Isrc/... copts that were in NATIVEAOT_COPTS.
+    includes = [
+        "Runtime",
+        "Runtime/inc",
+        "Runtime/unix",
+        "../gc",
+        "../gc/env",
+        "../runtime",
+        "../pal/inc/rt",
+    ] + select({
+        "@platforms//cpu:arm64": ["Runtime/arm64"],
+        "@platforms//cpu:x86_64": ["Runtime/amd64"],
+    }),
+)
+
+# ---------------------------------------------------------------------------
+# Generated AsmOffsets.inc (preprocessed from unix/AsmOffsets.cpp)
+# ---------------------------------------------------------------------------
+
+genrule(
+    name = "gen_asm_offsets",
+    srcs = [
+        "Runtime/unix/AsmOffsets.cpp",
+        "Runtime/AsmOffsets.h",
+    ] + select({
+        "@platforms//cpu:arm64": ["Runtime/arm64/AsmOffsetsCpu.h"],
+        "//conditions:default": ["Runtime/amd64/AsmOffsetsCpu.h"],
+    }),
+    outs = ["AsmOffsets.inc"],
+    cmd = select({
+        "@platforms//cpu:arm64": " ".join([
+            "clang",
+            "-x c++",
+            "-E -P",
+            "-DHOST_64BIT",
+            "-DHOST_ARM64",
+        ] + ["-D" + d for d in NATIVEAOT_COMMON_DEFINES] + [
+            "-I$$(dirname $(location Runtime/AsmOffsets.h))",
+            "-I$$(dirname $(location Runtime/arm64/AsmOffsetsCpu.h))",
+            "$(location Runtime/unix/AsmOffsets.cpp)",
+            "> $@",
+        ]),
+        "//conditions:default": " ".join([
+            "clang",
+            "-x c++",
+            "-E -P",
+            "-DHOST_64BIT",
+            "-DHOST_AMD64",
+        ] + ["-D" + d for d in NATIVEAOT_COMMON_DEFINES] + [
+            "-I$$(dirname $(location Runtime/AsmOffsets.h))",
+            "-I$$(dirname $(location Runtime/amd64/AsmOffsetsCpu.h))",
+            "$(location Runtime/unix/AsmOffsets.cpp)",
+            "> $@",
+        ]),
+    }),
+)
+
+# Copy the pre-generated config.h into the gendir so it is found via
+# -I$(GENDIR)/src/coreclr/nativeaot without polluting the source-tree
+# include paths (which would cause infinite include loops).
+genrule(
+    name = "gen_config_h",
+    srcs = select({
+        "//:macos_arm64": ["Runtime/unix/bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["Runtime/unix/bazel/osx-x64/config.h"],
+        "//conditions:default": ["Runtime/unix/bazel/config.h"],
+    }),
+    outs = ["config.h"],
+    cmd = select({
+        "//:macos_arm64": "cp $(location Runtime/unix/bazel/osx-arm64/config.h) $@",
+        "//:macos_x64": "cp $(location Runtime/unix/bazel/osx-x64/config.h) $@",
+        "//conditions:default": "cp $(location Runtime/unix/bazel/config.h) $@",
+    }),
+)
+
+# ---------------------------------------------------------------------------
+# Source lists (matching CMake variables)
+# ---------------------------------------------------------------------------
+
+# COMMON_RUNTIME_SOURCES — nativeaot/Runtime/*.cpp
+_NATIVEAOT_RUNTIME_SRCS = [
+    "Runtime/allocheap.cpp",
+    "Runtime/rhassert.cpp",
+    "Runtime/CachedInterfaceDispatch_Aot.cpp",
+    "Runtime/Crst.cpp",
+    "Runtime/DebugHeader.cpp",
+    "Runtime/MethodTable.cpp",
+    "Runtime/EHHelpers.cpp",
+    "Runtime/event.cpp",
+    "Runtime/FinalizerHelpers.cpp",
+    "Runtime/GcEnum.cpp",
+    "Runtime/GCHelpers.cpp",
+    "Runtime/gctoclreventsink.cpp",
+    "Runtime/gcheaputilities.cpp",
+    "Runtime/GCMemoryHelpers.cpp",
+    "Runtime/gcenv.ee.cpp",
+    "Runtime/GcStressControl.cpp",
+    "Runtime/HandleTableHelpers.cpp",
+    "Runtime/interoplibinterface_java.cpp",
+    "Runtime/MathHelpers.cpp",
+    "Runtime/MiscHelpers.cpp",
+    "Runtime/TypeManager.cpp",
+    "Runtime/ObjectLayout.cpp",
+    "Runtime/portable.cpp",
+    "Runtime/RestrictedCallouts.cpp",
+    "Runtime/RhConfig.cpp",
+    "Runtime/RuntimeInstance.cpp",
+    "Runtime/StackFrameIterator.cpp",
+    "Runtime/startup.cpp",
+    "Runtime/stressLog.cpp",
+    "Runtime/SyncClean.cpp",
+    "Runtime/thread.cpp",
+    "Runtime/threadstore.cpp",
+    "Runtime/UniversalTransitionHelpers.cpp",
+    "Runtime/yieldprocessornormalized.cpp",
+]
+
+# Shared runtime sources from src/coreclr/runtime/
+_CORECLR_RUNTIME_SRCS = [
+    "//src/coreclr/runtime:CachedInterfaceDispatch.cpp",
+]
+
+# GC sources (recompiled with NativeAOT defines)
+_GC_SRCS = [
+    "//src/coreclr/gc:gceventstatus.cpp",
+    "//src/coreclr/gc:gcbridge.cpp",
+    "//src/coreclr/gc:gcload.cpp",
+    "//src/coreclr/gc:gcconfig.cpp",
+    "//src/coreclr/gc:gchandletable.cpp",
+    "//src/coreclr/gc:gccommon.cpp",
+    "//src/coreclr/gc:gceewks.cpp",
+    "//src/coreclr/gc:gcwks.cpp",
+    "//src/coreclr/gc:gcscan.cpp",
+    "//src/coreclr/gc:handletable.cpp",
+    "//src/coreclr/gc:handletablecache.cpp",
+    "//src/coreclr/gc:handletablecore.cpp",
+    "//src/coreclr/gc:handletablescan.cpp",
+    "//src/coreclr/gc:objecthandle.cpp",
+    "//src/coreclr/gc:softwarewritewatch.cpp",
+]
+
+# GC textual headers (gc.cpp/gcee.cpp are #included by gcwks/gceewks)
+_GC_TEXTUAL_HDRS = [
+    "//src/coreclr/gc:gc.cpp",
+    "//src/coreclr/gc:gcee.cpp",
+    "//src/coreclr/gc:region_allocator.cpp",
+    "//src/coreclr/gc:region_free_list.cpp",
+    "//src/coreclr/gc:finalization.cpp",
+    "//src/coreclr/gc:interface.cpp",
+    "//src/coreclr/gc:allocation.cpp",
+    "//src/coreclr/gc:mark_phase.cpp",
+    "//src/coreclr/gc:plan_phase.cpp",
+    "//src/coreclr/gc:relocate_compact.cpp",
+    "//src/coreclr/gc:sweep.cpp",
+    "//src/coreclr/gc:background.cpp",
+    "//src/coreclr/gc:regions_segments.cpp",
+    "//src/coreclr/gc:card_table.cpp",
+    "//src/coreclr/gc:memory.cpp",
+    "//src/coreclr/gc:diagnostics.cpp",
+    "//src/coreclr/gc:dynamic_tuning.cpp",
+    "//src/coreclr/gc:no_gc.cpp",
+    "//src/coreclr/gc:dynamic_heap_count.cpp",
+    "//src/coreclr/gc:init.cpp",
+    "//src/coreclr/gc:collect.cpp",
+]
+
+# .cpp files that are #included by NativeAOT runtime sources
+_TEXTUAL_CPP_INCLUDES = [
+    "Runtime/gcinfodecoder.cpp",
+    "//src/coreclr/utilcode:yieldprocessornormalized.cpp",
+    "//src/coreclr/vm:gcinfodecoder.cpp",
+    "//src/coreclr/vm:yieldprocessornormalizedshared.cpp",
+]
+
+# Unix GC sources
+_GC_UNIX_SRCS = [
+    "//src/coreclr/gc:unix/gcenv.unix.cpp",
+    "//src/coreclr/gc:unix/numasupport.cpp",
+    "//src/coreclr/gc:unix/events.cpp",
+    "//src/coreclr/gc:unix/cgroup.cpp",
+] + select({
+    "//:macos_arm64": ["//src/coreclr/gc:unix/bazel/osx-arm64/config.gc.h"],
+    "//:macos_x64": ["//src/coreclr/gc:unix/bazel/osx-x64/config.gc.h"],
+    "//conditions:default": ["//src/coreclr/gc:unix/bazel/linux-glibc-x64/config.gc.h"],
+})
+
+# Unix runtime sources
+_UNIX_RUNTIME_SRCS = [
+    "Runtime/unix/PalUnix.cpp",
+    "Runtime/unix/PalCreateDump.cpp",
+]
+
+# minipal xoshiro128pp is already compiled via //src/native/minipal dep
+
+# FULL_RUNTIME_SOURCES
+_FULL_RUNTIME_SRCS = [
+    "Runtime/AsmOffsetsVerify.cpp",
+    "Runtime/ThunksMapping.cpp",
+]
+
+# Unix FULL sources
+_UNIX_FULL_SRCS = [
+    "Runtime/unix/cgroupcpu.cpp",
+    "Runtime/unix/HardwareExceptions.cpp",
+    "Runtime/unix/NativeContext.cpp",
+    "Runtime/unix/UnixSignals.cpp",
+    "Runtime/unix/UnwindHelpers.cpp",
+    "Runtime/unix/UnixNativeCodeManager.cpp",
+]
+
+# llvm-libunwind sources (compiled into NativeAOT Full runtime)
+_LLVM_LIBUNWIND_SRCS = [
+    "//src/native/external/llvm-libunwind:src/Unwind-EHABI.cpp",
+    "//src/native/external/llvm-libunwind:src/libunwind.cpp",
+]
+
+_LLVM_LIBUNWIND_ASM_SRCS = [
+    "//src/native/external/llvm-libunwind:src/UnwindRegistersRestore.S",
+    "//src/native/external/llvm-libunwind:src/UnwindRegistersSave.S",
+]
+
+# Assembly sources from nativeaot/Runtime/{arch}/
+# ThunkPoolThunks.S is Apple-only; on Linux FEATURE_RX_THUNKS is used.
+_NATIVEAOT_ASM_SRCS = select({
+    "@platforms//cpu:arm64": [
+        "Runtime/arm64/CachedInterfaceDispatchAot.S",
+        "Runtime/arm64/ExceptionHandling.S",
+        "Runtime/arm64/GcProbe.S",
+        "Runtime/arm64/InteropThunksHelpers.S",
+        "Runtime/arm64/MiscStubs.S",
+        "Runtime/arm64/PInvoke.S",
+        "Runtime/arm64/ThunkPoolThunks.S",
+        "Runtime/arm64/UniversalTransition.S",
+    ],
+    "//conditions:default": [
+        "Runtime/amd64/CachedInterfaceDispatchAot.S",
+        "Runtime/amd64/ExceptionHandling.S",
+        "Runtime/amd64/GcProbe.S",
+        "Runtime/amd64/InteropThunksHelpers.S",
+        "Runtime/amd64/MiscStubs.S",
+        "Runtime/amd64/PInvoke.S",
+        "Runtime/amd64/UniversalTransition.S",
+    ],
+})
+
+# Assembly sources from src/coreclr/runtime/{arch}/
+_CORECLR_ASM_SRCS = select({
+    "@platforms//cpu:arm64": [
+        "//src/coreclr/runtime:arm64/AllocFast.S",
+        "//src/coreclr/runtime:arm64/StubDispatch.S",
+        "//src/coreclr/runtime:arm64/WriteBarriers.S",
+    ],
+    "//conditions:default": [
+        "//src/coreclr/runtime:amd64/AllocFast.S",
+        "//src/coreclr/runtime:amd64/StubDispatch.S",
+        "//src/coreclr/runtime:amd64/WriteBarriers.S",
+    ],
+})
+
+# SERVER_GC_SOURCES
+_SERVER_GC_SRCS = [
+    "//src/coreclr/gc:gceesvr.cpp",
+    "//src/coreclr/gc:gcsvr.cpp",
+]
+
+# Server GC textual headers already included via _GC_TEXTUAL_HDRS
+
+# All COMMON sources combined (excluding GC — GC is in separate library targets)
+_ALL_COMMON = (
+    _NATIVEAOT_RUNTIME_SRCS +
+    _CORECLR_RUNTIME_SRCS +
+    _UNIX_RUNTIME_SRCS
+)
+
+# All FULL sources combined
+_ALL_FULL = (
+    _FULL_RUNTIME_SRCS +
+    _UNIX_FULL_SRCS +
+    _LLVM_LIBUNWIND_SRCS +
+    _LLVM_LIBUNWIND_ASM_SRCS
+)
+
+# All ASM sources
+_ALL_ASM = _NATIVEAOT_ASM_SRCS + _CORECLR_ASM_SRCS
+
+# Assembly include files that must be in the sandbox for .S preprocessing
+_ASM_INCLUDES = glob(
+    [
+        "Runtime/unix/*.inc",
+        "Runtime/amd64/*.inc",
+        "Runtime/amd64/AsmMacros_Shared.h",
+        "Runtime/arm64/*.inc",
+        "Runtime/arm64/AsmMacros_Shared.h",
+    ],
+    allow_empty = True,
+)
+
+# Headers visible to the runtime build
+_RUNTIME_HDRS = glob(
+    [
+        "Runtime/*.h",
+        "Runtime/*.hpp",
+        "Runtime/*.inl",
+        "Runtime/inc/*.h",
+        "Runtime/inc/*.inl",
+        "Runtime/unix/*.h",
+        "Runtime/unix/*.inc",
+        "Runtime/unix/bazel/*.h",
+        "Runtime/amd64/*.h",
+        "Runtime/amd64/*.inc",
+        "Runtime/arm64/*.h",
+        "Runtime/arm64/*.inc",
+        "Runtime/eventpipe/*.h",
+        "Runtime/eventpipe/bazel/inc/*.h",
+    ],
+    allow_empty = True,
+)
+
+# Gendir include path for generated files (AsmOffsets.inc, config.h)
+# Wrapped in a cc_library so Bazel resolves the include path automatically,
+# regardless of whether the runtime is built standalone or as a module dep.
+cc_library(
+    name = "nativeaot_generated_headers",
+    hdrs = [
+        ":gen_asm_offsets",
+        ":gen_config_h",
+    ],
+    includes = ["."],
+    linkstatic = True,
+)
+
+# Generated files needed by the runtime
+_GENERATED_SRCS = []
+
+# llvm-libunwind needs its own include path for internal headers
+# llvm-libunwind includes are now provided by
+# //src/native/external/llvm-libunwind:llvm_libunwind_headers via deps.
+
+# GC unix config header path
+_GC_UNIX_INCLUDES = [
+    "../gc/unix",
+] + select({
+    "//:macos_arm64": ["../gc/unix/bazel/osx-arm64"],
+    "//:macos_x64": ["../gc/unix/bazel/osx-x64"],
+    "//conditions:default": ["../gc/unix/bazel/linux-glibc-x64"],
+})
+
+# Pre-generated eventing headers (from genEventing.py)
+_EVENTING_INCLUDES = [
+    "Runtime/eventpipe/bazel/inc",
+]
+
+# Combined deps for runtime targets
+_RUNTIME_DEPS = [
+    "//src/coreclr/nativeaot:nativeaot_inc",
+    "//src/coreclr/gc:gc_headers",
+    "//src/coreclr/runtime:runtime_headers",
+    "//src/coreclr/pal:pal_rt_inc",
+    "//src/native/eventpipe:eventpipe-headers",
+    "//src/native/external/llvm-libunwind:llvm_libunwind_headers",
+    "//src/native/minipal",
+    "//src/native:native_inc",
+    "//eng/native:version_headers",
+]
+
+# coreclr/inc files needed in sandbox for relative #include resolution
+# (e.g., ../../inc/daccess.h) — NOT added to the include search path
+# to avoid shadowing NativeAOT headers like loglf.h.
+_CORECLR_INC_FILES = ["//src/coreclr/inc:coreclr_inc_files"]
+
+# ---------------------------------------------------------------------------
+# Eventpipe (disabled stubs)
+# ---------------------------------------------------------------------------
+
+cc_library(
+    name = "eventpipe_disabled",
+    srcs = [
+        "Runtime/DisabledEventPipeInterface.cpp",
+        "Runtime/disabledeventpipeinternal.cpp",
+        "Runtime/disabledeventtrace.cpp",
+        "Runtime/disabledruntimeeventinternal.cpp",
+    ] + _GENERATED_SRCS + _CORECLR_INC_FILES,
+    hdrs = _RUNTIME_HDRS,
+    textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
+    defines = NATIVEAOT_DEFINES,
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = _RUNTIME_DEPS + [
+        ":nativeaot_generated_headers",
+    ],
+)
+
+# TODO: eventpipe_enabled requires generated eventing headers from the
+# eventpipe build (ep-rt-aot.h etc.). Implement once the eventing header
+# generation is ported to Bazel.
+
+# ---------------------------------------------------------------------------
+# GC static libraries (compiled with NativeAOT defines)
+# ---------------------------------------------------------------------------
+# GC sources are compiled as separate libraries so that private GC headers
+# (gcpriv.h, gcimpl.h, handletablepriv.h) don't propagate to the ~100
+# NativeAOT runtime sources via implementation_deps.
+
+cc_library(
+    name = "nativeaot_gc_wks",
+    srcs = _GC_SRCS + _GC_UNIX_SRCS + _CORECLR_INC_FILES,
+    textual_hdrs = _GC_TEXTUAL_HDRS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    includes = _GC_UNIX_INCLUDES,
+    defines = NATIVEAOT_DEFINES,
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    alwayslink = True,
+    linkstatic = True,
+    implementation_deps = [
+        "//src/coreclr/gc:gc_internal_headers",
+    ],
+    deps = _RUNTIME_DEPS + [
+        ":nativeaot_generated_headers",
+    ],
+)
+
+cc_library(
+    name = "nativeaot_gc_svr",
+    srcs = _GC_SRCS + _GC_UNIX_SRCS + _SERVER_GC_SRCS + _CORECLR_INC_FILES,
+    textual_hdrs = _GC_TEXTUAL_HDRS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    includes = _GC_UNIX_INCLUDES,
+    defines = NATIVEAOT_DEFINES + ["FEATURE_SVR_GC"],
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    alwayslink = True,
+    linkstatic = True,
+    implementation_deps = [
+        "//src/coreclr/gc:gc_internal_headers",
+    ],
+    deps = _RUNTIME_DEPS + [
+        ":nativeaot_generated_headers",
+    ],
+)
+
+# ---------------------------------------------------------------------------
+# Runtime.WorkstationGC
+# ---------------------------------------------------------------------------
+
+cc_library(
+    name = "nativeaot_runtime_wks",
+    srcs = _ALL_COMMON + _ALL_FULL + _ALL_ASM + _ASM_INCLUDES + _GENERATED_SRCS + _CORECLR_INC_FILES,
+    hdrs = _RUNTIME_HDRS,
+    textual_hdrs = _TEXTUAL_CPP_INCLUDES,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
+    defines = NATIVEAOT_DEFINES,
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = _RUNTIME_DEPS + [
+        ":eventpipe_disabled",
+        ":nativeaot_gc_wks",
+        ":nativeaot_generated_headers",
+    ],
+)
+
+# ---------------------------------------------------------------------------
+# Runtime.ServerGC
+# ---------------------------------------------------------------------------
+
+cc_library(
+    name = "nativeaot_runtime_svr",
+    srcs = _ALL_COMMON + _ALL_FULL + _ALL_ASM + _ASM_INCLUDES + _GENERATED_SRCS + _CORECLR_INC_FILES,
+    hdrs = _RUNTIME_HDRS,
+    textual_hdrs = _TEXTUAL_CPP_INCLUDES,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
+    defines = NATIVEAOT_DEFINES + ["FEATURE_SVR_GC"],
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = _RUNTIME_DEPS + [
+        ":eventpipe_disabled",
+        ":nativeaot_gc_svr",
+        ":nativeaot_generated_headers",
+    ],
+)
+
+# ---------------------------------------------------------------------------
+# Standalone GC enable/disable stubs
+# ---------------------------------------------------------------------------
+
+cc_library(
+    name = "standalonegc_disabled",
+    srcs = ["Runtime/clrgc.disabled.cpp"] + _GENERATED_SRCS + _CORECLR_INC_FILES,
+    hdrs = _RUNTIME_HDRS,
+    textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
+    defines = NATIVEAOT_DEFINES,
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = _RUNTIME_DEPS + [
+        ":nativeaot_generated_headers",
+    ],
+)
+
+cc_library(
+    name = "standalonegc_enabled",
+    srcs = ["Runtime/clrgc.enabled.cpp"] + _GENERATED_SRCS + _CORECLR_INC_FILES,
+    hdrs = _RUNTIME_HDRS,
+    textual_hdrs = _GC_TEXTUAL_HDRS + _TEXTUAL_CPP_INCLUDES,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    includes = _GC_UNIX_INCLUDES + _EVENTING_INCLUDES,
+    defines = NATIVEAOT_DEFINES,
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = _RUNTIME_DEPS + [
+        ":nativeaot_generated_headers",
+    ],
+)
+
+# ---------------------------------------------------------------------------
+# VxSort (AMD64)
+# ---------------------------------------------------------------------------
+
+_VXSORT_SRCS = select({
+    "@platforms//cpu:arm64": [
+        "//src/coreclr/gc:vxsort/dummy.cpp",
+    ],
+    "//conditions:default": [
+        "//src/coreclr/gc:vxsort/isa_detection.cpp",
+        "//src/coreclr/gc:vxsort/do_vxsort_avx2.cpp",
+        "//src/coreclr/gc:vxsort/do_vxsort_avx512.cpp",
+        "//src/coreclr/gc:vxsort/machine_traits.avx2.cpp",
+        "//src/coreclr/gc:vxsort/smallsort/bitonic_sort.AVX2.int64_t.generated.cpp",
+        "//src/coreclr/gc:vxsort/smallsort/bitonic_sort.AVX2.int32_t.generated.cpp",
+        "//src/coreclr/gc:vxsort/smallsort/bitonic_sort.AVX512.int64_t.generated.cpp",
+        "//src/coreclr/gc:vxsort/smallsort/bitonic_sort.AVX512.int32_t.generated.cpp",
+        "//src/coreclr/gc:vxsort/smallsort/avx2_load_mask_tables.cpp",
+    ],
+})
+
+cc_library(
+    name = "nativeaot_vxsort_enabled",
+    srcs = _VXSORT_SRCS,
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS + select({
+        "@platforms//cpu:arm64": [],
+        "//conditions:default": ["-mavx2"],
+    }),
+    includes = ["../gc/vxsort", "../gc/vxsort/smallsort"],
+    defines = NATIVEAOT_DEFINES,
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = [
+        "//src/coreclr/nativeaot:nativeaot_inc",
+        "//src/coreclr/gc:gc_headers",
+        "//src/native:native_inc",
+        "//src/native/minipal",
+    ],
+)
+
+cc_library(
+    name = "nativeaot_vxsort_disabled",
+    srcs = ["//src/coreclr/gc:vxsort/dummy.cpp"],
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    includes = ["../gc/vxsort"],
+    defines = NATIVEAOT_DEFINES,
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = [
+        "//src/coreclr/nativeaot:nativeaot_inc",
+        "//src/coreclr/gc:gc_headers",
+        "//src/native:native_inc",
+    ],
+)
+
+# ---------------------------------------------------------------------------
+# Bootstrap targets
+# ---------------------------------------------------------------------------
+
+cc_library(
+    name = "bootstrapper",
+    srcs = ["Bootstrap/main.cpp"],
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    defines = NATIVEAOT_DEFINES,
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = ["//src/coreclr/nativeaot:nativeaot_inc", "//src/native:native_inc", "//src/native/minipal"],
+)
+
+cc_library(
+    name = "bootstrapperdll",
+    srcs = ["Bootstrap/main.cpp"],
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    defines = NATIVEAOT_DEFINES + ["NATIVEAOT_DLL"],
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = ["//src/coreclr/nativeaot:nativeaot_inc", "//src/native:native_inc", "//src/native/minipal"],
+)
+
+cc_library(
+    name = "stdc_compat",
+    srcs = ["Bootstrap/stdcppshim.cpp"],
+    copts = NATIVEAOT_COPTS + CLR_CONFIG_COPTS,
+    defines = NATIVEAOT_DEFINES,
+    local_defines = CLR_BASE_CONFIG_DEFINES,
+    linkstatic = True,
+    deps = ["//src/coreclr/nativeaot:nativeaot_inc", "//src/native:native_inc"],
+)
+
+exports_files([
+    "Common/src/System/Runtime/RhFailFastReason.cs",
+    "Runtime.Base/src/System/Runtime/ExceptionHandling.cs",
+    "Runtime.Base/src/System/Runtime/ExceptionIDs.cs",
+    "Runtime.Base/src/System/Runtime/StackFrameIterator.cs",
+])

@@ -1,0 +1,25 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "RedundantBranchAnd",
+    srcs = ["RedundantBranchAnd.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "RedundantBranchUnsigned2",
+    srcs = ["RedundantBranchUnsigned2.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "RedundantBranchOr",
+    srcs = ["RedundantBranchOr.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "RedundantBranchUnsigned",
+    srcs = ["RedundantBranchUnsigned.cs"],
+    optimize = True,
+)

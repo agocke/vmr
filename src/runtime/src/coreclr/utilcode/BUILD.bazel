@@ -1,0 +1,132 @@
+# CoreCLR utilcode — utility code libraries.
+# Three variants: utilcode (OBJECT), utilcodestaticnohost (STATIC), utilcode_dac (STATIC).
+# Matches CMake: src/coreclr/utilcode/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES", "CORECLR_DAC_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+exports_files(["yieldprocessornormalized.cpp"])
+
+_UTILCODE_COMMON_SOURCES = [
+    "clrhost_nodependencies.cpp",
+    "ccomprc.cpp",
+    "ex.cpp",
+    "sbuffer.cpp",
+    "sstring_com.cpp",
+    "fstring.cpp",
+    "namespaceutil.cpp",
+    "makepath.cpp",
+    "splitpath.cpp",
+    "clrconfig.cpp",
+    "configuration.cpp",
+    "collections.cpp",
+    "posterror.cpp",
+    "clrhelpers.cpp",
+    "memorystreams.cpp",
+    "utsem.cpp",
+    "check.cpp",
+    "log.cpp",
+    "arraylist.cpp",
+    "comex.cpp",
+    "guidfromname.cpp",
+    "memorypool.cpp",
+    "loaderheap.cpp",
+    "interleavedloaderheap.cpp",
+    "loaderheap_shared.cpp",
+    "explicitcontrolloaderheap.cpp",
+    "rangelist.cpp",
+    "outstring.cpp",
+    "ilformatter.cpp",
+    "opinfo.cpp",
+    "corimage.cpp",
+    "format1.cpp",
+    "prettyprintsig.cpp",
+    "sha1.cpp",
+    "sigbuilder.cpp",
+    "sigparser.cpp",
+    "sstring.cpp",
+    "util_nodependencies.cpp",
+    "safewrap.cpp",
+    "clrhost.cpp",
+    "cycletimer.cpp",
+    "md5.cpp",
+    "util.cpp",
+    "stresslog.cpp",
+    "debug.cpp",
+    "pedecoder.cpp",
+    "winfix.cpp",
+    "longfilepathwrappers.cpp",
+    "yieldprocessornormalized.cpp",
+]
+
+_UTILCODE_HDRS = [
+    "loaderheap_shared.h",
+    "stdafx.h",
+]
+
+# utilcode — OBJECT library used by the VM (cee_wks)
+cc_library(
+    name = "utilcode",
+    srcs = _UTILCODE_COMMON_SOURCES + [
+        "allocmemtracker.cpp",
+        "executableallocator.cpp",
+    ] + _UTILCODE_HDRS,
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-include", "src/coreclr/utilcode/stdafx.h",
+    ],
+    includes = ["."],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    alwayslink = True,
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/nativeresources:nativeresourcestring",
+        "//src/coreclr/pal:coreclrpal",
+    ],
+)
+
+# utilcodestaticnohost — static library used by the JIT
+cc_library(
+    name = "utilcodestaticnohost",
+    srcs = _UTILCODE_COMMON_SOURCES + [
+        "hostimpl.cpp",
+    ] + _UTILCODE_HDRS,
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-include", "src/coreclr/utilcode/stdafx.h",
+    ],
+    includes = ["."],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES + [
+        "SELF_NO_HOST",
+    ],
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/minipal:coreclrminipal",
+        "//src/coreclr/nativeresources:nativeresourcestring",
+    ],
+)
+
+# utilcode_dac — static library for the DAC (Data Access Component)
+# Matches CMake: src/coreclr/utilcode/CMakeLists.txt  utilcode_dac target.
+# Same sources as utilcodestaticnohost, compiled with DAC_COMPONENT defines.
+cc_library(
+    name = "utilcode_dac",
+    srcs = _UTILCODE_COMMON_SOURCES + [
+        "hostimpl.cpp",
+    ] + _UTILCODE_HDRS,
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-include", "src/coreclr/utilcode/stdafx.h",
+    ],
+    includes = ["."],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DAC_DEFINES + [
+        "SELF_NO_HOST",
+    ],
+    deps = [
+        "//src/coreclr/inc:coreclr_inc_dac",
+        "//src/coreclr/minipal:coreclrminipal",
+        "//src/coreclr/nativeresources:nativeresourcestring",
+    ],
+)

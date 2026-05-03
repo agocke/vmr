@@ -1,0 +1,135 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_DEFINES")
+
+cc_library(
+    name = "System.Native_lib",
+    srcs = [
+        "entrypoints.c",
+        "pal_console.c",
+        "pal_dynamicload.c",
+        "pal_errno.c",
+        "pal_interfaceaddresses.c",
+        "pal_io.c",
+        "pal_iossupportversion.c",
+        "pal_log.c",
+        "pal_maphardwaretype.c",
+        "pal_memory.c",
+        "pal_mount.c",
+        "pal_networkchange.c",
+        "pal_networking.c",
+        "pal_networkstatistics.c",
+        "pal_process.c",
+        "pal_random.c",
+        "pal_runtimeinformation.c",
+        "pal_signal.c",
+        "pal_string.c",
+        "pal_sysctl.c",
+        "pal_tcpstate.c",
+        "pal_threading.c",
+        "pal_time.c",
+        "pal_uid.c",
+    ] + select({
+        # On Apple platforms, the Objective-C variants in System.Native_objc
+        # replace these C stubs. On other platforms, use the C fallbacks.
+        "@platforms//os:macos": [
+            "pal_crossprocessmutex_unsupported.c",
+            "pal_datetime.c",
+            "pal_getosinfo.c",
+        ],
+        "//conditions:default": [
+            "pal_autoreleasepool.c",
+            "pal_crossprocessmutex.c",
+            "pal_datetime.c",
+            "pal_environment.c",
+            "pal_getosinfo.c",
+            "pal_searchpath.c",
+        ],
+    }) + glob(["*.h"]),
+    copts = [
+        "-Wno-declaration-after-statement",
+    ],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
+    ],
+    defines = [
+        "HAS_CONSOLE_SIGNALS",
+    ],
+    local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
+    linkopts = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["-lrt"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/native/libs:common",
+        "//src/native/minipal",
+    ] + select({
+        "@platforms//os:macos": [":System.Native_objc"],
+        "//conditions:default": [],
+    }),
+)
+
+# On macOS, compile Objective-C sources as a separate cc_library.
+# Rename .m -> .c and use -x objective-c to compile them as ObjC.
+[genrule(
+    name = "rename_%s" % src.replace(".m", "").replace("pal_", ""),
+    srcs = [src],
+    outs = [src.replace(".m", "_objc.c")],
+    cmd = "cp $< $@",
+) for src in [
+    "pal_autoreleasepool.m",
+    "pal_datetime.m",
+    "pal_environment.m",
+    "pal_searchpath.m",
+]]
+
+cc_library(
+    name = "System.Native_objc",
+    srcs = [
+        "pal_autoreleasepool_objc.c",
+        "pal_datetime_objc.c",
+        "pal_environment_objc.c",
+        "pal_searchpath_objc.c",
+    ] + glob(["*.h"]),
+    copts = [
+        "-x", "objective-c",
+        "-fno-objc-arc",
+        "-Wno-declaration-after-statement",
+
+    ],
+    defines = [
+        "HAS_CONSOLE_SIGNALS",
+    ],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
+        ".",
+    ],
+    local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
+    target_compatible_with = ["@platforms//os:macos"],
+    deps = [
+        "//src/native/libs:common",
+        "//src/native/minipal",
+    ],
+)
+
+cc_shared_library(
+    name = "System.Native",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libSystem.Native.dylib",
+        "//conditions:default": "libSystem.Native.so",
+    }),
+    user_link_flags = select({
+        "@platforms//os:macos": [
+            "-Wl,-install_name,@rpath/libSystem.Native.dylib",
+            "-framework", "Foundation",
+        ],
+        "//conditions:default": ["-Wl,-soname,libSystem.Native.so"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":System.Native_lib"],
+)

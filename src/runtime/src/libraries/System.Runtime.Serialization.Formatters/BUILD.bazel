@@ -1,0 +1,67 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Runtime.Serialization.Formatters",
+    srcs = [
+        "ref/System.Runtime.Serialization.Formatters.cs",
+        "ref/System.Runtime.Serialization.Formatters.Forwards.cs",
+    ],
+    assembly_version = "8.1.0.0",
+    deps = [
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Runtime.Serialization.Formatters",
+    nowarn = [
+        "CA1822",
+        "CP0003",
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+        "CS1591",
+    ],
+    compiler_options = ["/unsafe"],
+    srcs = [
+        "src/System.Runtime.Serialization.Formatters.TypeForwards.cs",
+        "src/System/Runtime/Serialization/DeserializationEventHandler.cs",
+        "src/System/Runtime/Serialization/Formatter.cs",
+        "src/System/Runtime/Serialization/FormatterConverter.cs",
+        "src/System/Runtime/Serialization/FormatterServices.cs",
+        "src/System/Runtime/Serialization/IFormatter.cs",
+        "src/System/Runtime/Serialization/ISerializationSurrogate.cs",
+        "src/System/Runtime/Serialization/ISurrogateSelector.cs",
+        "src/System/Runtime/Serialization/MemberHolder.cs",
+        "src/System/Runtime/Serialization/ObjectIDGenerator.cs",
+        "src/System/Runtime/Serialization/ObjectManager.cs",
+        "src/System/Runtime/Serialization/SerializationBinder.cs",
+        "src/System/Runtime/Serialization/SerializationEventsCache.cs",
+        "src/System/Runtime/Serialization/SerializationFieldInfo.cs",
+        "src/System/Runtime/Serialization/SerializationObjectManager.cs",
+        "src/System/Runtime/Serialization/SurrogateSelector.cs",
+        "src/System/Runtime/Serialization/ValueTypeFixupInfo.cs",
+        "src/System/Runtime/Serialization/Formatters/CommonEnums.cs",
+        "src/System/Runtime/Serialization/Formatters/IFieldInfo.cs",
+        "src/System/Runtime/Serialization/Formatters/Binary/BinaryFormatter.cs",
+
+        # NetCoreAppCurrent: BinaryFormatter is removed, compile stub instead of full impl
+        "src/System/Runtime/Serialization/Formatters/Binary/BinaryFormatter.Removed.cs",
+
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/HashHelpers.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        # MSBuild gets DefaultDllImportSearchPathsAttribute from CoreLib;
+        # Bazel needs explicit ref for include_dll_safe_search_path.
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries:ref_System.Runtime",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    include_dll_safe_search_path = True,
+    assembly_version = "8.1.0.0",
+)

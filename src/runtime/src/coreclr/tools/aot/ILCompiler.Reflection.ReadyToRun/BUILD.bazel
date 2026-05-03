@@ -1,0 +1,41 @@
+load("//:defs.bzl", "NETCOREAPP_MINIMUM", "csharp_library")
+
+exports_files(["PEReaderExtensions.cs"])
+
+csharp_library(
+    name = "ILCompiler.Reflection.ReadyToRun",
+    include_runtime_async = False,
+    msbuild_analyzer_config = "style",
+    include_default_ruleset = False,
+    compiler_options = ["/warnaserror+:NU1605"],
+    srcs = glob(["**/*.cs"]) + [
+        "//src/coreclr/tools/Common:Internal/Runtime/CorConstants.cs",
+        "//src/coreclr/tools/Common:Internal/Runtime/ModuleHeaders.cs",
+        "//src/coreclr/tools/Common:Internal/Runtime/ReadyToRunConstants.cs",
+        "//src/coreclr/tools/Common:Internal/Runtime/ReadyToRunInstructionSet.cs",
+        "//src/coreclr/tools/Common:Pgo/PgoFormat.cs",
+        "//src/coreclr/tools/Common:MachO/BinaryFormat/LoadCommand.cs",
+        "//src/coreclr/tools/Common:MachO/BinaryFormat/MachHeader.cs",
+        "//src/coreclr/tools/Common:MachO/BinaryFormat/NameBuffer.cs",
+        "//src/coreclr/tools/Common:MachO/BinaryFormat/Section64LoadCommand.cs",
+        "//src/coreclr/tools/Common:MachO/BinaryFormat/Segment64LoadCommand.cs",
+        "//src/coreclr/tools/Common:MachO/BinaryFormat/SymbolTableLoadCommand.cs",
+        "//src/coreclr/tools/Common:MachO/Enums/MachFileType.cs",
+        "//src/coreclr/tools/Common:MachO/Enums/MachLoadCommandType.cs",
+        "//src/coreclr/tools/Common:MachO/Enums/MachMagic.cs",
+        "//src/coreclr/tools/Common:MachO/MachMagicExtensions.cs",
+        "//src/coreclr/tools/Common:MachO/MachObjectFile.cs",
+    ],
+    allow_unsafe_blocks = True,
+    nowarn = ["1591", "8002", "NU1701"],
+    analyzers = [
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+    ],
+    target_frameworks = [NETCOREAPP_MINIMUM],
+    deps = [
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.reflection.metadata",
+        "@paket.main//system.runtime.compilerservices.unsafe",
+    ],
+    visibility = ["//visibility:public"],
+)

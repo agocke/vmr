@@ -1,0 +1,88 @@
+load("//:defs.bzl", "csharp_library")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Options.cs",
+])
+
+csharp_library(
+    name = "OptionsSourceGeneration",
+    out = "Microsoft.Extensions.Options.SourceGeneration",
+    srcs = [
+        "gen/DiagDescriptors.cs",
+        "gen/DiagDescriptorsBase.cs",
+        "gen/Emitter.cs",
+        "gen/EmitterBase.cs",
+        "gen/Generator.cs",
+        "gen/Model/ValidatedMember.cs",
+        "gen/Model/ValidatedModel.cs",
+        "gen/Model/ValidationAttributeInfo.cs",
+        "gen/Model/ValidatorType.cs",
+        "gen/OptionsSourceGenContext.cs",
+        "gen/Parser.cs",
+        "gen/ParserUtilities.cs",
+        "gen/SymbolHolder.cs",
+        "gen/SymbolLoader.cs",
+        "gen/TypeDeclarationSyntaxReceiver.cs",
+        "//src/libraries/Common:src/Roslyn/GetBestTypeByMetadataName.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
+    ],
+    target_frameworks = ["netstandard2.0"],
+    langversion = "preview",
+    cls_compliant = False,
+    defines = ["ROSLYN4_4_OR_GREATER"],
+    deps = [
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//microsoft.codeanalysis.csharp.workspaces",
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.memory",
+    ],
+    nullable = "annotations",
+    resx_file = "gen/Resources/Strings.resx",
+    visibility = ["//visibility:public"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Options",
+    srcs = [
+        "ref/Microsoft.Extensions.Options.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.ComponentModel.Annotations:ref_System.ComponentModel.Annotations",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Options",
+    include_runtime_async = False,
+    event_source_generator = True,
+    allow_unsafe_blocks = True,
+    skip_locals_init = True,
+    library_import_generator = False,
+    jsimport_generator = False,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]),
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.ComponentModel.Annotations:ref_System.ComponentModel.Annotations",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Options",
+    ref = ":ref_Microsoft.Extensions.Options",
+    lib = ":impl_Microsoft.Extensions.Options",
+    visibility = ["//visibility:public"],
+)

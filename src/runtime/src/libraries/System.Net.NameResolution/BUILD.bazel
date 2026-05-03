@@ -1,0 +1,88 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "src/System/Net/IPHostEntry.cs",
+    "src/System/Net/NameResolutionPal.Unix.cs",
+    "src/Resources/Strings.resx",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.NameResolution",
+    srcs = [
+        "ref/System.Net.NameResolution.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.NameResolution",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
+    os_targeted = "unix",
+    srcs = glob(
+        ["src/System/**/*.cs"],
+        exclude = [
+            "src/System/Net/Dns.Browser.cs",
+            "src/System/Net/NameResolutionPal.Windows.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/System/Net/Logging/NetEventSource.Common.cs",
+        "//src/libraries/Common:src/System/Net/InternalException.cs",
+        "//src/libraries/Common:src/System/Net/IPAddressParserStatics.cs",
+        "//src/libraries/Common:src/System/Net/SocketProtocolSupportPal.cs",
+        "//src/libraries/Common:src/System/LocalAppContextSwitches.Common.cs",
+        "//src/libraries/Common:src/System/Net/LocalAppContextSwitches.Net.cs",
+    ] + select({
+        "@platforms//os:linux": [
+            "//src/libraries/Common:src/System/Net/InteropIPAddressExtensions.Unix.cs",
+            "//src/libraries/Common:src/System/Net/SocketAddressPal.Unix.cs",
+            "//src/libraries/Common:src/System/Net/SocketProtocolSupportPal.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.ErrNo.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Close.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetHostName.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetNameInfo.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.HostEntry.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.IPAddress.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Socket.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SocketAddress.cs",
+        ],
+        "@platforms//os:macos": [
+            "//src/libraries/Common:src/System/Net/InteropIPAddressExtensions.Unix.cs",
+            "//src/libraries/Common:src/System/Net/SocketAddressPal.Unix.cs",
+            "//src/libraries/Common:src/System/Net/SocketProtocolSupportPal.Unix.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.ErrNo.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Close.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetHostName.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetNameInfo.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.HostEntry.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.IPAddress.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Socket.cs",
+            "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.SocketAddress.cs",
+        ],
+    }),
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Security.Claims:ref_System.Security.Claims",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Overlapped:ref_System.Threading.Overlapped",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+    ],
+    supported_os_platforms = ["unix"],
+)

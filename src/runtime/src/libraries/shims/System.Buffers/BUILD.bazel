@@ -1,0 +1,16 @@
+load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Buffers",
+    skip_locals_init = False,
+    srcs = ["src/System.Buffers.cs"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    os_targeted = True,
+    exclude_sr = True,
+    keyfile = OPEN_SNK,
+    generate_documentation_file = False,
+    library_import_generator = False,
+)

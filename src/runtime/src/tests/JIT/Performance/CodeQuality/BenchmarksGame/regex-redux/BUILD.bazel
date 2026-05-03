@@ -1,0 +1,21 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "regex-redux-1",
+    tags = ["manual"],  # Needs EmbeddedResource support
+    srcs = [
+        "regex-redux-1.cs",
+        "harness-helpers.cs",
+    ],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "regex-redux-5",
+    tags = ["manual"],  # Needs EmbeddedResource support
+    srcs = [
+        "regex-redux-5.cs",
+        "harness-helpers.cs",
+    ],
+    optimize = True,
+)

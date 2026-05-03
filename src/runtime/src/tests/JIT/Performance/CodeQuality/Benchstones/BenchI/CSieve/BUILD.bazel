@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "CSieve",
+    srcs = ["CSieve.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

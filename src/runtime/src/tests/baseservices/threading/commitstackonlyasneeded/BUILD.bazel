@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "DefaultStackCommit",
+    srcs = [
+        "DefaultStackCommit.cs",
+        "StackCommitCommon.cs",
+    ],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)

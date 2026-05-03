@@ -1,0 +1,17 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "class01_TypeParameters_MultiDim",
+    srcs = ["class01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "struct01_struct01.csproj",
+    srcs = ["struct01.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

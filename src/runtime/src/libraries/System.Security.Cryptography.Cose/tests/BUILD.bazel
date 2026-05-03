@@ -1,0 +1,34 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Security.Cryptography.Cose.Tests",
+    srcs = glob(["**/*.cs"]) + [
+        "//src/libraries/Common/tests:System/Security/Cryptography/ByteUtils.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/PlatformSupport.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/CngKeyWrapper.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/MLDsa/MLDsaTestsData.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/MLDsa/MLDsaTestsData.Ietf.cs",
+        "//src/libraries/Common:src/System/Experimentals.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Security.Cryptography.Cose:impl_System.Security.Cryptography.Cose",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Formats.Cbor:ref_System.Formats.Cbor",
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/shims/netstandard:impl_netstandard",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.identitymodel.tokens",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    nowarn = MULTITARGET_NOWARN + ["SYSLIB5006"],
+    defines = ["EXCLUDE_PEM_ENCODING_FROM_TEST_DATA"],
+    nullable = "enable",
+    size = "large",
+    keyfile = OPEN_SNK,
+)

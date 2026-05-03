@@ -1,0 +1,50 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/System.Runtime.Serialization.Schema.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Runtime.Serialization.Schema",
+    srcs = [
+        "ref/System.Runtime.Serialization.Schema.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.CodeDom:ref_System.CodeDom",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Runtime.Serialization.Schema",
+    include_runtime_async = False,
+    event_source_generator = False,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    com_interface_generator = True,
+    nowarn = ["CP0003"],
+    srcs = glob(["src/**/*.cs"]),
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.CodeDom:ref_System.CodeDom",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Xml:ref_System.Runtime.Serialization.Xml",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    assembly_description = "Provides support for importing and exporting xsd schemas for DataContractSerializer.\n\nCommonly Used Types:\nSystem.Runtime.Serialization.Schema.XsdDataContractExporter\nSystem.Runtime.Serialization.Schema.XsdDataContractImporter",
+)
+
+ref_impl_pair(
+    name = "live_System.Runtime.Serialization.Schema",
+    ref = ":ref_System.Runtime.Serialization.Schema",
+    lib = ":impl_System.Runtime.Serialization.Schema",
+    visibility = ["//visibility:public"],
+)

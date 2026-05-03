@@ -1,0 +1,53 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+# Minimal ref assembly for System.Windows.Extensions.
+# Only the API contracts are built (no Forwards.cs) to avoid pulling in
+# System.Drawing.Common.  This is enough for downstream consumers that
+# reference types like XamlAccessLevel.
+netcoreapp_ref_assembly(
+    name = "ref_System.Windows.Extensions",
+    srcs = [
+        "ref/System.Windows.Extensions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Windows.Extensions",
+    keyfile = OPEN_SNK,
+    allow_unsafe_blocks = True,
+    com_interface_generator = True,
+    include_editorconfig = False,
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_System_Windows_Extensions",
+    pnse_ref_srcs = ["ref/System.Windows.Extensions.cs"],
+    nowarn = ["CP0003", "CS1591"],
+    analyzers = [
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms_short = ["windows"],
+)
+
+ref_impl_pair(
+    name = "live_System.Windows.Extensions",
+    ref = ":ref_System.Windows.Extensions",
+    lib = ":impl_System.Windows.Extensions",
+    visibility = ["//visibility:public"],
+)

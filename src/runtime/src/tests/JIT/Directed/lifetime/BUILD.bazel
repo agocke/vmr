@@ -1,0 +1,28 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "lifetime1",
+    srcs = ["lifetime1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "PartialDefLiveness",
+    srcs = ["PartialDefLiveness.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "ObjBlkMemLiveness",
+    srcs = ["ObjBlkMemLiveness.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)

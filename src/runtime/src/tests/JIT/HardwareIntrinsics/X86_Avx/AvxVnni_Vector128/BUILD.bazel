@@ -1,0 +1,34 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "MultiplyWideningAndAdd_Vector128_ro",
+    srcs = [
+        "MultiplyWideningAndAdd.Byte.cs",
+        "MultiplyWideningAndAdd.Int16.cs",
+        "MultiplyWideningAndAddSaturate.Byte.cs",
+        "MultiplyWideningAndAddSaturate.Int16.cs",
+    ],
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+    ],
+)
+
+coreclr_test(
+    name = "MultiplyWideningAndAdd_Vector128_r",
+    srcs = [
+        "MultiplyWideningAndAdd.Byte.cs",
+        "MultiplyWideningAndAdd.Int16.cs",
+        "MultiplyWideningAndAddSaturate.Byte.cs",
+        "MultiplyWideningAndAddSaturate.Int16.cs",
+    ],
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+    
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+    ],
+)

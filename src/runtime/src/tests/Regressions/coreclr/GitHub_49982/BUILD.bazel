@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "test49982",
+    srcs = glob(["*.cs"]),
+    nullable = "enable",
+    pri = 1,
+    deps = [
+        "//src/libraries/System.Net.Sockets:ref_System.Net.Sockets",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+    ],
+)

@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "OOMException01",
+    srcs = ["oomexception01.cs"],
+    pri = 1,
+    size = "medium",
+)

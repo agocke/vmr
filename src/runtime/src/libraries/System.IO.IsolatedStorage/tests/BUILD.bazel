@@ -1,0 +1,65 @@
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+load("//src/tests:live_test.bzl", "library_test")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.IO.IsolatedStorage.Tests",
+    resx_file = "Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.IO.IsolatedStorage.Tests.SR.resources",
+    resx_file = "Resources/Strings.resx",
+)
+
+library_test(
+    name = "System.IO.IsolatedStorage.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.IO.IsolatedStorage.Tests.SR.resources": "FxResources.System.IO.IsolatedStorage.Tests.SR.resources"},
+    additionalfiles = ["Resources/Strings.resx"],
+    defines = select({"@platforms//os:linux": ["UNIX", "UNIX1_0"], "@platforms//os:macos": ["UNIX", "UNIX1_0"], "//conditions:default": []}),
+    # TODO: Skip on macOS due to debug assertion in DispatchNativeException
+    # when handling breakpoint exceptions without a debugger attached.
+    # See: https://github.com/dotnet/runtime/issues/XXXXX
+    target_compatible_with = select({
+        "@platforms//os:macos": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # Windows-specific
+            "**/Helper.Win32.cs",
+            # Mobile-specific
+            "**/Helper.AnyMobile.cs",
+            "**/TestHelper.AnyMobile.cs",
+            "**/HelperTests.AnyMobile.cs",
+        ],
+    ) + [
+        # Library source files compiled into tests
+        "//src/libraries/System.IO.IsolatedStorage:src/System/IO/IsolatedStorage/Helper.cs",
+        "//src/libraries/System.IO.IsolatedStorage:src/System/IO/IsolatedStorage/Helper.Unix.cs",
+        "//src/libraries/System.IO.IsolatedStorage:src/System/IO/IsolatedStorage/Helper.NonMobile.cs",
+        # Common source files
+        "//src/libraries/Common:src/System/Security/IdentityHelper.cs",
+        # Common test files
+        "//src/libraries/Common/tests:System/IO/TempDirectory.cs",
+        "//src/libraries/Common/tests:System/IO/TempFile.cs",
+        # SR resource generation
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
+    ],
+    keyfile = OPEN_SNK,
+    deps = [
+        "//src/libraries/System.IO.IsolatedStorage:ref_System.IO.IsolatedStorage",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+)

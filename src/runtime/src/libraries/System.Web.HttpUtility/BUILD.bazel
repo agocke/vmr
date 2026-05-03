@@ -1,0 +1,44 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Web.HttpUtility",
+    srcs = [
+        "ref/System.Web.HttpUtility.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Web.HttpUtility",
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Web/HttpUtility.cs",
+        "src/System/Web/IHtmlString.cs",
+        "src/System/Web/Util/HttpEncoder.cs",
+        "src/System/Web/Util/UriUtil.cs",
+
+        "//src/libraries/Common:src/System/HexConverter.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.AppendSpanFormattable.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+    allow_unsafe_blocks = True,
+    exclude_sr = True,
+    keyfile = OPEN_SNK,
+    library_import_generator = False,
+)
+
+ref_impl_pair(
+    name = "live_System.Web.HttpUtility",
+    ref = ":ref_System.Web.HttpUtility",
+    lib = ":impl_System.Web.HttpUtility",
+    visibility = ["//visibility:public"],
+)

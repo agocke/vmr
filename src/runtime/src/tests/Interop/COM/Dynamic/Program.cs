@@ -11,7 +11,7 @@ namespace Dynamic
     public class Program
     {
         [Fact]
-        [Xunit.SkipOnCoreClrAttribute("Depends on COM behavior that is not correct in interpreter", RuntimeTestModes.InterpreterActive)]
+        [Xunit.SkipOnCoreClrAttribute("Depends on COM behavior that is not correct in interpreter", (RuntimeTestModes)0x400)]
         public static int TestEntryPoint()
         {
             // RegFree COM is not supported on Windows Nano

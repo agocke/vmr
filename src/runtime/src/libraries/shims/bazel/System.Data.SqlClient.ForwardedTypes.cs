@@ -1,0 +1,54 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+namespace Microsoft.SqlServer.Server { public static class DataAccessKind { } }
+namespace Microsoft.SqlServer.Server { public static class Format { } }
+namespace Microsoft.SqlServer.Server { public static class IBinarySerialize { } }
+namespace Microsoft.SqlServer.Server { public static class InvalidUdtException { } }
+namespace Microsoft.SqlServer.Server { public static class SqlDataRecord { } }
+namespace Microsoft.SqlServer.Server { public static class SqlFacetAttribute { } }
+namespace Microsoft.SqlServer.Server { public static class SqlFunctionAttribute { } }
+namespace Microsoft.SqlServer.Server { public static class SqlMetaData { } }
+namespace Microsoft.SqlServer.Server { public static class SqlMethodAttribute { } }
+namespace Microsoft.SqlServer.Server { public static class SqlUserDefinedAggregateAttribute { } }
+namespace Microsoft.SqlServer.Server { public static class SqlUserDefinedTypeAttribute { } }
+namespace Microsoft.SqlServer.Server { public static class SystemDataAccessKind { } }
+namespace System.Data { public static class OperationAbortedException { } }
+namespace System.Data.Sql { public static class SqlNotificationRequest { } }
+namespace System.Data.SqlClient { public static class ApplicationIntent { } }
+namespace System.Data.SqlClient { public static class OnChangeEventHandler { } }
+namespace System.Data.SqlClient { public static class PoolBlockingPeriod { } }
+namespace System.Data.SqlClient { public static class SortOrder { } }
+namespace System.Data.SqlClient { public static class SqlBulkCopy { } }
+namespace System.Data.SqlClient { public static class SqlBulkCopyColumnMapping { } }
+namespace System.Data.SqlClient { public static class SqlBulkCopyColumnMappingCollection { } }
+namespace System.Data.SqlClient { public static class SqlBulkCopyOptions { } }
+namespace System.Data.SqlClient { public static class SqlClientFactory { } }
+namespace System.Data.SqlClient { public static class SqlClientMetaDataCollectionNames { } }
+namespace System.Data.SqlClient { public static class SqlCommand { } }
+namespace System.Data.SqlClient { public static class SqlCommandBuilder { } }
+namespace System.Data.SqlClient { public static class SqlConnection { } }
+namespace System.Data.SqlClient { public static class SqlConnectionStringBuilder { } }
+namespace System.Data.SqlClient { public static class SqlCredential { } }
+namespace System.Data.SqlClient { public static class SqlDataAdapter { } }
+namespace System.Data.SqlClient { public static class SqlDataReader { } }
+namespace System.Data.SqlClient { public static class SqlDependency { } }
+namespace System.Data.SqlClient { public static class SqlError { } }
+namespace System.Data.SqlClient { public static class SqlErrorCollection { } }
+namespace System.Data.SqlClient { public static class SqlException { } }
+namespace System.Data.SqlClient { public static class SqlInfoMessageEventArgs { } }
+namespace System.Data.SqlClient { public static class SqlInfoMessageEventHandler { } }
+namespace System.Data.SqlClient { public static class SqlNotificationEventArgs { } }
+namespace System.Data.SqlClient { public static class SqlNotificationInfo { } }
+namespace System.Data.SqlClient { public static class SqlNotificationSource { } }
+namespace System.Data.SqlClient { public static class SqlNotificationType { } }
+namespace System.Data.SqlClient { public static class SqlParameter { public static class SqlParameterConverter { } } }
+namespace System.Data.SqlClient { public static class SqlParameterCollection { } }
+namespace System.Data.SqlClient { public static class SqlRowUpdatedEventArgs { } }
+namespace System.Data.SqlClient { public static class SqlRowUpdatedEventHandler { } }
+namespace System.Data.SqlClient { public static class SqlRowUpdatingEventArgs { } }
+namespace System.Data.SqlClient { public static class SqlRowUpdatingEventHandler { } }
+namespace System.Data.SqlClient { public static class SqlRowsCopiedEventArgs { } }
+namespace System.Data.SqlClient { public static class SqlRowsCopiedEventHandler { } }
+namespace System.Data.SqlClient { public static class SqlTransaction { } }
+namespace System.Data.SqlTypes { public static class SqlFileStream { } }

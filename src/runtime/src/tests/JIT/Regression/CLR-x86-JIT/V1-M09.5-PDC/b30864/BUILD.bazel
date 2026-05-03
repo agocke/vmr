@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "b30864",
+    srcs = ["b30864.il"],
+    optimize = True,
+    pri = 1,
+    size = "medium",
+)

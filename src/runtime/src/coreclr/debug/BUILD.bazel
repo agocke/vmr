@@ -1,0 +1,480 @@
+# CoreCLR debug headers and libraries.
+# Matches CMake: src/coreclr/debug/*/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DEFINES", "CORECLR_DAC_DEFINES")
+
+package(default_visibility = ["//src/coreclr:__subpackages__"])
+
+cc_library(
+    name = "debug_inc",
+    hdrs = glob(
+        [
+            "inc/*.h",
+            "inc/*.inl",
+            "inc/amd64/*.h",
+            "inc/arm64/*.h",
+            "inc/dump/*.h",
+            # Headers from debug subdirectories used by other coreclr components
+            "ee/*.h",
+            "ee/*.inl",
+            "ee/amd64/*.h",
+            "ee/arm64/*.h",
+            "daccess/*.h",
+            "dbgutil/*.h",
+            "di/*.hpp",
+            "di/*.inl",
+        ],
+        allow_empty = True,
+    ),
+)
+
+# --- cDAC data descriptor shared infrastructure ---
+# Used by GC (and later VM) data descriptor stubs.
+
+# Header-only target for contract-descriptor.h (stripped prefix for clean includes)
+cc_library(
+    name = "datadescriptor_shared_inc",
+    hdrs = ["datadescriptor-shared/inc/contract-descriptor.h"],
+    strip_include_prefix = "datadescriptor-shared/inc",
+)
+
+# Same header without stripping — for relative includes from vm/cdacstress.cpp
+cc_library(
+    name = "datadescriptor_shared_inc_relative",
+    hdrs = ["datadescriptor-shared/inc/contract-descriptor.h"],
+)
+
+# Stub contract descriptor source (exported as a filegroup so multiple
+# cc_library targets can each compile their own copy with different defines).
+exports_files(
+    ["datadescriptor-shared/contractdescriptorstub.c"],
+)
+
+# --- debug-pal (debug platform abstraction layer) ---
+# Matches CMake: src/coreclr/debug/debug-pal/CMakeLists.txt
+cc_library(
+    name = "debug-pal",
+    srcs = [
+        "debug-pal/unix/processdescriptor.cpp",
+        "debug-pal/unix/twowaypipe.cpp",
+    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    includes = ["inc"],
+    local_defines = CLR_CONFIG_DEFINES + select({
+        "//:clr_debug": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//:clr_checked": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//conditions:default": [],
+    }),
+    defines = CORECLR_DEFINES + [
+        "FEATURE_PERFTRACING_STANDALONE_PAL",
+        "PAL_IMPLEMENTATION",
+        "_POSIX_C_SOURCE=200809L",
+    ],
+    alwayslink = True,
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/native/eventpipe:eventpipe-headers",
+    ],
+)
+
+# --- cordbee_wks (debugger execution engine, workstation) ---
+# Matches CMake: src/coreclr/debug/ee/wks/CMakeLists.txt
+cc_library(
+    name = "cordbee_wks",
+    srcs = [
+        "ee/canary.cpp",
+        "ee/controller.cpp",
+        "ee/dactable.cpp",
+        "ee/debugger.cpp",
+        "ee/debuggermessagebox.cpp",
+        "ee/debuggermodule.cpp",
+        "ee/executioncontrol.cpp",
+        "ee/frameinfo.cpp",
+        "ee/funceval.cpp",
+        "ee/functioninfo.cpp",
+        "ee/interpreterwalker.cpp",
+        "ee/rcthread.cpp",
+        "ee/shared.cpp",
+        "ee/stdafx.h",
+    ] + select({
+        "@platforms//cpu:arm64": [
+            "ee/arm64/primitives.cpp",
+            "ee/arm64/walker.cpp",
+            "ee/arm64/dbghelpers.S",
+        ],
+        "//conditions:default": [
+            "ee/amd64/debuggerregdisplayhelper.cpp",
+            "ee/amd64/primitives.cpp",
+            "ee/amd64/walker.cpp",
+            "ee/amd64/dbghelpers.S",
+        ],
+    }),
+    textual_hdrs = select({
+        "@platforms//cpu:arm64": [
+            "shared/arm64/primitives.cpp",
+        ],
+        "//conditions:default": [
+            "shared/amd64/primitives.cpp",
+        ],
+    }) + [
+        "shared/dbgtransportsession.cpp",
+        "shared/utils.cpp",
+    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-DFEATURE_NO_HOST",
+    ] + select({
+        "@platforms//cpu:arm64": [],
+        "//conditions:default": ["-mcx16"],
+    }),
+    includes = [
+        "../vm",
+        "ee",
+        ".",
+    ] + select({
+        "@platforms//cpu:arm64": ["../vm/arm64", "ee/arm64"],
+        "//conditions:default": ["../vm/amd64", "ee/amd64"],
+    }),
+    local_defines = CLR_CONFIG_DEFINES + select({
+        "//:clr_debug": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//:clr_checked": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//conditions:default": [],
+    }),
+    defines = CORECLR_DEFINES + [
+        "FEATURE_VIRTUAL_STUB_DISPATCH",
+    ],
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+    ],
+    alwayslink = True,
+    linkstatic = True,
+)
+
+# --- dbgutil (debug utilities — ELF/Mach-O reader) ---
+# Matches CMake: src/coreclr/debug/dbgutil/CMakeLists.txt
+cc_library(
+    name = "dbgutil",
+    srcs = ["dbgutil/dbgutil.cpp"] + select({
+        "@platforms//os:macos": ["dbgutil/machoreader.cpp"],
+        "//conditions:default": ["dbgutil/elfreader.cpp"],
+    }),
+    hdrs = select({
+        "@platforms//os:macos": ["dbgutil/machoreader.h"],
+        "//conditions:default": ["dbgutil/elfreader.h"],
+    }),
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS,
+    includes = ["dbgutil"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+    ],
+    linkstatic = True,
+)
+
+# --- createdump (crash dump creation tool) ---
+# Matches CMake: src/coreclr/debug/createdump/CMakeLists.txt (Unix path)
+
+# CMake configure_file: config.h.in -> config.h
+# check_function_exists(process_vm_readv HAVE_PROCESS_VM_READV)
+genrule(
+    name = "createdump_gen_config_h",
+    outs = ["createdump_generated/config.h"],
+    cmd = select({
+        "@platforms//os:linux": """printf '#pragma once\\n#define HAVE_PROCESS_VM_READV\\n' > $@""",
+        "//conditions:default": """printf '#pragma once\\n' > $@""",
+    }),
+)
+
+cc_library(
+    name = "createdump_config",
+    hdrs = [":createdump_gen_config_h"],
+    strip_include_prefix = "createdump_generated",
+)
+
+cc_library(
+    name = "createdump_static",
+    srcs = [
+        "createdump/crashinfo.cpp",
+        "createdump/crashreportwriter.cpp",
+        "createdump/createdumpmain.cpp",
+        "createdump/createdumpunix.cpp",
+        "createdump/datatarget.cpp",
+        "createdump/dumpname.cpp",
+        "createdump/dumpwriter.cpp",
+        "createdump/threadinfo.cpp",
+    ] + select({
+        "@platforms//os:macos": [
+            "createdump/crashinfomac.cpp",
+            "createdump/dumpwritermacho.cpp",
+            "createdump/threadinfomac.cpp",
+        ],
+        "//conditions:default": [
+            "createdump/crashinfounix.cpp",
+            "createdump/dumpwriterelf.cpp",
+            "createdump/threadinfounix.cpp",
+        ],
+    }),
+    hdrs = glob(["createdump/*.h"]),
+    # CMake: remove_definitions(-DUNICODE -D_UNICODE)
+    # CMake: include_directories(BEFORE ${VM_DIR})
+    # CMake: CMAKE_INCLUDE_CURRENT_DIR ON
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-UUNICODE",
+        "-U_UNICODE",
+    ],
+    includes = ["createdump"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    # CMake: target_link_libraries(createdump_static PRIVATE minipal)
+    deps = [
+        ":createdump_config",
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/native/minipal",
+        "//eng/native:version_headers",
+    ],
+    linkstatic = True,
+)
+
+cc_binary(
+    name = "createdump",
+    srcs = [
+        "createdump/main.cpp",
+        "createdump/createdumppal.cpp",
+    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-UUNICODE",
+        "-U_UNICODE",
+    ],
+    includes = ["createdump"],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    # CMake: RPATH $ORIGIN (Linux), @loader_path (macOS)
+    linkopts = select({
+        "@platforms//os:macos": ["-Wl,-rpath,@loader_path"],
+        "//conditions:default": ["-Wl,-rpath,$$ORIGIN"],
+    }) + ["-ldl"],
+    visibility = ["//visibility:public"],
+    # CMake: target_link_libraries(createdump PRIVATE
+    #   createdump_static corguids dbgutil ${CMAKE_DL_LIBS} minipal)
+    deps = [
+        ":createdump_static",
+        ":dbgutil",
+        "//src/coreclr/inc:corguids",
+        "//src/native/minipal",
+    ],
+)
+
+# --- cordbee_dac (debugger execution engine, DAC variant) ---
+# Matches CMake: src/coreclr/debug/ee/dac/CMakeLists.txt
+# Subset of cordbee_wks sources shared between DAC and WKS (CORDBEE_SOURCES_DAC_AND_WKS).
+cc_library(
+    name = "cordbee_dac",
+    srcs = [
+        "ee/controller.cpp",
+        "ee/debugger.cpp",
+        "ee/debuggermessagebox.cpp",
+        "ee/debuggermodule.cpp",
+        "ee/executioncontrol.cpp",
+        "ee/functioninfo.cpp",
+        "ee/stdafx.h",
+    ],
+    textual_hdrs = select({
+        "@platforms//cpu:arm64": [
+            "shared/arm64/primitives.cpp",
+        ],
+        "//conditions:default": [
+            "shared/amd64/primitives.cpp",
+        ],
+    }) + [
+        "shared/dbgtransportsession.cpp",
+        "shared/utils.cpp",
+    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-DFEATURE_NO_HOST",
+    ],
+    includes = [
+        "../vm",
+        "ee",
+        ".",
+    ] + select({
+        "@platforms//cpu:arm64": ["../vm/arm64", "ee/arm64"],
+        "//conditions:default": ["../vm/amd64", "ee/amd64"],
+    }),
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DAC_DEFINES + [
+        "FEATURE_VIRTUAL_STUB_DISPATCH",
+    ],
+    deps = [
+        "//src/coreclr/inc:coreclr_inc_dac",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+    ],
+    alwayslink = True,
+    linkstatic = True,
+)
+
+# --- daccess (Data Access Component core library) ---
+# Matches CMake: src/coreclr/debug/daccess/CMakeLists.txt
+cc_library(
+    name = "daccess",
+    srcs = [
+        "daccess/cdac.cpp",
+        "daccess/daccess.cpp",
+        "daccess/dacfn.cpp",
+        "daccess/dacdbiimpl.cpp",
+        "daccess/dacdbiimplstackwalk.cpp",
+        "daccess/datatargetadapter.cpp",
+        "daccess/enummem.cpp",
+        "daccess/fntableaccess.cpp",
+        "daccess/gcdump_dac.cpp",
+        "daccess/inspect.cpp",
+        "daccess/nidump.cpp",
+        "daccess/reimpl.cpp",
+        "daccess/request.cpp",
+        "daccess/request_svr.cpp",
+        "daccess/stack.cpp",
+        "daccess/task.cpp",
+    ] + glob([
+        "daccess/*.h",
+        "daccess/*.inl",
+    ]) + select({
+        "@platforms//cpu:arm64": [
+            "daccess/arm64/primitives.cpp",
+        ],
+        "//conditions:default": [
+            "daccess/amd64/primitives.cpp",
+        ],
+    }),
+    textual_hdrs = select({
+        "@platforms//cpu:arm64": [
+            "shared/arm64/primitives.cpp",
+        ],
+        "//conditions:default": [
+            "shared/amd64/primitives.cpp",
+        ],
+    }) + [
+        "shared/dbgtransportsession.cpp",
+        "shared/utils.cpp",
+    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-DFEATURE_NO_HOST",
+        "-Wno-error",
+        "-include", "src/coreclr/debug/daccess/stdafx.h",
+    ],
+    includes = [
+        "../vm",
+        "daccess",
+        "ee",
+        "../gcdump",
+        "../interop/inc",
+        "datadescriptor-shared/inc",
+    ] + select({
+        "@platforms//cpu:arm64": [
+            "../vm/arm64",
+            "daccess/arm64",
+        ],
+        "//conditions:default": [
+            "../vm/amd64",
+            "daccess/amd64",
+        ],
+    }),
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DAC_DEFINES + [
+        "FEATURE_VIRTUAL_STUB_DISPATCH",
+    ],
+    deps = [
+        ":datadescriptor_shared_inc",
+        "//src/native/managed/cdac:cdac_api",
+        "//src/coreclr/inc:coreclr_inc_dac",
+        "//src/coreclr/interop:interop_headers",
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+        "//src/coreclr/gcdump:gcdump_headers",
+        "//src/native/corehost:corehost_headers",
+    ],
+    alwayslink = True,
+    linkstatic = True,
+)
+
+# --- cordbdi (debugger interface, static library) ---
+# Matches CMake: src/coreclr/debug/di/CMakeLists.txt
+cc_library(
+    name = "cordbdi",
+    srcs = [
+        "di/shimprocess.cpp",
+        "di/shimcallback.cpp",
+        "di/shimevents.cpp",
+        "di/shimdatatarget.cpp",
+        "di/shimstackwalk.cpp",
+        "di/breakpoint.cpp",
+        "di/cordb.cpp",
+        "di/divalue.cpp",
+        "di/dbgtransportmanager.cpp",
+        "di/hash.cpp",
+        "di/module.cpp",
+        "di/platformspecific.cpp",
+        "di/process.cpp",
+        "di/rsappdomain.cpp",
+        "di/rsassembly.cpp",
+        "di/rsclass.cpp",
+        "di/rsfunction.cpp",
+        "di/rsmain.cpp",
+        "di/rsregsetcommon.cpp",
+        "di/rsstackwalk.cpp",
+        "di/rsthread.cpp",
+        "di/rstype.cpp",
+        "di/shared.cpp",
+        "di/symbolinfo.cpp",
+        "di/valuehome.cpp",
+    ] + glob([
+        "di/*.h",
+        "di/*.inl",
+    ]) + select({
+        "@platforms//cpu:arm64": [
+            "di/arm64/floatconversion.S",
+        ],
+        "//conditions:default": [
+            "di/amd64/floatconversion.S",
+        ],
+    }),
+    # platformspecific.cpp and shared.cpp textually include many source files.
+    textual_hdrs = glob([
+        "di/amd64/*.cpp",
+        "di/arm/*.cpp",
+        "di/arm64/*.cpp",
+        "di/i386/*.cpp",
+        "shared/*.cpp",
+        "shared/amd64/*.cpp",
+        "shared/arm/*.cpp",
+        "shared/arm64/*.cpp",
+    ]) + [
+        "di/dbgtransportpipeline.cpp",
+        "di/localeventchannel.cpp",
+        "di/remoteeventchannel.cpp",
+        "di/shimlocaldatatarget.cpp",
+        "di/shimremotedatatarget.cpp",
+        "di/windowspipeline.cpp",
+    ],
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-DDBI_COMPILE",
+        "-DFEATURE_METADATA_CUSTOM_DATA_SOURCE",
+        "-DFEATURE_METADATA_DEBUGGEE_DATA_SOURCE",
+        "-DFEATURE_NO_HOST",
+        "-DFEATURE_METADATA_LOAD_TRUSTED_IMAGES",
+    ],
+    includes = [
+        "di",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DEFINES,
+    deps = [
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/vm/eventing:eventing_headers",
+    ],
+    alwayslink = True,
+    linkstatic = True,
+)

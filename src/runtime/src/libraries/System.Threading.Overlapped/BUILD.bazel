@@ -1,0 +1,32 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files([
+    "ref/System.Threading.Overlapped.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Threading.Overlapped",
+    srcs = [
+        "ref/System.Threading.Overlapped.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+    allow_unsafe_blocks = True,
+    nowarn = ["CS9368"],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Threading.Overlapped",
+    include_editorconfig = False,
+    nowarn = ["CS1591"],
+    srcs = [],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    partial_facade = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Threading.Overlapped",
+    exclude_sr = True,
+    supported_os_platforms_short = ["windows"],
+)

@@ -1,0 +1,15 @@
+V1.0 {
+    global:
+        coreclr_create_delegate;
+        coreclr_execute_assembly;
+        coreclr_initialize;
+        coreclr_set_error_writer;
+        coreclr_shutdown;
+        coreclr_shutdown_2;
+        DllMain;
+        GetCLRRuntimeHost;
+        g_dacTable;
+        MetaDataGetDispenser;
+        DotNetRuntimeContractDescriptor;
+    local: *;
+};

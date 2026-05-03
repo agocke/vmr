@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "test61104",
+    srcs = ["test61104.cs"],
+    pri = 1,
+    tags = ["manual"],  # Uses top-level statements + ImplicitUsings (incompatible with _lib target)
+)

@@ -1,0 +1,57 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "bindhandle1",
+    srcs = ["bindhandle1.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "bindhandleinvalid",
+    srcs = ["bindhandleinvalid.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "bindhandleinvalid3",
+    srcs = ["bindhandleinvalid3.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "bindhandleinvalid4",
+    srcs = ["bindhandleinvalid4.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "bindhandleinvalid5",
+    srcs = ["bindhandleinvalid5.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "bindhandleinvalid6",
+    srcs = ["bindhandleinvalid6.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "bindhandlenull",
+    srcs = ["bindhandlenull.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)

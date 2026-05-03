@@ -1,0 +1,15 @@
+load("@rules_dotnet//dotnet:defs.bzl", "csharp_library")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files(
+    ["EquivalentValueType.cs"],
+    visibility = ["//src/libraries/System.Runtime/tests:__pkg__"],
+)
+
+csharp_library(
+    name = "TestAssembly",
+    srcs = glob(["*.cs"]),
+    target_frameworks = ["net11.0"],
+    keyfile = OPEN_SNK,
+    visibility = ["//src/libraries/System.Runtime/tests:__subpackages__"],
+)

@@ -1,0 +1,37 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHubIssue12479",
+    srcs = ["GitHubIssue12479.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "FastTailCallInlining",
+    srcs = ["FastTailCallInlining.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "FastTailCallCandidates",
+    srcs = ["FastTailCallCandidates.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "StructPassingSimple",
+    srcs = ["StructPassingSimple.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "StackFixup",
+    srcs = ["StackFixup.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

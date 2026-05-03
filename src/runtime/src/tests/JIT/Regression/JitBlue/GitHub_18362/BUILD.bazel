@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_18362",
+    srcs = ["GitHub_18362.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
+    ],
+)

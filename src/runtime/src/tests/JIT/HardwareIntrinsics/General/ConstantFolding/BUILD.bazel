@@ -1,0 +1,23 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "StaticReadonlySimd",
+    srcs = ["StaticReadonlySimd.cs"],
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "ScalarConstantFoldings",
+    srcs = ["ScalarConstantFoldings.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "SimdConstantFoldings",
+    srcs = ["SimdConstantFoldings.cs"],
+    optimize = True,
+)

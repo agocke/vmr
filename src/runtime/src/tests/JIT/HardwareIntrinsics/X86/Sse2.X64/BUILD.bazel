@@ -1,0 +1,14 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "StoreNonTemporal_r",
+    srcs = ["StoreNonTemporal.cs"],
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "StoreNonTemporal_ro",
+    srcs = ["StoreNonTemporal.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

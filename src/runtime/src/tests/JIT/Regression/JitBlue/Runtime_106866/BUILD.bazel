@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Runtime_106866",
+    srcs = ["Runtime_106866.cs"],
+    optimize = True,
+    compiler_options = ["/nowarn:SYSLIB5003"],
+)

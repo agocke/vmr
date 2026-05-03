@@ -1,0 +1,71 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_binary")
+
+csharp_binary(
+    name = "STAMain",
+    include_runtime_async = False,
+    srcs = ["STAMain/STAMain.cs"],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
+    target_frameworks = [NETCOREAPP_CURRENT],
+)
+
+csharp_binary(
+    name = "MTAMain",
+    include_runtime_async = False,
+    srcs = ["MTAMain/MTAMain.cs"],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
+    target_frameworks = [NETCOREAPP_CURRENT],
+)
+
+csharp_binary(
+    name = "DefaultApartmentStateMain",
+    include_runtime_async = False,
+    srcs = ["DefaultApartmentStateMain/DefaultApartmentStateMain.cs"],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
+    target_frameworks = [NETCOREAPP_CURRENT],
+)
+
+library_test(
+    name = "System.Threading.Thread.Tests",
+    srcs = glob(["*.cs"]) + [
+        "//src/libraries/Common/tests:System/Threading/ThreadTestHelpers.cs",
+    ],
+    data = [
+        ":STAMain",
+        ":MTAMain",
+        ":DefaultApartmentStateMain",
+    ],
+    deps = [
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Security.Claims:ref_System.Security.Claims",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    keyfile = OPEN_SNK,
+)

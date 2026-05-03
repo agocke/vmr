@@ -1,0 +1,75 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "MetricOuterLoop.Tests",
+    nowarn = MULTITARGET_NOWARN + ["NU1511"],
+    replace_library_nowarns = [
+        "CS1701",
+        "CS1702",
+        "NU5105",
+    ],
+    srcs = [
+        "Common.cs",
+        "MetricEventSourceTests.cs",
+    ] + [
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Helpers.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    defines = [
+        "MEMORYMARSHAL_SUPPORT",
+        "OS_ISBROWSER_SUPPORT",
+    ],
+    keyfile = OPEN_SNK,
+    size = "large",
+)
+
+library_test(
+    name = "MetricOuterLoop1.Tests",
+    nowarn = MULTITARGET_NOWARN + ["NU1511"],
+    replace_library_nowarns = [
+        "CS1701",
+        "CS1702",
+        "NU5105",
+    ],
+    srcs = [
+        "Common.cs",
+        "MetricEventSourceTests1.cs",
+    ] + [
+        "//src/libraries/System.Diagnostics.DiagnosticSource:src/System/Diagnostics/Helpers.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    defines = [
+        "MEMORYMARSHAL_SUPPORT",
+        "OS_ISBROWSER_SUPPORT",
+    ],
+    keyfile = OPEN_SNK,
+    size = "large",
+)

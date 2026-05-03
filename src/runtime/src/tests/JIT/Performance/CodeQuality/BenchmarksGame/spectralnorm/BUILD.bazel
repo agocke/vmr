@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "spectralnorm-3",
+    srcs = ["spectralnorm-3.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "spectralnorm-1",
+    srcs = ["spectralnorm-1.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

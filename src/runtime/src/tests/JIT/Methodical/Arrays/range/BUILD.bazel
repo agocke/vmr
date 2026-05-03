@@ -1,0 +1,127 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "int32_neg_range_d",
+    srcs = ["int32_neg_range_d.il", "int32_neg_range.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "float64_range2_d",
+    srcs = ["float64_range2_d.il", "float64_range2.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "int32_0_5a_d",
+    srcs = ["int32_0_5a_d.il", "int32_0_5a.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "negIndexRngChkElim_r",
+    srcs = ["negIndexRngChkElim.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "int32_m1_d",
+    srcs = ["int32_m1_d.il", "int32_m1.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "int32_range2_d",
+    srcs = ["int32_range2_d.il", "int32_range2.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "int32_range1_d",
+    srcs = ["int32_range1_d.il", "int32_range1.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "int32_m1_r",
+    srcs = ["int32_m1_r.il", "int32_m1.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "float64_range2_r",
+    srcs = ["float64_range2_r.il", "float64_range2.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "int32_1_r",
+    srcs = ["int32_1_r.il", "int32_1.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "int32_neg_range_r",
+    srcs = ["int32_neg_range_r.il", "int32_neg_range.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "int32_0_5b_d",
+    srcs = ["int32_0_5b_d.il", "int32_0_5b.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "int32_1_d",
+    srcs = ["int32_1_d.il", "int32_1.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "int32_0_d",
+    srcs = ["int32_0_d.il", "int32_0.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "int32_0_r",
+    srcs = ["int32_0_r.il", "int32_0.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "int32_range1_r",
+    srcs = ["int32_range1_r.il", "int32_range1.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "float64_range1_d",
+    srcs = ["float64_range1_d.il", "float64_range1.il"],
+    debug_type = "full",
+)
+
+il_coreclr_test(
+    name = "int32_0_5b_r",
+    srcs = ["int32_0_5b_r.il", "int32_0_5b.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "float64_range1_r",
+    srcs = ["float64_range1_r.il", "float64_range1.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "int32_0_5a_r",
+    srcs = ["int32_0_5a_r.il", "int32_0_5a.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "int32_range2_r",
+    srcs = ["int32_range2_r.il", "int32_range2.il"],
+    debug_type = "pdbonly",
+)

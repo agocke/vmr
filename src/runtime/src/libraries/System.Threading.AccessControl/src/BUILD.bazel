@@ -1,0 +1,31 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_impl_assembly")
+
+# PNSE stub assembly — on Linux, all public API throws PlatformNotSupportedException.
+# Matches MSBuild's GeneratePlatformNotSupportedAssemblyMessage behavior.
+netcoreapp_impl_assembly(
+    name = "impl_System.Threading.AccessControl",
+    event_source_generator = True,
+    include_runtime_async = False,
+    com_interface_generator = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_AccessControl",
+    pnse_ref_srcs = [
+        "//src/libraries/System.Threading.AccessControl:ref/System.Threading.AccessControl.cs",
+        "//src/libraries/System.Threading.AccessControl:ref/System.Threading.AccessControl.Extensions.cs",
+    ],
+    srcs = [],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "Resources/Strings.resx",
+    supported_os_platforms_short = ["windows"],
+    include_dll_safe_search_path = True,
+    nullable = "enable",
+    include_editorconfig = False,
+    assembly_description = "Provides support for managing access and audit control lists for synchronization primitives.\n\nCommonly Used Types:\nSystem.Security.AccessControl.EventWaitHandleAccessRule\nSystem.Security.AccessControl.EventWaitHandleAuditRule\nSystem.Security.AccessControl.MutexAccessRule\nSystem.Security.AccessControl.MutexAuditRule\nSystem.Security.AccessControl.MutexSecurity\nSystem.Security.AccessControl.SemaphoreAccessRule\nSystem.Security.AccessControl.SemaphoreAuditRule\nSystem.Security.AccessControl.SemaphoreSecurity",
+)

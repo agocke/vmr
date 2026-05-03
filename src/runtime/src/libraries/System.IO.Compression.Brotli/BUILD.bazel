@@ -1,0 +1,64 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "ECMA_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.IO.Compression.Brotli",
+    srcs = [
+        "ref/System.IO.Compression.Brotli.cs",
+    ],
+    deps = [
+        "//src/libraries/System.IO.Compression:ref_System.IO.Compression",
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.IO.Compression.Brotli",
+    nowarn = ["CS1591"],
+    os_targeted = "unix",
+    srcs = [
+        # Common interop (all platforms)
+        "//src/libraries/Common:src/Interop/Interop.Brotli.cs",
+        "//src/libraries/Common:src/Interop/Windows/Interop.BOOL.cs",
+        "//src/libraries/Common:src/Microsoft/Win32/SafeHandles/SafeBrotliHandle.cs",
+
+        # Common misc
+
+        # Brotli source files
+        "src/System/IO/Compression/BrotliStream.cs",
+        "src/System/IO/Compression/BrotliUtils.cs",
+        "src/System/IO/Compression/dec/BrotliDecoder.cs",
+        "src/System/IO/Compression/dec/BrotliStream.Decompress.cs",
+        "src/System/IO/Compression/enc/BrotliCompressionOptions.cs",
+        "src/System/IO/Compression/enc/BrotliEncoder.cs",
+        "src/System/IO/Compression/enc/BrotliEncoderOperation.cs",
+        "src/System/IO/Compression/enc/BrotliEncoderParameter.cs",
+        "src/System/IO/Compression/enc/BrotliStream.Compress.cs",
+    ] + select({
+        "@platforms//os:linux": [
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        ],
+        "@platforms//os:macos": [
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        ],
+    }),
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.IO.Compression:ref_System.IO.Compression",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms = ["unix"],
+    keyfile = ECMA_SNK,
+    com_interface_generator = True,
+)
+
+ref_impl_pair(
+    name = "live_System.IO.Compression.Brotli",
+    ref = ":ref_System.IO.Compression.Brotli",
+    lib = ":impl_System.IO.Compression.Brotli",
+    visibility = ["//visibility:public"],
+)

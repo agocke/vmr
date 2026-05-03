@@ -1,0 +1,60 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Configuration.ConfigurationManager.Tests",
+    resx_file = "Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Configuration.ConfigurationManager.Tests.SR.resources",
+    resx_file = "Resources/Strings.resx",
+)
+
+library_test(
+    name = "System.Configuration.ConfigurationManager.Tests",
+    nowarn = MULTITARGET_NOWARN + ["SYSLIB0011"],
+    srcs = glob(["Mono/**/*.cs", "System/**/*.cs"]) + [
+        "AssemblyInfo.cs",
+        ":gen_resx",
+        "//src/libraries/Common:src/System/SR.cs",
+        "//src/libraries/Common/tests:System/IO/TempDirectory.cs",
+        "//src/libraries/Common/tests:System/IO/TempFile.cs",
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelization.cs",
+        "//src/libraries/System.Configuration.ConfigurationManager:src/System/Configuration/ConfigPathUtility.cs",
+        "//src/libraries/System.Configuration.ConfigurationManager:src/System/Configuration/ExceptionUtil.cs",
+        "//src/libraries/System.Configuration.ConfigurationManager:src/System/Configuration/StringUtil.cs",
+        "//src/libraries/System.Configuration.ConfigurationManager:src/System/Configuration/TypeUtil.cs",
+        "//src/libraries/System.Configuration.ConfigurationManager:src/System/Configuration/UrlPath.cs",
+        "//src/libraries/System.Configuration.ConfigurationManager:src/System/Configuration/ValidatorUtils.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Configuration.ConfigurationManager:impl_System.Configuration.ConfigurationManager",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    defines = ["LEGACY_GETRESOURCESTRING_USER"],
+    keyfile = OPEN_SNK,
+    additionalfiles = ["Resources/Strings.resx"],
+    resources = [":strings_resx"],
+    size = "large",
+    resource_logical_names = {
+        "FxResources.System.Configuration.ConfigurationManager.Tests.SR.resources": "FxResources.System.Configuration.ConfigurationManager.Tests.SR.resources",
+    },
+    tags = ["no-sandbox"],
+)

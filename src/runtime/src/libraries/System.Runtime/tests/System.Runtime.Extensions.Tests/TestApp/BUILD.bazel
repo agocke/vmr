@@ -1,0 +1,37 @@
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_binary", "gen_resx_source", "resgen")
+
+resgen(
+    name = "resgen_TestApp",
+    out = "FxResources.TestApp.SR.resources",
+    resx_file = "Resources/Strings.resx",
+)
+
+gen_resx_source(
+    name = "gen_sr_TestApp",
+    out = "System.SR.cs",
+    assembly_name = "TestApp",
+    resx_file = "Resources/Strings.resx",
+)
+
+csharp_binary(
+    name = "TestApp",
+    include_runtime_async = False,
+    srcs = [
+        "TestApp.cs",
+        ":gen_sr_TestApp",
+        "//src/libraries/Common:src/System/SR.cs",
+    ],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
+    resources = [":resgen_TestApp"],
+    resource_logical_names = {
+        "FxResources.TestApp.SR.resources": "FxResources.TestApp.SR.resources",
+    },
+    target_frameworks = [NETCOREAPP_CURRENT],
+    visibility = ["//src/libraries/System.Runtime/tests:__subpackages__"],
+)

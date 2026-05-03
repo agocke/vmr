@@ -1,0 +1,25 @@
+
+load("//:defs.bzl", "csharp_binary")
+load("@rules_dotnet//dotnet:defs.bzl", "import_library")
+
+import_library(
+    name = "GenResxSourceNuGetFiles",
+    library_name = "GenResxSourceDlls",
+    refs = [
+        "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26170.102//:tools/net/Microsoft.DotNet.Arcade.Sdk.dll",
+    ],
+    libs = [
+        "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26170.102//:tools/net/Microsoft.DotNet.Arcade.Sdk.dll",
+    ],
+)
+
+csharp_binary(
+    name = "GenerateResxSource",
+    srcs = glob(["*.cs"]),
+    deps = [
+        ":GenResxSourceNuGetFiles",
+    ],
+    nullable = "annotations",
+    target_frameworks = [ "net11.0" ],
+    visibility = ["//visibility:public"],
+)

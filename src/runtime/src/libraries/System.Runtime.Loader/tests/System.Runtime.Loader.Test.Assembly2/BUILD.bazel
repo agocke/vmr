@@ -1,0 +1,29 @@
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_library")
+
+# Assembly2 compiles the same TestClass.cs from the Test.Assembly directory.
+csharp_library(
+    name = "System.Runtime.Loader.Test.Assembly2",
+    include_runtime_async = False,
+    srcs = ["//src/libraries/System.Runtime.Loader/tests/System.Runtime.Loader.Test.Assembly:TestClass.cs"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    keyfile = OPEN_SNK,
+    nullable = "annotations",
+    nowarn = [
+        "CA1510",
+        "CA1511",
+        "CA1512",
+        "CA1513",
+        "CA1845",
+        "CA1846",
+        "CA1847",
+        "IL2121",
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+    ],
+    msbuild_analyzer_config = "style",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    visibility = ["//src/libraries/System.Runtime.Loader/tests:__subpackages__"],
+)

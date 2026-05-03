@@ -1,0 +1,547 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "mcc_i50",
+    srcs = ["mcc_i50.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i02",
+    srcs = ["mcc_i02.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i33",
+    srcs = ["mcc_i33.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i85",
+    srcs = ["mcc_i85.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i10",
+    srcs = ["mcc_i10.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i32",
+    srcs = ["mcc_i32.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i13",
+    srcs = ["mcc_i13.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i60",
+    srcs = ["mcc_i60.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i71",
+    srcs = ["mcc_i71.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i76",
+    srcs = ["mcc_i76.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i31",
+    srcs = ["mcc_i31.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i84",
+    srcs = ["mcc_i84.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i61",
+    srcs = ["mcc_i61.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i83",
+    srcs = ["mcc_i83.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i35",
+    srcs = ["mcc_i35.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i12",
+    srcs = ["mcc_i12.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i16",
+    srcs = ["mcc_i16.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i55",
+    srcs = ["mcc_i55.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i51",
+    srcs = ["mcc_i51.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i05",
+    srcs = ["mcc_i05.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i11",
+    srcs = ["mcc_i11.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i62",
+    srcs = ["mcc_i62.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i30",
+    srcs = ["mcc_i30.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i04",
+    srcs = ["mcc_i04.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i52",
+    srcs = ["mcc_i52.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i53",
+    srcs = ["mcc_i53.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i63",
+    srcs = ["mcc_i63.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i14",
+    srcs = ["mcc_i14.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i73",
+    srcs = ["mcc_i73.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i07",
+    srcs = ["mcc_i07.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i82",
+    srcs = ["mcc_i82.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i86",
+    srcs = ["mcc_i86.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i81",
+    srcs = ["mcc_i81.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i75",
+    srcs = ["mcc_i75.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i77",
+    srcs = ["mcc_i77.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i87",
+    srcs = ["mcc_i87.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i66",
+    srcs = ["mcc_i66.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i00",
+    srcs = ["mcc_i00.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i34",
+    srcs = ["mcc_i34.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i01",
+    srcs = ["mcc_i01.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i54",
+    srcs = ["mcc_i54.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i67",
+    srcs = ["mcc_i67.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i15",
+    srcs = ["mcc_i15.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i56",
+    srcs = ["mcc_i56.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i06",
+    srcs = ["mcc_i06.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i74",
+    srcs = ["mcc_i74.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i17",
+    srcs = ["mcc_i17.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i80",
+    srcs = ["mcc_i80.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i57",
+    srcs = ["mcc_i57.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i37",
+    srcs = ["mcc_i37.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i36",
+    srcs = ["mcc_i36.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+il_coreclr_test(
+    name = "mcc_i70",
+    srcs = ["mcc_i70.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i03",
+    srcs = ["mcc_i03.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i65",
+    srcs = ["mcc_i65.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i64",
+    srcs = ["mcc_i64.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "mcc_i72",
+    srcs = ["mcc_i72.il", "//src/tests/JIT/jit64/mcc/common:common.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    deps = ["//src/tests/Common:TestLibrary"],
+    size = "medium",
+)

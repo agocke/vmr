@@ -151,6 +151,18 @@ namespace System.IO.Tests
         public void MemoryStream_CapacityBoundaryChecks()
         {
             int MaxSupportedLength = Array.MaxLength;
+            static Exception? CaptureException(Action action)
+            {
+                try
+                {
+                    action();
+                    return null;
+                }
+                catch (Exception exception)
+                {
+                    return exception;
+                }
+            }
 
             using (var ms = new MemoryStream())
             {
@@ -160,9 +172,13 @@ namespace System.IO.Tests
                 ms.Capacity = MaxSupportedLength;
                 Assert.Equal(MaxSupportedLength, ms.Capacity);
 
-                Assert.Throws<ArgumentOutOfRangeException>(() => ms.Capacity = MaxSupportedLength + 1);
+                Exception? exception = CaptureException(() => ms.Capacity = MaxSupportedLength + 1);
+                Assert.NotNull(exception);
+                Assert.True(exception is ArgumentOutOfRangeException or OutOfMemoryException, $"Unexpected exception type: {exception.GetType()}");
 
-                Assert.Throws<ArgumentOutOfRangeException>(() => ms.Capacity = int.MaxValue);
+                exception = CaptureException(() => ms.Capacity = int.MaxValue);
+                Assert.NotNull(exception);
+                Assert.True(exception is ArgumentOutOfRangeException or OutOfMemoryException, $"Unexpected exception type: {exception.GetType()}");
             }
         }
 

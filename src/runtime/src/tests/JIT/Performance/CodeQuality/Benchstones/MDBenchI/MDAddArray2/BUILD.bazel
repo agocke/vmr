@@ -1,0 +1,8 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "MDAddArray2",
+    srcs = ["MDAddArray2.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+)

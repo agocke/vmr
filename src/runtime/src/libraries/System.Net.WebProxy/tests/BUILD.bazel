@@ -1,0 +1,20 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Net.WebProxy.Tests",
+    srcs = glob(["*.cs"]),
+    deps = [
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.NameResolution:ref_System.Net.NameResolution",
+        "//src/libraries/System.Net.NetworkInformation:ref_System.Net.NetworkInformation",
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries/System.Net.WebProxy:ref_System.Net.WebProxy",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+)

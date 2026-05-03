@@ -1,0 +1,90 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "helper",
+    srcs = ["helper.cs"],
+    visibility = ["//visibility:public"],
+)
+
+coreclr_test(
+    name = "callconv2_PREFIX_cs_d",
+    srcs = ["callconv2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    deps = [":helper"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "callconv1_PREFIX_cs_d",
+    srcs = ["callconv1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = False,
+    allow_unsafe_blocks = True,
+    deps = [":helper"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "callconv1_PREFIX_cs_do",
+    srcs = ["callconv1.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [":helper"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "callconv1_PREFIX_cs_ro",
+    srcs = ["callconv1.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [":helper"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "callconv2_PREFIX_cs_r",
+    srcs = ["callconv2.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [":helper"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "callconv1_PREFIX_cs_r",
+    srcs = ["callconv1.cs"],
+    pri = 1,
+    allow_unsafe_blocks = True,
+    deps = [":helper"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "callconv2_PREFIX_cs_do",
+    srcs = ["callconv2.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [":helper"],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "callconv2_PREFIX_cs_ro",
+    srcs = ["callconv2.cs"],
+    pri = 1,
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [":helper"],
+    size = "medium",
+)

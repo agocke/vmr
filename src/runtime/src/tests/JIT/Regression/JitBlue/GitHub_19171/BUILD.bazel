@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GitHub_19171",
+    srcs = ["GitHub_19171.cs"],
+    pri = 1,
+    debug_type = "full",
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    size = "medium",
+)

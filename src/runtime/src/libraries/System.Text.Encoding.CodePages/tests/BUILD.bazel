@@ -1,0 +1,22 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Text.Encoding.CodePages.Tests",
+    nowarn = MULTITARGET_NOWARN,
+    srcs = glob(["*.cs"]),
+    deps = [
+        "//src/libraries/System.Text.Encoding.CodePages:live_System.Text.Encoding.CodePages",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    size = "large",
+    keyfile = OPEN_SNK,
+)

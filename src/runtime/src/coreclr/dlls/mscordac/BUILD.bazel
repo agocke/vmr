@@ -1,0 +1,116 @@
+# mscordaccore — the DAC (Data Access Component) shared library.
+# Matches CMake: src/coreclr/dlls/mscordac/CMakeLists.txt
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_DEFINES", "CORECLR_COPTS", "CLR_CONFIG_COPTS", "CORECLR_DAC_DEFINES")
+
+package(default_visibility = ["//visibility:public"])
+
+# Generate the DAC export version script from mscordac_unixexports.src.
+# On Linux, #-prefixed entries get the DAC_ prefix (using version script format).
+# On macOS, exports are simple symbol lists without prefix (using -exported_symbols_list format).
+genrule(
+    name = "gen_mscordac_exports",
+    srcs = ["mscordac_unixexports.src"],
+    outs = ["mscordac.exports"],
+    cmd = select({
+        "@platforms//os:macos": "$(location //eng/native:generateexportedsymbols.sh) $(location mscordac_unixexports.src) > $@",
+        "//conditions:default": "$(location //eng/native:generateversionscript.sh) $(location mscordac_unixexports.src) DAC_ > $@",
+    }),
+    tools = select({
+        "@platforms//os:macos": ["//eng/native:generateexportedsymbols.sh"],
+        "//conditions:default": ["//eng/native:generateversionscript.sh"],
+    }),
+)
+
+# Generate palredefines.inc — maps unprefixed PAL symbols to DAC_-prefixed ones.
+# Used by mscordbi (the DBI links against mscordaccore and uses these trampolines).
+genrule(
+    name = "gen_palredefines_inc",
+    srcs = ["mscordac_unixexports.src"],
+    outs = ["palredefines.inc"],
+    cmd = "$(location //src/coreclr:generateredefinesfile.sh) $(location mscordac_unixexports.src) " + select({
+        "@platforms//cpu:arm64": "b",
+        "//conditions:default": "jmp",
+    }) + ' "" DAC_ > $@',
+    tools = ["//src/coreclr:generateredefinesfile.sh"],
+)
+
+# Generate libredefines.inc — maps DAC_-prefixed symbols to unprefixed ones.
+# Compiled into libredefines.S and linked into the DAC shared library.
+genrule(
+    name = "gen_libredefines_inc",
+    srcs = ["mscordac_unixexports.src"],
+    outs = ["libredefines.inc"],
+    cmd = "$(location //src/coreclr:generateredefinesfile.sh) $(location mscordac_unixexports.src) " + select({
+        "@platforms//cpu:arm64": "b",
+        "//conditions:default": "jmp",
+    }) + " DAC_ > $@",
+    tools = ["//src/coreclr:generateredefinesfile.sh"],
+)
+
+cc_binary(
+    name = "libmscordaccore.so",
+    srcs = [
+        "mscordac.cpp",
+    ] + select({
+        "@platforms//os:linux": [
+            "libredefines.S",
+            ":gen_libredefines_inc",
+        ],
+        "//conditions:default": [],
+    }),
+    linkshared = True,
+    linkstatic = True,
+    copts = CORECLR_COPTS + CLR_CONFIG_COPTS + [
+        "-DFEATURE_NO_HOST",
+        "-DFX_VER_INTERNALNAME_STR=mscordaccore.dll",
+    ],
+    includes = ["."],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = CORECLR_DAC_DEFINES,
+    additional_linker_inputs = [":gen_mscordac_exports"],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-Wl,-exported_symbols_list,$(location :gen_mscordac_exports)",
+        ],
+        "//conditions:default": [
+            "-Wl,-Bsymbolic",
+            "-Wl,--version-script=$(location :gen_mscordac_exports)",
+            "-Wl,--start-group",
+            "-Wl,--end-group",
+            "-Wl,--undefined-version",
+        ],
+    }),
+    deps = [
+        # COREDAC_LIBRARIES (order matters for circular references)
+        "//src/coreclr/vm:cee_dac",
+        "//src/coreclr/debug:cordbee_dac",
+        "//src/coreclr/inc:corguids",
+        "//src/coreclr/debug:daccess",
+        "//src/coreclr/debug:dbgutil",
+        "//src/coreclr/md:mdcompiler_dac",
+        "//src/coreclr/md:mdruntime_dac",
+        "//src/coreclr/md:mdruntimerw_dac",
+        "//src/coreclr/utilcode:utilcode_dac",
+        "//src/coreclr/unwinder:unwinder_dac",
+        # Unix-only deps
+        "//src/coreclr/pal:coreclrpal_dac",
+        "//src/coreclr/dlls/mscorrc",
+        "//src/coreclr/pal:coreclrpal",
+        "//src/coreclr/minipal:coreclrminipal",
+        # Headers
+        "//src/coreclr/vm:vm_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+        "//src/coreclr/vm/eventing:eventpipe_shim_headers",
+        "//src/native/eventpipe:eventpipe-headers",
+    ],
+)
+
+# On macOS, produce libmscordaccore.dylib from libmscordaccore.so
+genrule(
+    name = "libmscordaccore_dylib",
+    srcs = [":libmscordaccore.so"],
+    outs = ["libmscordaccore.dylib"],
+    cmd = "cp $< $@",
+)

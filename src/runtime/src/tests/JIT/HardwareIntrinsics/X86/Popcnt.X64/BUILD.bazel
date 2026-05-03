@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Popcnt.X64_ro",
+    srcs = ["Popcnt.X64.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Popcnt.X64_r",
+    srcs = ["Popcnt.X64.cs"],
+)

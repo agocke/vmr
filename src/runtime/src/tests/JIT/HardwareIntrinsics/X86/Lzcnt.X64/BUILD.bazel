@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Lzcnt.X64_ro",
+    srcs = ["Lzcnt.X64.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Lzcnt.X64_r",
+    srcs = ["Lzcnt.X64.cs"],
+)

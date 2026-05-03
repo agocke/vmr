@@ -1,0 +1,49 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.DependencyInjection.Abstractions.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+    srcs = [
+        "ref/Microsoft.Extensions.DependencyInjection.Abstractions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.DependencyInjection.Abstractions",
+    include_runtime_async = False,
+    event_source_generator = True,
+    allow_unsafe_blocks = True,
+    skip_locals_init = True,
+    library_import_generator = False,
+    jsimport_generator = False,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/Extensions/ParameterDefaultValue/ParameterDefaultValue.cs",
+        "//src/libraries/Common:src/Extensions/ParameterDefaultValue/ParameterDefaultValue.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Diagnostics.StackTrace:ref_System.Diagnostics.StackTrace",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.Loader:ref_System.Runtime.Loader",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.DependencyInjection.Abstractions",
+    ref = ":ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+    lib = ":impl_Microsoft.Extensions.DependencyInjection.Abstractions",
+    visibility = ["//visibility:public"],
+)

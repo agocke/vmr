@@ -1,0 +1,132 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Type_ofT_Inherit_FromT",
+    srcs = ["Type_ofT_Inherit_FromT.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "abstract01",
+    srcs = ["abstract01.il"],
+)
+
+il_coreclr_test(
+    name = "abstract02",
+    srcs = ["abstract02.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "abstract03",
+    srcs = ["abstract03.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "abstract04",
+    srcs = ["abstract04.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "abstract05",
+    srcs = ["abstract05.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "abstract06",
+    srcs = ["abstract06.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "abstract07",
+    srcs = ["abstract07.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "abstract08",
+    srcs = ["abstract08.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "abstract09",
+    srcs = ["abstract09.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "abstract10",
+    srcs = ["abstract10.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "param01",
+    srcs = ["param01.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "param02",
+    srcs = ["param02.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "param03",
+    srcs = ["param03.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "param04",
+    srcs = ["param04.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "param05",
+    srcs = ["param05.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "param06",
+    srcs = ["param06.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "param07",
+    srcs = ["param07.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "param08",
+    srcs = ["param08.il"],
+    pri = 1,
+    size = "medium",
+)

@@ -1,0 +1,11 @@
+_coreclr_create_delegate
+_coreclr_execute_assembly
+_coreclr_initialize
+_coreclr_set_error_writer
+_coreclr_shutdown
+_coreclr_shutdown_2
+_DllMain
+_GetCLRRuntimeHost
+_g_dacTable
+_MetaDataGetDispenser
+_DotNetRuntimeContractDescriptor

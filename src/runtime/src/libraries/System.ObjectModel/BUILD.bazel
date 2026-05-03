@@ -1,0 +1,50 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ObjectModel",
+    srcs = [
+        "ref/System.ObjectModel.cs",
+        "ref/System.ObjectModel.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.ObjectModel",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System.ObjectModel.Forwards.cs",
+        "src/System/Collections/CollectionHelpers.cs",
+        "src/System/Collections/Generic/DebugView.cs",
+        "src/System/Collections/Specialized/INotifyCollectionChanged.cs",
+        "src/System/Collections/Specialized/NotifyCollectionChangedAction.cs",
+        "src/System/Collections/Specialized/NotifyCollectionChangedEventArgs.cs",
+        "src/System/Collections/ObjectModel/KeyedCollection.cs",
+        "src/System/Collections/ObjectModel/ObservableCollection.cs",
+        "src/System/Collections/ObjectModel/ReadOnlyObservableCollection.cs",
+        "src/System/ComponentModel/DataErrorsChangedEventArgs.cs",
+        "src/System/ComponentModel/INotifyDataErrorInfo.cs",
+        "src/System/ComponentModel/INotifyPropertyChanged.cs",
+        "src/System/ComponentModel/INotifyPropertyChanging.cs",
+        "src/System/ComponentModel/PropertyChangedEventArgs.cs",
+        "src/System/ComponentModel/PropertyChangedEventHandler.cs",
+        "src/System/ComponentModel/PropertyChangingEventArgs.cs",
+        "src/System/ComponentModel/PropertyChangingEventHandler.cs",
+        "src/System/ComponentModel/TypeConverterAttribute.cs",
+        "src/System/ComponentModel/TypeDescriptionProviderAttribute.cs",
+        "src/System/Reflection/ICustomTypeProvider.cs",
+        "src/System/Windows/Markup/ValueSerializerAttribute.cs",
+        "src/System/Windows/Input/ICommand.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries:ref_System.Runtime",
+            "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+],
+    resx_file = "src/Resources/Strings.resx",
+)

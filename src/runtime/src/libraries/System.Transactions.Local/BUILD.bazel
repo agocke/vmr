@@ -1,0 +1,51 @@
+load("//:defs.bzl", "OPEN_SNK")
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Transactions.Local",
+    srcs = [
+        "ref/System.Transactions.Local.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Transactions.Local",
+    keyfile = OPEN_SNK,
+    com_interface_generator = True,
+    srcs = glob(
+        ["src/System/**/*.cs"],
+        exclude = [
+            "src/System/Transactions/DtcProxyShim/**/*.cs",
+            "src/System/Transactions/Oletx/**/*.cs",
+            "src/System/Transactions/TransactionInterop.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    partial_facade = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Transactions.Local",
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    nowarn = ["CA1805", "CS1591", "CS3016", "IDE0059"],
+    deps = [
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries:ref_System.Diagnostics.Process",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+)

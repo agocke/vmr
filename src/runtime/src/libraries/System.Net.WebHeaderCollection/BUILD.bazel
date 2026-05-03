@@ -1,0 +1,45 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.WebHeaderCollection",
+    srcs = [
+        "ref/System.Net.WebHeaderCollection.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.WebHeaderCollection",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Net/HeaderInfo.cs",
+        "src/System/Net/HeaderInfoTable.cs",
+        "src/System/Net/HttpRequestHeader.cs",
+        "src/System/Net/HttpResponseHeader.cs",
+        "src/System/Net/WebHeaderCollection.cs",
+
+        "//src/libraries/Common:src/System/Net/HttpKnownHeaderNames.cs",
+        "//src/libraries/Common:src/System/Net/HttpValidationHelpers.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+    allow_unsafe_blocks = True,
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.Net.WebHeaderCollection",
+    ref = ":ref_System.Net.WebHeaderCollection",
+    lib = ":impl_System.Net.WebHeaderCollection",
+    visibility = ["//visibility:public"],
+)

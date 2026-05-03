@@ -1,0 +1,53 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//:cc_defs.bzl", "PLATFORM_COPTS", "PLATFORM_DEFINES")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_COPTS", "NATIVE_CONFIG_DEFINES")
+
+exports_files(
+    ["xoshiro128pp.c"],
+    visibility = ["//src/coreclr:__subpackages__"],
+)
+
+cc_library(
+    name = "minipal",
+    srcs = [
+        "cpufeatures.c",
+        "debugger.c",
+        "descriptorlimit.c",
+        "guid.c",
+        "log.c",
+        "memorybarrierprocesswide.c",
+        "mutex.c",
+        "random.c",
+        "strings.c",
+        "time.c",
+        "unicodedata.c",
+        "utf8.c",
+        "xoshiro128pp.c",
+    ] + select({
+        "//:macos_arm64": ["bazel/osx-arm64/minipalconfig.h"],
+        "//:macos_x64": ["bazel/osx-x64/minipalconfig.h"],
+        "@platforms//os:windows": ["bazel/windows-x64/minipalconfig.h"],
+        "//conditions:default": ["bazel/linux-glibc-x64/minipalconfig.h"],
+    }) + glob(
+        ["*.h", "**/*.h"],
+        exclude = ["bazel/**"],
+    ),
+    copts = CLR_CONFIG_COPTS + PLATFORM_COPTS + NATIVE_CONFIG_COPTS,
+    # includes = [".."] is already set below; add platform-specific config headers
+    includes = [".."] + select({
+        "//:macos_arm64": ["bazel/osx-arm64"],
+        "//:macos_x64": ["bazel/osx-x64"],
+        "@platforms//os:windows": ["bazel/windows-x64"],
+        "//conditions:default": ["bazel/linux-glibc-x64"],
+    }),
+    linkopts = select({
+        "@platforms//os:windows": ["bcrypt.lib"],
+        "//conditions:default": [],
+    }),
+    local_defines = PLATFORM_DEFINES + NATIVE_CONFIG_DEFINES,
+    visibility = [
+        "//src/coreclr:__subpackages__",
+        "//src/native:__subpackages__",
+    ],
+)

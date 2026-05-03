@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Composition.AttributeModel.Tests",
+    nowarn = MULTITARGET_NOWARN,
+    srcs = glob(["**/*.cs"]),
+    deps = [
+        "//src/libraries/System.Composition.AttributedModel:impl_System.Composition.AttributedModel",
+        "//src/libraries/System.ComponentModel.Composition:ref_System.ComponentModel.Composition",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+)

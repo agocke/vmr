@@ -1,0 +1,32 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files(
+    ["ref/System.Reflection.Emit.Lightweight.cs"]
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Reflection.Emit.Lightweight",
+    srcs = [
+        "ref/System.Reflection.Emit.Lightweight.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+    ],
+    allow_unsafe_blocks = True,
+    nowarn = ["CS9368"],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Reflection.Emit.Lightweight",
+    include_editorconfig = False,
+    nowarn = ["CS1591"],
+    srcs = [],
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+    ],
+    partial_facade = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Reflection.Emit.Lightweight",
+    exclude_sr = True,
+)

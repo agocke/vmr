@@ -1,0 +1,55 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ldind_conv",
+    srcs = ["ldind_conv.il"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "FPZero",
+    srcs = ["FPZero.cs"],
+    pri = 1,
+    debug_type = "pdbonly",
+    optimize = True,
+    allow_unsafe_blocks = True,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "minopts_convu1",
+    srcs = ["minopts_convu1.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "signed_overflow_conversions_are_not_treated_as_unsigned",
+    srcs = ["signed_overflow_conversions_are_not_treated_as_unsigned.il"],
+    debug_type = "pdbonly",
+)
+
+il_coreclr_test(
+    name = "implicitConv",
+    srcs = ["implicitConv.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+coreclr_test(
+    name = "value_numbering_checked_casts_of_constants",
+    srcs = [
+        "value_numbering_checked_casts_of_constants.cs",
+        "value_numbering_checked_casts_of_constants_float.cs",
+        "value_numbering_checked_casts_of_constants_double.cs",
+        "value_numbering_checked_casts_of_constants_byte.cs",
+        "value_numbering_checked_casts_of_constants_short.cs",
+        "value_numbering_checked_casts_of_constants_int.cs",
+        "value_numbering_checked_casts_of_constants_long.cs",
+    ],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)

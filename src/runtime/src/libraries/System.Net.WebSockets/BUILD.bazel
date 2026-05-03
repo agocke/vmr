@@ -1,0 +1,60 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files(["src/Resources/Strings.resx"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.WebSockets",
+    srcs = [
+        "ref/System.Net.WebSockets.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.WebSockets",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
+    os_targeted = "unix",
+    srcs = glob(["src/System/**/*.cs"]) + [
+        # Common sources
+        "//src/libraries/Common:src/System/Net/WebSockets/WebSocketDefaults.cs",
+        "//src/libraries/Common:src/System/Net/WebSockets/WebSocketValidate.cs",
+        "//src/libraries/Common:src/System/IO/Compression/ZLibNative.cs",
+        "//src/libraries/Common:src/System/IO/Compression/ZLibNative.CompressionLevel.cs",
+        "//src/libraries/Common:src/System/IO/Compression/ZLibNative.ZStream.cs",
+        "//src/libraries/Common:src/Interop/Interop.zlib.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/Common:src/System/Net/Logging/NetEventSource.Common.cs",
+        "//src/libraries/Common:src/System/Net/Logging/NetEventSource.Common.Associate.cs",
+    ] + select({
+        "@platforms//os:linux": [
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        ],
+        "@platforms//os:macos": [
+            "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        ],
+    }),
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries:ref_Microsoft.Win32.Primitives",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.Diagnostics.Tracing:ref_System.Diagnostics.Tracing",
+        "//src/libraries/System.IO.Compression:impl_System.IO.Compression",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Numerics.Vectors:ref_System.Numerics.Vectors",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    supported_os_platforms = ["unix"],
+)

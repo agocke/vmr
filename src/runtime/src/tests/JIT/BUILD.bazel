@@ -1,0 +1,92 @@
+load("//src/tests:live_test.bzl", "coreclr_merged_test")
+
+coreclr_merged_test(
+    name = "JIT_d",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+    ],
+)
+
+coreclr_merged_test(
+    name = "JIT_do",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+    ],
+)
+
+coreclr_merged_test(
+    name = "JIT_others",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/PGO/InstrumentedTiers:InstrumentedTiers",
+        "//src/tests/JIT/PGO/ProfileCastClassAndIsInst:ProfileCastClassAndIsInst",
+        "//src/tests/JIT/PGO/ProfileCastClassAndIsInst:ProfileCastClassAndIsInst_random1",
+        "//src/tests/JIT/PGO/ProfileCastClassAndIsInst:ProfileCastClassAndIsInst_random2",
+        "//src/tests/JIT/PGO/ProfileCastClassAndIsInst:ProfileCastClassAndIsInst_random3",
+        "//src/tests/JIT/RyuJIT:DoWhileBndChk",
+    ],
+)
+
+coreclr_merged_test(
+    name = "JIT_r",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/Intrinsics:BMI1Intrinsicss_r",
+        "//src/tests/JIT/Intrinsics:BitOperationsIntrinsics_r",
+        "//src/tests/JIT/Intrinsics:Interlocked_r",
+        "//src/tests/JIT/Intrinsics:MathCeilingDouble_r",
+        "//src/tests/JIT/Intrinsics:MathCeilingSingle_r",
+        "//src/tests/JIT/Intrinsics:MathFloorDouble_r",
+        "//src/tests/JIT/Intrinsics:MathFloorSingle_r",
+        "//src/tests/JIT/Intrinsics:MathFusedMultiplyAdd_r",
+        "//src/tests/JIT/Intrinsics:MathMinMaxInteger_r",
+        "//src/tests/JIT/Intrinsics:MathRoundDouble_r",
+        "//src/tests/JIT/Intrinsics:MathRoundSingle_r",
+        "//src/tests/JIT/Intrinsics:MemoryMarshalGetArrayDataReference_r",
+        "//src/tests/JIT/Intrinsics:TypeEqualitySealed_r",
+        "//src/tests/JIT/Intrinsics:TypeEquality_r",
+        "//src/tests/JIT/Math/Functions:Functions_r",
+    ],
+)
+
+coreclr_merged_test(
+    name = "JIT_ro",
+    deps = [
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    test_deps = [
+        "//src/tests/JIT/Intrinsics:BMI1Intrinsics_ro",
+        "//src/tests/JIT/Intrinsics:BitOperationsIntrinsics_ro",
+        "//src/tests/JIT/Intrinsics:Interlocked_ro",
+        "//src/tests/JIT/Intrinsics:MathCeilingDouble_ro",
+        "//src/tests/JIT/Intrinsics:MathCeilingSingle_ro",
+        "//src/tests/JIT/Intrinsics:MathFloorDouble_ro",
+        "//src/tests/JIT/Intrinsics:MathFloorSingle_ro",
+        "//src/tests/JIT/Intrinsics:MathFusedMultiplyAdd_ro",
+        "//src/tests/JIT/Intrinsics:MathMinMaxInteger_ro",
+        "//src/tests/JIT/Intrinsics:MathRoundDouble_ro",
+        "//src/tests/JIT/Intrinsics:MathRoundSingle_ro",
+        "//src/tests/JIT/Intrinsics:MemoryMarshalGetArrayDataReference_ro",
+        "//src/tests/JIT/Intrinsics:TypeEqualitySealed_ro",
+        "//src/tests/JIT/Intrinsics:TypeEquality_ro",
+        "//src/tests/JIT/Math/Functions:Functions_ro",
+    ],
+)

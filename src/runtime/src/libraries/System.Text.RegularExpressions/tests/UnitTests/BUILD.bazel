@@ -1,0 +1,89 @@
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+load("//src/tests:live_test.bzl", "library_test")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Text.RegularExpressions.Unit.Tests",
+    resx_file = "//src/libraries/System.Text.RegularExpressions:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Text.RegularExpressions.Unit.Tests.SR.resources",
+    resx_file = "//src/libraries/System.Text.RegularExpressions:src/Resources/Strings.resx",
+)
+
+library_test(
+    name = "System.Text.RegularExpressions.Unit.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.Text.RegularExpressions.Unit.Tests.SR.resources": "FxResources.System.Text.RegularExpressions.Unit.Tests.SR.resources"},
+    additionalfiles = ["//src/libraries/System.Text.RegularExpressions:src/Resources/Strings.resx"],
+    srcs = glob(["**/*.cs"]) + [
+        # Common source files
+        "//src/libraries/Common:src/System/HexConverter.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        # CoreLib shared files
+        "//src/libraries/Common:src/System/Collections/Generic/ValueListBuilder.cs",
+        "//src/libraries/Common:src/System/Collections/Generic/ValueListBuilder.Pop.cs",
+        # Generated string resources
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
+        # Production source files from System.Text.RegularExpressions
+        "//src/libraries/System.Text.RegularExpressions:src/System/Threading/StackHelper.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexCaseEquivalences.Data.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexCaseEquivalences.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexCaseBehavior.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexCharClass.Tables.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexCharClass.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexInterpreterCode.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexFindOptimizations.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexNode.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexNodeKind.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexOpcode.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexOptions.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexParseError.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexParseException.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexParser.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexPrefixAnalyzer.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexTree.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexTreeAnalyzer.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/RegexWriter.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Collections/HashtableExtensions.cs",
+        # Symbolic engine sources
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/BDD.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/BDDRangeConverter.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/CharKind.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/CharSetSolver.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/DerivativeEffect.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/MatchingState.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/DoublyLinkedList.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/ISolver.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/MintermGenerator.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/RegexNodeConverter.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/StateFlags.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/SymbolicRegexBuilder.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/SymbolicRegexInfo.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/SymbolicRegexKind.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/SymbolicRegexNode.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/SymbolicRegexThresholds.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/UnicodeCategoryConditions.cs",
+        "//src/libraries/System.Text.RegularExpressions:src/System/Text/RegularExpressions/Symbolic/UnicodeCategoryRanges.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    defines = ["DEBUG"],
+    nowarn = ["xUnit2008", "SYSLIB0036"],
+    keyfile = OPEN_SNK,
+    size = "large",
+)

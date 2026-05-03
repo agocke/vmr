@@ -1,0 +1,31 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Xml.XDocument",
+    srcs = [
+        "ref/System.Xml.XDocument.cs",
+    ],
+    deps = [
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Xml.XDocument",
+    nowarn = ["CS1591"],
+    partial_facade = True,
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Xml.XDocument",
+    exclude_sr = True,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.ObjectModel:impl_System.ObjectModel",
+        "//src/libraries/System.Private.Xml:impl_System.Private.Xml",
+        "//src/libraries/System.Private.Xml.Linq:impl_System.Private.Xml.Linq",
+    ],
+    include_dll_safe_search_path = False,
+    include_editorconfig = False,
+    library_import_generator = False,
+)

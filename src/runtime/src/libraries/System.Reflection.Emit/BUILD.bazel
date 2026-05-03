@@ -1,0 +1,39 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+
+exports_files(["ref/System.Reflection.Emit.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Reflection.Emit",
+    srcs = [
+        "ref/System.Reflection.Emit.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Diagnostics.StackTrace:ref_System.Diagnostics.StackTrace",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Reflection.Emit",
+    nowarn = ["CS1591"],
+    srcs = glob(["src/System/**/*.cs"]) + [
+        "//src/libraries/System.Private.CoreLib:src/System/Reflection/Emit/MethodBuilderInstantiation.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Reflection/Emit/SymbolType.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Reflection/Emit/TypeNameBuilder.cs",
+    ],
+    partial_facade = True,
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+        "//src/libraries:impl_System.Runtime",
+        "//src/libraries/System.Collections.Immutable:impl_System.Collections.Immutable",
+        "//src/libraries/System.Reflection.Metadata:impl_System.Reflection.Metadata",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Reflection.Emit",
+)

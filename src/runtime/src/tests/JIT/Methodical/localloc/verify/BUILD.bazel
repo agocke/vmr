@@ -1,0 +1,22 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "verify01_large",
+    srcs = ["verify01_large.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "verify01_dynamic",
+    srcs = ["verify01_dynamic.il"],
+    debug_type = "full",
+    optimize = False,
+)
+
+il_coreclr_test(
+    name = "verify01_small",
+    srcs = ["verify01_small.il"],
+    debug_type = "full",
+    optimize = False,
+)

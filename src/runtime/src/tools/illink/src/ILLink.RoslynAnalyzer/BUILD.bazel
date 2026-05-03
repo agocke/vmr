@@ -1,0 +1,60 @@
+load("//:defs.bzl", "csharp_library", "resgen", "gen_resx_source")
+
+# Generate code for the System.Reflection.Metadata Strings.resx resource.
+gen_resx_source(
+    name = "resx_srm_strings",
+    out = "System.Reflection.Metadata.SR.cs",
+    assembly_name = "ILLink.RoslynAnalyzer",
+    resource_name = "System.Reflection.Metadata.SR",
+    resource_class_name = "System.Reflection.Metadata.SR",
+    resx_file = "//src/libraries/System.Reflection.Metadata:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "resgen_srm_strings",
+    out = "System.Reflection.Metadata.Strings.resources",
+    resx_file = "//src/libraries/System.Reflection.Metadata:src/Resources/Strings.resx",
+)
+
+csharp_library(
+    name = "ILLink.RoslynAnalyzer",
+    srcs = glob(["**/*.cs"]) + [
+        # ILLink.Shared (shared project — compiled inline)
+        "//src/tools/illink/src/ILLink.Shared:srcs",
+        "//src/tools/illink/src/ILLink.Shared:resx_shared_strings",
+        # External source files from csproj
+        "//src/libraries/System.Private.CoreLib:src/System/Index.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+        "//src/libraries/Common:src/System/HexConverter.cs",
+        "//src/libraries/Common:src/System/Reflection/AssemblyNameFormatter.cs",
+        "//src/libraries/Common:src/System/Reflection/AssemblyNameParser.cs",
+        "//src/libraries/System.Reflection.Metadata:src/System/Reflection/Metadata/AssemblyNameInfo.cs",
+        "//src/libraries/System.Reflection.Metadata:src/System/Reflection/Metadata/TypeName.cs",
+        "//src/libraries/System.Reflection.Metadata:src/System/Reflection/Metadata/TypeNameParseOptions.cs",
+        "//src/libraries/System.Reflection.Metadata:src/System/Reflection/Metadata/TypeNameParser.cs",
+        "//src/libraries/System.Reflection.Metadata:src/System/Reflection/Metadata/TypeNameParserHelpers.cs",
+        "//src/libraries/Common:src/System/Buffers/SearchValuesPolyfills.cs",
+        # Generated resx code
+        ":resx_srm_strings",
+    ],
+    resources = [
+        "//src/tools/illink/src/ILLink.Shared:resgen_shared_strings",
+        ":resgen_srm_strings",
+    ],
+    resource_logical_names = {
+        "ILLink.Shared.SharedStrings.resources": "ILLink.Shared.SharedStrings.resources",
+        "System.Reflection.Metadata.Strings.resources": "System.Reflection.Metadata.Strings.resources",
+    },
+    target_frameworks = ["netstandard2.0"],
+    nullable = "enable",
+    allow_unsafe_blocks = True,
+    nowarn = ["CS0436"],
+    deps = [
+        "@paket.illink//microsoft.codeanalysis.common",
+        "@paket.illink//microsoft.codeanalysis.csharp",
+        "@paket.illink//system.buffers",
+        "@paket.illink//system.collections.immutable",
+        "@paket.illink//system.memory",
+    ],
+    visibility = ["//visibility:public"],
+)

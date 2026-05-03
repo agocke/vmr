@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "reflection-simple",
+    srcs = ["reflection-simple.cs"],
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+    ],
+    tags = ["manual"],  # Needs Microsoft.CSharp ref assembly (not yet in Bazel)
+)

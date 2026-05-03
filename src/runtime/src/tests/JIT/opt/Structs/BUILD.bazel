@@ -1,0 +1,38 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "structpop",
+    srcs = ["structpop.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "structpop2",
+    srcs = ["structpop2.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "structcopies",
+    srcs = ["structcopies.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "StructWithGC_Zeroing",
+    srcs = ["StructWithGC_Zeroing.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "MemsetMemcpyNullref",
+    srcs = ["MemsetMemcpyNullref.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = ["//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

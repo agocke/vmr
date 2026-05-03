@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "InlineGCStruct",
+    srcs = ["InlineGCStruct.cs"],
+)
+
+coreclr_test(
+    name = "NoThrowInline",
+    srcs = ["NoThrowInline.cs"],
+)

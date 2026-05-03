@@ -1,0 +1,24 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "smallFrame",
+    srcs = ["smallFrame.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "hijacking",
+    srcs = ["hijacking.il"],
+    debug_type = "pdbonly",
+    optimize = True,
+    env = {"DOTNET_TieredCompilation": "0"},
+)
+
+il_coreclr_test(
+    name = "delegateTail",
+    srcs = ["delegateTail.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

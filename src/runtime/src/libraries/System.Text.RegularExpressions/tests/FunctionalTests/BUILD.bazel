@@ -1,0 +1,51 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Text.RegularExpressions.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            # .NET Framework only
+            "RegexAssert.netfx.cs",
+            "RegexParserTests.netfx.cs",
+            "RegexGeneratorHelper.netfx.cs",
+            # Requires Microsoft.CodeAnalysis.CSharp.CodeFix.Testing (not in paket)
+            "CSharpCodeFixVerifier*",
+            "UpgradeToGeneratedRegexAnalyzerTests.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/Diagnostics/DebuggerAttributes.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Tasks.Parallel:ref_System.Threading.Tasks.Parallel",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/shims/System.Reflection:impl_System.Reflection",
+        "//src/libraries/shims/System.Threading.Tasks:impl_System.Threading.Tasks",
+        "//src/libraries/shims/netstandard:impl_netstandard",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+    data = ["@paket.main//system.text.regularexpressions.testdata:content_files"],
+    nowarn = MULTITARGET_NOWARN + ["xUnit2008", "SYSLIB0036", "SYSLIB1045", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    size = "large",
+)

@@ -1,0 +1,23 @@
+load("//:defs.bzl", "NETCOREAPP_MINIMUM", "NETCOREAPP_TOOL_CURRENT", "csharp_library")
+
+csharp_library(
+    name = "ILCompiler.Diagnostics",
+    include_runtime_async = False,
+    nowarn = ["1591"],
+    msbuild_analyzer_config = "style",
+    include_default_ruleset = False,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    compiler_options = ["/warnaserror+:NU1605"],
+    srcs = glob(["*.cs"]),
+    defines = ["READYTORUN"],
+    allow_unsafe_blocks = True,
+    analyzers = [
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+    ],
+    deps = [
+        "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//microsoft.diasymreader",
+    ],
+    target_frameworks = [NETCOREAPP_MINIMUM, NETCOREAPP_TOOL_CURRENT],
+    visibility = ["//visibility:public"],
+)

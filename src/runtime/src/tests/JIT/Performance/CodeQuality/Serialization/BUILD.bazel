@@ -1,0 +1,23 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Serialize",
+    srcs = ["Serialize.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    tags = ["manual"],  # Requires Newtonsoft.Json NuGet package
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+    ],
+)
+
+coreclr_test(
+    name = "Deserialize",
+    srcs = ["Deserialize.cs"],
+    debug_type = "pdbonly",
+    optimize = True,
+    tags = ["manual"],  # Requires Newtonsoft.Json NuGet package
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+    ],
+)

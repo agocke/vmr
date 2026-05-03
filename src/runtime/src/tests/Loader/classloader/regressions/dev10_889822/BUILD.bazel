@@ -1,0 +1,6 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "dev10_889822",
+    srcs = ["dev10_889822.cs"],
+)

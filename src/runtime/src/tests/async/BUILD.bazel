@@ -1,0 +1,4 @@
+exports_files(
+    ["RuntimeAsyncMethodGenerationAttribute.cs"],
+    visibility = ["//src/tests/async:__subpackages__"],
+)

@@ -1,0 +1,51 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files(["ref/System.Net.WebClient.cs"])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Net.WebClient",
+    srcs = [
+        "ref/System.Net.WebClient.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Requests:ref_System.Net.Requests",
+        "//src/libraries/System.Net.WebHeaderCollection:ref_System.Net.WebHeaderCollection",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Net.WebClient",
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Net/WebClient.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/Common:src/System/IO/DelegatingStream.cs",
+        "//src/libraries/Common:src/System/IO/ChunkedMemoryStream.cs",
+        "//src/libraries/Common:src/System/Threading/Tasks/BeginEndAwaitableAdapter.cs",
+        "//src/libraries/Common:src/System/Threading/Tasks/RendezvousAwaitable.cs",
+        "//src/libraries/Common:src/System/Net/HttpKnownHeaderNames.cs",
+        "//src/libraries/Common:src/System/HexConverter.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Requests:ref_System.Net.Requests",
+        "//src/libraries/System.Net.WebHeaderCollection:ref_System.Net.WebHeaderCollection",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Web.HttpUtility:ref_System.Web.HttpUtility",
+    ],
+    unsupported_os_platforms = ["browser", "wasi"],
+    keyfile = OPEN_SNK,
+    library_import_generator = False,
+)

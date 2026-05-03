@@ -1,0 +1,63 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Http.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Http",
+    srcs = [
+        "ref/Microsoft.Extensions.Http.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics:ref_Microsoft.Extensions.Diagnostics",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Http",
+    include_runtime_async = False,
+    event_source_generator = False,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/Extensions/NonCapturingTimer/NonCapturingTimer.cs",
+        "//src/libraries/Common:src/Extensions/TypeNameHelper/TypeNameHelper.cs",
+        "//src/libraries/Common:src/System/Net/Http/UriRedactionHelper.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics:ref_Microsoft.Extensions.Diagnostics",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Http",
+    ref = ":ref_Microsoft.Extensions.Http",
+    lib = ":impl_Microsoft.Extensions.Http",
+    visibility = ["//visibility:public"],
+)

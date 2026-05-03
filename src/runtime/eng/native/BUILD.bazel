@@ -1,0 +1,32 @@
+# Build infrastructure scripts.
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+exports_files(
+    [
+        "generateversionscript.sh",
+        "generateexportedsymbols.sh",
+    ],
+    visibility = [
+        "//src/coreclr:__subpackages__",
+        "//src/native:__subpackages__",
+    ],
+)
+
+# Version headers and static version source.
+# Used by corehost (utils.cpp #includes these).
+
+cc_library(
+    name = "version_headers",
+    hdrs = [
+        "version/_version.c",
+        "version/_version.h",
+        "version/runtime_version.h",
+    ],
+    strip_include_prefix = "version",
+    visibility = [
+        "//src/coreclr:__subpackages__",
+        "//src/native:__subpackages__",
+    ],
+)
+

@@ -1,0 +1,89 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "ref/System.Resources.Extensions.cs",
+    "src/Resources/Strings.resx",
+] + glob(["src/**/*.cs"]))
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Resources.Extensions",
+    srcs = [
+        "ref/System.Resources.Extensions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Resources.Writer:ref_System.Resources.Writer",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Resources.Extensions",
+    include_runtime_async = False,
+    event_source_generator = False,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    com_interface_generator = True,
+    keyfile = OPEN_SNK,
+    allow_unsafe_blocks = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    srcs = [
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/Common:src/System/Resources/ResourceWriter.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/IO/PinnedBufferMemoryStream.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Resources/FastResourceComparer.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Resources/ResourceReader.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Resources/ResourceTypeCode.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Resources/RuntimeResourceSet.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Numerics/Hashing/HashHelpers.cs",
+
+        "src/BinaryReaderExtensions.cs",
+        "src/BinaryWriterExtensions.cs",
+        "src/System/Resources/Extensions/DeserializingResourceReader.cs",
+        "src/System/Resources/Extensions/PreserializedResourceWriter.cs",
+        "src/System/Resources/Extensions/SerializationFormat.cs",
+        "src/System/Resources/Extensions/TypeNameComparer.cs",
+        "src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.cs",
+        "src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.IParseState.cs",
+        "src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.ITypeResolver.cs",
+        "src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.Options.cs",
+        "src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.ParseState.cs",
+        "src/System/Resources/Extensions/BinaryFormat/BinaryFormattedObject.TypeResolver.cs",
+        "src/System/Resources/Extensions/BinaryFormat/SerializationEvents.cs",
+        "src/System/Resources/Extensions/BinaryFormat/SerializationExtensions.cs",
+        "src/System/Resources/Extensions/BinaryFormat/SerializationInfoExtensions.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/ArrayRecordDeserializer.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/ArrayUpdater.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/ClassRecordDeserializer.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/ClassRecordFieldInfoDeserializer.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/ClassRecordSerializationInfoDeserializer.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/Deserializer.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/FieldValueUpdater.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/IDeserializer.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/ObjectRecordDeserializer.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/PendingSerializationInfo.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/SerializationInfoValueUpdater.cs",
+        "src/System/Resources/Extensions/BinaryFormat/Deserializer/ValueUpdater.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Formats.Nrbf:ref_System.Formats.Nrbf",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Resources.Writer:ref_System.Resources.Writer",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    defines = ["RESOURCES_EXTENSIONS"],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.Resources.Extensions",
+    ref = ":ref_System.Resources.Extensions",
+    lib = ":impl_System.Resources.Extensions",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,17 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "mutualrecurthd-tls",
+    srcs = ["MutualRecurThd-TLS.il"],
+    optimize = True,
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test-tls",
+    srcs = ["Test-TLS.il"],
+    optimize = True,
+    pri = 1,
+    size = "medium",
+)

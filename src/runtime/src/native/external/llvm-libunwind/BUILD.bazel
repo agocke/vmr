@@ -1,0 +1,27 @@
+# LLVM libunwind — sources compiled into NativeAOT runtime.
+# The NativeAOT runtime compiles these files directly (not as a shared library).
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+exports_files(
+    [
+        "src/Unwind-EHABI.cpp",
+        "src/libunwind.cpp",
+        "src/UnwindRegistersRestore.S",
+        "src/UnwindRegistersSave.S",
+    ],
+    visibility = ["//src/coreclr:__subpackages__"],
+)
+
+# Headers needed when compiling llvm-libunwind sources into NativeAOT.
+cc_library(
+    name = "llvm_libunwind_headers",
+    hdrs = glob([
+        "src/*.h",
+        "src/*.hpp",
+        "include/*.h",
+        "include/**/*.h",
+    ], allow_empty = True),
+    includes = ["include"],
+    visibility = ["//src/coreclr:__subpackages__"],
+)

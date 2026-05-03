@@ -1,0 +1,50 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/System.Collections.Concurrent.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Collections.Concurrent",
+    srcs = [
+        "ref/System.Collections.Concurrent.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Collections.Concurrent",
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Collections/Concurrent/BlockingCollection.cs",
+        "src/System/Collections/Concurrent/CDSCollectionETWBCLProvider.cs",
+        "src/System/Collections/Concurrent/ConcurrentBag.cs",
+        "src/System/Collections/Concurrent/ConcurrentStack.cs",
+        "src/System/Collections/Concurrent/OrderablePartitioner.cs",
+        "src/System/Collections/Concurrent/Partitioner.cs",
+        "src/System/Collections/Concurrent/PartitionerStatic.cs",
+
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/HashHelpers.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Concurrent/IProducerConsumerCollectionDebugView.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/DebugViewDictionaryItem.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Collections:impl_System.Collections",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
+        "//src/libraries/System.Diagnostics.Tracing:impl_System.Diagnostics.Tracing",
+        "//src/libraries/System.Threading:impl_System.Threading",
+    ],
+    generate_facades = True,
+    facade_contract_assembly = ":ref_System.Collections.Concurrent",
+    partial_facade = True,
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.Collections.Concurrent",
+    ref = ":ref_System.Collections.Concurrent",
+    lib = ":impl_System.Collections.Concurrent",
+    visibility = ["//visibility:public"],
+)

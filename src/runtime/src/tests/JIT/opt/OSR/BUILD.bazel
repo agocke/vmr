@@ -1,0 +1,244 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "tailrecursetry",
+    srcs = ["tailrecursetry.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "tailrecurse",
+    srcs = ["tailrecurse.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "memoryargument",
+    srcs = ["memoryargument.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "mainloop",
+    srcs = ["mainloop.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "livelocaladdress",
+    srcs = ["livelocaladdress.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "Runtime_69032",
+    srcs = ["Runtime_69032.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "largefuncletframe",
+    srcs = ["largefuncletframe.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "twoosrmethods1",
+    srcs = ["twoosrmethods1.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "Runtime_89666",
+    srcs = ["Runtime_89666.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "tailpgo",
+    srcs = ["tailpgo.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "handlerloop",
+    srcs = ["handlerloop.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "osrcontainstry",
+    srcs = ["osrcontainstry.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "pinnedlocal",
+    srcs = ["pinnedlocal.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "genericmethodpatchpoint",
+    srcs = ["genericmethodpatchpoint.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "promoted",
+    srcs = ["promoted.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "invalidpromotion",
+    srcs = ["invalidpromotion.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "normalizeonload",
+    srcs = ["normalizeonload.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "tailpgo2",
+    srcs = ["tailpgo2.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "mainlooptry3",
+    srcs = ["mainlooptry3.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "mainlooptry2",
+    srcs = ["mainlooptry2.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "twoosrmethods",
+    srcs = ["twoosrmethods.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "mainlooptry",
+    srcs = ["mainlooptry.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "exposure1",
+    srcs = ["exposure1.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "exposure2",
+    srcs = ["exposure2.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "originalstackalloc",
+    srcs = ["originalstackalloc.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "tailrecursetry2",
+    srcs = ["tailrecursetry2.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "integersumloop",
+    srcs = ["integersumloop.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "example",
+    srcs = ["example.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "shortenregisteredlocal",
+    srcs = ["shortenregisteredlocal.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "mainlooptry4",
+    srcs = ["mainlooptry4.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "livelocalstackalloc",
+    srcs = ["livelocalstackalloc.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "innerloop",
+    srcs = ["innerloop.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "mainloop2",
+    srcs = ["mainloop2.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "synchronized",
+    srcs = ["synchronized.cs"],
+    optimize = True,
+    deps = [
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+coreclr_test(
+    name = "addressexposedlocal",
+    srcs = ["addressexposedlocal.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "nesteddoloops",
+    srcs = ["nesteddoloops.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "doublestackalloc",
+    srcs = ["doublestackalloc.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "shadowparam",
+    srcs = ["shadowparam.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

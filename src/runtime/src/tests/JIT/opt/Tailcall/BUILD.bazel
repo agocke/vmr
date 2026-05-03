@@ -1,0 +1,21 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "EarlyFlowOptExample",
+    srcs = ["EarlyFlowOptExample.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "ImplicitByrefTailCallsAliasing",
+    srcs = ["ImplicitByrefTailCallsAliasing.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)
+
+coreclr_test(
+    name = "ImplicitByrefTailCalls",
+    srcs = ["ImplicitByrefTailCalls.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+)

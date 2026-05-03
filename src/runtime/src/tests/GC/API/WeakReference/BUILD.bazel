@@ -1,0 +1,46 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Finalize",
+    srcs = ["Finalize.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Finalize2",
+    srcs = ["Finalize2.cs"],
+)
+
+coreclr_test(
+    name = "IsAlive",
+    srcs = ["IsAlive.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "IsAlive_neg",
+    srcs = ["IsAlive_neg.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "NullHandle",
+    srcs = ["NullHandle.cs"],
+)
+
+coreclr_test(
+    name = "Target",
+    srcs = ["Target.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TrackResurrection",
+    srcs = ["TrackResurrection.cs"],
+    pri = 1,
+    size = "medium",
+)

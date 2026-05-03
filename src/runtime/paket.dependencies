@@ -1,0 +1,96 @@
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-dotnet-df857aec/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-libraries/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-libraries-transport/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet10/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet10-transport/nuget/v3/index.json
+
+storage: none
+framework: net10.0
+
+nuget Microsoft.CodeAnalysis.Common 5.0.0-2.26070.104
+nuget Microsoft.CodeAnalysis.CSharp 5.0.0-2.26070.104
+nuget Microsoft.CodeAnalysis.CSharp.Workspaces 5.0.0-2.26070.104
+nuget Microsoft.CodeAnalysis.Analyzers 5.0.0-2.26170.102
+nuget Microsoft.CodeAnalysis.CSharp.CodeStyle 5.0.0-2.26070.104
+nuget Microsoft.CodeAnalysis.NetAnalyzers 10.0.106
+nuget Microsoft.CodeAnalysis.Workspaces.Common 5.0.0-2.26070.104
+nuget Microsoft.DotNet.CodeAnalysis 10.0.0-beta.26170.102
+nuget StaticCs 0.2.0
+nuget Microsoft.CodeAnalysis.BannedApiAnalyzers 3.3.5-beta1.23270.2
+nuget StyleCop.Analyzers 1.2.0-beta.556
+nuget System.Memory 4.6.0
+nuget microsoft.dotnet.arcade.sdk 10.0.0-beta.26170.102
+nuget System.Buffers 4.5.1
+nuget microsoft.dotnet.genfacades 10.0.0-beta.26170.102
+nuget microsoft.dotnet.sharedframework.sdk 10.0.0-beta.26170.102
+nuget Microsoft.Build.Framework 17.8.3
+nuget Microsoft.Build.Utilities.Core 17.8.3
+nuget System.Resources.Extensions 8.0.0
+nuget Microsoft.DotNet.XUnitAssert 2.9.3-beta.26170.102
+nuget Microsoft.DotNet.XUnitConsoleRunner 2.9.3-beta.26170.102
+nuget Microsoft.DotNet.RemoteExecutor 11.0.0-beta.26211.102
+nuget XUnit.Abstractions 2.0.3
+nuget XUnit.Extensibility.Core 2.9.3
+nuget xunit.analyzers 1.22.0
+nuget xunit.extensibility.execution 2.9.3
+nuget Microsoft.DotNet.XUnitExtensions 10.0.0-beta.26170.102
+nuget Microsoft.DotNet.Cecil 0.11.5-alpha.26170.102
+nuget Microsoft.DiaSymReader 2.0.0
+nuget Microsoft.Diagnostics.Runtime 1.0.5
+nuget Microsoft.Diagnostics.Tracing.TraceEvent 3.1.28
+nuget Microsoft.Diagnostics.NetCore.Client 0.2.621003
+nuget System.Runtime.CompilerServices.Unsafe 6.1.2
+nuget System.Security.Cryptography.X509Certificates.TestData 10.0.0-beta.25418.1
+nuget System.Private.Runtime.UnicodeData 10.0.0-beta.25418.1
+nuget System.IO.Compression.TestData 10.0.0-beta.25418.1
+nuget System.IO.Packaging.TestData 10.0.0-beta.25418.1
+nuget System.Formats.Tar.TestData 10.0.0-beta.25418.1
+nuget System.Data.Common.TestData 10.0.0-beta.25418.1
+nuget System.Net.TestData 10.0.0-beta.25418.1
+nuget System.Text.RegularExpressions.TestData 10.0.0-beta.25418.1
+nuget Microsoft.IdentityModel.Tokens 6.15.0
+nuget Microsoft.IdentityModel.Logging 6.15.0
+nuget Humanizer.Core 2.14.1
+nuget Microsoft.NET.StringTools 17.11.4
+nuget Microsoft.VisualStudio.Setup.Configuration.Interop 3.11.2177
+nuget System.Collections.Immutable 9.0.8
+nuget System.CommandLine 2.0.6
+nuget System.Composition 9.0.0
+nuget System.Composition.AttributedModel 9.0.0
+nuget System.Composition.Convention 9.0.0
+nuget System.Composition.Hosting 9.0.0
+nuget System.Composition.Runtime 9.0.0
+nuget System.Composition.TypedParts 9.0.0
+nuget System.Configuration.ConfigurationManager 8.0.1
+nuget System.Diagnostics.EventLog 8.0.1
+nuget System.IO.Pipelines 8.0.0
+nuget System.Reflection.Metadata 9.0.8
+nuget System.Security.Cryptography.ProtectedData 8.0.0
+nuget System.Threading.Channels 8.0.0
+nuget optimization.linux-x64.mibc.runtime 1.0.0-prerelease.26080.1
+nuget optimization.linux-arm64.mibc.runtime 1.0.0-prerelease.26080.1
+nuget Moq 4.18.4
+nuget JsonSchema.Net 7.0.2
+nuget Newtonsoft.Json 13.0.3
+nuget FsCheck 2.14.3
+nuget FsCheck.Xunit 2.14.3
+nuget System.Data.SqlClient 4.9.0
+nuget AwesomeAssertions 8.0.2
+nuget System.Runtime.Numerics.TestData 10.0.0-beta.25418.1
+
+group illink
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json
+source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet10/nuget/v3/index.json
+
+storage: none
+framework: netstandard2.0
+
+nuget Microsoft.CodeAnalysis.Common 5.0.0-2.26070.104
+nuget Microsoft.CodeAnalysis.CSharp 5.0.0-2.26070.104
+nuget System.Collections.Immutable 9.0.0
+nuget System.Memory 4.6.0

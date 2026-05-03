@@ -1,0 +1,50 @@
+load("//src/libraries:defs.bzl",
+    "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly", "netcoreapp_ref_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Reflection.MetadataLoadContext",
+    srcs = [
+        "ref/System.Reflection.MetadataLoadContext.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Reflection.MetadataLoadContext",
+    include_runtime_async = False,
+    event_source_generator = False,
+    keyfile = OPEN_SNK,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    srcs = glob(
+        ["src/**/*.cs"],
+        exclude = [
+            # netstandard-only; TypeExtensions.net.cs is used for netcoreapp
+            "src/System/Reflection/TypeLoading/General/TypeExtensions.netstandard.cs",
+        ],
+    ) + [
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+)
+
+ref_impl_pair(
+    name = "live_System.Reflection.MetadataLoadContext",
+    ref = ":ref_System.Reflection.MetadataLoadContext",
+    lib = ":impl_System.Reflection.MetadataLoadContext",
+    visibility = ["//visibility:public"],
+)

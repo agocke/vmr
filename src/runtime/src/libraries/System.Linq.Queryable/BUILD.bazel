@@ -1,0 +1,44 @@
+load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Linq.Queryable",
+    srcs = [
+        "ref/System.Linq.Queryable.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.Linq.Expressions",
+        "//src/libraries/System.Linq:ref_System.Linq",
+    ],
+)
+
+netcoreapp_impl_assembly(
+    name = "impl_System.Linq.Queryable",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
+    srcs = [
+        "src/System/Linq/EnumerableExecutor.cs",
+        "src/System/Linq/EnumerableQuery.cs",
+        "src/System/Linq/EnumerableRewriter.cs",
+        "src/System/Linq/Error.cs",
+        "src/System/Linq/Queryable.cs",
+        "src/System/Linq/Strings.cs",
+        "src/System/Linq/TypeHelper.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries:ref_System.Linq.Expressions",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_System.Linq.Queryable",
+    ref = ":ref_System.Linq.Queryable",
+    lib = ":impl_System.Linq.Queryable",
+    visibility = ["//visibility:public"],
+)

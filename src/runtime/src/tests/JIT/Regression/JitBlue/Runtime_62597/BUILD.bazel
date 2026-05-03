@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Runtime_62597",
+    srcs = ["Runtime_62597.cs"],
+    optimize = True,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+    ],
+)

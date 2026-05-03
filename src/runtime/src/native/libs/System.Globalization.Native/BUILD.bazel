@@ -1,0 +1,150 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library", "objc_library")
+load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_DEFINES")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+
+# System.Globalization.Native for linux-x64
+# Produces libSystem.Globalization.Native.so (shared) and libSystem.Globalization.Native.a (static)
+# Uses pal_icushim.c to load ICU libraries (libicuuc, libicui18n) via dlopen at runtime.
+
+cc_library(
+    name = "System.Globalization.Native_lib",
+    srcs = [
+        "entrypoints.c",
+        "pal_calendarData.c",
+        "pal_casing.c",
+        "pal_collation.c",
+        "pal_common.c",
+        "pal_icushim.c",
+        "pal_idna.c",
+        "pal_locale.c",
+        "pal_localeNumberData.c",
+        "pal_localeStringData.c",
+        "pal_normalization.c",
+        "pal_timeZoneInfo.c",
+    ] + glob(["*.h"]),
+    hdrs = select({
+        "//:macos_arm64": ["bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["bazel/osx-x64/config.h"],
+        "//conditions:default": ["bazel/linux-glibc-x64/config.h"],
+    }),
+    copts = CLR_CONFIG_COPTS + [
+        "-Wno-switch-enum",
+        "-Wno-covered-switch-default",
+        "-Wno-reserved-id-macro",
+        "-Wno-documentation",
+        "-Wno-documentation-unknown-command",
+        "-Wno-reserved-identifier",
+        "-Wno-extra-semi-stmt",
+        "-Wno-unknown-warning-option",
+    ] + select({
+        "@platforms//os:macos": [
+            """-DOSX_ICU_LIBRARY_PATH='"/usr/lib/libicucore.dylib"'""",
+            "-DU_DISABLE_RENAMING",
+        ],
+        "//conditions:default": [],
+    }),
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
+        ".",
+    ] + select({
+        "//:macos_arm64": ["bazel/osx-arm64"],
+        "//:macos_x64": ["bazel/osx-x64"],
+        "//conditions:default": ["bazel/linux-glibc-x64"],
+    }),
+    linkopts = select({
+        "@platforms//os:macos": ["-framework", "Foundation"],
+        "//conditions:default": ["-ldl"],
+    }),
+    local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/native/libs:common",
+        "//src/native/minipal",
+        "@icu4c//:headers",
+    ] + select({
+        "@platforms//os:macos": [":System.Globalization.Native_objc"],
+        "//conditions:default": [],
+    }),
+    alwayslink = True,
+)
+
+# On macOS, compile Objective-C sources as a separate cc_library.
+# Rename .m → .c and use -x objective-c to compile them as ObjC.
+[genrule(
+    name = "rename_%s" % src.replace(".m", "").replace("pal_", ""),
+    srcs = [src],
+    outs = [src.replace(".m", "_objc.c")],
+    cmd = "cp $< $@",
+) for src in [
+    "pal_locale.m",
+    "pal_collation.m",
+    "pal_casing.m",
+    "pal_calendarData.m",
+    "pal_normalization.m",
+    "pal_timeZoneInfo.m",
+]]
+
+cc_library(
+    name = "System.Globalization.Native_objc",
+    srcs = [
+        "pal_locale_objc.c",
+        "pal_collation_objc.c",
+        "pal_casing_objc.c",
+        "pal_calendarData_objc.c",
+        "pal_normalization_objc.c",
+        "pal_timeZoneInfo_objc.c",
+    ] + glob(["*.h"]),
+    hdrs = select({
+        "//:macos_arm64": ["bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["bazel/osx-x64/config.h"],
+    }),
+    copts = CLR_CONFIG_COPTS + [
+        "-x", "objective-c",
+        "-fobjc-arc",
+        "-Wno-switch-enum",
+        "-Wno-covered-switch-default",
+        "-Wno-reserved-id-macro",
+        "-Wno-documentation",
+        "-Wno-documentation-unknown-command",
+        "-Wno-reserved-identifier",
+        "-Wno-extra-semi-stmt",
+        "-Wno-unknown-warning-option",
+
+        """-DOSX_ICU_LIBRARY_PATH='"/usr/lib/libicucore.dylib"'""",
+        "-DU_DISABLE_RENAMING",
+    ],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
+        ".",
+    ] + select({
+        "//:macos_arm64": ["bazel/osx-arm64"],
+        "//:macos_x64": ["bazel/osx-x64"],
+    }),
+    local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
+    linkopts = ["-framework", "Foundation"],
+    target_compatible_with = ["@platforms//os:macos"],
+    deps = [
+        "//src/native/libs:common",
+        "//src/native/minipal",
+        "@icu4c//:headers",
+    ],
+)
+
+cc_shared_library(
+    name = "System.Globalization.Native",
+    shared_lib_name = select({
+        "@platforms//os:macos": "libSystem.Globalization.Native.dylib",
+        "//conditions:default": "libSystem.Globalization.Native.so",
+    }),
+    user_link_flags = select({
+        "@platforms//os:macos": ["-Wl,-install_name,@rpath/libSystem.Globalization.Native.dylib"],
+        "//conditions:default": ["-Wl,-soname,libSystem.Globalization.Native.so"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":System.Globalization.Native_lib"],
+)

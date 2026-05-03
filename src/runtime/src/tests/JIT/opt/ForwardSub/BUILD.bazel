@@ -1,0 +1,57 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "lowerContainCheckCompare",
+    srcs = ["lowerContainCheckCompare.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "modOpt",
+    srcs = ["modOpt.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "callArgInterference3",
+    srcs = ["callArgInterference3.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "callArgInterference",
+    srcs = ["callArgInterference.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "callArgInterference2",
+    srcs = ["callArgInterference2.cs"],
+    optimize = True,
+)
+
+il_coreclr_test(
+    name = "normalizeOnStore",
+    srcs = ["normalizeOnStore.il"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "andnotcontained",
+    srcs = ["andnotcontained.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "earlyLiveness",
+    srcs = ["earlyLiveness.cs"],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "switchWithSideEffects",
+    srcs = ["switchWithSideEffects.cs"],
+    optimize = True,
+)

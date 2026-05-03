@@ -49,7 +49,7 @@ namespace System.IO.Compression
         // out different array sizes), the tests will need to be tweaked.
         public override int BufferSize => 1 << 16;
 
-        protected override string CompressedTestFile(string uncompressedPath) => Path.Combine("ZstandardTestData", Path.GetFileName(uncompressedPath) + ".zst");
+        protected override string CompressedTestFile(string uncompressedPath) => ZstandardTestUtils.GetCompressedTestFile(uncompressedPath);
 
         [Fact]
         public void ZstandardStream_WithEncoder_CompressesData()

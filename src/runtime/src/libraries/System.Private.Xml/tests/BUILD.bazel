@@ -1,0 +1,284 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_library")
+load(":remap_data.bzl", "remap_data")
+
+# MSBuild uses Link attributes to remap test data directory paths:
+#   XmlReader/TestFiles/** → TestFiles/**   (strip "XmlReader/" prefix)
+#   Xslt/TestFiles/**      → TestFiles/**   (strip "Xslt/" prefix)
+# These remap_data targets produce symlinks at the correct output paths so that
+# library_test's data handling places them next to the test DLL as expected.
+remap_data(
+    name = "xslt_testfiles",
+    srcs = glob(["Xslt/TestFiles/**"]),
+    strip_prefix = "Xslt/",
+)
+
+remap_data(
+    name = "xmlreader_testfiles",
+    srcs = glob(["XmlReader/TestFiles/**"]),
+    strip_prefix = "XmlReader/",
+)
+
+# DTD files from System.Private.Xml src need to appear at Utils/DTDs/... next to the DLL.
+# MSBuild copies these with Link="Utils\DTDs\..." preserving the DTDs subdirectory structure.
+remap_data(
+    name = "dtd_files",
+    srcs = [
+        "//src/libraries/System.Private.Xml:src/Utils/DTDs/XHTML10/no_comments/xhtml1-frameset.dtd",
+        "//src/libraries/System.Private.Xml:src/Utils/DTDs/XHTML10/no_comments/xhtml1-strict.dtd",
+        "//src/libraries/System.Private.Xml:src/Utils/DTDs/XHTML10/no_comments/xhtml1-transitional.dtd",
+        "//src/libraries/System.Private.Xml:src/Utils/DTDs/XHTML10/no_comments/xhtml-lat1.ent",
+        "//src/libraries/System.Private.Xml:src/Utils/DTDs/XHTML10/no_comments/xhtml-special.ent",
+        "//src/libraries/System.Private.Xml:src/Utils/DTDs/XHTML10/no_comments/xhtml-symbol.ent",
+        "//src/libraries/System.Private.Xml:src/Utils/DTDs/RSS091/no_comments/rss-0.91.dtd",
+    ],
+    full_strip_prefix = "src/libraries/System.Private.Xml/src/",
+)
+
+# XmlReaderLib sub-library (referenced by csproj as ProjectReference)
+csharp_library(
+    name = "XmlReaderLib",
+    srcs = glob(["XmlReaderLib/*.cs"]),
+    keyfile = OPEN_SNK,
+    nowarn = ["CS1701", "CS1702", "CS1705", "CS8500", "CS8969", "IDE0060", "IDE0100", "NU5105", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051", "IL2121"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    deps = [
+        "//src/libraries/Common/tests:XmlModuleCore",
+        "//src/libraries/Common/tests:XmlCoreTest",
+        "//src/libraries/Common/tests:XmlDiff",
+        "//src/libraries/Common/tests:TestUtilities",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XPath:ref_System.Xml.XPath",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# BaseLibManaged sub-library (referenced by csproj as ProjectReference)
+csharp_library(
+    name = "BaseLibManaged",
+    srcs = ["//src/libraries/Common/tests:System/Xml/BaseLibManaged/Globalization.cs"],
+    keyfile = OPEN_SNK,
+    nowarn = ["CS1701", "CS1702", "CS1705"],
+    # MSBuild targets netstandard2.0, but under Bazel the netstandard facade
+    # assembly is not available in LIVE_REFPACK_DEPS, so target net11.0 instead.
+    target_frameworks = [NETCOREAPP_CURRENT],
+    visibility = ["//visibility:public"],
+)
+
+# XPath embedded resources from Common/tests — these are accessed via
+# Assembly.GetManifestResourceStream with logical names like
+# "System.Xml.Tests.TestData.<filename>.xml"
+_XPATH_TESTDATA_FILES = [
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/91893.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/JPN_problem_chars_1.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/JPN_problem_chars_2.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/KOR_problem_chars_b.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/Russian_problem_chars.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/Single_byte_problem_chars_b.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/Surrogates_1.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/Thai_risky_chars.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/XQL_Orders_j1.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/XQL_Orders_j3.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/books.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/books_2.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/bookstore.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/data.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/data1.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/data4.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/dummy.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/id4.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/lang.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/name.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/name2.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/name4.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/namespaces.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/ns_default.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/ns_prefixes.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/numbers.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/space.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/t114730.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/t98598.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/test1.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/test63682.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/test63733.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/test66246.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/turkish.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xp001.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xp002.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xp003.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xp004.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xp005.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xp006.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xp008.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xp012.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xpC001.xml",
+    "//src/libraries/Common/tests:System/Xml/XPath/TestData/xql_orders-flat-200a.xml",
+]
+
+# Resource logical names: MSBuild uses RootNamespace (System.Xml.Tests) + Link path
+# The Link in csproj is "TestData\<filename>" → logical name "System.Xml.Tests.TestData.<filename>"
+_XPATH_RESOURCE_NAMES = {f.split("/")[-1]: "System.Xml.Tests.TestData." + f.split("/")[-1] for f in _XPATH_TESTDATA_FILES}
+
+library_test(
+    name = "System.Private.Xml.Tests",
+    size = "large",
+    nowarn = ["CS1591"],
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "XmlReaderLib/**",
+            "TrimmingTests/**",
+            # XmlPreloadedResolverGetEntity needs DTD files at Utils/DTDs/ that aren't in the repo
+            "XmlResolver/System.Xml.XmlResolver.Tests/XmlPreloadedResolverGetEntity.cs",
+            # XmlWriterApi/TestExtensions.cs overrides DataAttribute.GetData(MethodInfo)
+            # from xunit.extensibility.core (netstandard1.1). This requires the
+            # System.Reflection facade assembly for MethodInfo type unification, which
+            # is not available in LIVE_REFPACK_DEPS. Exclude TestExtensions.cs and the
+            # 27 test files that use its XmlWriterInlineDataAttribute.
+            "Writers/XmlWriterApi/TestExtensions.cs",
+            "Writers/XmlWriterApi/EndOfLineHandlingTests.cs",
+            "Writers/XmlWriterApi/ErrorCondition.cs",
+            "Writers/XmlWriterApi/NamespaceHandlingTests.cs",
+            "Writers/XmlWriterApi/TCAttribute.cs",
+            "Writers/XmlWriterApi/TCAutoCL.cs",
+            "Writers/XmlWriterApi/TCAutoComplete.cs",
+            "Writers/XmlWriterApi/TCCheckChars.cs",
+            "Writers/XmlWriterApi/TCCloseOutput.cs",
+            "Writers/XmlWriterApi/TCDefaultWriterSettingsTests.cs",
+            "Writers/XmlWriterApi/TCDocType.cs",
+            "Writers/XmlWriterApi/TCDocument.cs",
+            "Writers/XmlWriterApi/TCElement.cs",
+            "Writers/XmlWriterApi/TCErrorState.cs",
+            "Writers/XmlWriterApi/TCFlushClose.cs",
+            "Writers/XmlWriterApi/TCFragmentCL.cs",
+            "Writers/XmlWriterApi/TCFullEndElement.cs",
+            "Writers/XmlWriterApi/TCIndent.cs",
+            "Writers/XmlWriterApi/TCIndentChars.cs",
+            "Writers/XmlWriterApi/TCNewLineChars.cs",
+            "Writers/XmlWriterApi/TCNewLineHandling.cs",
+            "Writers/XmlWriterApi/TCNewLineOnAttributes.cs",
+            "Writers/XmlWriterApi/TCOmitXmlDecl.cs",
+            "Writers/XmlWriterApi/TCStandAlone.cs",
+            "Writers/XmlWriterApi/TCWriteAttributes.cs",
+            "Writers/XmlWriterApi/TCWriteNode_XPathNavigator.cs",
+            "Writers/XmlWriterApi/TCWriteNode_XmlReader.cs",
+            "Writers/XmlWriterApi/TCWriterWithMemoryStream.cs",
+        ],
+    ) + [
+        # Common test utilities
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelizationPerAssembly.cs",
+        # Common source files
+        "//src/libraries/Common/tests:System/ShouldNotBeInvokedException.cs",
+        "//src/libraries/Common/tests:System/IO/TempDirectory.cs",
+        "//src/libraries/Common/tests:System/Runtime/Serialization/Utils.cs",
+        "//src/libraries/Common/tests:System/Threading/TrackingSynchronizationContext.cs",
+        # XPath sources from Common/tests
+        "//src/libraries/Common/tests:System/Xml/XPath/XmlDocument/CreateNavigatorFromXmlDocument.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/XDocument/CreateNavigatorComparer.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/XDocument/CreateNavigatorFromXDocument.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/XDocument/NavigatorComparer.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/Common/FileHelper.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/Common/ICreateNavigator.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/Common/Utils.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/Common/XPathResult.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/Common/XPathResultToken.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/CoreFunctionLibrary/BooleanFunctionsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/CoreFunctionLibrary/ComplexExpressionsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/CoreFunctionLibrary/NodeSetFunctionsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/CoreFunctionLibrary/NodeSetMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/CoreFunctionLibrary/NumberFunctionsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/CoreFunctionLibrary/ParameterTypeCoercionTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/CoreFunctionLibrary/StringFunctionsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/CustomerScenarios/CustomerScenariosTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/CustomerScenarios/MatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncExpressions/BasicMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncExpressions/BasicsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncExpressions/BooleansTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncExpressions/NodeSetsMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncExpressions/NodeSetsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncExpressions/NumbersTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncExpressions/SetContextFunctionalTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncExpressions/SetContextMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathAbbreviatedSyntaxMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathAbbreviatedSyntaxTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathAxeCombinationsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathAxeComplexExprMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathAxeComplexExprTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathAxeMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathAxesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathNodeMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathNodeTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathPredicateComplexExprTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathPredicateMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathPredicatePositionTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/PathPredicatesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/StepMatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/FuncLocation/StepsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/MiscellaneousCases/GlobalizationTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/MiscellaneousCases/LexicalStructureTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/MiscellaneousCases/MatchesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/MiscellaneousCases/MiscellaneousCasesTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/MiscellaneousCases/NodeSetsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/MiscellaneousCases/RegressionTestsTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/TestsWithEncoding/MiscWithEncodings.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/XPathExpressionTests/CompileTests.cs",
+        "//src/libraries/Common/tests:System/Xml/XPath/XPathExpressionTests/EvaluateTests.cs",
+        # SerializationTypes from System.Runtime.Serialization.Xml tests
+        "//src/libraries/System.Runtime.Serialization.Xml/tests:SerializationTypes.RuntimeOnly.cs",
+    ],
+    data = glob([
+        "XmlSchema/TestFiles/**",
+        "XmlDocument/example.xml",
+    ]) + [
+        ":xslt_testfiles",
+        ":xmlreader_testfiles",
+        ":dtd_files",
+    ],
+    resources = _XPATH_TESTDATA_FILES,
+    resource_logical_names = _XPATH_RESOURCE_NAMES,
+    deps = [
+        ":BaseLibManaged",
+        ":XmlReaderLib",
+        "//src/libraries/Common/tests:TestUtilities",
+        "//src/libraries/Common/tests:XmlCoreTest",
+        "//src/libraries/Common/tests:XmlDiff",
+        "//src/libraries/Common/tests:XmlModuleCore",
+        "//src/libraries/System.Runtime.Serialization.Xml/tests:SerializableAssembly",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
+        "//src/libraries/System.Xml.XPath:ref_System.Xml.XPath",
+        "//src/libraries/System.Xml.XPath.XDocument:ref_System.Xml.XPath.XDocument",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Runtime.Serialization.Xml:ref_System.Runtime.Serialization.Xml",
+        "//src/libraries/System.Runtime.Serialization.Json:ref_System.Runtime.Serialization.Json",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Emit.Lightweight:ref_System.Reflection.Emit.Lightweight",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/System.Text.Encoding.CodePages:ref_System.Text.Encoding.CodePages",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+        "@paket.main//xunit.extensibility.execution",
+    ],
+    keyfile = OPEN_SNK,
+    writable_test_dir = True,
+)

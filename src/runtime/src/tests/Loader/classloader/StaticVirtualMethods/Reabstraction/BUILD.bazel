@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Reabstraction",
+    srcs = ["Reabstraction.il"],
+    tags = ["manual"],  # Missing xunit.assert at runtime
+)

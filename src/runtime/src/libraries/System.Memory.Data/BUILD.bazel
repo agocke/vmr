@@ -1,0 +1,48 @@
+load("//src/libraries:defs.bzl",
+    "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "ref/System.Memory.Data.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Memory.Data",
+    srcs = [
+        "ref/System.Memory.Data.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Memory.Data",
+    include_runtime_async = False,
+    event_source_generator = False,
+    keyfile = OPEN_SNK,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    allow_unsafe_blocks = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
+    srcs = [
+        "src/System/BinaryData.cs",
+        "src/System/BinaryDataConverter.cs",
+        "//src/libraries/Common:src/System/IO/ReadOnlyMemoryStream.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Mail:ref_System.Net.Mail",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    assembly_description = "A lightweight abstraction for a payload of bytes. Provides methods for converting between strings, streams, JSON, and bytes.\n\nCommonly Used Types:\nSystem.BinaryData",
+)
+
+ref_impl_pair(
+    name = "live_System.Memory.Data",
+    ref = ":ref_System.Memory.Data",
+    lib = ":impl_System.Memory.Data",
+    visibility = ["//visibility:public"],
+)

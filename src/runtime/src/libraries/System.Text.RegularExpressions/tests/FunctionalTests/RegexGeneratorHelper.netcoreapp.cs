@@ -40,13 +40,37 @@ namespace System.Text.RegularExpressions.Tests
                 return [];
             }
 
+            // When running under Bazel, the shared-framework CoreLib is
+            // crossgen'd (R2R) and Roslyn can't read its metadata.  If SDK
+            // ref assemblies are available in the testhost's ref/ directory,
+            // use all of them instead of runtime assemblies — the generated
+            // regex code may reference types spread across several ref DLLs
+            // (e.g. MemoryExtensions lives in System.Memory.dll).
+            string corelibPath = typeof(object).Assembly.Location;
+            string fwDir = Path.GetDirectoryName(corelibPath);
+            // Navigate up from <testhost>/shared/Microsoft.NETCore.App/<version>/
+            string testhostDir = fwDir is not null
+                ? Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(fwDir)))
+                : null;
+            if (testhostDir is not null)
+            {
+                string refDir = Path.Combine(testhostDir, "ref");
+                if (Directory.Exists(refDir))
+                {
+                    string[] refDlls = Directory.GetFiles(refDir, "*.dll");
+                    if (refDlls.Length > 0)
+                    {
+                        return refDlls.Select(dll => MetadataReference.CreateFromFile(dll)).ToArray();
+                    }
+                }
+            }
+
             // Typically we'd want to use the right reference assemblies, but as we're not persisting any
             // assets and only using this for testing purposes, referencing implementation assemblies is sufficient.
-            string corelibPath = typeof(object).Assembly.Location;
             return new[]
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(Path.Combine(Path.GetDirectoryName(corelibPath), "System.Runtime.dll")),
+                MetadataReference.CreateFromFile(Path.Combine(fwDir, "System.Runtime.dll")),
                 MetadataReference.CreateFromFile(typeof(Unsafe).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Regex).Assembly.Location),
             };
@@ -72,19 +96,13 @@ namespace System.Text.RegularExpressions.Tests
         internal static async Task<(Compilation, GeneratorDriverRunResult)> RunGeneratorCore(
             string code, LanguageVersion langVersion = LanguageVersion.Preview, MetadataReference[]? additionalRefs = null, bool allowUnsafe = false, bool checkOverflow = true, CancellationToken cancellationToken = default)
         {
-            var proj = new AdhocWorkspace()
-                .AddSolution(SolutionInfo.Create(SolutionId.CreateNewId(), VersionStamp.Create()))
-                .AddProject("RegexGeneratorTest", "RegexGeneratorTest.dll", "C#")
-                .WithMetadataReferences(additionalRefs is not null ? References.Concat(additionalRefs) : References)
-                .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: allowUnsafe, checkOverflow: checkOverflow)
-                .WithNullableContextOptions(NullableContextOptions.Enable))
-                .WithParseOptions(new CSharpParseOptions(langVersion))
-                .AddDocument("RegexGenerator.g.cs", SourceText.From(code, Encoding.UTF8)).Project;
-
-            Assert.True(proj.Solution.Workspace.TryApplyChanges(proj.Solution));
-
-            Compilation? comp = await proj!.GetCompilationAsync(CancellationToken.None).ConfigureAwait(false);
-            Debug.Assert(comp is not null);
+            var syntaxTree = CSharpSyntaxTree.ParseText(SourceText.From(code, Encoding.UTF8), new CSharpParseOptions(langVersion));
+            var comp = CSharpCompilation.Create(
+                "RegexGeneratorTest",
+                new[] { syntaxTree },
+                additionalRefs is not null ? References.Concat(additionalRefs) : References,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: allowUnsafe, checkOverflow: checkOverflow)
+                    .WithNullableContextOptions(NullableContextOptions.Enable));
 
             var generator = new RegexGenerator();
             CSharpGeneratorDriver cgd = CSharpGeneratorDriver.Create(new[] { generator.AsSourceGenerator() }, parseOptions: CSharpParseOptions.Default.WithLanguageVersion(langVersion));
@@ -208,29 +226,22 @@ namespace System.Text.RegularExpressions.Tests
 
             code.AppendLine("}");
 
-            // Use a cached compilation to save a little time.  Rather than creating an entirely new workspace
-            // for each test, just create a single compilation, cache it, and then replace its syntax tree
-            // on each test.
+            // Use a cached compilation to save a little time.  Rather than creating an entirely new
+            // compilation for each test, just create a single compilation, cache it, and then replace
+            // its syntax tree on each test.
             if (s_compilation is not Compilation comp)
             {
-                // Create the project containing the source.
-                var proj = new AdhocWorkspace()
-                    .AddSolution(SolutionInfo.Create(SolutionId.CreateNewId(), VersionStamp.Create()))
-                    .AddProject("Test", "test.dll", "C#")
-                    .WithMetadataReferences(References)
-                    .WithCompilationOptions(
-                        new CSharpCompilationOptions(
-                            OutputKind.DynamicallyLinkedLibrary,
-                            checkOverflow: true,
-                            warningLevel: 9999, // docs recommend using "9999" to catch all warnings now and in the future
-                            specificDiagnosticOptions: ImmutableDictionary<string, ReportDiagnostic>.Empty.Add("SYSLIB1044", ReportDiagnostic.Hidden)) // regex with limited support
-                            .WithNullableContextOptions(NullableContextOptions.Enable))
-                            .WithParseOptions(s_previewParseOptions)
-                    .AddDocument("RegexGenerator.g.cs", SourceText.From("// Empty", Encoding.UTF8)).Project;
-                Assert.True(proj.Solution.Workspace.TryApplyChanges(proj.Solution));
-
-                s_compilation = comp = await proj!.GetCompilationAsync(CancellationToken.None).ConfigureAwait(false);
-                Debug.Assert(comp is not null);
+                var emptySyntaxTree = CSharpSyntaxTree.ParseText(SourceText.From("// Empty", Encoding.UTF8), s_previewParseOptions);
+                s_compilation = comp = CSharpCompilation.Create(
+                    "Test",
+                    new[] { emptySyntaxTree },
+                    References,
+                    new CSharpCompilationOptions(
+                        OutputKind.DynamicallyLinkedLibrary,
+                        checkOverflow: true,
+                        warningLevel: 9999, // docs recommend using "9999" to catch all warnings now and in the future
+                        specificDiagnosticOptions: ImmutableDictionary<string, ReportDiagnostic>.Empty.Add("SYSLIB1044", ReportDiagnostic.Hidden)) // regex with limited support
+                        .WithNullableContextOptions(NullableContextOptions.Enable));
             }
 
             comp = comp.ReplaceSyntaxTree(comp.SyntaxTrees.First(), CSharpSyntaxTree.ParseText(SourceText.From(code.ToString(), Encoding.UTF8), s_previewParseOptions));

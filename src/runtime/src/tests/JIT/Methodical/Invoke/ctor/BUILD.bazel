@@ -1,0 +1,33 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "val_ctor_newobj_r",
+    srcs = ["val_ctor_newobj_r.il", "val_ctor_newobj.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "val_ctor_newobj_d",
+    srcs = ["val_ctor_newobj_d.il", "val_ctor_newobj.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "val_cctor_d",
+    srcs = ["val_cctor_d.il", "val_cctor.il"],
+    pri = 1,
+    debug_type = "full",
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "val_cctor_r",
+    srcs = ["val_cctor_r.il", "val_cctor.il"],
+    pri = 1,
+    debug_type = "pdbonly",
+    size = "medium",
+)

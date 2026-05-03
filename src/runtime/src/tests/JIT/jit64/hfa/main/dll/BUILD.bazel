@@ -1,0 +1,87 @@
+load("//src/libraries:defs.bzl", "live_csharp_library")
+
+live_csharp_library(
+    name = "hfa_nested_f32_common",
+    srcs = ["hfa_common.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_simple_f32_common",
+    srcs = ["hfa_common.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_nested_f32_interop_cpp",
+    srcs = ["hfa_interop.cs"],
+    deps = [":hfa_nested_f32_common"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_nested_f64_managed",
+    srcs = ["hfa_managed.cs"],
+    deps = [":hfa_nested_f64_common"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_simple_f64_managed",
+    srcs = ["hfa_managed.cs"],
+    deps = [":hfa_simple_f64_common"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_simple_f32_interop_cpp",
+    srcs = ["hfa_interop.cs"],
+    deps = [":hfa_simple_f32_common"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_nested_f64_interop_cpp",
+    srcs = ["hfa_interop.cs"],
+    deps = [":hfa_nested_f64_common"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_simple_f64_interop_cpp",
+    srcs = ["hfa_interop.cs"],
+    deps = [":hfa_simple_f64_common"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "common",
+    srcs = ["common.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_nested_f64_common",
+    srcs = ["hfa_common.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_simple_f32_managed",
+    srcs = ["hfa_managed.cs"],
+    deps = [":hfa_simple_f32_common"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_simple_f64_common",
+    srcs = ["hfa_common.cs"],
+    visibility = ["//visibility:public"],
+)
+
+live_csharp_library(
+    name = "hfa_nested_f32_managed",
+    srcs = ["hfa_managed.cs"],
+    deps = [":hfa_nested_f32_common"],
+    visibility = ["//visibility:public"],
+)

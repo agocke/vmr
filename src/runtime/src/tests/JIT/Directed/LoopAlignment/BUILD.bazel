@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "LoopsToProcess",
+    srcs = ["LoopsToProcess.cs"],
+    pri = 1,
+    optimize = True,
+    size = "medium",
+)

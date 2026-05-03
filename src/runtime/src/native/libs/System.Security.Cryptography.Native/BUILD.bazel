@@ -1,0 +1,85 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library")
+load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_DEFINES")
+
+# System.Security.Cryptography.Native.OpenSsl for linux-x64
+# Produces libSystem.Security.Cryptography.Native.OpenSsl.so (shared)
+# Uses FEATURE_DISTRO_AGNOSTIC_SSL to load OpenSSL via dlopen at runtime.
+
+cc_library(
+    name = "System.Security.Cryptography.Native.OpenSsl_lib",
+    srcs = [
+        "apibridge_30.c",
+        "entrypoints.c",
+        "memory_debug.c",
+        "openssl.c",
+        "opensslshim.c",
+        "pal_asn1.c",
+        "pal_bignum.c",
+        "pal_bio.c",
+        "pal_dsa.c",
+        "pal_ecc_import_export.c",
+        "pal_eckey.c",
+        "pal_err.c",
+        "pal_evp.c",
+        "pal_evp_cipher.c",
+        "pal_evp_kdf.c",
+        "pal_evp_kem.c",
+        "pal_evp_mac.c",
+        "pal_evp_pkey.c",
+        "pal_evp_pkey_dsa.c",
+        "pal_evp_pkey_ecdh.c",
+        "pal_evp_pkey_ecdsa.c",
+        "pal_evp_pkey_eckey.c",
+        "pal_evp_pkey_ml_dsa.c",
+        "pal_evp_pkey_raw_signverify.c",
+        "pal_evp_pkey_rsa.c",
+        "pal_evp_pkey_slh_dsa.c",
+        "pal_evp_pkey_x25519.c",
+        "pal_hmac.c",
+        "pal_ocsp.c",
+        "pal_pkcs7.c",
+        "pal_ssl.c",
+        "pal_x509.c",
+        "pal_x509_name.c",
+        "pal_x509_root.c",
+        "pal_x509ext.c",
+    ] + glob(["*.h"]),
+    hdrs = ["bazel/linux-glibc-x64/pal_crypto_config.h"],
+    copts = [
+        "-Wno-cast-align",
+        "-Wno-reserved-id-macro",
+        "-Wno-documentation",
+        "-Wno-used-but-marked-unused",
+        "-pthread",
+
+    ],
+    includes = [
+        "../../..",
+        "../Common",
+        "../bazel",
+        ".",
+        "bazel/linux-glibc-x64",
+    ],
+    defines = [
+        "OPENSSL_API_COMPAT=0x10100000L",
+        "FEATURE_DISTRO_AGNOSTIC_SSL",
+    ],
+    local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
+    linkopts = ["-ldl", "-pthread"],
+    visibility = ["//visibility:public"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        "//src/native/libs:common",
+        "//src/native/minipal",
+    ],
+)
+
+cc_shared_library(
+    name = "System.Security.Cryptography.Native.OpenSsl",
+    shared_lib_name = "libSystem.Security.Cryptography.Native.OpenSsl.so",
+    user_link_flags = ["-Wl,-soname,libSystem.Security.Cryptography.Native.OpenSsl.so"],
+    visibility = ["//visibility:public"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [":System.Security.Cryptography.Native.OpenSsl_lib"],
+)
