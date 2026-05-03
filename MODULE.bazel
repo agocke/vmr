@@ -1,4 +1,4 @@
-module(name = "dotnet_vmr", version = "10.0.0")
+module(name = "dotnet_vmr", version = "11.0.0")
 
 # ── Runtime ─────────────────────────────────────────────────────────
 bazel_dep(name = "dotnet_runtime")
@@ -21,7 +21,7 @@ bazel_dep(name = "rules_dotnet")
 git_override(
     module_name = "rules_dotnet",
     remote = "https://github.com/agocke/rules_dotnet.git",
-    commit = "135a84744155442c7b1753e9d1a13fb6dfc1a401",
+    commit = "96ecc8c01bbf330bdaa30356a8c37714271cb710",
 )
 
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
@@ -31,7 +31,7 @@ bazel_dep(name = "rules_cc", version = "0.2.14")
 
 # ── Toolchains ──────────────────────────────────────────────────────
 dotnet = use_extension("@rules_dotnet//dotnet:extensions.bzl", "dotnet")
-dotnet.toolchain(dotnet_version = "10.0.100")
+dotnet.toolchain(dotnet_version = "11.0.100-preview.3.26207.106")
 use_repo(dotnet, "dotnet_toolchains")
 
 register_toolchains("@dotnet_toolchains//:all")

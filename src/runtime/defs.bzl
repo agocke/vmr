@@ -48,6 +48,12 @@ ECMA_SNK = "//eng:snk/ECMA.snk"
 SHAREDLIB1024_SNK = "//eng:snk/35MSSharedLib1024.snk"
 SILVERLIGHT_SNK = "//eng:snk/SilverlightPlatformPublicKey.snk"
 DEFAULT_RULESET = "//eng:Default.ruleset"
+
+# When this repo is consumed as an external Bazel module (e.g. from the VMR),
+# sandbox-relative paths differ from standalone builds. Label.workspace_root
+# gives the correct prefix (empty for standalone, "external/<module>" for external).
+_RULESET_LABEL = Label("//eng:Default.ruleset")
+_RULESET_PATH = (_RULESET_LABEL.workspace_root + "/" if _RULESET_LABEL.workspace_root else "") + "eng/Default.ruleset"
 # MIBC PGO optimization data files from NuGet (matched to target architecture).
 # MSBuild equivalent: eng/restore/optimizationData.targets selects the right
 # optimization.<OS>-<ARCH>.mibc.runtime package, then crossgen-corelib.proj
@@ -680,7 +686,7 @@ EOF""".format(version = PRODUCT_VERSION, extra = extra_editorconfig_content, glo
         _compiler_options = _compiler_options + [
             # Microsoft.DotNet.CodeAnalysis package supplies this ruleset to
             # source-build projects. compile_data makes it available in the sandbox.
-            "/ruleset:eng/Default.ruleset",
+            "/ruleset:" + _RULESET_PATH,
         ]
 
     _base_csharp_library(
@@ -849,7 +855,7 @@ EOF""".format(version = PRODUCT_VERSION, extra = extra_editorconfig_content, glo
         _compiler_options = _compiler_options + [
             # Microsoft.DotNet.CodeAnalysis package supplies this ruleset to
             # source-build projects. compile_data makes it available in the sandbox.
-            "/ruleset:eng/Default.ruleset",
+            "/ruleset:" + _RULESET_PATH,
         ]
 
     _base_csharp_binary(

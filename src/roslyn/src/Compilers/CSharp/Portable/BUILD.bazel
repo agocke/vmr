@@ -44,6 +44,7 @@ csharp_library(
     langversion = "preview",
     keyfile = ROSLYN_KEYFILE,
     compiler_options = ["/publicsign"],
+    nowarn = ["RSEXPERIMENTAL006"],
     target_frameworks = ["net10.0"],
     internals_visible_to = [
         "csc, PublicKey=" + ROSLYN_PUBLIC_KEY,
