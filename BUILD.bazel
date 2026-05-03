@@ -1,0 +1,16 @@
+# VMR root BUILD file
+
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+
+# Mirror runtime's config flags so .bazelrc --//:clr_config works from VMR root.
+string_flag(
+    name = "clr_config",
+    build_setting_default = "debug",
+    visibility = ["//visibility:public"],
+)
+
+string_flag(
+    name = "libs_config",
+    build_setting_default = "debug",
+    visibility = ["//visibility:public"],
+)

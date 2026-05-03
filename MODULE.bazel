@@ -1,0 +1,37 @@
+module(name = "dotnet_vmr", version = "10.0.0")
+
+# ── Runtime ─────────────────────────────────────────────────────────
+bazel_dep(name = "dotnet_runtime")
+local_path_override(
+    module_name = "dotnet_runtime",
+    path = "src/runtime",
+)
+
+# ── NuGet packages (via runtime's paket) ────────────────────────────
+# Re-export the runtime's paket extension so VMR targets can reference
+# NuGet packages like @paket.main//microsoft.codeanalysis.visualbasic.
+main_extension = use_extension(
+    "@dotnet_runtime//paket:paket.main_extension.bzl",
+    "main_extension",
+)
+use_repo(main_extension, "paket.main")
+
+# ── Shared dependencies ────────────────────────────────────────────
+bazel_dep(name = "rules_dotnet")
+git_override(
+    module_name = "rules_dotnet",
+    remote = "https://github.com/agocke/rules_dotnet.git",
+    commit = "135a84744155442c7b1753e9d1a13fb6dfc1a401",
+)
+
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_cc", version = "0.2.14")
+
+# ── Toolchains ──────────────────────────────────────────────────────
+dotnet = use_extension("@rules_dotnet//dotnet:extensions.bzl", "dotnet")
+dotnet.toolchain(dotnet_version = "10.0.100")
+use_repo(dotnet, "dotnet_toolchains")
+
+register_toolchains("@dotnet_toolchains//:all")
