@@ -52,7 +52,7 @@ roslyn_xunit_test(
     allow_unsafe_blocks = True,
     nullable = "enable",
     langversion = "preview",
-    nowarn = ["CS1570", "CS1587"],
+    nowarn = ["CS1570", "CS1587", "RSEXPERIMENTAL006"],
     keyfile = ROSLYN_KEYFILE,
     compiler_options = ["/publicsign", "/nostdlib"],
     visibility = ["//src/roslyn:__subpackages__"],

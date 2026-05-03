@@ -81,6 +81,7 @@ def _compile_csharp_library(ctx, tfm):
             ctx.attr._windows_constraint[platform_common.ConstraintValueInfo],
         ),
         shared_compilation_worker = None,
+        pathmap = {},
     )
 
 def _roslyn_xunit_test_impl(ctx):

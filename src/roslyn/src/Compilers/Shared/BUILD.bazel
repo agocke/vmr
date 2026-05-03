@@ -15,6 +15,11 @@ filegroup(
     visibility = ["//src/roslyn:__subpackages__"],
 )
 
+exports_files(
+    ["ThrowingTraceListener.cs"],
+    visibility = ["//src/roslyn:__subpackages__"],
+)
+
 # All shared files including VB (for VBCSCompiler)
 filegroup(
     name = "all_srcs",

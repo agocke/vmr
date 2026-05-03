@@ -5,11 +5,11 @@ exports_files(["run_xunit_test.sh.tpl"])
 filegroup(
     name = "xunit_console_runner",
     srcs = [
-        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.console.dll",
-        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.console.runtimeconfig.json",
-        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.console.deps.json",
-        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.runner.reporters.netcoreapp10.dll",
-        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26102.102//:tools/net/xunit.runner.utility.netcoreapp10.dll",
+        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26170.102//:tools/net/xunit.console.dll",
+        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26170.102//:tools/net/xunit.console.runtimeconfig.json",
+        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26170.102//:tools/net/xunit.console.deps.json",
+        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26170.102//:tools/net/xunit.runner.reporters.netcoreapp10.dll",
+        "@@dotnet_runtime++main_extension+nuget.microsoft.dotnet.xunitconsolerunner.v2.9.3-beta.26170.102//:tools/net/xunit.runner.utility.netcoreapp10.dll",
     ],
     visibility = ["//src/roslyn:__subpackages__"],
 )
