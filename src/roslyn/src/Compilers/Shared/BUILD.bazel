@@ -1,0 +1,23 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "BuildClient.cs",
+        "BuildProtocol.cs",
+        "BuildServerConnection.cs",
+        "CompilerServerLogger.cs",
+        "ConsoleUtil.cs",
+        "Csc.cs",
+        "ExitingTraceListener.cs",
+        "NamedPipeUtil.cs",
+        "NativeMethods.cs",
+        "RuntimeHostInfo.cs",
+    ],
+    visibility = ["//src/roslyn:__subpackages__"],
+)
+
+# All shared files including VB (for VBCSCompiler)
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**/*.cs"]),
+    visibility = ["//src/roslyn:__subpackages__"],
+)

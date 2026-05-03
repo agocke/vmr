@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# --- begin runfiles.bash initialization v3 ---
+set -uo pipefail; set +e; f=bazel_tools/tools/bash/runfiles/runfiles.bash
+source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \
+  source "$(grep -sm1 "^$f " "${RUNFILES_MANIFEST_FILE:-/dev/null}" | cut -f2- -d' ')" 2>/dev/null || \
+  source "$0.runfiles/$f" 2>/dev/null || \
+  source "$(grep -sm1 "^$f " "$0.runfiles_manifest" | cut -f2- -d' ')" 2>/dev/null || \
+  source "$(grep -sm1 "^$f " "$0.exe.runfiles_manifest" | cut -f2- -d' ')" 2>/dev/null || \
+  { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
+# --- end runfiles.bash initialization v3 ---
+
+DOTNET="$(rlocation TEMPLATED_dotnet)"
+XUNIT_CONSOLE="$(rlocation TEMPLATED_xunit_console)"
+ENTRY_DLL="$(rlocation TEMPLATED_entry_dll)"
+
+# Set DOTNET_ROOT so the host can find shared frameworks
+DOTNET_DIR="$(dirname "$(readlink -f "$DOTNET")")"
+export DOTNET_ROOT="$DOTNET_DIR"
+
+# Run from the directory containing the test DLL so deps can be found
+RESOLVED_DIR="$(dirname "$(readlink -f "$ENTRY_DLL")")"
+cd "$RESOLVED_DIR"
+
+"$DOTNET" exec "$XUNIT_CONSOLE" "$ENTRY_DLL" -nologo "$@"
