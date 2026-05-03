@@ -1,14 +1,21 @@
+load("//:defs.bzl", "ECMA_SNK")
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System",
-    skip_cs1591 = True,
+    com_interface_generator = True,
+    interop_source_generation = True,
+    library_import_generator = False,
+    generate_documentation_file = False,
+    keyfile = ECMA_SNK,
+    skip_locals_init = False,
     srcs = [
         "ref/System.cs",
+        "src/System.cs",
     ],
     deps = [
-        # Base types from CoreLib ref assembly (matches MSBuild's /nostdlib+ pattern)
-        "//src/libraries:ref_System.Private.CoreLib",
+        # Base types from CoreLib (matches MSBuild's /nostdlib+ pattern)
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
         # Implementation assemblies (MSBuild uses CompileUsingReferenceAssemblies=false)
         "//src/libraries:impl_Microsoft.Win32.Primitives",
         "//src/libraries:impl_System.ComponentModel.Primitives",

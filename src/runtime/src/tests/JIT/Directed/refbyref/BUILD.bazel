@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["refpinned2iu_d.il", "refpinned2iu.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["ref2byref_r.il", "ref2byref.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["byrefconvert_r.il", "byrefconvert.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -26,6 +29,7 @@ il_coreclr_test(
     srcs = ["byref2iu_d.il", "byref2iu.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +37,7 @@ il_coreclr_test(
     srcs = ["byrefconvert_d.il", "byrefconvert.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -40,6 +45,7 @@ il_coreclr_test(
     srcs = ["refpinned2iu_r.il", "refpinned2iu.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -47,6 +53,7 @@ il_coreclr_test(
     srcs = ["ref2byref_d.il", "ref2byref.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -54,6 +61,7 @@ il_coreclr_test(
     srcs = ["ref2iu_d.il", "ref2iu.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -61,6 +69,7 @@ il_coreclr_test(
     srcs = ["byref2iu_r.il", "byref2iu.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -68,4 +77,5 @@ il_coreclr_test(
     srcs = ["ref2iu_r.il", "ref2iu.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

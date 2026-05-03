@@ -9,19 +9,32 @@ local_path_override(
 
 # ── NuGet packages (via runtime's paket) ────────────────────────────
 # Re-export the runtime's paket extension so VMR targets can reference
-# NuGet packages like @paket.main//microsoft.codeanalysis.visualbasic.
+# NuGet packages like @paket.main//xunit.extensibility.core.
 main_extension = use_extension(
     "@dotnet_runtime//paket:paket.main_extension.bzl",
     "main_extension",
 )
 use_repo(main_extension, "paket.main")
 
+# ── NuGet packages (Roslyn-specific) ───────────────────────────────
+# Roslyn tests need packages not in the runtime's paket (e.g.
+# Microsoft.CodeAnalysis.VisualBasic, DiffPlex, etc.).
+roslyn_extension = use_extension(
+    "//src/roslyn/paket:paket.main_extension.bzl",
+    "roslyn_extension",
+)
+use_repo(
+    roslyn_extension,
+    "roslyn_paket",
+    "nuget.xunit.runner.console.v2.9.2",
+)
+
 # ── Shared dependencies ────────────────────────────────────────────
 bazel_dep(name = "rules_dotnet")
 git_override(
     module_name = "rules_dotnet",
     remote = "https://github.com/agocke/rules_dotnet.git",
-    commit = "135a84744155442c7b1753e9d1a13fb6dfc1a401",
+    commit = "e02dc11e69a60652b6ab6a1ca9cceeba0c615e29",
 )
 
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")

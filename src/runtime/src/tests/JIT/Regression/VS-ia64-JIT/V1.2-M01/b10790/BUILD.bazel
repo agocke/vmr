@@ -5,4 +5,5 @@ coreclr_test(
     srcs = ["locals10K.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

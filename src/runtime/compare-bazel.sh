@@ -19,10 +19,11 @@ set -euo pipefail
 scriptroot="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ----- Defaults -----
-config="debug"
+config="release"
 skip_build=false
 verbose=false
 json_output=""
+msbuild_json=""
 
 # ----- Parse arguments -----
 while [[ $# -gt 0 ]]; do
@@ -41,6 +42,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --json-output)
             json_output="$2"
+            shift 2
+            ;;
+        --msbuild-json)
+            msbuild_json="$2"
             shift 2
             ;;
         -h|--help)
@@ -87,12 +92,14 @@ for cfg in "${configs[@]}"; do
     log "════════════════════════════════════════════════════"
 
     # ----- Map config to build system flags -----
+    # Always include --ci for MSBuild and --config=ci for Bazel so the
+    # comparison reflects CI-mode deterministic source paths.
     if [[ "$cfg" == "debug" ]]; then
         msbuild_rc="Debug"
-        bazel_aquery_args=()
+        bazel_aquery_args=(--config=clr_debug --config=ci)
     else
         msbuild_rc="Release"
-        bazel_aquery_args=(--config=release)
+        bazel_aquery_args=(--config=release --config=ci)
     fi
 
     # ----- CMake compile_commands.json paths -----
@@ -110,12 +117,20 @@ for cfg in "${configs[@]}"; do
     bazel_managed_aquery="$aquery_dir/${cfg}-managed.json"
 
     # ----- Step 1: Build with CMake/MSBuild -----
-    if [[ "$skip_build" != "true" ]]; then
-        log "Building with CMake/MSBuild (./build.sh clr+libs+libs.tests -rc $cfg -lc $cfg)..."
-        "$scriptroot/build.sh" clr+libs+libs.tests -rc "$cfg" -lc "$cfg" -bl
+    if [[ -z "$msbuild_json" && "$skip_build" != "true" ]]; then
+        log "Building with CMake/MSBuild (./build.sh clr+libs+libs.tests --ci -c $cfg -rc $cfg -lc $cfg -bl --rebuild)..."
+        "$scriptroot/build.sh" clr+libs+libs.tests --ci -c "$cfg" -rc "$cfg" -lc "$cfg" -bl --rebuild
     fi
 
-    # ----- Step 2: Extract Bazel aquery -----
+    # ----- Step 2: Build with Bazel + extract aquery -----
+    # Build first so that generated source files (AssemblyInfo.cs, System.SR.cs)
+    # are materialized on disk with the correct CI-mode content.  The aquery
+    # alone only performs analysis and does not write generated files.
+    if [[ "$skip_build" != "true" ]]; then
+        log "Building with Bazel (bazel build ${bazel_aquery_args[*]} //...)..."
+        bazel --nohome_rc build "${bazel_aquery_args[@]}" //...
+    fi
+
     log "Extracting Bazel aquery (native)..."
     bazel --nohome_rc aquery \
         "${bazel_aquery_args[@]}" \
@@ -132,7 +147,7 @@ for cfg in "${configs[@]}"; do
 
     # ----- Step 3: Find binlog files -----
     binlog_args=()
-    if [[ -d "$binlog_dir" ]]; then
+    if [[ -z "$msbuild_json" && -d "$binlog_dir" ]]; then
         while IFS= read -r -d '' f; do
             binlog_args+=(--binlog "$f")
         done < <(find "$binlog_dir" -name "*.binlog" -print0)
@@ -140,7 +155,7 @@ for cfg in "${configs[@]}"; do
 
     # ----- Step 4: Build the analysis tool -----
     log "Building analysis tool..."
-    dotnet build "$scriptroot/src/tools/bazel/BuildEquivalenceCheck/BuildEquivalenceCheck.csproj" \
+    "$scriptroot/dotnet.sh" build "$scriptroot/src/tools/bazel/BuildEquivalenceCheck/BuildEquivalenceCheck.csproj" \
         --nologo -v quiet 2>&1
 
     # ----- Step 5: Run comparison -----
@@ -161,8 +176,12 @@ for cfg in "${configs[@]}"; do
         fi
     done
 
-    # Add binlog files
-    tool_args+=("${binlog_args[@]}")
+    # Use pre-extracted MSBuild JSON if provided, otherwise use binlog files
+    if [[ -n "$msbuild_json" ]]; then
+        tool_args+=(--msbuild-json "$msbuild_json")
+    else
+        tool_args+=("${binlog_args[@]}")
+    fi
 
     if [[ "$verbose" == "true" ]]; then
         tool_args+=(--verbose)
@@ -173,7 +192,7 @@ for cfg in "${configs[@]}"; do
         tool_args+=(--json-output "$local_json")
     fi
 
-    dotnet run --project "$scriptroot/src/tools/bazel/BuildEquivalenceCheck/BuildEquivalenceCheck.csproj" \
+    "$scriptroot/dotnet.sh" run --project "$scriptroot/src/tools/bazel/BuildEquivalenceCheck/BuildEquivalenceCheck.csproj" \
         --no-build -- "${tool_args[@]}" || overall_exit=1
 
     echo ""

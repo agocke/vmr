@@ -74,16 +74,22 @@ namespace System.Xml.XslCompiledTransformApiTests
             this.Init(null);
         }
 
+        private static readonly string s_absoluteUriXslFile;
+
         static XsltApiTestCaseBase2()
         {
-            // Replace absolute URI in xmlResolver_document_function.xml based on the environment
+            // Replace absolute URI in xmlResolver_document_function.xml based on the environment.
+            // Copy to a writable temp location instead of modifying in-place (Bazel runfiles are read-only).
             string targetFile = Path.Combine(Path.GetTempPath(), typeof(XsltApiTestCaseBase2) + "_" + Path.GetRandomFileName());
             string xslFile = Path.Combine("TestFiles", FilePathUtil.GetTestDataPath(), "XsltApiV2", "xmlResolver_document_function_absolute_uri.xsl");
+            string testDirPath = Path.Combine(Path.GetTempPath(), "XsltApiV2");
+            Directory.CreateDirectory(testDirPath);
+            s_absoluteUriXslFile = Path.Combine(testDirPath, "xmlResolver_document_function_absolute_uri.xsl");
             XmlDocument doc = new XmlDocument();
             doc.Load(xslFile);
             string xslString = doc.OuterXml.Replace("ABSOLUTE_URI", targetFile);
             doc.LoadXml(xslString);
-            doc.Save(xslFile);
+            doc.Save(s_absoluteUriXslFile);
         }
 
         public OutputType GetOutputType(string s)
@@ -173,6 +179,9 @@ namespace System.Xml.XslCompiledTransformApiTests
         {
             if (szFile == null || szFile == string.Empty)
                 return szFile;
+            // Redirect the modified xsl file to the writable copy
+            if (szFile == "xmlResolver_document_function_absolute_uri.xsl")
+                return s_absoluteUriXslFile;
             if (szFile.Length > 5)
             {
                 if (szFile.Substring(0, 5) != "http:")

@@ -11,6 +11,7 @@ il_coreclr_test(
     srcs = ["cpblkInt32.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -18,4 +19,5 @@ il_coreclr_test(
     srcs = ["flowgraph.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

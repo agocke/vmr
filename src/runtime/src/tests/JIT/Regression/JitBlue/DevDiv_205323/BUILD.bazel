@@ -5,4 +5,5 @@ il_coreclr_test(
     srcs = ["starg0.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

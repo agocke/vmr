@@ -1,0 +1,113 @@
+load("//:defs.bzl", "ASPNETCORE_SNK", "csharp_library")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Configuration.Binder.cs",
+    "src/Resources/Strings.resx",
+])
+
+# Source generator: Microsoft.Extensions.Configuration.Binder.SourceGeneration
+# Used by Microsoft.Extensions.Logging.Configuration and Logging.Console.
+csharp_library(
+    name = "ConfigurationBinderSourceGeneration",
+    out = "Microsoft.Extensions.Configuration.Binder.SourceGeneration",
+    keyfile = ASPNETCORE_SNK,
+    srcs = glob(["gen/**/*.cs"]) + [
+        "//src/libraries/System.Private.CoreLib:src/System/Diagnostics/CodeAnalysis/NullableAttributes.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Diagnostics/CodeAnalysis/SetsRequiredMembersAttribute.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Collections/Generic/ValueListBuilder.Pop.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Numerics/Hashing/HashHelpers.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/CompilerFeatureRequiredAttribute.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/IsExternalInit.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/RequiredMemberAttribute.cs",
+        "//src/libraries/Common:src/Roslyn/DiagnosticDescriptorHelper.cs",
+        "//src/libraries/Common:src/Roslyn/GetBestTypeByMetadataName.cs",
+        "//src/libraries/Common:src/SourceGenerators/CSharpSyntaxUtilities.cs",
+        "//src/libraries/Common:src/SourceGenerators/DiagnosticInfo.cs",
+        "//src/libraries/Common:src/SourceGenerators/ImmutableEquatableArray.cs",
+        "//src/libraries/Common:src/SourceGenerators/SourceWriter.cs",
+        "//src/libraries/Common:src/SourceGenerators/TypeModelHelper.cs",
+        "//src/libraries/Common:src/SourceGenerators/TypeRef.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+    ],
+    target_frameworks = ["netstandard2.0"],
+    langversion = "preview",
+    allow_unsafe_blocks = True,
+    cls_compliant = False,
+    deps = [
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//microsoft.codeanalysis.workspaces.common",
+        "@paket.main//microsoft.codeanalysis.csharp.workspaces",
+        "@paket.main//system.buffers",
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.memory",
+        "@paket.main//system.composition.attributedmodel",
+        "@paket.main//system.composition.convention",
+        "@paket.main//system.composition.hosting",
+        "@paket.main//system.composition.runtime",
+        "@paket.main//system.composition.typedparts",
+        "@paket.main//system.io.pipelines",
+        "@paket.illink//system.numerics.vectors",
+        "@paket.main//system.reflection.metadata",
+        "@paket.main//system.runtime.compilerservices.unsafe",
+        "@paket.main//system.threading.channels",
+        "@paket.illink//system.text.encoding.codepages",
+        "@paket.illink//system.threading.tasks.extensions",
+    ],
+    nullable = "enable",
+    resx_file = "gen/Resources/Strings.resx",
+    analyzers = [
+        "//:source_build_analyzers",
+    ],
+    additionalfiles = glob(["src/Resources/*.resx"]) + glob(["gen/Resources/*.resx"]),
+    msbuild_analyzer_config = "source",
+    include_syslib_warnaserror = False,
+    extra_editorconfig_content = "dotnet_diagnostic.RS1036.severity = none",
+    nowarn = ["nullable"],
+    visibility = ["//visibility:public"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Configuration.Binder",
+    srcs = [
+        "ref/Microsoft.Extensions.Configuration.Binder.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Configuration.Binder",
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/Extensions/ParameterDefaultValue/ParameterDefaultValue.cs",
+        "//src/libraries/Common:src/Extensions/ParameterDefaultValue/ParameterDefaultValue.netcoreapp.cs",
+    ],
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Configuration.Binder",
+    ref = ":ref_Microsoft.Extensions.Configuration.Binder",
+    lib = ":impl_Microsoft.Extensions.Configuration.Binder",
+    visibility = ["//visibility:public"],
+)

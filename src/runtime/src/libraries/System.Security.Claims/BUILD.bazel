@@ -1,5 +1,7 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
 
+exports_files(["src/ILLink/ILLink.Descriptors.LibraryBuild.xml"])
+
 netcoreapp_ref_assembly(
     name = "ref_System.Security.Claims",
     srcs = [
@@ -12,6 +14,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Security.Claims",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Security/Claims/Claim.cs",
         "src/System/Security/Claims/ClaimsIdentity.cs",

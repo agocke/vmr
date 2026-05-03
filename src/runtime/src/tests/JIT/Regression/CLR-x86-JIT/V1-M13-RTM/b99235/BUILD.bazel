@@ -6,4 +6,5 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     allow_unsafe_blocks = True,
+    size = "medium",
 )

@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "LargeStructSize_CoreCLR",
+    srcs = ["LargeStructSize_CoreCLR.cs"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "LargeStructSize_Mono",
+    srcs = ["LargeStructSize_Mono.cs"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "ManagedSequential",
+    srcs = ["ManagedSequential.cs"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

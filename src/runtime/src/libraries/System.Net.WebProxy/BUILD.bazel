@@ -1,4 +1,5 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
 
 netcoreapp_ref_assembly(
     name = "ref_System.Net.WebProxy",
@@ -14,6 +15,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.WebProxy",
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Net/IWebProxyScript.cs",
         "src/System/Net/WebProxy.cs",
@@ -31,4 +33,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    keyfile = OPEN_SNK,
+    library_import_generator = False,
 )

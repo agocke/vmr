@@ -1,0 +1,46 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "keepalivearray",
+    srcs = ["keepalivearray.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "keepalivedirectedgraph",
+    srcs = ["keepalivedirectedgraph.cs"],
+)
+
+coreclr_test(
+    name = "keepalivefinalize",
+    srcs = ["keepalivefinalize.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "keepalivehandle",
+    srcs = ["keepalivehandle.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "keepalivescope",
+    srcs = ["keepalivescope.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "keepalivetry",
+    srcs = ["keepalivetry.cs"],
+)
+
+coreclr_test(
+    name = "keepalivetypes",
+    srcs = ["keepalivetypes.cs"],
+    pri = 1,
+    size = "medium",
+)

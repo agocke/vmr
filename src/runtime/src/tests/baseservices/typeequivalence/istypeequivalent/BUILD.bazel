@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "typeequivalenttypes_1",
+    srcs = glob(["*.cs"]),
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "typeequivalenttypes_2",
+    srcs = glob(["*.cs"]),
+    tags = ["manual"],  # Needs additional deps not yet available
+)

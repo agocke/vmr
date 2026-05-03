@@ -71,7 +71,7 @@ _CORECLR_DAC_COMMON_DEFINES = _CORECLR_BASE_DEFINES + [
 ]
 
 CORECLR_DEFINES = _CORECLR_COMMON_DEFINES + select({
-    "@platforms//os:macos": [
+    "//:macos_arm64": [
         # Platform (configurecompiler.cmake)
         "HOST_64BIT",
         "HOST_ARM64",
@@ -86,6 +86,28 @@ CORECLR_DEFINES = _CORECLR_COMMON_DEFINES + select({
         # clrdefinitions.cmake — ARM64-specific
         "FEATURE_EMULATE_SINGLESTEP",
         "OSX_ARM64_ABI",
+        # configurecompiler.cmake — macOS platform defines
+        "_XOPEN_SOURCE",
+        "_DARWIN_C_SOURCE",
+        "__DARWIN_NON_CANCELABLE=1",
+        # clrfeatures.cmake — macOS-only features
+        "FEATURE_OBJCMARSHAL",
+    ],
+    "//:macos_x64": [
+        # Platform (configurecompiler.cmake)
+        "HOST_64BIT",
+        "HOST_AMD64",
+        "HOST_UNIX",
+        "HOST_APPLE",
+        "HOST_OSX",
+        "TARGET_64BIT",
+        "TARGET_AMD64",
+        "TARGET_UNIX",
+        "TARGET_APPLE",
+        "TARGET_OSX",
+        # clrdefinitions.cmake — AMD64-specific
+        "UNIX_AMD64_ABI",
+        "UNIX_AMD64_ABI_ITF",
         # configurecompiler.cmake — macOS platform defines
         "_XOPEN_SOURCE",
         "_DARWIN_C_SOURCE",
@@ -113,7 +135,7 @@ CORECLR_DEFINES = _CORECLR_COMMON_DEFINES + select({
 
 # DAC variant: same platform selects, different base defines.
 CORECLR_DAC_DEFINES = _CORECLR_DAC_COMMON_DEFINES + select({
-    "@platforms//os:macos": [
+    "//:macos_arm64": [
         "HOST_64BIT",
         "HOST_ARM64",
         "HOST_UNIX",
@@ -126,6 +148,24 @@ CORECLR_DAC_DEFINES = _CORECLR_DAC_COMMON_DEFINES + select({
         "TARGET_OSX",
         "FEATURE_EMULATE_SINGLESTEP",
         "OSX_ARM64_ABI",
+        "_XOPEN_SOURCE",
+        "_DARWIN_C_SOURCE",
+        "__DARWIN_NON_CANCELABLE=1",
+        "FEATURE_OBJCMARSHAL",
+    ],
+    "//:macos_x64": [
+        "HOST_64BIT",
+        "HOST_AMD64",
+        "HOST_UNIX",
+        "HOST_APPLE",
+        "HOST_OSX",
+        "TARGET_64BIT",
+        "TARGET_AMD64",
+        "TARGET_UNIX",
+        "TARGET_APPLE",
+        "TARGET_OSX",
+        "UNIX_AMD64_ABI",
+        "UNIX_AMD64_ABI_ITF",
         "_XOPEN_SOURCE",
         "_DARWIN_C_SOURCE",
         "__DARWIN_NON_CANCELABLE=1",
@@ -222,21 +262,17 @@ CLR_CONFIG_DEFINES = select({
 
 # --- Debug/checked/release copts ---
 # Flags that vary by config but aren't -D defines (e.g. optimization level).
-# Checked and release both need -O2.  Previously release relied on Bazel's
-# global -c opt, but that also switches library C# from DEBUG to RELEASE,
-# which is wrong for the "release CLR + debug libs" CI configuration.
+# Checked and release both need -O2 (Clang) or /O2 (MSVC).  Previously
+# release relied on Bazel's global -c opt, but that also switches library
+# C# from DEBUG to RELEASE, which is wrong for the "release CLR + debug
+# libs" CI configuration.
+#
+# The *_windows config_settings are more specific than the base ones
+# (they add a constraint_values match), so Bazel picks them on Windows.
 CLR_CONFIG_COPTS = select({
     "//:clr_debug": [],
+    "//:clr_checked_windows": ["/O2"],
+    "//:clr_release_windows": ["/O2"],
     "//:clr_checked": ["-O2"],
     "//:clr_release": ["-O2"],
 })
-
-# --- DAC-specific configuration ---
-# The DAC (Data Access Component) is used for post-mortem debugging and live
-# diagnostics. It should always be built without debug assertions (_DEBUG)
-# because ThreadHoldsLock() and similar debug-only functions are defined
-# inside #ifndef DACCESS_COMPILE and are not available in DAC builds.
-# Using release-mode defines ensures _ASSERTE expands to ((void)0).
-CLR_DAC_CONFIG_DEFINES = _BASE_RELEASE + [
-    "URTBLDENV_FRIENDLY=Retail",
-]

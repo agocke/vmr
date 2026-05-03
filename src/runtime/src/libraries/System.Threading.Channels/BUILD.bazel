@@ -1,4 +1,5 @@
-load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
 
 exports_files([
     "ref/System.Threading.Channels.cs",
@@ -18,7 +19,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Threading.Channels",
-    multitarget = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
     srcs = [
         "src/System/VoidResult.cs",
         "src/System/Threading/Channels/AsyncOperation.cs",
@@ -60,6 +61,8 @@ netcoreapp_impl_assembly(
     ],
     resx_file = "src/Resources/Strings.resx",
     assembly_description = "Provides types for passing data between producers and consumers.\n\nCommonly Used Types:\nSystem.Threading.Channel\nSystem.Threading.Channel<T>",
+    keyfile = OPEN_SNK,
+    library_import_generator = False,
 )
 
 ref_impl_pair(

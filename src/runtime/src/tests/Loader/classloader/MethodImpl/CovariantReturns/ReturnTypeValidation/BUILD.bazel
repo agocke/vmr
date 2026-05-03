@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ImplicitOverrideSameSigAsDecl",
+    srcs = ["ImplicitOverrideSameSigAsDecl.il"],
+)
+
+il_coreclr_test(
+    name = "OverrideSameSigAsDecl",
+    srcs = ["OverrideSameSigAsDecl.il"],
+)

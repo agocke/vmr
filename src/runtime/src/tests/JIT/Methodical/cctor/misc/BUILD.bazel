@@ -26,6 +26,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -41,6 +42,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -57,6 +59,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -64,6 +67,7 @@ il_coreclr_test(
     srcs = ["deadlock_r.il", "deadlock.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -80,6 +84,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -97,6 +102,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -104,6 +110,7 @@ il_coreclr_test(
     srcs = ["deadlock_d.il", "deadlock.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 # global_d is disabled (DisableProjectBuild=true, rva_statics support #2451)
@@ -139,6 +146,7 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -155,4 +163,5 @@ coreclr_test(
     
         "@paket.main//microsoft.dotnet.xunitextensions",
     ],
+    size = "medium",
 )

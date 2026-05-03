@@ -6,6 +6,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -13,12 +14,14 @@ coreclr_test(
     srcs = ["dev11_20929.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "dev11_20929_r",
     srcs = ["dev11_20929.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -27,4 +30,5 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )

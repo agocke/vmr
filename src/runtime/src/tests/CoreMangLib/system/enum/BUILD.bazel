@@ -1,0 +1,67 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "EnumIConvertibleToInt64",
+    srcs = ["enumiconvertibletoint64.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "EnumIConvertibleToSingle",
+    srcs = ["enumiconvertibletosingle.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "EnumIConvertibleToType",
+    srcs = ["enumiconvertibletotype.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "EnumIConvertibleToUint16",
+    srcs = ["enumiconvertibletouint16.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "EnumIConvertibleToUint32",
+    srcs = ["enumiconvertibletouint32.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "EnumIConvertibleToUint64",
+    srcs = ["enumiconvertibletouint64.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)

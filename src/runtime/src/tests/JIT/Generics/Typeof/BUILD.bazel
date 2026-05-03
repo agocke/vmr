@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["Struct02.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -13,6 +14,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -20,6 +22,7 @@ coreclr_test(
     srcs = ["class02.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -28,6 +31,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -35,6 +39,7 @@ coreclr_test(
     srcs = ["class03.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -42,6 +47,7 @@ coreclr_test(
     srcs = ["struct03.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -49,6 +55,7 @@ coreclr_test(
     srcs = ["class01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -56,6 +63,7 @@ coreclr_test(
     srcs = ["struct01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -64,6 +72,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -72,4 +81,5 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )

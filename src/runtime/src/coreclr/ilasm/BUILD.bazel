@@ -39,7 +39,8 @@ cc_binary(
         "../../native/libs/Common",
         "../../native/libs/System.Security.Cryptography.Native",
     ] + select({
-        "@platforms//os:macos": ["../../native/libs/System.Security.Cryptography.Native/bazel/darwin-arm64"],
+        "//:macos_arm64": ["../../native/libs/System.Security.Cryptography.Native/bazel/osx-arm64"],
+        "//:macos_x64": ["../../native/libs/System.Security.Cryptography.Native/bazel/osx-x64"],
         "//conditions:default": ["../../native/libs/System.Security.Cryptography.Native/bazel/linux-glibc-x64"],
     }),
     local_defines = CLR_CONFIG_DEFINES,

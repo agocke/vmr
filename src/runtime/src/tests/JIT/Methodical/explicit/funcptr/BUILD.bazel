@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["seq_funcptr_gc_d.il", "seq_funcptr_gc.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["expl_funcptr_gc_d.il", "expl_funcptr_gc.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["expl_funcptr_val_d.il", "expl_funcptr_val.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -26,6 +29,7 @@ il_coreclr_test(
     srcs = ["seq_funcptr_val_d.il", "seq_funcptr_val.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +37,7 @@ il_coreclr_test(
     srcs = ["expl_funcptr_gc_r.il", "expl_funcptr_gc.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -40,6 +45,7 @@ il_coreclr_test(
     srcs = ["seq_funcptr_val_r.il", "seq_funcptr_val.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -47,6 +53,7 @@ il_coreclr_test(
     srcs = ["expl_funcptr_val_r.il", "expl_funcptr_val.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -54,4 +61,5 @@ il_coreclr_test(
     srcs = ["seq_funcptr_gc_r.il", "seq_funcptr_gc.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

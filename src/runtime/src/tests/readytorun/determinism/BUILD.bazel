@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "crossgen2determinism",
+    srcs = ["Program.cs"],
+    tags = ["manual"],  # Needs crossgen2 data files
+)

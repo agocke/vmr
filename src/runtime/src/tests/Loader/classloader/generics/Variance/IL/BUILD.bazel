@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "ILLib",
+    srcs = ["ILLib.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "VarInterfaceLib2",
+    srcs = ["VarInterfaceLib2.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "varlib",
+    srcs = ["varlib.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

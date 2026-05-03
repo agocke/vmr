@@ -13,6 +13,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Threading.Tasks.Parallel",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Threading/Tasks/Parallel.cs",
         "src/System/Threading/Tasks/Parallel.ForEachAsync.cs",

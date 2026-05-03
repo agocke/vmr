@@ -1,0 +1,33 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "ASPNETCORE_SNK")
+
+library_test(
+    name = "Microsoft.Extensions.FileProviders.Physical.Tests",
+    nowarn = MULTITARGET_NOWARN,
+    srcs = glob(["**/*.cs"]) + [
+        "//src/libraries/Common/tests:System/IO/ReparsePointUtilities.cs",
+        "//src/libraries/Common/tests:System/IO/TempDirectory.cs",
+        "//src/libraries/Common/tests:System/Threading/Tasks/TaskTimeoutExtensions.cs",
+    ],
+    deps = [
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:impl_Microsoft.Extensions.FileProviders.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Physical:impl_Microsoft.Extensions.FileProviders.Physical",
+        "//src/libraries/Microsoft.Extensions.FileSystemGlobbing:impl_Microsoft.Extensions.FileSystemGlobbing",
+        "//src/libraries/Microsoft.Extensions.Primitives:impl_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.IO.FileSystem.Watcher:ref_System.IO.FileSystem.Watcher",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//castle.core",
+        "@paket.main//moq",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    keyfile = ASPNETCORE_SNK,
+    size = "large",
+)

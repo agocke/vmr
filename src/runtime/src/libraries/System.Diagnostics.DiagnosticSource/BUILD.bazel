@@ -1,10 +1,12 @@
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load(
     "//src/libraries:defs.bzl",
+    "MULTITARGET_NOWARN",
     "live_csharp_library",
     "netcoreapp_impl_assembly",
     "netcoreapp_ref_assembly",
 )
+load("//:defs.bzl", "OPEN_SNK")
 
 exports_files([
     "ref/System.Diagnostics.DiagnosticSource.cs",
@@ -24,6 +26,7 @@ exports_files([
     "src/System/Diagnostics/Metrics/StringSequence.cs",
     "src/System/Diagnostics/Metrics/StringSequence.netcore.cs",
     "src/Resources/Strings.resx",
+    "src/ILLink/ILLink.Descriptors.LibraryBuild.xml",
 ])
 
 netcoreapp_ref_assembly(
@@ -60,7 +63,8 @@ write_file(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Diagnostics.DiagnosticSource",
-    multitarget = True,
+    keyfile = OPEN_SNK,
+    com_interface_generator = True,
     srcs = [
         # Unconditional sources
         "src/System/Diagnostics/Activity.cs",
@@ -166,12 +170,13 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
     ],
     resx_file = "src/Resources/Strings.resx",
-    nowarn = ["SA1205"],
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "SA1205", "CS1591"],
     assembly_description = "Provides Classes that allow you to decouple code logging rich (unserializable) diagnostics/telemetry (e.g. framework) from code that consumes it (e.g. tools)\n\nCommonly Used Types:\nSystem.Diagnostics.DiagnosticListener\nSystem.Diagnostics.DiagnosticSource",
 )
 
 live_csharp_library(
     name = "live_System.Diagnostics.DiagnosticSource",
+    generate_assembly_info = True,
     srcs = [
         # Unconditional sources
         "src/System/Diagnostics/Activity.cs",

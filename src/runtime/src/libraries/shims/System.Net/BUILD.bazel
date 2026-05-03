@@ -2,7 +2,9 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net",
-    skip_cs1591 = True,
+    library_import_generator = False,
+    generate_documentation_file = False,
+    skip_locals_init = False,
     srcs = [
         "src/System.Net.cs",
     ],

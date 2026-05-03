@@ -1,0 +1,35 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "AvxVnniInt16_handwritten_r",
+    srcs = [
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:SimpleUnOpTest_DataTable.cs",
+        "AvxVnniInt16SampleTest.cs",
+    ],
+)
+
+coreclr_test(
+    name = "AvxVnniInt16_handwritten_ro",
+    srcs = [
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:SimpleUnOpTest_DataTable.cs",
+        "AvxVnniInt16SampleTest.cs",
+    ],
+    optimize = True,
+)
+
+coreclr_test(
+    name = "AvxVnniInt16_r",
+    srcs = [
+        "Program.AvxVnniInt16.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+)
+
+coreclr_test(
+    name = "AvxVnniInt16_ro",
+    srcs = [
+        "Program.AvxVnniInt16.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+    optimize = True,
+)

@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["i_prop_d.il", "i_prop.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["u_seq_d.il", "u_seq.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["i_qsort2_d.il", "i_qsort2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -26,6 +29,7 @@ il_coreclr_test(
     srcs = ["i_seq_r.il", "i_seq.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +37,7 @@ il_coreclr_test(
     srcs = ["i_flood_d.il", "i_flood.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -46,6 +51,7 @@ il_coreclr_test(
     srcs = ["u_prop_d.il", "u_prop.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -53,6 +59,7 @@ il_coreclr_test(
     srcs = ["i_vfld_r.il", "i_vfld.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -60,6 +67,7 @@ il_coreclr_test(
     srcs = ["convovf_i8_i_r.il", "convovf_i8_i.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -67,6 +75,7 @@ il_coreclr_test(
     srcs = ["convovf_i8_u_r.il", "convovf_i8_u.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -74,6 +83,7 @@ il_coreclr_test(
     srcs = ["conv_i8_u_d.il", "conv_i8_u.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -87,6 +97,7 @@ il_coreclr_test(
     srcs = ["i_box_d.il", "i_box.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -94,6 +105,7 @@ il_coreclr_test(
     srcs = ["i_vfld_d.il", "i_vfld.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -101,6 +113,7 @@ il_coreclr_test(
     srcs = ["i_conv_r.il", "i_conv.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -108,6 +121,7 @@ il_coreclr_test(
     srcs = ["i_flood_r.il", "i_flood.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -115,6 +129,7 @@ il_coreclr_test(
     srcs = ["convovf_i8_u_d.il", "convovf_i8_u.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -128,6 +143,7 @@ il_coreclr_test(
     srcs = ["u_flow_r.il", "u_flow.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -135,6 +151,7 @@ il_coreclr_test(
     srcs = ["i_qsort1_r.il", "i_qsort1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -142,6 +159,7 @@ il_coreclr_test(
     srcs = ["qperm_r.il", "qperm.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -155,6 +173,7 @@ il_coreclr_test(
     srcs = ["u_flood_r.il", "u_flood.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -162,6 +181,7 @@ il_coreclr_test(
     srcs = ["qperm_d.il", "qperm.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -169,6 +189,7 @@ il_coreclr_test(
     srcs = ["conv_i8_i_r.il", "conv_i8_i.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -182,6 +203,7 @@ il_coreclr_test(
     srcs = ["u_box_r.il", "u_box.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -189,6 +211,7 @@ il_coreclr_test(
     srcs = ["i_ref_r.il", "i_ref.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -196,6 +219,7 @@ il_coreclr_test(
     srcs = ["i_fld_d.il", "i_fld.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -203,6 +227,7 @@ il_coreclr_test(
     srcs = ["u_box_d.il", "u_box.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -210,6 +235,7 @@ il_coreclr_test(
     srcs = ["u_flow_d.il", "u_flow.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -223,6 +249,7 @@ il_coreclr_test(
     srcs = ["u_conv_d.il", "u_conv.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -230,6 +257,7 @@ il_coreclr_test(
     srcs = ["u_prop_r.il", "u_prop.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -237,6 +265,7 @@ il_coreclr_test(
     srcs = ["i_flow_r.il", "i_flow.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -244,6 +273,7 @@ il_coreclr_test(
     srcs = ["convovf_i8_i_d.il", "convovf_i8_i.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -251,6 +281,7 @@ il_coreclr_test(
     srcs = ["conv_i8_u_r.il", "conv_i8_u.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -258,6 +289,7 @@ il_coreclr_test(
     srcs = ["i_qsort1_d.il", "i_qsort1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -265,6 +297,7 @@ il_coreclr_test(
     srcs = ["u_qsort1_d.il", "u_qsort1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -272,6 +305,7 @@ il_coreclr_test(
     srcs = ["i_seq_d.il", "i_seq.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -279,6 +313,7 @@ il_coreclr_test(
     srcs = ["i_conv_d.il", "i_conv.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -286,6 +321,7 @@ il_coreclr_test(
     srcs = ["u_seq_r.il", "u_seq.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -293,6 +329,7 @@ il_coreclr_test(
     srcs = ["i_fld_r.il", "i_fld.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -300,6 +337,7 @@ il_coreclr_test(
     srcs = ["u_ref_d.il", "u_ref.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -307,6 +345,7 @@ il_coreclr_test(
     srcs = ["u_ref_r.il", "u_ref.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -314,6 +353,7 @@ il_coreclr_test(
     srcs = ["i_ref_d.il", "i_ref.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -339,6 +379,7 @@ il_coreclr_test(
     srcs = ["u_vfld_d.il", "u_vfld.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -346,6 +387,7 @@ il_coreclr_test(
     srcs = ["i_prop_r.il", "i_prop.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -353,6 +395,7 @@ il_coreclr_test(
     srcs = ["u_vfld_r.il", "u_vfld.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -366,6 +409,7 @@ il_coreclr_test(
     srcs = ["i_flow_d.il", "i_flow.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -373,6 +417,7 @@ il_coreclr_test(
     srcs = ["i_box_r.il", "i_box.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -380,4 +425,5 @@ il_coreclr_test(
     srcs = ["u_flood_d.il", "u_flood.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

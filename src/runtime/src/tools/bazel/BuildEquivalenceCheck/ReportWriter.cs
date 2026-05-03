@@ -27,36 +27,85 @@ public static class ReportWriter
         {
             Console.WriteLine("── Native C/C++ ──────────────────────────────────────");
             var nativeMatches = report.NativeResults.Count(r => r.IsMatch);
-            var nativeKnown = report.NativeResults.Count(r => !r.IsMatch && report.KnownNativeDiffs.Contains(r.Name));
-            var nativeUnexpected = report.NativeResults.Count(r => !r.IsMatch && !report.KnownNativeDiffs.Contains(r.Name));
+            var nativeKnown = report.NativeResults.Count(r => !r.IsMatch && report.IsNativeKnownDiff(r.Name));
+            var nativeUnexpected = report.NativeResults.Count(r => !r.IsMatch && !report.IsNativeKnownDiff(r.Name));
             Console.WriteLine($"  Compared: {report.NativeResults.Count} source files");
             WriteColored($"  Matched:  {nativeMatches}", ConsoleColor.Green);
             if (nativeKnown > 0)
                 WriteColored($"  Known:    {nativeKnown}", ConsoleColor.Yellow);
             if (nativeUnexpected > 0)
-                WriteColored($"  Differ:   {nativeUnexpected}", ConsoleColor.Red);
+            {
+                if (report.HasNativeManifest)
+                    WriteColored($"  Differ:   {nativeUnexpected}", ConsoleColor.Red);
+                else
+                    WriteColored($"  Differ:   {nativeUnexpected} (no native manifest — informational only)", ConsoleColor.Yellow);
+            }
             if (report.OnlyInCMake.Count > 0)
                 WriteColored($"  Only in CMake: {report.OnlyInCMake.Count}", ConsoleColor.Yellow);
             if (report.OnlyInBazel.Count > 0)
                 WriteColored($"  Only in Bazel: {report.OnlyInBazel.Count}", ConsoleColor.Yellow);
             Console.WriteLine();
 
-            // Show unexpected diffs (always)
-            foreach (var result in report.NativeResults.Where(r => !r.IsMatch && !report.KnownNativeDiffs.Contains(r.Name)))
+            if (report.HasNativeManifest)
             {
-                WriteColored($"  ✗ {result.Name}", ConsoleColor.Red);
-                foreach (var diff in result.Differences)
-                    WriteDifference(diff);
+                // Show regressions (match files that differ — always)
+                foreach (var result in report.NativeRegressions)
+                {
+                    WriteColored($"  ✗ {result.Name} (REGRESSION — expected to match)", ConsoleColor.Red);
+                    foreach (var diff in result.Differences)
+                        WriteDifference(diff);
+                }
+
+                // Show unexpected diffs (not in manifest — always)
+                foreach (var result in report.NativeResults.Where(r => !r.IsMatch
+                    && !report.IsNativeKnownDiff(r.Name)
+                    && !report.NativeRegressions.Any(reg => reg.Name == r.Name)))
+                {
+                    WriteColored($"  ✗ {result.Name}", ConsoleColor.Red);
+                    foreach (var diff in result.Differences)
+                        WriteDifference(diff);
+                }
+
+                // Show manifest violations
+                if (report.NativeMissingFromBothBuilds.Count > 0)
+                {
+                    WriteColored($"  Missing from both builds ({report.NativeMissingFromBothBuilds.Count}):", ConsoleColor.Red);
+                    foreach (var name in report.NativeMissingFromBothBuilds)
+                        Console.WriteLine($"    - {name}");
+                }
+
+                if (report.NativeUnlistedFiles.Count > 0)
+                {
+                    WriteColored($"  Not in manifest ({report.NativeUnlistedFiles.Count}):", ConsoleColor.Yellow);
+                    foreach (var name in report.NativeUnlistedFiles)
+                        Console.WriteLine($"    - {name}");
+                }
+            }
+            else
+            {
+                // No native manifest — show diffs as informational (verbose only)
+                if (verbose)
+                {
+                    foreach (var result in report.NativeResults.Where(r => !r.IsMatch))
+                    {
+                        WriteColored($"  ⚠ {result.Name}", ConsoleColor.Yellow);
+                        foreach (var diff in result.Differences)
+                            WriteDifference(diff);
+                    }
+                }
             }
 
             // Show known diffs and only-in lists (verbose only)
             if (verbose)
             {
-                foreach (var result in report.NativeResults.Where(r => !r.IsMatch && report.KnownNativeDiffs.Contains(r.Name)))
+                if (report.HasNativeManifest)
                 {
-                    WriteColored($"  ⚠ {result.Name} (known)", ConsoleColor.Yellow);
-                    foreach (var diff in result.Differences)
-                        WriteDifference(diff);
+                    foreach (var result in report.NativeResults.Where(r => !r.IsMatch && report.IsNativeKnownDiff(r.Name)))
+                    {
+                        WriteColored($"  ⚠ {result.Name} (known diff)", ConsoleColor.Yellow);
+                        foreach (var diff in result.Differences)
+                            WriteDifference(diff);
+                    }
                 }
 
                 if (report.OnlyInCMake.Count > 0)
@@ -167,22 +216,37 @@ public static class ReportWriter
         Console.WriteLine($"  Matches:           {report.Matches}");
         if (report.KnownMismatches > 0)
             Console.WriteLine($"  Known diffs:       {report.KnownMismatches}");
+        if (report.NativeRegressions.Count > 0)
+            WriteColored($"  Native regressions:{report.NativeRegressions.Count}", ConsoleColor.Red);
         if (report.Regressions.Count > 0)
-            WriteColored($"  Regressions:       {report.Regressions.Count}", ConsoleColor.Red);
+            WriteColored($"  Managed regressions:{report.Regressions.Count}", ConsoleColor.Red);
+        if (report.UntrackedNativeDiffs > 0 && !report.HasNativeManifest)
+            WriteColored($"  Native diffs:      {report.UntrackedNativeDiffs} (no manifest — informational)", ConsoleColor.Yellow);
         if (report.UnexpectedMismatches > 0)
             WriteColored($"  Unexpected diffs:  {report.UnexpectedMismatches}", ConsoleColor.Red);
         else if (report.KnownMismatches == 0 && report.Mismatches > 0)
             Console.WriteLine($"  Mismatches:        {report.Mismatches}");
+        if (report.NativeMissingFromBothBuilds.Count > 0)
+            WriteColored($"  Native missing:    {report.NativeMissingFromBothBuilds.Count}", ConsoleColor.Red);
         if (report.MissingFromBothBuilds.Count > 0)
-            WriteColored($"  Missing:           {report.MissingFromBothBuilds.Count}", ConsoleColor.Red);
+            WriteColored($"  Managed missing:   {report.MissingFromBothBuilds.Count}", ConsoleColor.Red);
+        if (report.NativeUnlistedFiles.Count > 0)
+            WriteColored($"  Native unlisted:   {report.NativeUnlistedFiles.Count}", ConsoleColor.Yellow);
         if (report.UnlistedAssemblies.Count > 0)
-            WriteColored($"  Unlisted:          {report.UnlistedAssemblies.Count}", ConsoleColor.Yellow);
+            WriteColored($"  Managed unlisted:  {report.UnlistedAssemblies.Count}", ConsoleColor.Yellow);
         Console.WriteLine();
 
         if (report.IsEquivalent)
             WriteColored("  PASS: Build inputs are equivalent.", ConsoleColor.Green);
         else
-            WriteColored("  FAIL: Build inputs differ.", ConsoleColor.Red);
+        {
+            if (!report.NativeIsEquivalent && !report.ManagedIsEquivalent)
+                WriteColored("  FAIL: Native and managed build inputs differ.", ConsoleColor.Red);
+            else if (!report.NativeIsEquivalent)
+                WriteColored("  FAIL: Native build inputs differ.", ConsoleColor.Red);
+            else
+                WriteColored("  FAIL: Managed build inputs differ.", ConsoleColor.Red);
+        }
 
         Console.WriteLine();
     }
@@ -208,7 +272,7 @@ public static class ReportWriter
                 UnlistedAssemblies = report.UnlistedAssemblies.Count,
             },
             NativeDifferences = report.NativeResults
-                .Where(r => !r.IsMatch && !report.KnownNativeDiffs.Contains(r.Name))
+                .Where(r => !r.IsMatch && !report.IsNativeKnownDiff(r.Name))
                 .Select(ToJsonDiff)
                 .ToList(),
             ManagedDifferences = report.ManagedResults
@@ -216,7 +280,7 @@ public static class ReportWriter
                 .Select(ToJsonDiff)
                 .ToList(),
             KnownNativeDifferences = report.NativeResults
-                .Where(r => !r.IsMatch && report.KnownNativeDiffs.Contains(r.Name))
+                .Where(r => !r.IsMatch && report.IsNativeKnownDiff(r.Name))
                 .Select(ToJsonDiff)
                 .ToList(),
             KnownManagedDifferences = report.ManagedResults

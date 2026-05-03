@@ -1,0 +1,26 @@
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_library", "resgen")
+
+resgen(
+    name = "resgen_ReferencedClassLib",
+    out = "ReferencedClassLib.ReferencedStrings.resources",
+    resx_file = "ReferencedStrings.resx",
+)
+
+csharp_library(
+    name = "ReferencedClassLib",
+    srcs = ["ReferencedClassLib.cs"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    resources = [":resgen_ReferencedClassLib"],
+    resource_logical_names = {
+        "ReferencedClassLib.ReferencedStrings.resources": "ReferencedClassLib.ReferencedStrings.resources",
+    },
+    keyfile = OPEN_SNK,
+    visibility = ["//src/libraries/System.Runtime.Loader/tests:__subpackages__"],
+)

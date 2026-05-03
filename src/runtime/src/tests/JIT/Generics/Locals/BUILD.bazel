@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["instance_equalnull_struct01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -12,6 +13,7 @@ coreclr_test(
     srcs = ["static_passing_struct01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -19,6 +21,7 @@ coreclr_test(
     srcs = ["instance_passing_struct01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -26,6 +29,7 @@ coreclr_test(
     srcs = ["instance_assignment_class01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -33,6 +37,7 @@ coreclr_test(
     srcs = ["instance_assignment_struct01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -40,6 +45,7 @@ coreclr_test(
     srcs = ["static_assignment_struct01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -47,6 +53,7 @@ coreclr_test(
     srcs = ["instance_passing_class01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -54,6 +61,7 @@ coreclr_test(
     srcs = ["static_assignment_class01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -61,6 +69,7 @@ coreclr_test(
     srcs = ["instance_equalnull_class01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -68,6 +77,7 @@ coreclr_test(
     srcs = ["static_passing_class01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -75,6 +85,7 @@ coreclr_test(
     srcs = ["static_equalnull_class01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -82,4 +93,5 @@ coreclr_test(
     srcs = ["static_equalnull_struct01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

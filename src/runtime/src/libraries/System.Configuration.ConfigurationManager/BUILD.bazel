@@ -1,0 +1,84 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly", "netcoreapp_ref_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "src/Resources/Strings.resx",
+    "src/System/Configuration/ConfigPathUtility.cs",
+    "src/System/Configuration/ExceptionUtil.cs",
+    "src/System/Configuration/StringUtil.cs",
+    "src/System/Configuration/TypeUtil.cs",
+    "src/System/Configuration/UrlPath.cs",
+    "src/System/Configuration/ValidatorUtils.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Configuration.ConfigurationManager",
+    srcs = [
+        "ref/System.Configuration.ConfigurationManager.cs",
+        "ref/System.Configuration.ConfigurationManager.netcoreapp.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    nowarn = ["CS0618"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Configuration.ConfigurationManager",
+    keyfile = OPEN_SNK,
+    nowarn = MULTITARGET_NOWARN + ["CA2249", "CP0003", "nullable", "CS1591"],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/System/IO/TempFileCollection.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+        "//src/libraries/Common:src/System/Security/IdentityHelper.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Specialized:ref_System.Collections.Specialized",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.ComponentModel.EventBasedAsync:ref_System.ComponentModel.EventBasedAsync",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Console:ref_System.Console",
+        "//src/libraries/System.Diagnostics.EventLog:ref_System.Diagnostics.EventLog",
+        "//src/libraries:ref_System.Diagnostics.Process",
+        "//src/libraries/System.Diagnostics.TextWriterTraceListener:ref_System.Diagnostics.TextWriterTraceListener",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+        "//src/libraries/System.IO.FileSystem.Watcher:ref_System.IO.FileSystem.Watcher",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.WebClient:ref_System.Net.WebClient",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Security.Cryptography.ProtectedData:ref_System.Security.Cryptography.ProtectedData",
+        "//src/libraries/System.Text.Encoding.Extensions:ref_System.Text.Encoding.Extensions",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    nullable = "disable",
+    assembly_description = "Provides types that support using XML configuration files (app.config). This package exists only to support migrating existing .NET Framework code that already uses System.Configuration. When writing new code, use another configuration system instead, such as Microsoft.Extensions.Configuration.",
+)
+
+ref_impl_pair(
+    name = "live_System.Configuration.ConfigurationManager",
+    ref = ":ref_System.Configuration.ConfigurationManager",
+    lib = ":impl_System.Configuration.ConfigurationManager",
+    visibility = ["//visibility:public"],
+)

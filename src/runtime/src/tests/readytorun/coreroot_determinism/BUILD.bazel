@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "coreroot_determinism",
+    srcs = ["Program.cs"],
+    tags = ["manual"],  # Needs CORE_ROOT env var
+)

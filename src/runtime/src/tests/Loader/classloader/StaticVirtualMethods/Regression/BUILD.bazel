@@ -1,0 +1,61 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "GetInterfaceMapWithStaticVirtualsAndConstraints",
+    srcs = ["GetInterfaceMapWithStaticVirtualsAndConstraints.cs"],
+)
+
+coreclr_test(
+    name = "GitHub_59432",
+    srcs = ["GitHub_59432.cs"],
+)
+
+il_coreclr_test(
+    name = "GitHub_70385",
+    srcs = ["GitHub_70385.il"],
+)
+
+coreclr_test(
+    name = "GitHub_71319",
+    srcs = ["GitHub_71319.cs"],
+)
+
+coreclr_test(
+    name = "GitHub_74792",
+    srcs = ["GitHub_74792.cs"],
+)
+
+coreclr_test(
+    name = "GitHub_76673",
+    srcs = ["GitHub_76673.cs"],
+)
+
+coreclr_test(
+    name = "GitHub_78866",
+    srcs = ["GitHub_78866.cs"],
+)
+
+coreclr_test(
+    name = "GitHub_80350",
+    srcs = ["GitHub_80350.cs"],
+)
+
+coreclr_test(
+    name = "GitHub_86993",
+    srcs = ["GitHub_86993.cs"],
+)
+
+coreclr_test(
+    name = "RecursiveConstraintOnDIOfStaticAbstractMember",
+    srcs = ["RecursiveConstraintOnDIOfStaticAbstractMember.cs"],
+)
+
+coreclr_test(
+    name = "StaticVirtualsAndMethodConstraintsAndDI",
+    srcs = ["StaticVirtualsAndMethodConstraintsAndDI.cs"],
+)
+
+coreclr_test(
+    name = "VariantVirtualStaticDefaultDispatch",
+    srcs = ["VariantVirtualStaticDefaultDispatch.cs"],
+)

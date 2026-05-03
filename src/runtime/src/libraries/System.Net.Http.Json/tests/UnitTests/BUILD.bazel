@@ -1,0 +1,43 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Net.Http.Json.Unit.Tests",
+    resx_file = "Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Net.Http.Json.Unit.Tests.SR.resources",
+    resx_file = "Resources/Strings.resx",
+)
+
+library_test(
+    name = "System.Net.Http.Json.Unit.Tests",
+    nowarn = MULTITARGET_NOWARN,
+    srcs = glob(["*.cs"]) + [
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
+        "//src/libraries/System.Net.Http.Json:src/System/Net/Http/Json/TranscodingReadStream.cs",
+        "//src/libraries/System.Net.Http.Json:src/System/Net/Http/Json/TranscodingWriteStream.cs",
+    ],
+    deps = [
+        "//src/libraries/System.IO.Pipelines:ref_System.IO.Pipelines",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Text.Encodings.Web:ref_System.Text.Encodings.Web",
+        "//src/libraries/System.Text.Json:ref_System.Text.Json",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    additionalfiles = ["Resources/Strings.resx"],
+    keyfile = OPEN_SNK,
+    resources = [":strings_resx"],
+    resource_logical_names = {
+        "FxResources.System.Net.Http.Json.Unit.Tests.SR.resources": "FxResources.System.Net.Http.Json.Unit.Tests.SR.resources",
+    },
+)

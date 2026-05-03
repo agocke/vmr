@@ -14,6 +14,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Linq.Queryable",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Linq/EnumerableExecutor.cs",
         "src/System/Linq/EnumerableQuery.cs",

@@ -113,6 +113,72 @@ def _runtime_staging_impl(ctx):
 
     return [DefaultInfo(files = depset([output]))]
 
+def _runtime_archive_impl(ctx):
+    version = ctx.attr.version
+    rid = ctx.attr.rid
+    staging = ctx.attr.staging[DefaultInfo].files.to_list()[0]
+    deps_json = ctx.file.deps_json
+
+    output = ctx.actions.declare_file(
+        "dotnet-runtime-{}-{}.tar.gz".format(version, rid),
+    )
+
+    fx_dir = "shared/Microsoft.NETCore.App/{}".format(version)
+
+    ctx.actions.run_shell(
+        inputs = [staging, deps_json],
+        outputs = [output],
+        command = """
+            set -euo pipefail
+            STAGING="{staging}"
+            DEPS="{deps}"
+            OUT="{out}"
+            WORK=$(mktemp -d)
+            trap "rm -rf $WORK" EXIT
+            cp -rL "$STAGING" "$WORK/archive"
+            cp "$DEPS" "$WORK/archive/{fx_dir}/Microsoft.NETCore.App.deps.json"
+            find "$WORK/archive" -type f -exec chmod 644 {{}} +
+            find "$WORK/archive/shared" -type f \\( {native_pattern} -o -name "createdump" \\) -exec chmod 755 {{}} +
+            chmod 755 "$WORK/archive/dotnet"
+            tar czf "$OUT" -C "$WORK/archive" .
+        """.format(
+            staging = staging.path,
+            deps = deps_json.path,
+            out = output.path,
+            fx_dir = fx_dir,
+            native_pattern = ctx.attr.native_lib_pattern,
+        ),
+    )
+
+    return [DefaultInfo(files = depset([output]))]
+
+runtime_archive = rule(
+    implementation = _runtime_archive_impl,
+    attrs = {
+        "version": attr.string(
+            mandatory = True,
+            doc = "Product version string for the archive filename and internal paths (e.g. '10.0.4-dev').",
+        ),
+        "rid": attr.string(
+            mandatory = True,
+            doc = "Runtime identifier for the archive filename (e.g. 'linux-x64').",
+        ),
+        "staging": attr.label(
+            mandatory = True,
+            doc = "The runtime_staging target providing the directory layout.",
+        ),
+        "deps_json": attr.label(
+            mandatory = True,
+            allow_single_file = True,
+            doc = "The generated deps.json file to inject into the archive.",
+        ),
+        "native_lib_pattern": attr.string(
+            mandatory = True,
+            doc = "find(1) -name pattern for native shared libraries (e.g. '*.so' or '*.dylib').",
+        ),
+    },
+)
+
 runtime_staging = rule(
     implementation = _runtime_staging_impl,
     attrs = {

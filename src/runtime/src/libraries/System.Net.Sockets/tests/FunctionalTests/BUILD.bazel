@@ -1,13 +1,11 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.Net.Sockets.Tests",
+    defines = select({"@platforms//os:linux": ["UNIX", "UNIX1_0"], "@platforms//os:macos": ["UNIX", "UNIX1_0"], "//conditions:default": []}),
     srcs = glob(
         ["**/*.cs"],
-        exclude = [
-            "StartupTests.Windows.cs",
-            "InlineCompletions.Unix.cs",
-        ],
     ) + [
         "//src/libraries/Common/tests:System/Net/Configuration.cs",
         "//src/libraries/Common/tests:System/Net/Configuration.Sockets.cs",
@@ -59,5 +57,6 @@ library_test(
     ],
     allow_unsafe_blocks = True,
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    flaky = True,  # Flaky in debug (libs_config=debug); Bazel flaky is not configurable
+    keyfile = OPEN_SNK,
 )

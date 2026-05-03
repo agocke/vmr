@@ -2,7 +2,9 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.UnmanagedMemoryStream",
-    skip_cs1591 = True,
+    interop_source_generation = True,
+    library_import_generator = False,
+    skip_locals_init = False,
     srcs = ["src/System.IO.UnmanagedMemoryStream.cs"],
     deps = [
         "//src/libraries:ref_System.Runtime",
@@ -10,4 +12,6 @@ netcoreapp_impl_assembly(
     ],
     os_targeted = True,
     exclude_sr = True,
+    generate_documentation_file = False,
+    com_interface_generator = True,
 )

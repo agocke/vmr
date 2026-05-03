@@ -1,12 +1,42 @@
-load("//:defs.bzl", "csharp_library")
+load("//:defs.bzl", "csharp_library", "gen_assembly_info", "gen_target_framework_attrs")
+
+gen_assembly_info(
+    name = "assemblyinfo_ILCompiler.Diagnostics",
+    out = "ILCompiler.Diagnostics.AssemblyInfo.cs",
+    assembly_name = "ILCompiler.Diagnostics",
+    cls_compliant = False,
+    is_aot_compatible = False,
+    include_serviceable = False,
+    include_description = False,
+    assembly_configuration = "Release",
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_ILCompiler.Diagnostics",
+    out = ".NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
+)
 
 csharp_library(
     name = "ILCompiler.Diagnostics",
-    srcs = glob(["*.cs"]),
+    nowarn = ["1591"],
+    msbuild_analyzer_config = "style",
+    include_default_ruleset = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    compiler_options = ["/warnaserror+:NU1605"],
+    srcs = glob(["*.cs"]) + [
+        ":assemblyinfo_ILCompiler.Diagnostics",
+        ":tfmattrs_ILCompiler.Diagnostics",
+    ],
     defines = ["READYTORUN"],
-    compiler_options = ["/unsafe"],
+    allow_unsafe_blocks = True,
+    analyzers = [
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+    ],
     deps = [
         "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//microsoft.diasymreader",
     ],
     target_frameworks = ["net10.0"],
     visibility = ["//visibility:public"],

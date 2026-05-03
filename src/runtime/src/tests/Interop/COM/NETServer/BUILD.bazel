@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "NETServer",
+    srcs = glob(["*.cs"]),
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "NETServer.DefaultInterfaces",
+    srcs = ["NETServer.DefaultInterfaces.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

@@ -12,4 +12,5 @@ coreclr_test(
     srcs = ["osr001.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

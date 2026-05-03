@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "ExtensionPoints",
+    srcs = [
+        "ExtensionPoints.cs",
+        "Interfaces.cs",
+    ],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

@@ -31,14 +31,14 @@ bazel build //... --config=clr_checked
 
 ## Syncing Runtime Changes into the VMR
 
-When new commits land on the runtime's `bazel` branch (on `agocke/runtime`),
+When new commits land on the runtime's `bazel` branch (on `agocke/rbz`),
 use `darc vmr update` to sync them into the VMR.
 
 ### Prerequisites
 
 - The `darc` CLI must be installed (via `dotnet tool install -g Microsoft.DotNet.Darc`)
 - `src/source-mappings.json` and `src/source-manifest.json` must have their
-  runtime `remoteUri`/`defaultRemote` pointing at `https://github.com/agocke/runtime`
+  runtime `remoteUri`/`defaultRemote` pointing at `https://github.com/agocke/rbz`
   (not `dotnet/runtime`)
 
 ### Using a GitHub URL as the remote
@@ -46,12 +46,12 @@ use `darc vmr update` to sync them into the VMR.
 ```bash
 # Sync to the tip of the bazel branch
 darc vmr update runtime:bazel \
-  --additional-remotes runtime:https://github.com/agocke/runtime \
+  --additional-remotes runtime:https://github.com/agocke/rbz \
   --vmr /path/to/vmr
 
 # Sync to a specific commit SHA
 darc vmr update runtime:<sha> \
-  --additional-remotes runtime:https://github.com/agocke/runtime \
+  --additional-remotes runtime:https://github.com/agocke/rbz \
   --vmr /path/to/vmr
 ```
 
@@ -77,7 +77,7 @@ darc vmr update runtime:bazel \
 Darc resolves the branch name against the remote specified in
 `source-mappings.json` (`defaultRemote`) and `source-manifest.json`
 (`remoteUri`). If these point at `dotnet/runtime` instead of
-`agocke/runtime`, the `bazel` branch won't exist there and darc falls
+`agocke/rbz`, the `bazel` branch won't exist there and darc falls
 back to the current SHA. Fix by updating both files to point at the fork.
 
 **"patch does not apply" errors:**

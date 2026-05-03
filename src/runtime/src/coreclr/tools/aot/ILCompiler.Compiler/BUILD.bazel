@@ -1,12 +1,20 @@
-load("//:defs.bzl", "csharp_library", "gen_resx_source", "resgen")
+load("//:defs.bzl", "csharp_library", "gen_assembly_info", "gen_resx_source", "gen_target_framework_attrs", "resgen")
 
-genrule(
-    name = "AssemblyInfo",
-    outs = ["AssemblyInfo.g.cs"],
-    cmd = """cat > $@ << 'EOF'
-[assembly: System.Reflection.AssemblyFileVersion("10.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersion("10.0.0-dev+bazel")]
-EOF""",
+gen_assembly_info(
+    name = "assemblyinfo_ILCompiler.Compiler",
+    out = "ILCompiler.Compiler.AssemblyInfo.cs",
+    assembly_name = "ILCompiler.Compiler",
+    cls_compliant = False,
+    is_aot_compatible = False,
+    include_serviceable = False,
+    include_description = False,
+    assembly_configuration = "Release",
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_ILCompiler.Compiler",
+    out = ".NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
 )
 
 gen_resx_source(
@@ -28,8 +36,10 @@ exports_files(["Compiler/JitHelper.cs"])
 
 csharp_library(
     name = "ILCompiler.Compiler",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
     srcs = [
-        ":AssemblyInfo",
+        ":assemblyinfo_ILCompiler.Compiler",
+        ":tfmattrs_ILCompiler.Compiler",
         ":SharedStringsSR",
         "Compiler/AnalysisBasedInteropStubManager.cs",
         "Compiler/AnalysisBasedMetadataManager.cs",
@@ -623,16 +633,32 @@ csharp_library(
         "//src/tools/illink/src/ILLink.Shared:TypeSystemProxy/TypeProxy.cs",
         "//src/tools/illink/src/ILLink.Shared:TypeSystemProxy/WellKnownType.cs",
     ],
-    compiler_options = ["/unsafe"],
+    compiler_options = ["/unsafe", "/warnaserror+:NU1605"],
     resources = [":SharedStringsResources"],
     resource_logical_names = {
         "ILLink.Shared.SharedStrings.resources": "ILLink.Shared.SharedStrings.resources",
     },
+    additionalfiles = [
+        "//src/tools/illink/src/ILLink.Shared:SharedStrings.resx",
+    ],
     deps = [
         "//src/coreclr/tools/aot/ILCompiler.DependencyAnalysisFramework",
         "//src/coreclr/tools/aot/ILCompiler.MetadataTransform",
         "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//microsoft.diasymreader",
     ],
     target_frameworks = ["net10.0"],
+    nowarn = ["1591", "CA1859", "CA1866", "CA1867"],
+    extra_editorconfig_content = "\n".join([
+        "dotnet_diagnostic.IDE0073.severity = none",
+        "dotnet_diagnostic.SA1400.severity = none",
+        "dotnet_diagnostic.SYSLIB1054.severity = none",
+    ]),
     visibility = ["//visibility:public"],
+    analyzers = [
+        "//:source_build_analyzers",
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+        "//:staticcs_analyzers",
+    ],
+    msbuild_analyzer_config = "source",
 )

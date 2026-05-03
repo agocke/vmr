@@ -22,4 +22,10 @@ export DOTNET_ROOT="$DOTNET_DIR"
 RESOLVED_DIR="$(dirname "$(readlink -f "$ENTRY_DLL")")"
 cd "$RESOLVED_DIR"
 
+# Constrain the OS thread stack to ~1.5 MB to match Windows defaults.
+# Roslyn tests assume a Windows-sized stack (~1 MB reserve); on Linux/macOS the
+# OS default is 8 MB, which lets the parser recurse deep enough to defeat the
+# StackGuard tests (TooDeepObjectInitializer*) when Roslyn is built optimized.
+ulimit -s 1536 2>/dev/null || true
+
 "$DOTNET" exec "$XUNIT_CONSOLE" "$ENTRY_DLL" -nologo "$@"

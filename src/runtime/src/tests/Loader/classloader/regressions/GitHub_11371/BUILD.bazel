@@ -1,0 +1,6 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "Negative_ByRefLikeType",
+    srcs = ["Negative_ByRefLikeType.il"],
+)

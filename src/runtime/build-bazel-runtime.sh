@@ -93,7 +93,7 @@ if [[ -n "$config" ]]; then
     clr_config="${clr_config:-$config}"
     libs_config="${libs_config:-$config}"
 fi
-clr_config="${clr_config:-debug}"
+clr_config="${clr_config:-checked}"
 libs_config="${libs_config:-debug}"
 
 # Validate config values
@@ -122,7 +122,7 @@ if [[ "$clr_config" == "release" && "$libs_config" == "release" ]]; then
     bazel_config_args=(--config=release)
 else
     bazel_config_args=()
-    [[ "$clr_config" != "debug" ]] && bazel_config_args+=(--config=clr_${clr_config})
+    [[ "$clr_config" != "checked" ]] && bazel_config_args+=(--config=clr_${clr_config})
     [[ "$libs_config" != "debug" ]] && bazel_config_args+=(--config=libs_${libs_config})
 fi
 

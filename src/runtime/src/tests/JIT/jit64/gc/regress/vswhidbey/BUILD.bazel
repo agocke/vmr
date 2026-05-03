@@ -13,4 +13,5 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )

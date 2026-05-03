@@ -1,10 +1,16 @@
-load("//:defs.bzl", "gen_resx_source")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
 load("//src/tests:live_test.bzl", "library_test")
 
 gen_resx_source(
     name = "gen_resx",
     out = "SR.g.cs",
-    assembly_name = "System.Console",
+    assembly_name = "System.Console.Tests",
+    resx_file = "//src/libraries/System.Console:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Console.Tests.SR.resources",
     resx_file = "//src/libraries/System.Console:src/Resources/Strings.resx",
 )
 
@@ -26,11 +32,15 @@ genrule(
 
 library_test(
     name = "System.Console.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.Console.Tests.SR.resources": "FxResources.System.Console.Tests.SR.resources"},
     srcs = glob(
         ["**/*.cs"],
         exclude = [
             # Windows-only
             "ConsoleEncoding.Windows.cs",
+            # Manual interactive tests — not in automated test project
+            "ManualTests/**",
         ],
     ) + [
         "//src/libraries/System.Console:src/System/TermInfo.WellKnownStrings.cs",
@@ -74,12 +84,9 @@ library_test(
         "@paket.main//xunit.abstractions",
         "@paket.main//xunit.extensibility.core",
     ],
+    additionalfiles = ["//src/libraries/System.Console:src/Resources/Strings.resx"],
     allow_unsafe_blocks = True,
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
     data = [":ncurses_xterm", ":ncurses_screen256color"],
     size = "large",
 )

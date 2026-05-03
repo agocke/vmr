@@ -6,7 +6,6 @@ netcoreapp_ref_assembly(
         "ref/System.ComponentModel.Annotations.cs",
     ],
     deps = [
-        "//src/libraries:ref_System.ComponentModel.Primitives",
         "//src/libraries:ref_System.Runtime",
         "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
         "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
@@ -15,12 +14,15 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.ComponentModel.Annotations",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = glob(["src/System/**/*.cs"]) + [
         # Common sources
         "//src/libraries/Common:src/System/NotImplemented.cs",
         "//src/libraries/Common:src/System/Obsoletions.cs",
     ],
     resx_file = "src/Resources/Strings.resx",
+    include_default_values = True,
     deps = [
         "//src/libraries:ref_System.ComponentModel.Primitives",
         "//src/libraries:ref_System.Runtime",

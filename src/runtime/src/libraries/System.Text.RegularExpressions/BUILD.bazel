@@ -1,19 +1,14 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
-load("//:defs.bzl", "csharp_library", "gen_resx_source")
+load("//:defs.bzl", "MSFT_SNK", "csharp_library")
 
 exports_files([
     "ref/System.Text.RegularExpressions.cs",
-])
-
-gen_resx_source(
-    name = "gen_resx_RegexGenerator",
-    out = "RegexGenerator/SR.g.cs",
-    assembly_name = "System.Text.RegularExpressions.Generator",
-    resx_file = "gen/Resources/Strings.resx",
-)
+] + glob(["src/**/*.cs"]) + glob(["src/**/*.resx"]))
 
 csharp_library(
     name = "RegexGenerator",
+    keyfile = MSFT_SNK,
+    compiler_options = ["/publicsign+"],
     out = "System.Text.RegularExpressions.Generator",
     srcs = [
         "gen/RegexGenerator.cs",
@@ -23,7 +18,6 @@ csharp_library(
         "gen/UpgradeToGeneratedRegexAnalyzer.cs",
         "gen/UpgradeToGeneratedRegexCodeFixer.cs",
         "gen/Stubs.cs",
-        ":gen_resx_RegexGenerator",
 
         # Common Roslyn helpers
         "//src/libraries/Common:src/Roslyn/DiagnosticDescriptorHelper.cs",
@@ -56,10 +50,11 @@ csharp_library(
         "src/System/Text/RegularExpressions/RegexTreeAnalyzer.cs",
         "src/System/Collections/HashtableExtensions.cs",
     ],
+    resx_file = "gen/Resources/Strings.resx",
     target_frameworks = ["netstandard2.0"],
     langversion = "preview",
     cls_compliant = False,
-    nullable = "annotations",
+    nullable = "enable",
     allow_unsafe_blocks = True,
     deps = [
         "@paket.main//microsoft.codeanalysis.common",
@@ -67,15 +62,40 @@ csharp_library(
         "@paket.main//microsoft.codeanalysis.workspaces.common",
         "@paket.main//microsoft.codeanalysis.csharp.workspaces",
         "@paket.main//system.composition.attributedmodel",
+        "@paket.main//system.composition.convention",
+        "@paket.main//system.composition.hosting",
+        "@paket.main//system.composition.runtime",
+        "@paket.main//system.composition.typedparts",
         "@paket.main//system.collections.immutable",
         "@paket.main//system.memory",
         "@paket.main//system.buffers",
+        "@paket.main//system.io.pipelines",
+        "@paket.illink//system.numerics.vectors",
+        "@paket.main//system.reflection.metadata",
         "@paket.main//system.runtime.compilerservices.unsafe",
+        "@paket.main//system.threading.channels",
+        "@paket.illink//system.text.encoding.codepages",
+        "@paket.illink//system.threading.tasks.extensions",
     ],
+    analyzers = [
+        "//:source_build_analyzers",
+    ],
+    additionalfiles = glob(["gen/Resources/*.resx"]),
+    msbuild_analyzer_config = "source",
+    include_syslib_warnaserror = False,
+    extra_editorconfig_content = "dotnet_diagnostic.RS1036.severity = none",
     nowarn = [
         "CS0436",
         "CS0649",
         "CA1872",
+        "CA1510",
+        "CA1511",
+        "CA1512",
+        "CA1513",
+        "CA1845",
+        "CA1846",
+        "CA1847",
+        "nullable",
     ],
     visibility = ["//visibility:public"],
 )
@@ -93,6 +113,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Text.RegularExpressions",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     srcs = [
         # Core types
         "src/System/Collections/HashtableExtensions.cs",

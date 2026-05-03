@@ -1,0 +1,20 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Bmi2_r",
+    srcs = [
+        "Program.Bmi2.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "Bmi2_ro",
+    srcs = [
+        "Program.Bmi2.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+    optimize = True,
+    tags = ["manual"],  # Needs additional deps not yet available
+)

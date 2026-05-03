@@ -1,0 +1,14 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "InvalidOperations",
+    srcs = [
+        "ManagedPointers.cs",
+        "Arrays.cs",
+    ],
+    optimize = False,  # csproj: "Make sure that invalid operations are not optimized out by Roslyn"
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+)

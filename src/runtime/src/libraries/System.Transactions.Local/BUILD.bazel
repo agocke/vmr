@@ -1,3 +1,4 @@
+load("//:defs.bzl", "OPEN_SNK")
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
 
 netcoreapp_ref_assembly(
@@ -13,6 +14,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Transactions.Local",
+    keyfile = OPEN_SNK,
+    com_interface_generator = True,
     srcs = glob(
         ["src/System/**/*.cs"],
         exclude = [
@@ -28,7 +31,7 @@ netcoreapp_impl_assembly(
     facade_contract_assembly = ":ref_System.Transactions.Local",
     resx_file = "src/Resources/Strings.resx",
     allow_unsafe_blocks = True,
-    nowarn = ["CA1805", "IDE0059", "CS3016"],
+    nowarn = ["CA1805", "CS1591", "CS3016", "IDE0059"],
     deps = [
         "//src/libraries/System.Collections:ref_System.Collections",
         "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",

@@ -4,8 +4,18 @@ exports_files([
     "ref/Microsoft.CSharp.dll",
 ])
 
+# MSBuild embeds ILLink.Descriptors.Shared.xml with the logical name
+# ILLink.Descriptors.xml.  Copy to match so the /resource: flag is identical.
+genrule(
+    name = "illink_descriptors_xml",
+    srcs = ["src/ILLink/ILLink.Descriptors.Shared.xml"],
+    outs = ["ILLink.Descriptors.xml"],
+    cmd = "cp $< $@",
+)
+
 netcoreapp_impl_assembly(
     name = "impl_Microsoft.CSharp",
+    com_interface_generator = True,
     srcs = [
         # Common files
         "//src/libraries/Common:src/System/Obsoletions.cs",
@@ -192,7 +202,9 @@ netcoreapp_impl_assembly(
     defines = [
         "LEGACY_GETRESOURCESTRING_USER",
     ],
-    nowarn = ["CA1859", "nullable"],
+    nowarn = ["CA1859", "nullable", "CS1591"],
+    resources = [":illink_descriptors_xml"],
+    resource_logical_names = {"ILLink.Descriptors.xml": "ILLink.Descriptors.xml"},
 )
 
 ref_impl_pair(

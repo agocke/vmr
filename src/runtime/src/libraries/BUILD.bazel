@@ -5,6 +5,7 @@ load(
 )
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load("//:defs.bzl", "SILVERLIGHT_SNK")
 load("defs.bzl",
     "netcoreapp_ref_assembly",
     "netcoreapp_impl_assembly",
@@ -14,7 +15,16 @@ load("defs.bzl",
 
 nowarn = [ "CS8500", "CS8969" ]
 
-exports_files([])
+exports_files([
+    "Microsoft.VisualBasic.Core/ref/Microsoft.VisualBasic.Core.cs",
+    "System.Diagnostics.Process/src/Resources/Strings.resx",
+    "System.Private.Uri/src/Resources/Strings.resx",
+    "System.Private.Uri/src/System/IriHelper.cs",
+    "System.Private.Uri/src/System/PercentEncodingHelper.cs",
+    "System.Private.Uri/src/System/UriEnumTypes.cs",
+    "System.Private.Uri/src/System/UriHelper.cs",
+    "System.Private.Uri/src/System/ValueStringBuilderExtensions.cs",
+])
 
 # ── Minimal impl assemblies for JIT tests ─────────────────────────────
 # This subset is used by Core_Root to reduce cache invalidation.
@@ -67,11 +77,15 @@ ref_assembly_nowarns = [
 ]
 
 filegroup(
-    name = "impl_netcoreapp",
+    # Core set of impl assemblies, excluding impl_System.Runtime.
+    # impl_System.Runtime is a type-forwarding assembly (936 ExportedTypes →
+    # CoreLib).  ILLink follows those forwards and rewrites AssemblyRefs from
+    # "System.Runtime" to "System.Private.CoreLib".  Consumers that need
+    # System.Runtime should compose with it explicitly (see impl_netcoreapp).
+    name = "impl_netcoreapp_base",
     srcs = [
         # ── Core ──
         "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
-        ":impl_System.Runtime",
         ":impl_System.Private.Uri",
         "//src/libraries/shims/mscorlib:impl_mscorlib",
         ":impl_Microsoft.Win32.Primitives",
@@ -114,6 +128,17 @@ filegroup(
         # ── Per-library impl assemblies ──
         "//src/libraries/Microsoft.CSharp:impl_Microsoft.CSharp",
         "//src/libraries/Microsoft.Extensions.Primitives:impl_Microsoft.Extensions.Primitives",
+        "//src/libraries/Microsoft.Extensions.Caching.Abstractions:impl_Microsoft.Extensions.Caching.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration:impl_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:impl_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection:impl_Microsoft.Extensions.DependencyInjection",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:impl_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:impl_Microsoft.Extensions.Diagnostics.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:impl_Microsoft.Extensions.FileProviders.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileSystemGlobbing:impl_Microsoft.Extensions.FileSystemGlobbing",
+        "//src/libraries/Microsoft.Extensions.Logging:impl_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:impl_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:impl_Microsoft.Extensions.Options",
         "//src/libraries/Microsoft.Win32.Registry:impl_Microsoft.Win32.Registry",
         ":impl_System.ComponentModel.Primitives",
         "//src/libraries/System.CodeDom:impl_System.CodeDom",
@@ -242,6 +267,39 @@ filegroup(
         "//src/libraries/shims/System.Data.DataSetExtensions:impl_System.Data.DataSetExtensions",
         "//src/libraries/shims/System.Net.ServicePoint:impl_System.Net.ServicePoint",
         "//src/libraries/shims/netstandard:impl_netstandard",
+
+        # ── NetFxReference shims (legacy .NET Framework type-forwarders) ──
+        "//src/libraries/shims/Microsoft.VisualBasic:impl_Microsoft.VisualBasic",
+        "//src/libraries/shims/System:impl_System",
+        "//src/libraries/shims/System.ComponentModel.DataAnnotations:impl_System.ComponentModel.DataAnnotations",
+        "//src/libraries/shims/System.Configuration:impl_System.Configuration",
+        "//src/libraries/shims/System.Core:impl_System.Core",
+        "//src/libraries/shims/System.Data:impl_System.Data",
+        "//src/libraries/shims/System.Drawing:impl_System.Drawing",
+        "//src/libraries/shims/System.IO.Compression.FileSystem:impl_System.IO.Compression.FileSystem",
+        "//src/libraries/shims/System.Net:impl_System.Net",
+        "//src/libraries/shims/System.Numerics:impl_System.Numerics",
+        "//src/libraries/shims/System.Runtime.Serialization:impl_System.Runtime.Serialization",
+        "//src/libraries/shims/System.Security:impl_System.Security",
+        "//src/libraries/shims/System.ServiceModel.Web:impl_System.ServiceModel.Web",
+        "//src/libraries/shims/System.ServiceProcess:impl_System.ServiceProcess",
+        "//src/libraries/shims/System.Transactions:impl_System.Transactions",
+        "//src/libraries/shims/System.Web:impl_System.Web",
+        "//src/libraries/shims/System.Windows:impl_System.Windows",
+        "//src/libraries/shims/System.Xml:impl_System.Xml",
+        "//src/libraries/shims/System.Xml.Linq:impl_System.Xml.Linq",
+        "//src/libraries/shims/System.Xml.Serialization:impl_System.Xml.Serialization",
+        "//src/libraries/shims/WindowsBase:impl_WindowsBase",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Full impl_netcoreapp = base + impl_System.Runtime.
+filegroup(
+    name = "impl_netcoreapp",
+    srcs = [
+        ":impl_netcoreapp_base",
+        ":impl_System.Runtime",
     ],
     visibility = ["//visibility:public"],
 )
@@ -251,55 +309,6 @@ ref_impl_pair(
     ref = ":ref_System.Runtime",
     lib = ":impl_System.Runtime",
     visibility = ["//visibility:public"],
-)
-
-netcoreapp_ref_assembly(
-    name = "ref_System.Private.CoreLib",
-    srcs = [
-        "Microsoft.Win32.Primitives/ref/Microsoft.Win32.Primitives.cs",
-        "//src/libraries/System.Diagnostics.Contracts:ref/System.Diagnostics.Contracts.cs",
-        "//src/libraries/System.Diagnostics.Tracing:ref/System.Diagnostics.Tracing.cs",
-        "//src/libraries/System.Diagnostics.Tracing:ref/System.Diagnostics.Tracing.Counters.cs",
-        "//src/libraries/System.Numerics.Vectors:ref/System.Numerics.Vectors.cs",
-        "//src/libraries/System.Reflection.Emit.ILGeneration:ref/System.Reflection.Emit.ILGeneration.cs",
-        "//src/libraries/System.Reflection.Emit.Lightweight:ref/System.Reflection.Emit.Lightweight.cs",
-        "//src/libraries/System.Reflection.Emit:ref/System.Reflection.Emit.cs",
-        "//src/libraries/System.Reflection.Primitives:ref/System.Reflection.Primitives.cs",
-        "//src/libraries/System.Runtime.Intrinsics:ref/System.Runtime.Intrinsics.cs",
-        "//src/libraries/System.Runtime.Loader:ref/System.Runtime.Loader.cs",
-        "System.Runtime/ref/System.Runtime.cs",
-        "//src/libraries/System.Text.Encoding.Extensions:ref/System.Text.Encoding.Extensions.cs",
-        "//src/libraries/System.Threading.Overlapped:ref/System.Threading.Overlapped.cs",
-        "//src/libraries/System.Threading.ThreadPool:ref/System.Threading.ThreadPool.cs",
-        "//src/libraries/System.Threading.Thread:ref/System.Threading.Thread.cs",
-
-        # contracts where types were partially moved to CoreLib, these are used both here and in the contract assemblies and are generated -->
-        "//src/libraries/System.Collections.Concurrent:ref/System.Collections.Concurrent.cs",
-        "//src/libraries/System.Collections:ref/System.Collections.cs",
-        "//src/libraries/System.Diagnostics.StackTrace:ref/System.Diagnostics.StackTrace.cs",
-        "//src/libraries/System.Memory:ref/System.Memory.cs",
-        "//src/libraries/System.Runtime.InteropServices:ref/System.Runtime.InteropServices.cs",
-        "//src/libraries/System.Threading:ref/System.Threading.cs",
-
-        # types only exposed through CoreLib, this is manually maintained -->
-        "//src/libraries/System.Private.CoreLib:ref/System.Private.CoreLib.ExtraApis.cs",
-
-        # types not exposed in contracts but forwarded from the mscorlib shim, this is manually maintained -->
-        "//src/libraries/System.Private.CoreLib:ref/System.Private.CoreLib.ManualShimTypeForwards.cs",
-    ],
-    allow_unsafe_blocks = True,
-    defines = ["BUILDING_CORELIB_REFERENCE"],
-    compiler_options = [
-        "/runtimemetadataversion:v4.0.30319",
-        "/checksumalgorithm:SHA256",
-        "/publicsign+",
-    ],
-    nowarn = nowarn + ref_assembly_nowarns + [
-        # disable warnings about obsolete APIs,
-        # Remove warning disable when nullable attributes are respected,
-        # Type has no accessible constructors which use only CLS-compliant types
-        "CS0809", "CS0618", "CS8614", "CS3015"
-    ],
 )
 
 netcoreapp_ref_assembly(
@@ -326,6 +335,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_Microsoft.Win32.Primitives",
+    include_editorconfig = False,
+    nowarn = ["CS1591"],
     deps = [
         "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
     ],
@@ -373,6 +384,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Private.Uri",
+    nowarn = ["CS1591"],
     srcs = [
         "//src/libraries/Common:src/System/HexConverter.cs",
         "//src/libraries/Common:src/System/Obsoletions.cs",
@@ -403,7 +415,7 @@ netcoreapp_impl_assembly(
         "System.Private.Uri/src/System/ValueStringBuilderExtensions.cs",
     ],
     deps = [
-        ":ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
     ],
     allow_unsafe_blocks = True,
     include_neutral_resources_language = True,
@@ -412,11 +424,12 @@ netcoreapp_impl_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime",
+    nowarn = ["CS1591"],
     srcs = [
         "System.Runtime/src/System.Runtime.Typeforwards.cs",
     ],
     deps = [
-        ":ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
         ":impl_System.Private.Uri",
     ],
     partial_facade = True,
@@ -430,12 +443,10 @@ netcoreapp_impl_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Diagnostics.Process",
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     os_targeted = True,
     defines = ["FEATURE_REGISTRY"],
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     srcs = [
         "System.Diagnostics.Process/src/Microsoft/Win32/SafeHandles/SafeProcessHandle.cs",
         "System.Diagnostics.Process/src/System/Collections/Specialized/DictionaryWrapper.cs",
@@ -567,6 +578,8 @@ netcoreapp_impl_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.ComponentModel.Primitives",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "System.ComponentModel.Primitives/src/System/ComponentModel/ISynchronizeInvoke.cs",
         "System.ComponentModel.Primitives/src/System/ComponentModel/BrowsableAttribute.cs",
@@ -610,6 +623,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
     resx_file = "System.ComponentModel.Primitives/src/Resources/Strings.resx",
+    include_default_values = True,
 )
 
 # ── Ref assemblies for TestUtilities dependencies ────────────────────

@@ -33,8 +33,17 @@ public sealed class ManagedCompilationRecord
     public Dictionary<string, string> SourceFileOriginalPaths { get; init; } = [];
     public required SortedSet<string> Defines { get; init; }
     public required SortedSet<string> References { get; init; }
-    public required SortedSet<string> NoWarn { get; init; }
+    /// <summary>
+    /// Maps reference assembly name → resolved full path on disk.
+    /// Used to distinguish ref vs impl assemblies in MSBuild records.
+    /// </summary>
+    public Dictionary<string, string> ReferencePaths { get; init; } = [];
     public required SortedSet<string> Analyzers { get; init; }
+    /// <summary>
+    /// Maps analyzer assembly name → resolved full path on disk.
+    /// Preserved for diagnostic purposes; comparison uses name-only.
+    /// </summary>
+    public Dictionary<string, string> AnalyzerPaths { get; init; } = [];
     public required SortedSet<string> Flags { get; init; }
     public string TargetType { get; init; } = "library";
     public string LangVersion { get; init; } = "";
@@ -52,4 +61,9 @@ public sealed class ManagedCompilationRecord
     /// Empty for MSBuild records.
     /// </summary>
     public string TargetLabel { get; init; } = "";
+    /// <summary>
+    /// The target framework moniker extracted from the output path
+    /// (e.g. "net10.0", "net10.0-linux", "netstandard2.0").
+    /// </summary>
+    public string TargetFramework { get; set; } = "";
 }

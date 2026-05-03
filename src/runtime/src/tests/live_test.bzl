@@ -1,4 +1,4 @@
-load("//:defs.bzl", "NETCOREAPP_CURRENT", "csharp_library")
+load("//:defs.bzl", "DEFAULT_RULESET", "NETCOREAPP_CURRENT", "csharp_library")
 load("@bazel_skylib//lib:dicts.bzl", "dicts")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@rules_dotnet//dotnet/private:providers.bzl",
@@ -18,9 +18,10 @@ load("@rules_dotnet//dotnet/private:common.bzl",
     "to_rlocation_path",)
 load("@rules_dotnet//dotnet/private/macros:register_tfms.bzl", "get_tfm_value")
 load("//src/libraries:defs.bzl", "LIVE_REFPACK_DEPS", "CORE_ROOT_REFPACK_DEPS")
-load("//src/tests:defs.bzl", "COMMON_ATTRS", "build_binary", "create_launcher", "COPY_EXECUTION_REQUIREMENTS")
+load("//src/tests:defs.bzl", "COMMON_ATTRS", "build_binary", "create_launcher")
+load("//eng/bazel:version.bzl", "PRODUCT_VERSION")
 
-# Match src/tests/Directory.Build.props NoWarn
+# Match src/tests/Directory.Build.props NoWarn (for JIT/coreclr tests under src/tests/)
 _TEST_NOWARN = [
     "CS0078", "CS0162", "CS0164", "CS0168", "CS0169", "CS0219",
     "CS0251", "CS0252", "CS0414", "CS0429", "CS0618", "CS0642",
@@ -29,6 +30,29 @@ _TEST_NOWARN = [
     "CS3016", "CS8981",
 ]
 
+# NoWarn for library tests under src/libraries/. These inherit from:
+# - Directory.Build.props global: CS8500, CS8969, IDE0060, IDE0100
+# - Arcade SDK: CS1701, CS1702, CS1705, NU5105
+# - Directory.Build.props (IsTestProject): SYSLIB0011, SYSLIB0050, SYSLIB0051, IL2121
+_LIBRARY_TEST_NOWARN = [
+    # Directory.Build.props global NoWarn
+    "CS8500",
+    "CS8969",
+    "IDE0060",
+    "IDE0100",
+    # Arcade SDK global NoWarn
+    "CS1701",
+    "CS1702",
+    "CS1705",
+    "NU5105",
+    # Directory.Build.props IsTestProject NoWarn
+    "SYSLIB0011",
+    "SYSLIB0050",
+    "SYSLIB0051",
+    "IL2121",
+]
+
+# Directory.Build.targets NoWarn for projects that multi-target net4x/netstandard:
 # Label for the Roslyn compiler server persistent worker binary.
 _SHARED_COMPILATION_WORKER = "@rules_dotnet//dotnet/private/tools/compiler_worker"
 
@@ -137,6 +161,7 @@ def _compile_csharp_library(ctx, tfm):
         is_language_specific_analyzer = False,
         analyzer_configs = ctx.files.analyzer_configs,
         compiler_options = ctx.attr.compiler_options,
+        pathmap = {},
         override_debug = False,
         ref_assembly = False,
         is_windows = ctx.target_platform_has_constraint(ctx.attr._windows_constraint[platform_common.ConstraintValueInfo]),
@@ -155,19 +180,13 @@ def _xunit_library_test_impl(ctx):
     dll = runtime_provider.libs[0]
     additional_runfiles = list(runtime_provider.pdbs)
 
-    # Copy the xunit console runner files to the same output directory as the test DLL.
+    # Symlink the xunit console runner files to the same output directory as the test DLL.
     xunit_console_dll = None
     for f in ctx.files._xunit_runner:
         dst = ctx.actions.declare_file("%s/%s/%s" % (ctx.label.name, tfm, f.basename))
-        ctx.actions.run_shell(
-            inputs = [f],
-            outputs = [dst],
-            command = "cp -f \"$1\" \"$2\"",
-            arguments = [f.path, dst.path],
-            mnemonic = "CopyFile",
-            progress_message = "Copying %s" % f.basename,
-            use_default_shell_env = True,
-            execution_requirements = COPY_EXECUTION_REQUIREMENTS,
+        ctx.actions.symlink(
+            output = dst,
+            target_file = f,
         )
         additional_runfiles.append(dst)
         if f.basename == "xunit.console.dll":
@@ -176,49 +195,37 @@ def _xunit_library_test_impl(ctx):
     if xunit_console_dll == None:
         fail("xunit.console.dll not found in xunit runner files")
 
-    # Copy xunit.runner.json next to the test DLL to match MSBuild behavior.
+    # Symlink xunit.runner.json next to the test DLL to match MSBuild behavior.
     # Key settings: preEnumerateTheories=false avoids expensive upfront theory
     # enumeration, and diagnosticMessages=true enables long-running test warnings.
     xunit_runner_json = ctx.file._xunit_runner_config
     dst = ctx.actions.declare_file("%s/%s/%s" % (ctx.label.name, tfm, xunit_runner_json.basename))
-    ctx.actions.run_shell(
-        inputs = [xunit_runner_json],
-        outputs = [dst],
-        command = "cp -f \"$1\" \"$2\"",
-        arguments = [xunit_runner_json.path, dst.path],
-        mnemonic = "CopyFile",
-        progress_message = "Copying %s" % xunit_runner_json.basename,
-        use_default_shell_env = True,
-        execution_requirements = COPY_EXECUTION_REQUIREMENTS,
+    ctx.actions.symlink(
+        output = dst,
+        target_file = xunit_runner_json,
     )
     additional_runfiles.append(dst)
 
-    # Copy non-framework transitive runtime deps to the output directory.
+    # Symlink non-framework transitive runtime deps to the output directory.
     # Framework assemblies are already in the testhost via Core_Root, so only
-    # test helpers (TestUtilities, RemoteExecutor, etc.) need to be copied.
+    # test helpers (TestUtilities, RemoteExecutor, etc.) need to be symlinked.
     # Deduplicate by basename to avoid conflicts when NuGet packages provide
     # DLLs for multiple TFMs (e.g., net8.0 + netstandard2.0).
     framework_basenames = {f.basename: True for f in ctx.files._framework_assemblies}
-    copied_basenames = {}
+    symlinked_basenames = {}
     transitive_runtime_deps = runtime_provider.deps.to_list()
     for dep in transitive_runtime_deps:
         for lib in dep.libs:
-            if lib.extension == "dll" and lib.basename not in framework_basenames and lib.basename not in copied_basenames:
-                copied_basenames[lib.basename] = True
+            if lib.extension == "dll" and lib.basename not in framework_basenames and lib.basename not in symlinked_basenames:
+                symlinked_basenames[lib.basename] = True
                 dst = ctx.actions.declare_file("%s/%s/%s" % (ctx.label.name, tfm, lib.basename))
-                ctx.actions.run_shell(
-                    inputs = [lib],
-                    outputs = [dst],
-                    command = "cp -f \"$1\" \"$2\"",
-                    arguments = [lib.path, dst.path],
-                    mnemonic = "CopyFile",
-                    progress_message = "Copying files",
-                    use_default_shell_env = True,
-                    execution_requirements = COPY_EXECUTION_REQUIREMENTS,
+                ctx.actions.symlink(
+                    output = dst,
+                    target_file = lib,
                 )
                 additional_runfiles.append(dst)
 
-    # Copy data files to the output directory next to the test DLL.
+    # Symlink data files to the output directory next to the test DLL.
     # Preserves directory structure: for local files, paths are relative to
     # the package; for NuGet content files, the contentFiles/any/any/ prefix
     # is stripped to get the expected relative path.
@@ -242,15 +249,9 @@ def _xunit_library_test_impl(ctx):
             # Fallback: just use basename
             rel = f.basename
         dst = ctx.actions.declare_file("%s/%s/%s" % (ctx.label.name, tfm, rel))
-        ctx.actions.run_shell(
-            inputs = [f],
-            outputs = [dst],
-            command = "cp -f \"$1\" \"$2\" && chmod u+rw \"$2\"",
-            arguments = [f.path, dst.path],
-            mnemonic = "CopyFile",
-            progress_message = "Copying %s" % rel,
-            use_default_shell_env = True,
-            execution_requirements = COPY_EXECUTION_REQUIREMENTS,
+        ctx.actions.symlink(
+            output = dst,
+            target_file = f,
         )
         additional_runfiles.append(dst)
 
@@ -308,6 +309,12 @@ def _generate_runtimeconfigs(ctx, dll, tfm, sdk_version, additional_runfiles):
        Microsoft.DotNet.RemoteExecutor.dll" so it resolves libhostpolicy.so from
        the testhost's shared framework directory.
     """
+
+    # Build additional configProperties from the runtimeconfig_properties attribute.
+    extra_props = ""
+    for key, value in ctx.attr.runtimeconfig_properties.items():
+        extra_props += ',\n      "{}": {}'.format(key, value)
+
     runtimeconfig_content = """\
 {{
   "runtimeOptions": {{
@@ -317,11 +324,11 @@ def _generate_runtimeconfigs(ctx, dll, tfm, sdk_version, additional_runfiles):
       "version": "{version}"
     }},
     "configProperties": {{
-      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false
+      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false{extra_props}
     }}
   }}
 }}
-""".format(tfm = tfm, version = sdk_version)
+""".format(tfm = tfm, version = sdk_version, extra_props = extra_props)
 
     # Always generate a runtimeconfig for the test assembly itself.
     test_name = dll.basename.replace(".dll", "")
@@ -578,6 +585,11 @@ _xunit_library_test = rule(
                       "Off by default to avoid the copy overhead.",
                 default = False,
             ),
+            "runtimeconfig_properties": attr.string_dict(
+                doc = "Additional configProperties for runtimeconfig.json. " +
+                      "Keys are property names, values are JSON literals (e.g. 'true', '\"string\"').",
+                default = {},
+            ),
         }),
     test = True,
     toolchains = [
@@ -593,21 +605,123 @@ def library_test(
     nowarn = [],
     size = "medium",
     use_shared_compilation = True,
+    replace_library_nowarns = None,
+    additionalfiles = [],
+    analyzer_configs = [],
+    compiler_options = [],
+    features_strict = True,
+    features_nullable_public_only = True,
+    os_targeted = False,
     **kwargs
 ):
     """Test macro for library tests that compiles as library and runs via xunit.console.dll."""
     deps = deps + LIVE_REFPACK_DEPS
+
+    # Assemblies whose MSBuild TFM includes an OS suffix receive OS-specific
+    # implicit defines.  Match that in Bazel via select().
+    # os_targeted can be True/"linux" for net10.0-linux, or "unix" for net10.0-unix.
+    defines = kwargs.pop("defines", [])
+    if os_targeted == "unix" or os_targeted == "Unix":
+        defines = defines + select({
+            "@platforms//os:linux": ["UNIX", "UNIX1_0"],
+            "@platforms//os:macos": ["UNIX", "UNIX1_0"],
+            "//conditions:default": [],
+        })
+    elif os_targeted:
+        defines = defines + select({
+            "@platforms//os:linux": ["LINUX", "LINUX1_0"],
+            "@platforms//os:macos": ["OSX", "OSX1_0"],
+            "//conditions:default": [],
+        })
+    if defines:
+        kwargs["defines"] = defines
     # Match MSBuild default: src/libraries/Directory.Build.props sets
     # <Nullable>annotations</Nullable> for test projects.
     nullable = kwargs.pop("nullable", "annotations")
+    if replace_library_nowarns != None:
+        # Allow overriding the standard _LIBRARY_TEST_NOWARN set (e.g. when MSBuild
+        # csproj <NoWarn> replaces rather than appends to inherited warnings).
+        all_nowarn = nowarn + replace_library_nowarns
+    else:
+        all_nowarn = nowarn + _LIBRARY_TEST_NOWARN
+
+    # ── Analyzer infrastructure (matching MSBuild's Analyzers.targets for tests) ──
+    # Generate an empty disabledAnalyzers.config
+    _disabled_analyzers_target = "disabled_analyzers_" + name
+    native.genrule(
+        name = _disabled_analyzers_target,
+        outs = [name + "/disabledAnalyzers.config"],
+        cmd = ": > \"$@\"",
+    )
+
+    # Generate per-test GeneratedMSBuildEditorConfig.editorconfig
+    _editorconfig_target = "editorconfig_" + name
+    native.genrule(
+        name = _editorconfig_target,
+        outs = [name + "/" + name + ".GeneratedMSBuildEditorConfig.editorconfig"],
+        cmd = """cat >"$@" <<'EOF'
+is_global = true
+build_property.InformationalVersion = {version}
+build_property._SupportedPlatformList = Linux,macOS,Windows,Android,iOS,tvOS,macCatalyst,browser,wasi,illumos,Solaris,Haiku,Unix,FreeBSD
+EOF""".format(version = PRODUCT_VERSION),
+    )
+
+    # Merge additionalfiles with generated disabledAnalyzers.config
+    _additionalfiles = additionalfiles + [":" + _disabled_analyzers_target]
+
+    # Test analyzer configs: .editorconfig + test globalconfig + analysis levels + per-test editorconfig
+    _analyzer_configs = analyzer_configs + [
+        "//:test_analyzer_configs",
+        ":" + _editorconfig_target,
+    ]
+
+    # Test analyzers: source build analyzers + interop generators.
+    # MSBuild adds these via eng/Analyzers.targets, eng/generators.targets,
+    # and eng/testing/xunit/xunit.props.
+    _analyzers = analyzers + [
+        "//:source_build_analyzers",
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Runtime.InteropServices.JavaScript:JSImportGenerator",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+        "//:xunit_test_analyzers",
+    ]
+
+    # Match MSBuild test compiler options
+    compiler_options = compiler_options + [
+        "/checksumalgorithm:SHA256",
+        "/features:InterceptorsNamespaces=;Microsoft.Extensions.Validation.Generated",
+        "/noconfig",
+        "/warn:9999",
+        "/ruleset:eng/Default.ruleset",
+        # MSBuild SDK defaults that csc always receives from the .NET SDK.
+        "/fullpaths",
+        "/errorreport:prompt",
+        "/delaysign-",
+        "/publicsign-",
+    ] + (["/features:strict"] if features_strict else []) + (["/features:nullablePublicOnly"] if features_nullable_public_only else [])
+
     _xunit_library_test(
         name = name,
         deps = deps,
-        analyzers = analyzers,
+        analyzers = _analyzers,
+        additionalfiles = _additionalfiles,
+        analyzer_configs = _analyzer_configs,
+        compiler_options = compiler_options,
+        compile_data = [DEFAULT_RULESET],
         target_frameworks = [NETCOREAPP_CURRENT],
-        nowarn = nowarn + [ "CS1701" ] + _TEST_NOWARN,
+        nowarn = all_nowarn,
         size = size,
         nullable = nullable,
+        # Match MSBuild's LangVersion=preview from Directory.Build.props.
+        langversion = "preview",
+        # Match MSBuild's TreatWarningsAsErrors=true from Directory.Build.props.
+        treat_warnings_as_errors = True,
+        # Match MSBuild's WarningsNotAsErrors from Directory.Build.props
+        # (NuGet audit warnings demoted from errors for non-official builds).
+        warnings_not_as_errors = ["NU1901", "NU1902", "NU1903", "NU1904"],
         use_shared_compilation = use_shared_compilation,
         shared_compilation_worker = _SHARED_COMPILATION_WORKER if use_shared_compilation else None,
         # Match MSBuild: GenerateAssemblyInfo=false (no CLSCompliant attribute),
@@ -622,11 +736,13 @@ def coreclr_test(
     size = "small",
     pri = 0,
     tags = [],
+    flaky = False,
     debug_type = "portable", # TODO: plum through to compiler
-    optimize = False, # TODO: plum through to compiler
+    optimize = True, # Match src/tests/Directory.Build.props Checked configuration default
     compiler_options = [],
     use_shared_compilation = True,
     nullable = "annotations",
+    allow_unsafe_blocks = True,  # Match src/tests/Directory.Build.props global setting
     **kwargs
 ):
     # Build complete deps list for JIT tests:
@@ -665,6 +781,7 @@ def coreclr_test(
         use_shared_compilation = use_shared_compilation,
         nullable = nullable,
         generate_documentation_file = False,
+        allow_unsafe_blocks = allow_unsafe_blocks,
         **kwargs
     )
 
@@ -675,13 +792,16 @@ def coreclr_test(
         analyzers = analyzers,
         size = size,
         tags = tags + ["pri%d" % pri],
-        compiler_options = compiler_options,
+        flaky = flaky,
+        compiler_options = compiler_options + ["/ruleset:eng/Default.ruleset"],
+        compile_data = [DEFAULT_RULESET],
         target_frameworks = [NETCOREAPP_CURRENT],
         nowarn = ["CS1701"] + _TEST_NOWARN,
         use_shared_compilation = use_shared_compilation,
         shared_compilation_worker = _SHARED_COMPILATION_WORKER if use_shared_compilation else None,
         nullable = nullable,
         generate_documentation_file = False,
+        allow_unsafe_blocks = allow_unsafe_blocks,
         **kwargs
     )
 
@@ -738,21 +858,15 @@ def _il_test_impl(ctx):
         executable = ctx.executable.ilasm_exe,
     )
 
-    # Copy runtime DLLs from deps alongside the test DLL
+    # Symlink runtime DLLs from deps alongside the test DLL
     for dep in ctx.attr.deps:
         runtime_info = dep[DotnetAssemblyRuntimeInfo]
         for lib in runtime_info.libs:
             if lib.extension == "dll":
                 dst = ctx.actions.declare_file(lib.basename, sibling = dll)
-                ctx.actions.run_shell(
-                    inputs = [lib],
-                    outputs = [dst],
-                    command = "cp -f \"$1\" \"$2\"",
-                    arguments = [lib.path, dst.path],
-                    mnemonic = "CopyFile",
-                    progress_message = "Copying %s" % lib.basename,
-                    use_default_shell_env = True,
-                    execution_requirements = COPY_EXECUTION_REQUIREMENTS,
+                ctx.actions.symlink(
+                    output = dst,
+                    target_file = lib,
                 )
                 additional_runfiles.append(dst)
 

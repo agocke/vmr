@@ -15,7 +15,7 @@ filegroup(
 # Resource generation for SharedStrings.resx — each consumer includes these targets.
 resgen(
     name = "resgen_shared_strings",
-    out = "SharedStrings.resources",
+    out = "ILLink.Shared.SharedStrings.resources",
     resx_file = "SharedStrings.resx",
     visibility = ["//src/tools/illink:__subpackages__"],
 )

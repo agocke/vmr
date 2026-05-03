@@ -1,4 +1,5 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "ECMA_SNK")
 
 netcoreapp_ref_assembly(
     name = "ref_System.IO.Compression.Brotli",
@@ -13,11 +14,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.Compression.Brotli",
+    nowarn = ["CS1591"],
     os_targeted = "unix",
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     srcs = [
         # Common interop (all platforms)
         "//src/libraries/Common:src/Interop/Interop.Brotli.cs",
@@ -54,6 +52,8 @@ netcoreapp_impl_assembly(
     ],
     resx_file = "src/Resources/Strings.resx",
     supported_os_platforms = ["unix"],
+    keyfile = ECMA_SNK,
+    com_interface_generator = True,
 )
 
 ref_impl_pair(

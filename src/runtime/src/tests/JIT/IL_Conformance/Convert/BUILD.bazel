@@ -11,4 +11,5 @@ coreclr_test(
         "//src/libraries/System.Reflection.Emit.Lightweight:ref_System.Reflection.Emit.Lightweight",
         "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
     ],
+    size = "medium",
 )

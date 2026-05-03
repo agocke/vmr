@@ -1,0 +1,43 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Configuration.UserSecrets.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Configuration.UserSecrets",
+    srcs = [
+        "ref/Microsoft.Extensions.Configuration.UserSecrets.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration.Json:ref_Microsoft.Extensions.Configuration.Json",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Configuration.UserSecrets",
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]),
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration.Json:ref_Microsoft.Extensions.Configuration.Json",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:ref_Microsoft.Extensions.FileProviders.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Physical:ref_Microsoft.Extensions.FileProviders.Physical",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Configuration.UserSecrets",
+    ref = ":ref_Microsoft.Extensions.Configuration.UserSecrets",
+    lib = ":impl_Microsoft.Extensions.Configuration.UserSecrets",
+    visibility = ["//visibility:public"],
+)

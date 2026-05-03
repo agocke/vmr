@@ -1,0 +1,88 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "bigdat",
+    srcs = ["bigdat.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test10",
+    srcs = ["test10.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test11",
+    srcs = ["test11.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test13",
+    srcs = ["test13.il"],
+)
+
+il_coreclr_test(
+    name = "test14",
+    srcs = ["test14.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test15",
+    srcs = ["test15.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test16",
+    srcs = ["test16.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test2",
+    srcs = ["test2.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test21",
+    srcs = ["test21.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test23",
+    srcs = ["test23.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test24",
+    srcs = ["test24.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "test3",
+    srcs = ["test3.il"],
+)
+
+il_coreclr_test(
+    name = "test9",
+    srcs = ["test9.il"],
+    pri = 1,
+    size = "medium",
+)

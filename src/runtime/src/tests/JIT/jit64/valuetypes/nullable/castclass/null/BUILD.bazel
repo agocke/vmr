@@ -1,0 +1,431 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "castclass-null001",
+    srcs = [
+        "castclass-null001.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null002",
+    srcs = [
+        "castclass-null002.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null003",
+    srcs = [
+        "castclass-null003.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null004",
+    srcs = [
+        "castclass-null004.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null005",
+    srcs = [
+        "castclass-null005.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null006",
+    srcs = [
+        "castclass-null006.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null007",
+    srcs = [
+        "castclass-null007.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null008",
+    srcs = [
+        "castclass-null008.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null009",
+    srcs = [
+        "castclass-null009.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null010",
+    srcs = [
+        "castclass-null010.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null011",
+    srcs = [
+        "castclass-null011.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null012",
+    srcs = [
+        "castclass-null012.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null013",
+    srcs = [
+        "castclass-null013.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null014",
+    srcs = [
+        "castclass-null014.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null015",
+    srcs = [
+        "castclass-null015.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null016",
+    srcs = [
+        "castclass-null016.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null017",
+    srcs = [
+        "castclass-null017.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null018",
+    srcs = [
+        "castclass-null018.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null019",
+    srcs = [
+        "castclass-null019.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null020",
+    srcs = [
+        "castclass-null020.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null021",
+    srcs = [
+        "castclass-null021.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null022",
+    srcs = [
+        "castclass-null022.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null023",
+    srcs = [
+        "castclass-null023.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null024",
+    srcs = [
+        "castclass-null024.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null025",
+    srcs = [
+        "castclass-null025.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null026",
+    srcs = [
+        "castclass-null026.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null027",
+    srcs = [
+        "castclass-null027.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null028",
+    srcs = [
+        "castclass-null028.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null029",
+    srcs = [
+        "castclass-null029.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null030",
+    srcs = [
+        "castclass-null030.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null031",
+    srcs = [
+        "castclass-null031.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null032",
+    srcs = [
+        "castclass-null032.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null033",
+    srcs = [
+        "castclass-null033.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null034",
+    srcs = [
+        "castclass-null034.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null037",
+    srcs = [
+        "castclass-null037.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null038",
+    srcs = [
+        "castclass-null038.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null039",
+    srcs = [
+        "castclass-null039.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null040",
+    srcs = [
+        "castclass-null040.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null041",
+    srcs = [
+        "castclass-null041.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null042",
+    srcs = [
+        "castclass-null042.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null043",
+    srcs = [
+        "castclass-null043.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null044",
+    srcs = [
+        "castclass-null044.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-null045",
+    srcs = [
+        "castclass-null045.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)

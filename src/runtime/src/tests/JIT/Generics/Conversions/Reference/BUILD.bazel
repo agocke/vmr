@@ -11,6 +11,7 @@ coreclr_test(
     srcs = ["GenToNonGen03.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -36,6 +37,7 @@ coreclr_test(
     srcs = ["GenToNonGen02.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(

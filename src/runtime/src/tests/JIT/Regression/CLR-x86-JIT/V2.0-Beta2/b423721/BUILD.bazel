@@ -10,8 +10,10 @@ live_csharp_library(
 
 coreclr_test(
     name = "b423721",
+    optimize = False,
     srcs = ["b423721.cs"],
     pri = 1,
     debug_type = "pdbonly",
     deps = [":c1"],
+    size = "medium",
 )

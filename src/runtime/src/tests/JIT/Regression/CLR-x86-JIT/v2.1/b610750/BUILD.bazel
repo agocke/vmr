@@ -8,6 +8,7 @@ coreclr_test(
     deps = [
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -15,4 +16,5 @@ coreclr_test(
     srcs = ["b610750.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )

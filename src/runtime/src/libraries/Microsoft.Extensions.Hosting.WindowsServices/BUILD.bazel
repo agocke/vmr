@@ -1,0 +1,63 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Hosting.WindowsServices.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Hosting.WindowsServices",
+    srcs = [
+        "ref/Microsoft.Extensions.Hosting.WindowsServices.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Hosting:ref_Microsoft.Extensions.Hosting",
+        "//src/libraries/Microsoft.Extensions.Hosting.Abstractions:ref_Microsoft.Extensions.Hosting.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/System.ServiceProcess.ServiceController:ref_System.ServiceProcess.ServiceController",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Hosting.WindowsServices",
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    exclude_sr = True,
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/DisableRuntimeMarshalling.cs",
+        "//src/libraries/Common:src/Interop/Windows/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.CloseHandle.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.CreateToolhelp32Snapshot.cs",
+        "//src/libraries/Common:src/Interop/Windows/Kernel32/Interop.MAX_PATH.cs",
+    ],
+    allow_unsafe_blocks = True,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries:ref_System.Diagnostics.Process",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Hosting:ref_Microsoft.Extensions.Hosting",
+        "//src/libraries/Microsoft.Extensions.Hosting.Abstractions:ref_Microsoft.Extensions.Hosting.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.EventLog:ref_Microsoft.Extensions.Logging.EventLog",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.ServiceProcess.ServiceController:ref_System.ServiceProcess.ServiceController",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Hosting.WindowsServices",
+    ref = ":ref_Microsoft.Extensions.Hosting.WindowsServices",
+    lib = ":impl_Microsoft.Extensions.Hosting.WindowsServices",
+    visibility = ["//visibility:public"],
+)

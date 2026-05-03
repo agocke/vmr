@@ -1,0 +1,21 @@
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_library")
+
+csharp_library(
+    name = "System.Runtime.Loader.Test.ContextualReflectionDependency",
+    srcs = ["ContextualReflectionDependency.cs"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    keyfile = OPEN_SNK,
+    nullable = "annotations",
+    nowarn = [
+        "IL2121",
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+    ],
+    msbuild_analyzer_config = "style",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    visibility = ["//src/libraries/System.Runtime.Loader/tests:__subpackages__"],
+)

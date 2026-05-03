@@ -1,0 +1,49 @@
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_library")
+load("//src/libraries:defs.bzl", "DOWNLEVEL_GENERATOR_ANALYZERS")
+
+exports_files(glob(["**/*.cs"]))
+
+csharp_library(
+    name = "XDocument.Test.ModuleCore",
+    analyzers = DOWNLEVEL_GENERATOR_ANALYZERS,
+    srcs = glob(["XDocument.Test.ModuleCore/*.cs"]),
+    target_frameworks = ["netstandard2.0"],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051", "nullable"],
+    visibility = ["//visibility:public"],
+    keyfile = OPEN_SNK,
+)
+
+csharp_library(
+    name = "XDocument.Common",
+    srcs = glob(["XDocument.Common/*.cs"]),
+    target_frameworks = [NETCOREAPP_CURRENT],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    deps = [
+        ":XDocument.Test.ModuleCore",
+        "//src/libraries/Common/tests:TestUtilities",
+        "//src/libraries/Common/tests:XmlCoreTest",
+        "//src/libraries/Common/tests:XmlDiff",
+        "//src/libraries/Common/tests:XmlModuleCore",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
+        "//src/libraries/shims/netstandard:impl_netstandard",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+        "@paket.main//xunit.extensibility.execution",
+    ],
+    visibility = ["//visibility:public"],
+    keyfile = OPEN_SNK,
+)

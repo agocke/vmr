@@ -6,4 +6,5 @@ coreclr_test(
     pri = 1,
     optimize = True,
     allow_unsafe_blocks = True,
+    size = "medium",
 )

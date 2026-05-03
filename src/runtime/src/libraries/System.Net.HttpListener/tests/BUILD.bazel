@@ -1,9 +1,29 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+
+gen_resx_source(
+    name = "SR",
+    out = "SR.g.cs",
+    assembly_name = "System.Net.HttpListener.Tests",
+    resx_file = "//src/libraries/System.Net.HttpListener:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Net.HttpListener.Tests.SR.resources",
+    resx_file = "//src/libraries/System.Net.HttpListener:src/Resources/Strings.resx",
+)
 
 library_test(
     name = "System.Net.HttpListener.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.Net.HttpListener.Tests.SR.resources": "FxResources.System.Net.HttpListener.Tests.SR.resources"},
+    additionalfiles = ["//src/libraries/System.Net.HttpListener:src/Resources/Strings.resx"],
+    defines = select({"@platforms//os:linux": ["UNIX", "UNIX1_0"], "@platforms//os:macos": ["UNIX", "UNIX1_0"], "//conditions:default": []}),
     srcs = glob(["*.cs"]) + [
         "//src/libraries/Common/tests:System/Threading/Tasks/TaskTimeoutExtensions.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+        ":SR",
     ],
     deps = [
         "//src/libraries/System.Net.HttpListener:ref_System.Net.HttpListener",
@@ -31,5 +51,5 @@ library_test(
     ],
     allow_unsafe_blocks = True,
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

@@ -1,0 +1,48 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "ClosedStatic",
+    srcs = ["ClosedStatic.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Co6010DelegateEqualsTwo",
+    srcs = ["co6010delegateequalstwo.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Co6031GetHashCode",
+    srcs = ["co6031gethashcode.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "InvokeNull",
+    srcs = ["InvokeNull.il"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "SecondLevelIndirection",
+    srcs = ["SecondLevelIndirection.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)

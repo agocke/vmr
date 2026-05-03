@@ -1,0 +1,26 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files(["Mono/testdataset1.xml"])
+
+library_test(
+    name = "System.Data.DataSetExtensions.Tests",
+    srcs = glob(["**/*.cs"]),
+    deps = [
+        "//src/libraries/System.Data.Common:ref_System.Data.Common",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/shims/System.Data.DataSetExtensions:impl_System.Data.DataSetExtensions",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    data = [
+        "Mono/testdataset1.xml",
+    ],
+    nowarn = ["SYSLIB0011", "SYSLIB0051"],
+    size = "large",
+    keyfile = OPEN_SNK,
+)

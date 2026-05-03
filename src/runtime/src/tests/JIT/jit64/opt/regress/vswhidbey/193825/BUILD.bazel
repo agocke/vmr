@@ -7,6 +7,7 @@ coreclr_test(
     debug_type = "full",
     optimize = True,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -15,4 +16,5 @@ coreclr_test(
     pri = 1,
     optimize = True,
     allow_unsafe_blocks = True,
+    size = "medium",
 )

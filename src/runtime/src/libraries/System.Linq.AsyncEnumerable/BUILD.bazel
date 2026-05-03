@@ -1,4 +1,4 @@
-load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
 
 exports_files([
     "ref/System.Linq.AsyncEnumerable.cs",
@@ -20,8 +20,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Linq.AsyncEnumerable",
-    multitarget = True,
-    skip_cs1591 = True,
+    com_interface_generator = True,
     srcs = [
         "src/System/Linq/AggregateAsync.cs",
         "src/System/Linq/AggregateBy.cs",
@@ -96,7 +95,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Memory:ref_System.Memory",
         "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
     ],
-    nowarn = ["CS1998", "CA2007"],
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1998", "CA2007"],
     resx_file = "src/Resources/Strings.resx",
 )
 

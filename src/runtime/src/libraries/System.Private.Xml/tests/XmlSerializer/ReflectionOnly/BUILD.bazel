@@ -1,0 +1,38 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "System.Xml.XmlSerializer.ReflectionOnly.Tests",
+    srcs = [
+        "//src/libraries/System.Private.Xml/tests/XmlSerializer:XmlSerializerTests.cs",
+        "//src/libraries/System.Private.Xml/tests/XmlSerializer:XmlSerializerTests.RuntimeOnly.cs",
+        "//src/libraries/System.Runtime.Serialization.Xml/tests:SerializationTypes.RuntimeOnly.cs",
+        "//src/libraries/Common/tests:System/Runtime/Serialization/Utils.cs",
+    ],
+    defines = ["ReflectionOnly"],
+    deps = [
+        "//src/libraries/System.Runtime.Serialization.Xml:ref_System.Runtime.Serialization.Xml",
+        "//src/libraries/System.Runtime.Serialization.Json:ref_System.Runtime.Serialization.Json",
+        "//src/libraries/System.Runtime.Serialization.Primitives:ref_System.Runtime.Serialization.Primitives",
+        "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
+        "//src/libraries/System.Xml.XmlSerializer:ref_System.Xml.XmlSerializer",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Runtime.Serialization.Formatters:ref_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.Text.RegularExpressions:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries:ref_System.Threading.Tasks",
+        "//src/libraries/Common/tests:TestUtilities",
+        "//src/libraries/System.Runtime.Serialization.Xml/tests:SerializableAssembly",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    data = ["//src/libraries/System.Runtime.Serialization.Xml/tests:SerializableAssembly"],
+    keyfile = OPEN_SNK,
+)

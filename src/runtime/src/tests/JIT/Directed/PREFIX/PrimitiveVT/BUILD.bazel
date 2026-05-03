@@ -15,6 +15,7 @@ coreclr_test(
     optimize = False,
     allow_unsafe_blocks = True,
     deps = [":helper"],
+    size = "medium",
 )
 
 coreclr_test(
@@ -25,6 +26,7 @@ coreclr_test(
     optimize = False,
     allow_unsafe_blocks = True,
     deps = [":helper"],
+    size = "medium",
 )
 
 coreclr_test(
@@ -35,6 +37,7 @@ coreclr_test(
     optimize = True,
     allow_unsafe_blocks = True,
     deps = [":helper"],
+    size = "medium",
 )
 
 coreclr_test(
@@ -44,6 +47,7 @@ coreclr_test(
     optimize = True,
     allow_unsafe_blocks = True,
     deps = [":helper"],
+    size = "medium",
 )
 
 coreclr_test(
@@ -52,6 +56,7 @@ coreclr_test(
     pri = 1,
     allow_unsafe_blocks = True,
     deps = [":helper"],
+    size = "medium",
 )
 
 coreclr_test(
@@ -60,6 +65,7 @@ coreclr_test(
     pri = 1,
     allow_unsafe_blocks = True,
     deps = [":helper"],
+    size = "medium",
 )
 
 coreclr_test(
@@ -70,6 +76,7 @@ coreclr_test(
     optimize = True,
     allow_unsafe_blocks = True,
     deps = [":helper"],
+    size = "medium",
 )
 
 coreclr_test(
@@ -79,4 +86,5 @@ coreclr_test(
     optimize = True,
     allow_unsafe_blocks = True,
     deps = [":helper"],
+    size = "medium",
 )

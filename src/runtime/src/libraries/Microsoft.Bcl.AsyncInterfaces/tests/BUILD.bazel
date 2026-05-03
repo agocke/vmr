@@ -1,0 +1,28 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK")
+
+library_test(
+    name = "Microsoft.Bcl.AsyncInterfaces.Tests",
+    nowarn = MULTITARGET_NOWARN,
+    srcs = [
+        "//src/libraries/Common/tests:System/Threading/Tasks/Sources/ManualResetValueTaskSource.cs",
+        "//src/libraries/System.Runtime/tests:System.Threading.Tasks.Extensions.Tests/ManualResetValueTaskSourceTests.cs",
+        "//src/libraries/System.Runtime/tests:System.Threading.Tasks.Tests/System.Runtime.CompilerServices/ConfiguredAsyncDisposable.cs",
+        "//src/libraries/System.Runtime/tests:System.Threading.Tasks.Tests/System.Runtime.CompilerServices/ConfiguredCancelableAsyncEnumerableTests.cs",
+    ],
+    deps = [
+        "//src/libraries/Microsoft.Bcl.AsyncInterfaces:impl_Microsoft.Bcl.AsyncInterfaces",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/System.Threading.ThreadPool:ref_System.Threading.ThreadPool",
+        "//src/libraries:ref_System.Threading.Tasks",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+    size = "large",
+)

@@ -1,0 +1,65 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "DOWNLEVEL_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly")
+load("//:defs.bzl", "MSFT_SNK", "csharp_library")
+
+impl_assembly(
+    name = "impl_System.Composition.TypedParts",
+    srcs = glob(["src/**/*.cs"]) + [
+        # Linked from CoreLib shared sources
+        "//src/libraries/System.Private.CoreLib:src/System/Numerics/Hashing/HashHelpers.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Composition.AttributedModel:impl_System.Composition.AttributedModel",
+        "//src/libraries/System.Composition.Hosting:impl_System.Composition.Hosting",
+        "//src/libraries/System.Composition.Runtime:impl_System.Composition.Runtime",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    nullable = "disable",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "nullable", "CS1591"],
+    is_trimmable = False,
+    is_aot_compatible = False,
+)
+
+# Polyfill sources that MSBuild auto-includes for non-.NETCoreApp TFMs
+# (src/libraries/Directory.Build.targets:177-183).
+_NETSTANDARD_POLYFILLS = [
+    "//src/libraries/Common:src/System/SR.cs",
+    "//src/libraries/Common:src/System/ExceptionPolyfills.cs",
+    "//src/libraries/System.Private.CoreLib:src/System/Diagnostics/CodeAnalysis/NullableAttributes.cs",
+    "//src/libraries/System.Private.CoreLib:src/System/Runtime/CompilerServices/CallerArgumentExpressionAttribute.cs",
+]
+
+# netstandard2.0 build matching MSBuild's multi-targeting. Used by test
+# helpers that must share type identity with the net10.0 impl at runtime.
+# Reuses the resgen and SR source from the impl target to avoid output conflicts.
+csharp_library(
+    name = "System.Composition.TypedParts_netstandard2.0",
+    out = "System.Composition.TypedParts",
+    analyzers = DOWNLEVEL_GENERATOR_ANALYZERS,
+    keyfile = MSFT_SNK,
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/System.Private.CoreLib:src/System/Numerics/Hashing/HashHelpers.cs",
+        ":resx_impl_System.Composition.TypedParts",
+    ] + _NETSTANDARD_POLYFILLS,
+    resources = [":resgen_impl_System.Composition.TypedParts"],
+    resource_logical_names = {"FxResources.System.Composition.TypedParts.SR.resources": "FxResources.System.Composition.TypedParts.SR.resources"},
+    target_frameworks = ["netstandard2.0"],
+    langversion = "preview",
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    nullable = "annotations",
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051", "nullable", "CA1510", "CA1511", "CA1512", "CA1513", "CA1845", "CA1846", "CA1847"],
+    deps = [
+        "//src/libraries/System.Composition.AttributedModel:System.Composition.AttributedModel_netstandard2.0",
+        "//src/libraries/System.Composition.Hosting:System.Composition.Hosting_netstandard2.0",
+        "//src/libraries/System.Composition.Runtime:System.Composition.Runtime_netstandard2.0",
+    ],
+    visibility = ["//src/libraries:__subpackages__"],
+)

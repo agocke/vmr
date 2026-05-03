@@ -1,11 +1,16 @@
-# Bazel configuration for dotnet/runtime native builds (linux-x64, osx-arm64)
+# Bazel configuration for dotnet/runtime native builds.
+#
+# Supported platforms: linux-x64, osx-arm64, win-x64.
+# Platform-specific flags are applied automatically via
+# --enable_platform_specific_config (build:linux, build:macos, build:windows).
 #
 # Per-component configuration (matching MSBuild's -rc / -lc flags):
 #
-#   CoreCLR (clr_config):   debug (default), checked, release
+#   CoreCLR (clr_config):   debug, checked (default), release
 #   Libraries (libs_config): debug (default), release
 #
 # Use --config flags to select:
+#   --config=clr_debug       Debug CLR
 #   --config=clr_checked     Checked CLR (debug asserts + release optimization)
 #   --config=clr_release     Release CLR
 #   --config=libs_release    Release libraries
@@ -22,144 +27,179 @@
 #   bazel build --config=clr_checked --config=libs_release //... # checked CLR + release libs
 #   bazel build -c opt --config=clr_checked //...              # checked CLR + debug libs + -O2
 
-# --- Default compiler: Clang (matching CMake) ---
-# Uses clang/clang++ with lld linker on Linux.
-# On macOS, Apple Clang is the default; lld is not used.
-build --config=clang
+# =====================================================================
+# Unix compiler flags (GCC/Clang)
+# =====================================================================
+# Applied automatically on Linux and macOS via --enable_platform_specific_config
+# (see build:linux --config=unix and build:macos --config=unix below).
+# Windows uses MSVC flags instead (see build:windows section).
+#
+# Flags within build:unix are applied in file order, so -Wall appears
+# before -Wno-* suppressions — the ordering is correct.
+
+# Default to Clang on Unix (matching CMake).
+build:unix --config=clang
 
 # Match CMake configurecompiler.cmake settings (config-independent)
-build --conlyopt=-std=gnu11
-build --cxxopt=-std=gnu++11
-build --copt=-fPIC
-build --copt=-fno-omit-frame-pointer
-build --copt=-fno-strict-overflow
-build --copt=-fno-strict-aliasing
-build --copt=-fstack-protector-strong
-build --copt=-ffp-contract=off
-build --copt=-fsigned-char
-build --copt=-fvisibility=hidden
-build --copt=-ffunction-sections
-build --cxxopt=-fno-rtti
+build:unix --conlyopt=-std=gnu11
+build:unix --cxxopt=-std=gnu++11
+build:unix --copt=-fPIC
+build:unix --copt=-fno-omit-frame-pointer
+build:unix --copt=-fno-strict-overflow
+build:unix --copt=-fno-strict-aliasing
+build:unix --copt=-fstack-protector-strong
+build:unix --copt=-ffp-contract=off
+build:unix --copt=-fsigned-char
+build:unix --copt=-fvisibility=hidden
+build:unix --copt=-ffunction-sections
+build:unix --cxxopt=-fno-rtti
 
-# Platform defines (config-independent)
-# Platform-specific arch/OS defines are in PLATFORM_DEFINES (defs.bzl)
+# Platform defines (Unix only)
+# Platform-specific arch/OS defines are in PLATFORM_DEFINES (cc_defs.bzl)
 # and used via select() in BUILD files. Only universal defines go here.
-build --copt=-D_FILE_OFFSET_BITS=64
-build --copt=-D_TIME_BITS=64
+build:unix --copt=-D_FILE_OFFSET_BITS=64
+build:unix --copt=-D_TIME_BITS=64
 
 # Exec/tool platform defines (for tools like ilasm built with cfg = "exec")
-build --host_conlyopt=-std=gnu11
-build --host_cxxopt=-std=gnu++11
-build --host_copt=-D_FILE_OFFSET_BITS=64
-build --host_copt=-D_TIME_BITS=64
+build:unix --host_conlyopt=-std=gnu11
+build:unix --host_cxxopt=-std=gnu++11
+build:unix --host_copt=-D_FILE_OFFSET_BITS=64
+build:unix --host_copt=-D_TIME_BITS=64
 
 # Warning flags shared between GCC and Clang (configurecompiler.cmake)
-build --copt=-Wall
-build --copt=-Wno-unused-variable
-build --copt=-Wno-unused-value
-build --copt=-Wno-unused-function
-build --copt=-Wno-tautological-compare
-build --copt=-Wno-unknown-pragmas
-build --copt=-Wimplicit-fallthrough
-build --copt=-Wno-unused-but-set-variable
+build:unix --copt=-Wall
+build:unix --copt=-Wno-unused-variable
+build:unix --copt=-Wno-unused-value
+build:unix --copt=-Wno-unused-function
+build:unix --copt=-Wno-tautological-compare
+build:unix --copt=-Wno-unknown-pragmas
+build:unix --copt=-Wimplicit-fallthrough
+build:unix --copt=-Wno-unused-but-set-variable
 # Bazel's default C++ toolchain enables -Wunused-but-set-parameter; CMake does not.
-build --copt=-Wno-unused-but-set-parameter
+build:unix --copt=-Wno-unused-but-set-parameter
 
 # --- GCC-specific warning flags (default compiler) ---
 # These are in an else() branch in configurecompiler.cmake (not Clang).
 # Silently ignored by Clang when -Wno-unknown-warning-option is set.
-build --copt=-Wno-uninitialized
-build --copt=-Wno-strict-aliasing
-build --copt=-Wno-array-bounds
-build --cxxopt=-Wno-misleading-indentation
-build --cxxopt=-Wno-stringop-overflow
-build --cxxopt=-Wno-restrict
-build --copt=-Wno-stringop-truncation
-build --cxxopt=-Wno-class-memaccess
+build:unix --copt=-Wno-uninitialized
+build:unix --copt=-Wno-strict-aliasing
+build:unix --copt=-Wno-array-bounds
+build:unix --cxxopt=-Wno-misleading-indentation
+build:unix --cxxopt=-Wno-stringop-overflow
+build:unix --cxxopt=-Wno-restrict
+build:unix --copt=-Wno-stringop-truncation
+build:unix --cxxopt=-Wno-class-memaccess
 
 # --- Clang-specific warning flags (configurecompiler.cmake) ---
-# IMPORTANT: These MUST be plain "build" lines (not "build:clang") because
-# "build --config=clang" on line 27 causes config expansion BEFORE the
-# plain "build" lines above.  If these were under "build:clang", they would
-# appear before -Wall, and -Wall would re-enable the warnings.
 # Unknown -Wno-* flags are silently ignored by GCC, so this is safe.
-build --copt=-Wno-unknown-warning-option
-build --copt=-ferror-limit=4096
-build --copt=-Wno-null-conversion
-build --copt=-Wno-unused-private-field
-build --copt=-Wno-constant-logical-operand
-build --copt=-Wno-pragma-pack
-build --copt=-Wno-incompatible-ms-struct
-build --copt=-Wno-reserved-identifier
-build --copt=-Wno-unsafe-buffer-usage
-build --copt=-Wno-single-bit-bitfield-constant-conversion
-build --copt=-Wno-cast-function-type-strict
-build --copt=-Wno-switch-default
-build --cxxopt=-Wno-nontrivial-memaccess
+build:unix --copt=-Wno-unknown-warning-option
+build:unix --copt=-ferror-limit=4096
+build:unix --copt=-Wno-null-conversion
+build:unix --copt=-Wno-unused-private-field
+build:unix --copt=-Wno-constant-logical-operand
+build:unix --copt=-Wno-pragma-pack
+build:unix --copt=-Wno-incompatible-ms-struct
+build:unix --copt=-Wno-reserved-identifier
+build:unix --copt=-Wno-unsafe-buffer-usage
+build:unix --copt=-Wno-single-bit-bitfield-constant-conversion
+build:unix --copt=-Wno-cast-function-type-strict
+build:unix --copt=-Wno-switch-default
+build:unix --cxxopt=-Wno-nontrivial-memaccess
 
 # Exec/tool warning flags (for tools like ilasm built with cfg = "exec")
-build --host_copt=-Wall
-build --host_copt=-Wno-unused-variable
-build --host_copt=-Wno-unused-value
-build --host_copt=-Wno-unused-function
-build --host_copt=-Wno-tautological-compare
-build --host_copt=-Wno-unknown-pragmas
-build --host_copt=-Wimplicit-fallthrough
-build --host_copt=-Wno-unused-but-set-variable
-build --host_copt=-Wno-unused-but-set-parameter
-build --host_copt=-Wno-uninitialized
-build --host_copt=-Wno-strict-aliasing
-build --host_copt=-Wno-array-bounds
-build --host_cxxopt=-Wno-misleading-indentation
-build --host_cxxopt=-Wno-stringop-overflow
-build --host_cxxopt=-Wno-restrict
-build --host_copt=-Wno-stringop-truncation
-build --host_cxxopt=-Wno-class-memaccess
-build --host_copt=-Wno-unknown-warning-option
-build --host_copt=-ferror-limit=4096
-build --host_copt=-Wno-null-conversion
-build --host_copt=-Wno-unused-private-field
-build --host_copt=-Wno-constant-logical-operand
-build --host_copt=-Wno-pragma-pack
-build --host_copt=-Wno-incompatible-ms-struct
-build --host_copt=-Wno-reserved-identifier
-build --host_copt=-Wno-unsafe-buffer-usage
-build --host_copt=-Wno-single-bit-bitfield-constant-conversion
-build --host_copt=-Wno-cast-function-type-strict
-build --host_copt=-Wno-switch-default
-build --host_cxxopt=-Wno-nontrivial-memaccess
+build:unix --host_copt=-Wall
+build:unix --host_copt=-Wno-unused-variable
+build:unix --host_copt=-Wno-unused-value
+build:unix --host_copt=-Wno-unused-function
+build:unix --host_copt=-Wno-tautological-compare
+build:unix --host_copt=-Wno-unknown-pragmas
+build:unix --host_copt=-Wimplicit-fallthrough
+build:unix --host_copt=-Wno-unused-but-set-variable
+build:unix --host_copt=-Wno-unused-but-set-parameter
+build:unix --host_copt=-Wno-uninitialized
+build:unix --host_copt=-Wno-strict-aliasing
+build:unix --host_copt=-Wno-array-bounds
+build:unix --host_cxxopt=-Wno-misleading-indentation
+build:unix --host_cxxopt=-Wno-stringop-overflow
+build:unix --host_cxxopt=-Wno-restrict
+build:unix --host_copt=-Wno-stringop-truncation
+build:unix --host_cxxopt=-Wno-class-memaccess
+build:unix --host_copt=-Wno-unknown-warning-option
+build:unix --host_copt=-ferror-limit=4096
+build:unix --host_copt=-Wno-null-conversion
+build:unix --host_copt=-Wno-unused-private-field
+build:unix --host_copt=-Wno-constant-logical-operand
+build:unix --host_copt=-Wno-pragma-pack
+build:unix --host_copt=-Wno-incompatible-ms-struct
+build:unix --host_copt=-Wno-reserved-identifier
+build:unix --host_copt=-Wno-unsafe-buffer-usage
+build:unix --host_copt=-Wno-single-bit-bitfield-constant-conversion
+build:unix --host_copt=-Wno-cast-function-type-strict
+build:unix --host_copt=-Wno-switch-default
+build:unix --host_cxxopt=-Wno-nontrivial-memaccess
+
+# Disable warnings for vendored code
+build:unix --per_file_copt=src/native/external/.*@-w
+build:unix --host_per_file_copt=src/native/external/.*@-w
+
+# safecrt_input_s.cpp is the non-unicode scanf variant — _UNICODE must not be defined
+build:unix --per_file_copt=.*safecrt_input_s.*@-U_UNICODE,-UUNICODE
+build:unix --host_per_file_copt=.*safecrt_input_s.*@-U_UNICODE,-UUNICODE
 
 # --- Clang compiler (config:clang) ---
 # Matches CMake default: uses clang/clang++ with lld linker on Linux.
 # On macOS, Apple Clang + default ld are used (no lld).
-# NOTE: Only compiler/linker selection goes here. Warning flags MUST go
-# in plain "build" lines above to avoid config expansion ordering issues.
 build:clang --repo_env=CC=clang
 build:clang --repo_env=CXX=clang++
 build:clang --define compiler=clang
 
-# Disable warnings that CMake also suppresses for vendored code
-build --per_file_copt=src/native/external/.*@-w
-build --host_per_file_copt=src/native/external/.*@-w
-
-# safecrt_input_s.cpp is the non-unicode scanf variant — _UNICODE must not be defined
-build --per_file_copt=.*safecrt_input_s.*@-U_UNICODE,-UUNICODE
-build --host_per_file_copt=.*safecrt_input_s.*@-U_UNICODE,-UUNICODE
-
-# Preserve debug symbols (match CMake behavior of always including -g)
-build --strip=never
-
-# --- Linux-specific settings ---
-# Linker hardening, shared object naming, and lld.
-# These are no-ops or harmful on macOS, so they live behind --config=linux.
+# =====================================================================
+# Linux-specific settings
+# =====================================================================
+build:linux --config=unix
+# Linker hardening and lld (no-ops or harmful on macOS).
 build:linux --linkopt=-Wl,--build-id=sha1
 build:linux --linkopt=-fuse-ld=lld
 
-# macOS deployment target — match CMake's eng/native/configureplatform.cmake
+# =====================================================================
+# macOS-specific settings
+# =====================================================================
+build:macos --config=unix
+# Deployment target — match CMake's eng/native/configureplatform.cmake
 build:macos --macos_minimum_os=12.0
 
+# =====================================================================
+# Windows-specific settings (MSVC)
+# =====================================================================
+# Applied automatically via --enable_platform_specific_config.
+# Compiler and linker flags live in cc_defs.bzl (PLATFORM_COPTS,
+# PLATFORM_LINKOPTS) so targets opt in explicitly, matching the
+# PLATFORM_DEFINES pattern.  Only per_file_copt overrides (which have
+# no BUILD-file equivalent) belong here.
+
+# Disable Bazel's default dynamic CRT selection (/MD, /MDd).  The
+# project controls CRT flags explicitly via NATIVE_CONFIG_COPTS in
+# native_defs.bzl, selecting /MT or /MTd based on clr_config to match
+# CMake's configurecompiler.cmake.
+build:windows --features=-dynamic_link_msvcrt
+
+# Force /DEBUG:FULL for all link actions.  Bazel's MSVC toolchain
+# defaults to /DEBUG:FASTLINK in fastbuild mode, which is no longer
+# supported by current MSVC linkers.  The /ignore:4315 suppresses the
+# warning that the linker falls back to /DEBUG:FULL anyway.
+build:windows --linkopt=/DEBUG:FULL
+build:windows --linkopt=/ignore:4315
+
+# Disable warnings for vendored code
+build:windows --per_file_copt=src/native/external/.*@/w
+build:windows --host_per_file_copt=src/native/external/.*@/w
+
+# safecrt_input_s.cpp is the non-unicode scanf variant — _UNICODE must not be defined
+build:windows --per_file_copt=.*safecrt_input_s.*@/U_UNICODE,/UUNICODE
+build:windows --host_per_file_copt=.*safecrt_input_s.*@/U_UNICODE,/UUNICODE
+
 # Enable automatic platform config selection (applies build:linux on Linux,
-# build:macos on macOS, etc.).
+# build:macos on macOS, build:windows on Windows).
 build --enable_platform_specific_config
 
 # =====================================================================
@@ -175,46 +215,51 @@ build --enable_platform_specific_config
 # src/native/native_defs.bzl.  The --config flags below set the
 # string_flag values that drive those select() expressions.
 
-# --- CoreCLR default: debug ---
-build --//:clr_config=debug
-# When used as external module @dotnet_runtime, also set the module's flag
-build --@dotnet_runtime//:clr_config=debug
+# --- CoreCLR default: checked ---
+build --//:clr_config=checked
 
 # --- Libraries default: debug ---
 build --//:libs_config=debug
-# When used as external module @dotnet_runtime, also set the module's flag
-build --@dotnet_runtime//:libs_config=debug
 
 # =====================================================================
-# --config=clr_checked: Checked CoreCLR
+# --config=clr_debug: Debug CoreCLR
+# =====================================================================
+build:clr_debug --//:clr_config=debug
+
+# =====================================================================
+# --config=clr_checked: Checked CoreCLR (same as default)
 # =====================================================================
 build:clr_checked --//:clr_config=checked
-# When used as external module @dotnet_runtime, also set the module's flag
-build:clr_checked --@dotnet_runtime//:clr_config=checked
 
 # =====================================================================
 # --config=clr_release: Release CoreCLR
 # =====================================================================
 build:clr_release --//:clr_config=release
-# When used as external module @dotnet_runtime, also set the module's flag
-build:clr_release --@dotnet_runtime//:clr_config=release
+build:clr_release -c opt
 
 # =====================================================================
 # --config=libs_release: Release libraries
 # =====================================================================
 build:libs_release --//:libs_config=release
-# When used as external module @dotnet_runtime, also set the module's flag
-build:libs_release --@dotnet_runtime//:libs_config=release
 
 # =====================================================================
 # --config=release: Release everything (convenience)
 # =====================================================================
 build:release --config=clr_release
 build:release --config=libs_release
-# Enable compiler optimizations.  System.Private.CoreLib uses
-# override_debug to control its own DEBUG/RELEASE defines via
-# select() on //:clr_config, so it is safe to mix CLR and library
-# configurations.  The -c opt here switches the default C# compilation
-# from /define:DEBUG to /define:RELEASE for library targets and enables
-# native optimizations.
-build:release -c opt
+# Note: -c opt is on clr_release, so it applies here too.
+
+# =====================================================================
+# --config=ci: CI mode — deterministic source paths
+# Enables /pathmap to normalize source and PDB paths, matching MSBuild's
+# ContinuousIntegrationBuild=true / DeterministicSourcePaths=true.
+# Use with --config=release for comparison against CI-built MSBuild output.
+# =====================================================================
+build:ci --//:ci=true
+
+# =====================================================================
+# Default test tag filters: exclude pri1 tests (expensive / not default)
+# To include pri1 tests: bazel test --test_tag_filters= //...
+# To run ONLY pri1 tests: bazel test --test_tag_filters=pri1 //...
+# =====================================================================
+test --test_tag_filters=-pri1

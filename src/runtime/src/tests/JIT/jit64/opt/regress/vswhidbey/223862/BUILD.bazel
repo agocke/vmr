@@ -12,6 +12,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -34,6 +35,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -41,6 +43,7 @@ il_coreclr_test(
     srcs = ["rem_d.il", "rem.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -49,6 +52,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -56,6 +60,7 @@ il_coreclr_test(
     srcs = ["bne_d.il", "bne.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -64,6 +69,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -77,6 +83,7 @@ il_coreclr_test(
     srcs = ["mul1_d.il", "mul1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -84,4 +91,5 @@ il_coreclr_test(
     srcs = ["div_d.il", "div.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

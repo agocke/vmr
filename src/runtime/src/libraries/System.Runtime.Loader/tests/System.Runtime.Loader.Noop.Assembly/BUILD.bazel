@@ -1,0 +1,29 @@
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "csharp_library")
+
+csharp_library(
+    name = "System.Runtime.Loader.Noop.Assembly",
+    srcs = ["TestClass.cs"],
+    target_frameworks = [NETCOREAPP_CURRENT],
+    nullable = "annotations",
+    nowarn = [
+        "IL2121",
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+    ],
+    msbuild_analyzer_config = "style",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    visibility = ["//src/libraries/System.Runtime.Loader/tests:__subpackages__"],
+)
+
+# Renamed copy for DefaultContext tests (expects _test.dll suffix).
+genrule(
+    name = "System.Runtime.Loader.Noop.Assembly_test",
+    srcs = [":System.Runtime.Loader.Noop.Assembly"],
+    outs = ["System.Runtime.Loader.Noop.Assembly_test.dll"],
+    cmd = "for f in $(SRCS); do if echo $$f | grep -q '\\.dll$$'; then cp $$f $@; break; fi; done",
+    visibility = ["//src/libraries/System.Runtime.Loader/tests:__subpackages__"],
+)

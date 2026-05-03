@@ -1,0 +1,52 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "ASPNETCORE_SNK")
+
+library_test(
+    name = "Microsoft.Extensions.Http.Tests",
+    nowarn = MULTITARGET_NOWARN,
+    srcs = glob(
+        ["Microsoft.Extensions.Http.Tests/**/*.cs"],
+        exclude = [
+            # TrimmingTests are not applicable
+            "Microsoft.Extensions.Http.Tests/TrimmingTests/**",
+        ],
+    ) + [
+        "//src/libraries/Microsoft.Extensions.Logging/tests:DI.Common/Common/src/TestSink.cs",
+        "//src/libraries/Microsoft.Extensions.Logging/tests:DI.Common/Common/src/WriteContext.cs",
+        "//src/libraries/Microsoft.Extensions.Logging/tests:DI.Common/Common/src/BeginScopeContext.cs",
+        "//src/libraries/Microsoft.Extensions.Logging/tests:DI.Common/Common/src/ITestSink.cs",
+        "//src/libraries/Microsoft.Extensions.Logging/tests:DI.Common/Common/src/TestLogger.cs",
+        "//src/libraries/Microsoft.Extensions.Logging/tests:DI.Common/Common/src/TestLoggerFactory.cs",
+        "//src/libraries/Common/tests:Extensions/SingleThreadedSynchronizationContext.cs",
+        "//src/libraries/Common/tests:System/Net/RemoteExecutorExtensions.cs",
+    ],
+    deps = [
+        "//src/libraries/Microsoft.Extensions.Http:impl_Microsoft.Extensions.Http",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection:ref_Microsoft.Extensions.DependencyInjection",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics:impl_Microsoft.Extensions.Diagnostics",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Net.Http:ref_System.Net.Http",
+        "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
+        "//src/libraries/System.Net.Security:ref_System.Net.Security",
+        "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//moq",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = ASPNETCORE_SNK,
+)

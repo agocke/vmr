@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["ptr_types_r.il", "ptr_types.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["ptr_types_d.il", "ptr_types.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["ldtoken_d.il", "ldtoken.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -32,6 +35,7 @@ il_coreclr_test(
     srcs = ["ldtokena_d.il", "ldtokena.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -39,6 +43,7 @@ il_coreclr_test(
     srcs = ["ldtoken_r.il", "ldtoken.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -52,4 +57,5 @@ il_coreclr_test(
     srcs = ["ldtokena_r.il", "ldtokena.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

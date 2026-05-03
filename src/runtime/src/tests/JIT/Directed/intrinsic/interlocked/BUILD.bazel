@@ -11,6 +11,7 @@ coreclr_test(
     deps = [
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -22,6 +23,7 @@ coreclr_test(
     deps = [
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -33,6 +35,7 @@ coreclr_test(
     deps = [
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -44,6 +47,7 @@ coreclr_test(
     deps = [
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -55,6 +59,7 @@ coreclr_test(
     deps = [
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -66,4 +71,5 @@ coreclr_test(
     deps = [
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    size = "medium",
 )

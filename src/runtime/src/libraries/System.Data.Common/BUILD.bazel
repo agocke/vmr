@@ -4,6 +4,8 @@ exports_files([
     "ref/System.Data.Common.cs",
     "ref/System.Data.Common.Forwards.cs",
     "ref/System.Data.Common.manual.cs",
+    "src/ILLink/ILLink.Descriptors.LibraryBuild.xml",
+    "src/ILLink/ILLink.Suppressions.LibraryBuild.xml",
 ])
 
 netcoreapp_ref_assembly(
@@ -44,16 +46,19 @@ netcoreapp_impl_assembly(
     ],
     resx_file = "src/Resources/Strings.resx",
     allow_unsafe_blocks = True,
-    nowarn = ["SYSLIB0038"],
+    nowarn = [
+        "SYSLIB0038",
+        "CS1591",
+    ],
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
         "//src/libraries:impl_System.Runtime",
         "//src/libraries/System.Collections:impl_System.Collections",
-        "//src/libraries/System.Collections.Concurrent:impl_System.Collections.Concurrent",
-        "//src/libraries/System.Collections.NonGeneric:ref_System.Collections.NonGeneric",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.NonGeneric:impl_System.Collections.NonGeneric",
         "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
         "//src/libraries:ref_System.ComponentModel.Primitives",
-        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.ComponentModel.TypeConverter:impl_System.ComponentModel.TypeConverter",
         "//src/libraries/System.Drawing.Primitives:ref_System.Drawing.Primitives",
         "//src/libraries/System.Linq:ref_System.Linq",
         "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",

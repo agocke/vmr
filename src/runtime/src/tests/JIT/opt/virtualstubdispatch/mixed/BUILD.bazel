@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["mixed.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -13,6 +14,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -21,10 +23,12 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
     name = "mixed_cs_r",
     srcs = ["mixed.cs"],
     pri = 1,
+    size = "medium",
 )

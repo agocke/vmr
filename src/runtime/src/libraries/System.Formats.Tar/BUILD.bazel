@@ -1,4 +1,5 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
 
 exports_files([
     "ref/System.Formats.Tar.cs",
@@ -17,11 +18,10 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Formats.Tar",
+    keyfile = OPEN_SNK,
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     os_targeted = "unix",
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     srcs = [
         "src/System/Formats/Tar/FieldLengths.cs",
         "src/System/Formats/Tar/FieldLocations.cs",

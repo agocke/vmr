@@ -19,7 +19,7 @@ NATIVEAOT_COMMON_DEFINES = [
 ]
 
 NATIVEAOT_DEFINES = NATIVEAOT_COMMON_DEFINES + select({
-    "@platforms//os:macos": [
+    "//:macos_arm64": [
         "HOST_64BIT",
         "HOST_ARM64",
         "HOST_UNIX",
@@ -32,6 +32,23 @@ NATIVEAOT_DEFINES = NATIVEAOT_COMMON_DEFINES + select({
         "TARGET_OSX",
         "FEATURE_EMULATE_SINGLESTEP",
         "OSX_ARM64_ABI",
+        "FEATURE_USE_SOFTWARE_WRITE_WATCH_FOR_GC_HEAP",
+        "FEATURE_MANUALLY_MANAGED_CARD_BUNDLES",
+    ],
+    "//:macos_x64": [
+        "HOST_64BIT",
+        "HOST_AMD64",
+        "HOST_UNIX",
+        "HOST_APPLE",
+        "HOST_OSX",
+        "TARGET_64BIT",
+        "TARGET_AMD64",
+        "TARGET_UNIX",
+        "TARGET_APPLE",
+        "TARGET_OSX",
+        "UNIX_AMD64_ABI",
+        "FEATURE_USE_SOFTWARE_WRITE_WATCH_FOR_GC_HEAP",
+        "FEATURE_MANUALLY_MANAGED_CARD_BUNDLES",
     ],
     "@platforms//os:linux": [
         "_GNU_SOURCE",

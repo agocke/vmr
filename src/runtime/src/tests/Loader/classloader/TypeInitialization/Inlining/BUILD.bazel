@@ -1,0 +1,43 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GenMethInlined",
+    srcs = ["GenMethInlined.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "GenMethInlined_Multinested",
+    srcs = ["GenMethInlined_Multinested.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "GenTypeInlined",
+    srcs = ["GenTypeInlined.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "GenTypeInlined_Multinested",
+    srcs = ["GenTypeInlined_Multinested.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Inlined",
+    srcs = ["Inlined.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Inlined_Multinested",
+    srcs = ["Inlined_Multinested.cs"],
+    pri = 1,
+    size = "medium",
+)

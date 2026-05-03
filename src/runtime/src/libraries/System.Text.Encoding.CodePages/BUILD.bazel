@@ -1,4 +1,4 @@
-load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
 
 exports_files([
     "ref/System.Text.Encoding.CodePages.cs",
@@ -18,7 +18,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Text.Encoding.CodePages",
-    multitarget = True,
+    com_interface_generator = True,
     srcs = [
         "src/Microsoft/Win32/SafeHandles/SafeAllocHHandle.cs",
         "src/System/Text/BaseCodePageEncoding.cs",
@@ -54,7 +54,7 @@ netcoreapp_impl_assembly(
     resx_file = "src/Resources/Strings.resx",
     resources = ["src/Data/codepages.nlp"],
     resource_logical_names = {"codepages.nlp": "codepages.nlp"},
-    nowarn = ["NU5128"],
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "NU5128", "CS1591"],
     assembly_description = "Provides support for code-page based encodings, including Windows-1252, Shift-JIS, and GB2312.\n\nCommonly Used Types:\nSystem.Text.CodePagesEncodingProvider",
 )
 

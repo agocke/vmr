@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["mixed1.cs"],
     pri = 1,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -19,6 +20,7 @@ coreclr_test(
     srcs = ["mixed2.cs"],
     pri = 1,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -28,6 +30,7 @@ coreclr_test(
     debug_type = "full",
     optimize = True,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -37,6 +40,7 @@ coreclr_test(
     debug_type = "full",
     optimize = False,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -46,6 +50,7 @@ coreclr_test(
     debug_type = "full",
     optimize = False,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -54,6 +59,7 @@ coreclr_test(
     pri = 1,
     optimize = True,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(

@@ -1,0 +1,5 @@
+exports_files([
+    "Program.cs",
+    "SimpleBinOpTest_DataTable.cs",
+    "SimpleUnOpTest_DataTable.cs",
+], visibility = ["//src/tests:__subpackages__"])

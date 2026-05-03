@@ -1,7 +1,9 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.IO.Compression.Brotli.Tests",
+    defines = select({"@platforms//os:linux": ["UNIX", "UNIX1_0"], "@platforms//os:macos": ["UNIX", "UNIX1_0"], "//conditions:default": []}),
     srcs = glob(["**/*.cs"]) + [
         "//src/libraries/Common/tests:System/IO/Compression/CompressionStreamTestBase.cs",
         "//src/libraries/Common/tests:System/IO/Compression/CompressionStreamUnitTestBase.cs",
@@ -26,7 +28,6 @@ library_test(
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
         "//src/libraries/Common/tests:StreamConformanceTests",
         "//src/libraries/Common/tests:TestUtilities",
-        "@paket.main//microsoft.dotnet.remoteexecutor",
         "@paket.main//microsoft.dotnet.xunitassert",
         "@paket.main//microsoft.dotnet.xunitextensions",
         "@paket.main//xunit.abstractions",
@@ -35,5 +36,5 @@ library_test(
     allow_unsafe_blocks = True,
     data = ["@paket.main//system.io.compression.testdata:content_files"],
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

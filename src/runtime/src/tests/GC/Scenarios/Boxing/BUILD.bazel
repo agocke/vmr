@@ -1,0 +1,13 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "arrcpy",
+    srcs = ["arrcpy.cs"],
+)
+
+coreclr_test(
+    name = "simpvariant",
+    srcs = ["simpvariant.cs"],
+    pri = 1,
+    size = "medium",
+)

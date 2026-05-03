@@ -1,4 +1,6 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN")
+load("//:defs.bzl", "OPEN_SNK", "UNICODE_DATA_REPO")
 
 library_test(
     name = "System.Text.Encodings.Web.Tests",
@@ -27,7 +29,9 @@ library_test(
         "@paket.main//xunit.extensibility.core",
     ],
     allow_unsafe_blocks = True,
-    resources = ["@nuget.system.private.runtime.unicodedata.v10.0.0-beta.25418.1//:contentFiles/any/any/16.0.0/ucd/UnicodeData.txt"],
+    keyfile = OPEN_SNK,
+    nowarn = MULTITARGET_NOWARN + ["CS3021"],
+    resources = ["@{}//:contentFiles/any/any/16.0.0/ucd/UnicodeData.txt".format(UNICODE_DATA_REPO)],
     resource_logical_names = {
         "UnicodeData.txt": "UnicodeData.txt",
     },

@@ -1,0 +1,22 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "nesting4",
+    srcs = ["nesting4.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "nesting63",
+    srcs = ["nesting63.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "nesting7",
+    srcs = ["nesting7.il"],
+    pri = 1,
+    size = "medium",
+)

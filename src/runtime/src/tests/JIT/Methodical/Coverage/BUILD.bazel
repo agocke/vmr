@@ -4,6 +4,7 @@ il_coreclr_test(
     name = "b518440",
     srcs = ["b518440.il"],
     pri = 1,
+    size = "medium",
 )
 
 il_coreclr_test(

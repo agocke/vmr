@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["lclfldadd.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["subbyref_r.il", "subbyref.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -24,6 +26,7 @@ coreclr_test(
     name = "lclfldrem_cs_r",
     srcs = ["lclfldrem.cs"],
     pri = 1,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -37,6 +40,7 @@ il_coreclr_test(
     srcs = ["ldsshrstsfld_r.il", "ldsshrstsfld.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -45,6 +49,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -58,6 +63,7 @@ il_coreclr_test(
     srcs = ["zeroinit_d.il", "zeroinit.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -65,6 +71,7 @@ il_coreclr_test(
     srcs = ["switchdefaultonly1_r.il", "switchdefaultonly1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -72,6 +79,7 @@ il_coreclr_test(
     srcs = ["subbyref_d.il", "subbyref.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -85,6 +93,7 @@ il_coreclr_test(
     srcs = ["ldfldstatic_r.il", "ldfldstatic.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -92,6 +101,7 @@ il_coreclr_test(
     srcs = ["stfldstatic2_d.il", "stfldstatic2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -99,6 +109,7 @@ il_coreclr_test(
     srcs = ["switchdefaultonly2_r.il", "switchdefaultonly2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -108,6 +119,7 @@ coreclr_test(
     debug_type = "full",
     optimize = False,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -116,6 +128,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -123,6 +136,7 @@ il_coreclr_test(
     srcs = ["switchdefaultonly1_d.il", "switchdefaultonly1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
@@ -130,6 +144,7 @@ coreclr_test(
     srcs = ["33objref.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -137,6 +152,7 @@ coreclr_test(
     srcs = ["lclfldrem.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -144,6 +160,7 @@ il_coreclr_test(
     srcs = ["stfldstatic1_d.il", "stfldstatic1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
@@ -151,6 +168,7 @@ coreclr_test(
     srcs = ["cse2.cs"],
     pri = 1,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -158,6 +176,7 @@ coreclr_test(
     srcs = ["lclflddiv.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -166,6 +185,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -173,12 +193,14 @@ il_coreclr_test(
     srcs = ["volatilecpobj_d.il", "volatilecpobj.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
     name = "lclfldmul_cs_r",
     srcs = ["lclfldmul.cs"],
     pri = 1,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -193,6 +215,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -201,6 +224,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -209,6 +233,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -216,6 +241,7 @@ il_coreclr_test(
     srcs = ["zeroinit_r.il", "zeroinit.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -224,6 +250,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -231,6 +258,7 @@ coreclr_test(
     srcs = ["lclfldmul.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -239,12 +267,14 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "33objref_cs_r",
     srcs = ["33objref.cs"],
     pri = 1,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -252,6 +282,7 @@ il_coreclr_test(
     srcs = ["switchdefaultonly3_d.il", "switchdefaultonly3.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
@@ -273,6 +304,7 @@ il_coreclr_test(
     srcs = ["ldvirtftncalli_r.il", "ldvirtftncalli.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -280,12 +312,14 @@ coreclr_test(
     srcs = ["cse1.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "cse1_cs_r",
     srcs = ["cse1.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -299,12 +333,14 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "lclflddiv_cs_r",
     srcs = ["lclflddiv.cs"],
     pri = 1,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -312,6 +348,7 @@ il_coreclr_test(
     srcs = ["ldsshrstsfld_d.il", "ldsshrstsfld.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -326,6 +363,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -333,6 +371,7 @@ il_coreclr_test(
     srcs = ["switchdefaultonly2_d.il", "switchdefaultonly2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -340,6 +379,7 @@ il_coreclr_test(
     srcs = ["stfldstatic2_r.il", "stfldstatic2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -347,6 +387,7 @@ il_coreclr_test(
     srcs = ["stfldstatic1_r.il", "stfldstatic1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -354,6 +395,7 @@ il_coreclr_test(
     srcs = ["ldfldstatic_d.il", "ldfldstatic.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -361,6 +403,7 @@ il_coreclr_test(
     srcs = ["switchdefaultonly3_r.il", "switchdefaultonly3.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -368,6 +411,7 @@ il_coreclr_test(
     srcs = ["lcliimpl_r.il", "lcliimpl.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -375,6 +419,7 @@ il_coreclr_test(
     srcs = ["ldvirtftncalli_d.il", "ldvirtftncalli.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
@@ -383,6 +428,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -390,6 +436,7 @@ il_coreclr_test(
     srcs = ["lcliimpl_d.il", "lcliimpl.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -409,6 +456,7 @@ il_coreclr_test(
     srcs = ["arrgetlen_d.il", "arrgetlen.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -430,6 +478,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -437,6 +486,7 @@ coreclr_test(
     srcs = ["lclfldsub.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -445,6 +495,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -452,12 +503,14 @@ il_coreclr_test(
     srcs = ["volatilecpobj_r.il", "volatilecpobj.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
     name = "lclfldsub_cs_r",
     srcs = ["lclfldsub.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -466,6 +519,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -473,4 +527,5 @@ il_coreclr_test(
     srcs = ["arrgetlen_r.il", "arrgetlen.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

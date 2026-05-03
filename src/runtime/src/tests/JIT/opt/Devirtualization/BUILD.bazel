@@ -6,6 +6,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -14,6 +15,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -22,6 +24,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -37,6 +40,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -51,6 +55,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -58,6 +63,7 @@ coreclr_test(
     srcs = ["GitHub_9945.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -66,6 +72,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -73,6 +80,7 @@ coreclr_test(
     srcs = ["GitHub_10858.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -80,6 +88,7 @@ coreclr_test(
     srcs = ["exact1.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -88,6 +97,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -96,6 +106,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -104,6 +115,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -112,6 +124,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -125,6 +138,7 @@ il_coreclr_test(
     srcs = ["override.il"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -132,6 +146,7 @@ il_coreclr_test(
     srcs = ["GenericArrayOverride.il"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -147,6 +162,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -155,6 +171,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -163,6 +180,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -171,6 +189,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -185,6 +204,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -202,6 +222,7 @@ coreclr_test(
     srcs = ["GitHub_10311.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -216,6 +237,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -229,6 +251,7 @@ coreclr_test(
     srcs = ["GitHub_51918.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -237,6 +260,7 @@ coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -277,6 +301,7 @@ il_coreclr_test(
     srcs = ["GitHub_9945_2.il"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -284,4 +309,5 @@ coreclr_test(
     srcs = ["exact2.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )

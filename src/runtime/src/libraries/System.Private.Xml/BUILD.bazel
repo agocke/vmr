@@ -1,7 +1,22 @@
 load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files([
+    "src/ILLink/ILLink.Descriptors.LibraryBuild.xml",
+    "src/Utils/DTDs/XHTML10/no_comments/xhtml1-frameset.dtd",
+    "src/Utils/DTDs/XHTML10/no_comments/xhtml1-strict.dtd",
+    "src/Utils/DTDs/XHTML10/no_comments/xhtml1-transitional.dtd",
+    "src/Utils/DTDs/XHTML10/no_comments/xhtml-lat1.ent",
+    "src/Utils/DTDs/XHTML10/no_comments/xhtml-special.ent",
+    "src/Utils/DTDs/XHTML10/no_comments/xhtml-symbol.ent",
+    "src/Utils/DTDs/RSS091/no_comments/rss-0.91.dtd",
+])
 
 netcoreapp_impl_assembly(
     name = "impl_System.Private.Xml",
+    keyfile = OPEN_SNK,
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     srcs = [
         # Common files (from $(CommonPath))
         "//src/libraries/Common:src/System/Text/StringBuilderCache.cs",
@@ -714,6 +729,24 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
     ],
     resx_file = "src/Resources/Strings.resx",
+    resources = [
+        "src/Utils/DTDs/RSS091/no_comments/rss-0.91.dtd",
+        "src/Utils/DTDs/XHTML10/no_comments/xhtml-lat1.ent",
+        "src/Utils/DTDs/XHTML10/no_comments/xhtml-special.ent",
+        "src/Utils/DTDs/XHTML10/no_comments/xhtml-symbol.ent",
+        "src/Utils/DTDs/XHTML10/no_comments/xhtml1-frameset.dtd",
+        "src/Utils/DTDs/XHTML10/no_comments/xhtml1-strict.dtd",
+        "src/Utils/DTDs/XHTML10/no_comments/xhtml1-transitional.dtd",
+    ],
+    resource_logical_names = {
+        "rss-0.91.dtd": "rss-0.91.dtd",
+        "xhtml-lat1.ent": "xhtml-lat1.ent",
+        "xhtml-special.ent": "xhtml-special.ent",
+        "xhtml-symbol.ent": "xhtml-symbol.ent",
+        "xhtml1-frameset.dtd": "xhtml1-frameset.dtd",
+        "xhtml1-strict.dtd": "xhtml1-strict.dtd",
+        "xhtml1-transitional.dtd": "xhtml1-transitional.dtd",
+    },
     analyzers = [
         "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
     ],

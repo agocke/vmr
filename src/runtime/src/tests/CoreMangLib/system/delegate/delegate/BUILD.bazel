@@ -1,0 +1,67 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "DelegateCombine1",
+    srcs = ["delegatecombine1.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DelegateCombineImpl",
+    srcs = ["delegatecombineimpl.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DelegateEquals1",
+    srcs = ["delegateequals1.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DelegateGetHashCode1",
+    srcs = ["delegategethashcode1.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "DelegateRemove",
+    srcs = ["delegateremove.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)
+
+coreclr_test(
+    name = "delegateRemoveImpl",
+    srcs = ["delegateremoveimpl.cs"],
+    pri = 1,
+    deps = [
+        "//src/tests/Common:TestLibrary",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+    ],
+    size = "medium",
+)

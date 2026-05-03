@@ -6,6 +6,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +20,7 @@ il_coreclr_test(
     srcs = ["cpblk3_d.il", "cpblk3.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -32,6 +34,7 @@ il_coreclr_test(
     srcs = ["cpblk3_r.il", "cpblk3.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -39,6 +42,7 @@ il_coreclr_test(
     srcs = ["dynblk_order_d.il", "dynblk_order.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(

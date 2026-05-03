@@ -1,0 +1,60 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Win32.Registry.AccessControl.cs",
+    "ref/Microsoft.Win32.Registry.AccessControl.Forwards.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Win32.Registry.AccessControl",
+    srcs = [
+        "ref/Microsoft.Win32.Registry.AccessControl.cs",
+        "ref/Microsoft.Win32.Registry.AccessControl.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Win32.Registry:ref_Microsoft.Win32.Registry",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Win32.Registry.AccessControl",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    com_interface_generator = True,
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_RegistryAccessControl",
+    pnse_ref_srcs = [
+        "ref/Microsoft.Win32.Registry.AccessControl.cs",
+        "ref/Microsoft.Win32.Registry.AccessControl.Forwards.cs",
+    ],
+    srcs = [],
+    nowarn = MULTITARGET_NOWARN + ["CP0003", 
+        "SYSLIB0003",
+        "SYSLIB0004",
+        "SYSLIB0015",
+        "SYSLIB0017",
+        "SYSLIB0021",
+        "SYSLIB0022",
+        "SYSLIB0023",
+        "SYSLIB0025",
+        "SYSLIB0032",
+        "SYSLIB0036",
+        "CS1591",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Win32.Registry:ref_Microsoft.Win32.Registry",
+        "//src/libraries/System.Security.AccessControl:ref_System.Security.AccessControl",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms_short = ["windows"],
+    include_editorconfig = False,
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Win32.Registry.AccessControl",
+    ref = ":ref_Microsoft.Win32.Registry.AccessControl",
+    lib = ":impl_Microsoft.Win32.Registry.AccessControl",
+    visibility = ["//visibility:public"],
+)

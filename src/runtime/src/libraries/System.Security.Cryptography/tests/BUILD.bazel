@@ -1,11 +1,29 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
+
+gen_resx_source(
+    name = "gen_resx",
+    out = "SR.g.cs",
+    assembly_name = "System.Security.Cryptography.Tests",
+    resx_file = "//src/libraries/System.Security.Cryptography:src/Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.Security.Cryptography.Tests.SR.resources",
+    resx_file = "//src/libraries/System.Security.Cryptography:src/Resources/Strings.resx",
+)
 
 library_test(
     name = "System.Security.Cryptography.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.Security.Cryptography.Tests.SR.resources": "FxResources.System.Security.Cryptography.Tests.SR.resources"},
+    additionalfiles = ["//src/libraries/System.Security.Cryptography:src/Resources/Strings.resx"],
     srcs = glob(
         ["**/*.cs"],
         exclude = [
             "TrimmingTests/**",
+            "SRStub.cs",
             # Windows-only
             "DefaultECDsaProvider.Windows.cs",
             "DefaultECDiffieHellmanProvider.Windows.cs",
@@ -26,17 +44,6 @@ library_test(
             "MLKemOpenSslTests.NotSupported.cs",
             "SlhDsaOpenSslConstructionTests.NotSupported.cs",
             "X509Certificates/X509StoreMutableTests.cs",
-            # Requires Unix interop P/Invoke partial methods (LibraryImport source gen)
-            "MLDsaOpenSslTests.Unix.cs",
-            "MLKemOpenSslTests.Unix.cs",
-            "SlhDsaOpenSslConstructionTests.Unix.cs",
-            "SlhDsaOpenSslTests.cs",
-            "X509Certificates/HostnameMatchTests.Unix.cs",
-            "X509Certificates/X509FilesystemTests.Unix.cs",
-            "X509Certificates/X509StoreTests.Unix.cs",
-            "Interop.EVP.ExtraHandle.cs",
-            # Missing Microsoft.Diagnostics.Runtime.Interop namespace
-            "X509Certificates/PublicKeyTests.cs",
         ],
     ) + [
         # ---- Shared projitems: AsnReader ----
@@ -75,10 +82,26 @@ library_test(
         "//src/libraries/Common:src/System/Security/Cryptography/Asn1/PrivateKeyInfoAsn.xml.cs",
         "//src/libraries/Common:src/System/Security/Cryptography/Asn1/SubjectPublicKeyInfoAsn.xml.cs",
         "//src/libraries/Common:src/System/Security/Cryptography/CryptoPool.cs",
-        # NOTE: Most Unix interop files (LibraryImport partial methods) and CoreLib PersistedFiles
-        # are excluded because they require source generation that isn't available in Bazel.
-        # Only files with DllImport or plain constants are included.
+        # ---- Unix interop files (LibraryImport source gen) ----
+        "//src/libraries/Common:src/Interop/Unix/Interop.Errors.cs",
         "//src/libraries/Common:src/Interop/Unix/Interop.Libraries.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetEUid.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.GetPwUid.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Native/Interop.Stat.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Security.Cryptography.Native/Interop.CheckX509Hostname_IntPtr.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Security.Cryptography.Native/Interop.ERR.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Security.Cryptography.Native/Interop.EVP.Kem.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Security.Cryptography.Native/Interop.EvpPkey.ExportKeyContents.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Security.Cryptography.Native/Interop.EvpPkey.FromData.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Security.Cryptography.Native/Interop.EvpPkey.MLDsa.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Security.Cryptography.Native/Interop.EvpPkey.SlhDsa.cs",
+        "//src/libraries/Common:src/Interop/Unix/System.Security.Cryptography.Native/Interop.Initialization.cs",
+        # ---- CoreLib PersistedFiles (for X509 store path tests) ----
+        "//src/libraries/System.Private.CoreLib:src/System/IO/PersistedFiles.Unix.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/IO/PersistedFiles.Names.Unix.cs",
+        # ---- Generated string resources ----
+        "//src/libraries/Common:src/System/SR.cs",
+        ":gen_resx",
         # ---- CommonTestPath files (shared test infrastructure) ----
         "//src/libraries/Common/tests:System/IO/ConnectedStreams.cs",
         "//src/libraries/Common/tests:System/IO/PositionValueStream.cs",
@@ -93,7 +116,14 @@ library_test(
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/AES/AesModeTests.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/AES/DecryptorReusability.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/AES/KeyWrapTests.cs",
-        # CompositeMLDsa excluded: CompositeMLDsaTestHelpers references internal SR class
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/CompositeMLDsa/CompositeMLDsaContractTests.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/CompositeMLDsa/CompositeMLDsaFactoryTests.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/CompositeMLDsa/CompositeMLDsaImplementationTests.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/CompositeMLDsa/CompositeMLDsaMockImplementation.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/CompositeMLDsa/CompositeMLDsaTestData.Raw.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/CompositeMLDsa/CompositeMLDsaTestData.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/CompositeMLDsa/CompositeMLDsaTestHelpers.cs",
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/CompositeMLDsa/CompositeMLDsaTestsBase.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/DES/DESCipherOneShotTests.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/DES/DESCipherTests.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/DES/DESContractTests.cs",
@@ -110,7 +140,7 @@ library_test(
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/DSA/DSASignatureFormatTests.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/DSA/DSASignatureFormatter.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/DSA/DSATestData.cs",
-        # DSAXml.cs excluded: requires System.Xml.Linq (no Bazel BUILD)
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/DSA/DSAXml.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/DSA/DsaFamilySignatureFormatTests.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/EC/CurveDef.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/EC/ECKeyFileTests.LimitedPrivate.cs",
@@ -166,7 +196,7 @@ library_test(
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/RSA/RSAKeyPemTests.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/RSA/RSASignatureFormatter.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/RSA/RSATestHelpers.cs",
-        # RSAXml.cs excluded: requires System.Xml.Linq (no Bazel BUILD)
+        "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/RSA/RSAXml.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/RSA/SignVerify.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/RSA/SignVerify.netcoreapp.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/AlgorithmImplementations/RSA/TestData.cs",
@@ -191,7 +221,7 @@ library_test(
         "//src/libraries/Common/tests:System/Security/Cryptography/ByteUtils.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/CngKeyWrapper.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/CommonAEADTests.cs",
-        # CompositeMLDsaAlgorithmTests excluded: depends on CompositeMLDsaTestHelpers (needs SR)
+        "//src/libraries/Common/tests:System/Security/Cryptography/CompositeMLDsaAlgorithmTests.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/CryptoUtils.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/HashInfo.cs",
         "//src/libraries/Common/tests:System/Security/Cryptography/MLDsaAlgorithmTests.cs",
@@ -232,6 +262,7 @@ library_test(
         "//src/libraries/System.Net.Primitives:ref_System.Net.Primitives",
         "//src/libraries/System.Net.HttpListener:ref_System.Net.HttpListener",
         "//src/libraries/System.Xml.ReaderWriter:ref_System.Xml.ReaderWriter",
+        "//src/libraries/System.Xml.XDocument:ref_System.Xml.XDocument",
         "//src/libraries/System.Web.HttpUtility:ref_System.Web.HttpUtility",
         "//src/libraries/System.Threading:ref_System.Threading",
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
@@ -241,6 +272,7 @@ library_test(
         "//src/libraries/shims/System.Threading.Tasks:impl_System.Threading.Tasks",
         "//src/libraries/Common/tests:StreamConformanceTests",
         "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.diagnostics.runtime",
         "@paket.main//microsoft.dotnet.remoteexecutor",
         "@paket.main//microsoft.dotnet.xunitassert",
         "@paket.main//microsoft.dotnet.xunitextensions",
@@ -249,8 +281,9 @@ library_test(
     ],
     allow_unsafe_blocks = True,
     data = ["@paket.main//system.security.cryptography.x509certificates.testdata:content_files"],
-    nowarn = ["CS0234", "CS8821", "SYSLIB0021", "SYSLIB0026", "SYSLIB0027", "SYSLIB0028", "SYSLIB0057", "SYSLIB5006"],
+    nowarn = ["SYSLIB0021", "SYSLIB0026", "SYSLIB0027", "SYSLIB0028", "SYSLIB0057", "SYSLIB5006"],
+    defines = ["UNIX", "UNIX1_0", "Unix"],
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
     target_compatible_with = ["@platforms//os:linux"],
 )

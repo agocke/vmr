@@ -2,6 +2,7 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 
 netcoreapp_impl_assembly(
     name = "impl_System.Private.DataContractSerialization",
+    library_import_generator = False,
     analyzers = [
         "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
     ],
@@ -13,7 +14,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/Common:src/System/CodeDom/CodeObject.cs",
     ],
     resx_file = "src/Resources/Strings.resx",
-    nowarn = ["CS0649", "CS1634", "CS1691"],
+    nowarn = ["CS0649", "CS1634", "CS1691", "CS1591"],
     allow_unsafe_blocks = True,
     deps = [
         "//src/libraries/System.Collections:ref_System.Collections",

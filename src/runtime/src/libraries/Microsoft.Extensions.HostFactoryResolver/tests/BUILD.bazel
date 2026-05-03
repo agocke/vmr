@@ -1,0 +1,325 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "live_csharp_library")
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "ASPNETCORE_SNK", "OPEN_SNK", "csharp_binary")
+
+_hosting_deps = [
+    "//src/libraries/Microsoft.Extensions.Configuration:impl_Microsoft.Extensions.Configuration",
+    "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:impl_Microsoft.Extensions.Configuration.Abstractions",
+    "//src/libraries/Microsoft.Extensions.Configuration.Binder:impl_Microsoft.Extensions.Configuration.Binder",
+    "//src/libraries/Microsoft.Extensions.Configuration.CommandLine:impl_Microsoft.Extensions.Configuration.CommandLine",
+    "//src/libraries/Microsoft.Extensions.Configuration.EnvironmentVariables:impl_Microsoft.Extensions.Configuration.EnvironmentVariables",
+    "//src/libraries/Microsoft.Extensions.Configuration.FileExtensions:impl_Microsoft.Extensions.Configuration.FileExtensions",
+    "//src/libraries/Microsoft.Extensions.Configuration.Json:impl_Microsoft.Extensions.Configuration.Json",
+    "//src/libraries/Microsoft.Extensions.Configuration.UserSecrets:impl_Microsoft.Extensions.Configuration.UserSecrets",
+    "//src/libraries/Microsoft.Extensions.DependencyInjection:impl_Microsoft.Extensions.DependencyInjection",
+    "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:impl_Microsoft.Extensions.DependencyInjection.Abstractions",
+    "//src/libraries/Microsoft.Extensions.Diagnostics:impl_Microsoft.Extensions.Diagnostics",
+    "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:impl_Microsoft.Extensions.Diagnostics.Abstractions",
+    "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:ref_Microsoft.Extensions.FileProviders.Abstractions",
+    "//src/libraries/Microsoft.Extensions.FileProviders.Physical:impl_Microsoft.Extensions.FileProviders.Physical",
+    "//src/libraries/Microsoft.Extensions.FileSystemGlobbing:impl_Microsoft.Extensions.FileSystemGlobbing",
+    "//src/libraries/Microsoft.Extensions.Hosting:impl_Microsoft.Extensions.Hosting",
+    "//src/libraries/Microsoft.Extensions.Hosting.Abstractions:impl_Microsoft.Extensions.Hosting.Abstractions",
+    "//src/libraries/Microsoft.Extensions.Logging:impl_Microsoft.Extensions.Logging",
+    "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+    "//src/libraries/Microsoft.Extensions.Logging.Configuration:impl_Microsoft.Extensions.Logging.Configuration",
+    "//src/libraries/Microsoft.Extensions.Logging.Console:impl_Microsoft.Extensions.Logging.Console",
+    "//src/libraries/Microsoft.Extensions.Logging.Debug:impl_Microsoft.Extensions.Logging.Debug",
+    "//src/libraries/Microsoft.Extensions.Logging.EventLog:impl_Microsoft.Extensions.Logging.EventLog",
+    "//src/libraries/Microsoft.Extensions.Logging.EventSource:impl_Microsoft.Extensions.Logging.EventSource",
+    "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+    "//src/libraries/Microsoft.Extensions.Options.ConfigurationExtensions:impl_Microsoft.Extensions.Options.ConfigurationExtensions",
+    "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+    "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+    "//src/libraries/System.Diagnostics.EventLog:impl_System.Diagnostics.EventLog",
+    "//src/libraries/System.Threading:ref_System.Threading",
+    "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+]
+
+_mock_host_type_deps = _hosting_deps + [":MockHostTypes"]
+
+live_csharp_library(
+    name = "MockHostTypes",
+    srcs = glob(["MockHostTypes/*.cs"]),
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Runtime.InteropServices.JavaScript:JSImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
+        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nowarn = ["CA1510", "CA1511", "CA1512", "CA1513", "CA1845", "CA1846", "CA1847", "IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    nullable = "annotations",
+    treat_warnings_as_errors = True,
+    warnings_not_as_errors = ["NU1901", "NU1902", "NU1903", "NU1904"],
+)
+
+csharp_binary(
+    name = "ApplicationNameSetFromArgument",
+    srcs = ["ApplicationNameSetFromArgument/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "BuildWebHostInvalidSignature",
+    srcs = ["BuildWebHostInvalidSignature/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "BuildWebHostPatternTestSite",
+    srcs = ["BuildWebHostPatternTestSite/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "CreateHostBuilderInvalidSignature",
+    srcs = ["CreateHostBuilderInvalidSignature/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "CreateHostBuilderPatternTestSite",
+    srcs = ["CreateHostBuilderPatternTestSite/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "CreateWebHostBuilderInvalidSignature",
+    srcs = ["CreateWebHostBuilderInvalidSignature/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "CreateWebHostBuilderPatternTestSite",
+    srcs = ["CreateWebHostBuilderPatternTestSite/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "NoSpecialEntryPointPattern",
+    srcs = ["NoSpecialEntryPointPattern/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "NoSpecialEntryPointPatternBuildsThenThrows",
+    srcs = ["NoSpecialEntryPointPatternBuildsThenThrows/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "NoSpecialEntryPointPatternExits",
+    srcs = ["NoSpecialEntryPointPatternExits/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "NoSpecialEntryPointPatternHangs",
+    srcs = ["NoSpecialEntryPointPatternHangs/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "NoSpecialEntryPointPatternMainNoArgs",
+    srcs = ["NoSpecialEntryPointPatternMainNoArgs/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "NoSpecialEntryPointPatternThrows",
+    srcs = ["NoSpecialEntryPointPatternThrows/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "TopLevelStatements",
+    srcs = ["TopLevelStatements/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+csharp_binary(
+    name = "TopLevelStatementsTestsTimeout",
+    srcs = ["TopLevelStatementsTestsTimeout/Program.cs"],
+    deps = _mock_host_type_deps,
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    keyfile = OPEN_SNK,
+    msbuild_analyzer_config = "style",
+    nullable = "annotations",
+    nowarn = MULTITARGET_NOWARN + ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
+    target_frameworks = ["net10.0"],
+)
+
+_app_targets = [
+    ":ApplicationNameSetFromArgument",
+    ":BuildWebHostInvalidSignature",
+    ":BuildWebHostPatternTestSite",
+    ":CreateHostBuilderInvalidSignature",
+    ":CreateHostBuilderPatternTestSite",
+    ":CreateWebHostBuilderInvalidSignature",
+    ":CreateWebHostBuilderPatternTestSite",
+    ":NoSpecialEntryPointPattern",
+    ":NoSpecialEntryPointPatternBuildsThenThrows",
+    ":NoSpecialEntryPointPatternExits",
+    ":NoSpecialEntryPointPatternHangs",
+    ":NoSpecialEntryPointPatternMainNoArgs",
+    ":NoSpecialEntryPointPatternThrows",
+    ":TopLevelStatements",
+    ":TopLevelStatementsTestsTimeout",
+]
+
+library_test(
+    name = "Microsoft.Extensions.HostFactoryResolver.Tests",
+    srcs = [
+        "HostFactoryResolverTests.cs",
+        "//src/libraries/Microsoft.Extensions.HostFactoryResolver:src/HostFactoryResolver.cs",
+    ],
+    data = _app_targets,
+    deps = _hosting_deps + _app_targets + [
+        ":MockHostTypes",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = ASPNETCORE_SNK,
+    nullable = "enable",
+    nowarn = MULTITARGET_NOWARN,
+)

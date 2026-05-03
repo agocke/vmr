@@ -1,0 +1,9 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b36472",
+    srcs = ["b36472.cs"],
+    pri = 1,
+    target_compatible_with = ["@platforms//os:windows"],
+    size = "medium",
+)

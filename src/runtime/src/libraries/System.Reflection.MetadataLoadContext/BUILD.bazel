@@ -1,4 +1,6 @@
-load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly", "netcoreapp_ref_assembly", "ref_impl_pair")
+load("//src/libraries:defs.bzl",
+    "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "impl_assembly", "netcoreapp_ref_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
 
 netcoreapp_ref_assembly(
     name = "ref_System.Reflection.MetadataLoadContext",
@@ -10,8 +12,11 @@ netcoreapp_ref_assembly(
     ],
 )
 
-netcoreapp_impl_assembly(
+impl_assembly(
     name = "impl_System.Reflection.MetadataLoadContext",
+    keyfile = OPEN_SNK,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CA1865", "CP0003", "CS1591"],
     srcs = glob(
         ["src/**/*.cs"],
         exclude = [

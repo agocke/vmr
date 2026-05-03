@@ -1,4 +1,5 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.Diagnostics.Tracing.Tests",
@@ -14,6 +15,8 @@ library_test(
             "BasicEventSourceTest/FuzzyTests.Etw.cs",
             "BasicEventSourceTest/TestsWriteEventToListener.Etw.cs",
             "BasicEventSourceTest/TestsManifestGeneration.Etw.cs",
+            # Not compiled by MSBuild test project
+            "BasicEventSourceTest/TestCallbacks.cs",
             # Trimming tests (require ILLink)
             "TrimmingTests/**",
         ],
@@ -33,6 +36,9 @@ library_test(
         "@paket.main//xunit.extensibility.core",
     ],
     allow_unsafe_blocks = True,
+    analyzers = [
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:LoggingGenerators",
+    ],
     size = "large",
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

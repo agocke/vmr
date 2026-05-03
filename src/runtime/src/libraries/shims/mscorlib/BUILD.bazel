@@ -1,8 +1,16 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "ECMA_SNK")
 
 netcoreapp_ref_assembly(
     name = "ref_mscorlib",
-    srcs = [ "ref/mscorlib.cs" ],
+    srcs = [
+        "ref/mscorlib.cs",
+        "//src/libraries/shims:System.Void.cs",
+    ],
+    defines = select({
+        "@platforms//os:linux": ["LINUX", "LINUX1_0"],
+        "//conditions:default": [],
+    }),
     deps = [
         "//src/libraries/Microsoft.Win32.Registry:ref_Microsoft.Win32.Registry",
         "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
@@ -39,12 +47,12 @@ netcoreapp_ref_assembly(
         "//src/libraries/shims/stubs:ref_System.Security.Permissions",
         "//src/libraries/shims/stubs:ref_System.Threading.AccessControl",
     ],
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/ECMA.snk"
+    keyfile = ECMA_SNK
 )
 
 netcoreapp_impl_assembly(
     name = "impl_mscorlib",
-    skip_cs1591 = True,
+    skip_locals_init = False,
     srcs = [
         "ref/mscorlib.cs",
         "src/mscorlib.cs",
@@ -52,7 +60,7 @@ netcoreapp_impl_assembly(
     ],
     assembly_version = "4.0.0.0",
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
         "//src/libraries/Microsoft.Win32.Registry:impl_Microsoft.Win32.Registry",
         "//src/libraries/System.Collections:impl_System.Collections",
         "//src/libraries/System.Collections.Concurrent:impl_System.Collections.Concurrent",
@@ -63,7 +71,7 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.IO.FileSystem.AccessControl:impl_System.IO.FileSystem.AccessControl",
         "//src/libraries/System.IO.FileSystem.DriveInfo:impl_System.IO.FileSystem.DriveInfo",
         "//src/libraries/System.IO.IsolatedStorage:impl_System.IO.IsolatedStorage",
-        "//src/libraries/System.Reflection.TypeExtensions:ref_System.Reflection.TypeExtensions",
+        "//src/libraries/System.Reflection.TypeExtensions:impl_System.Reflection.TypeExtensions",
         "//src/libraries/System.Memory:impl_System.Memory",
         "//src/libraries/System.ObjectModel:impl_System.ObjectModel",
     #<ProjectReference Include="$(LibrariesProjectRoot)System.Reflection.TypeExtensions\src\System.Reflection.TypeExtensions.csproj" />
@@ -83,5 +91,9 @@ netcoreapp_impl_assembly(
     ],
     os_targeted = True,
     exclude_sr = True,
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/ECMA.snk",
+    keyfile = ECMA_SNK,
+    generate_documentation_file = False,
+    interop_source_generation = True,
+    library_import_generator = False,
+    com_interface_generator = True,
 )

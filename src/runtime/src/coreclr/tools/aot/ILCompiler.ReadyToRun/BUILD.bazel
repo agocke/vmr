@@ -1,4 +1,4 @@
-load("//:defs.bzl", "csharp_library")
+load("//:defs.bzl", "csharp_library", "gen_assembly_info", "gen_target_framework_attrs")
 
 exports_files([
     "Compiler/FileLayoutOptimizer.cs",
@@ -11,16 +11,30 @@ exports_files([
     "IBC/MIbcProfileParser.cs",
 ])
 
-genrule(
-    name = "AssemblyInfo",
-    outs = ["AssemblyInfo.g.cs"],
-    cmd = "echo '[assembly: System.Reflection.AssemblyFileVersion(\"10.0.0.0\")]' > $@",
+gen_assembly_info(
+    name = "assemblyinfo_ILCompiler.ReadyToRun",
+    out = "ILCompiler.ReadyToRun.AssemblyInfo.cs",
+    assembly_name = "ILCompiler.ReadyToRun",
+    cls_compliant = False,
+    is_aot_compatible = False,
+    include_serviceable = False,
+    include_description = False,
+    assembly_configuration = "Release",
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_ILCompiler.ReadyToRun",
+    out = ".NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
 )
 
 csharp_library(
     name = "ILCompiler.ReadyToRun",
+    interceptors_namespaces = ";Microsoft.Extensions.Validation.Generated",
+    nowarn = ["1591"],
     srcs = [
-        ":AssemblyInfo",
+        ":assemblyinfo_ILCompiler.ReadyToRun",
+        ":tfmattrs_ILCompiler.ReadyToRun",
         "CodeGen/ReadyToRunObjectWriter.cs",
         "Compiler/AssemblyExtensions.cs",
         "Compiler/CallChainProfile.cs",
@@ -304,12 +318,20 @@ csharp_library(
         "//src/coreclr/tools/Common:Compiler/GenericCycleDetection/ModuleCycleInfo.cs",
     ],
     defines = ["READYTORUN"],
-    compiler_options = ["/unsafe"],
+    compiler_options = ["/unsafe", "/warnaserror+:NU1605"],
     deps = [
         "//src/coreclr/tools/aot/ILCompiler.DependencyAnalysisFramework",
         "//src/coreclr/tools/aot/ILCompiler.Diagnostics",
         "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//microsoft.diasymreader",
     ],
     target_frameworks = ["net10.0"],
     visibility = ["//visibility:public"],
+    analyzers = [
+        "//src/tools/illink/src/ILLink.RoslynAnalyzer",
+        "//:staticcs_analyzers",
+    ],
+    msbuild_analyzer_config = "style",
+    include_default_ruleset = False,
+    skip_analyzers = True,
 )

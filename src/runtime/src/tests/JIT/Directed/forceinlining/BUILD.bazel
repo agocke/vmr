@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["NoMetaData.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -18,6 +19,7 @@ coreclr_test(
     srcs = ["Recursion.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -25,6 +27,7 @@ coreclr_test(
     srcs = ["LargeNumberOfArgs.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +36,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     env = {"DOTNET_TieredCompilation": "0"},
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -41,4 +45,5 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     env = {"DOTNET_TieredCompilation": "0"},
+    size = "medium",
 )

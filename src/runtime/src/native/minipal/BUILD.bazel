@@ -1,6 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//:cc_defs.bzl", "PLATFORM_DEFINES")
+load("//:cc_defs.bzl", "PLATFORM_COPTS", "PLATFORM_DEFINES")
 load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
+load("//src/native:native_defs.bzl", "NATIVE_CONFIG_COPTS", "NATIVE_CONFIG_DEFINES")
 
 exports_files(
     ["xoshiro128pp.c"],
@@ -22,19 +23,27 @@ cc_library(
         "utf8.c",
         "xoshiro128pp.c",
     ] + select({
-        "@platforms//os:macos": ["bazel/darwin-arm64/minipalconfig.h"],
+        "//:macos_arm64": ["bazel/osx-arm64/minipalconfig.h"],
+        "//:macos_x64": ["bazel/osx-x64/minipalconfig.h"],
+        "@platforms//os:windows": ["bazel/windows-x64/minipalconfig.h"],
         "//conditions:default": ["bazel/linux-glibc-x64/minipalconfig.h"],
     }) + glob(
         ["*.h", "**/*.h"],
         exclude = ["bazel/**"],
     ),
-    copts = CLR_CONFIG_COPTS,
+    copts = CLR_CONFIG_COPTS + PLATFORM_COPTS + NATIVE_CONFIG_COPTS,
     # includes = [".."] is already set below; add platform-specific config headers
     includes = [".."] + select({
-        "@platforms//os:macos": ["bazel/darwin-arm64"],
+        "//:macos_arm64": ["bazel/osx-arm64"],
+        "//:macos_x64": ["bazel/osx-x64"],
+        "@platforms//os:windows": ["bazel/windows-x64"],
         "//conditions:default": ["bazel/linux-glibc-x64"],
     }),
-    local_defines = PLATFORM_DEFINES,
+    linkopts = select({
+        "@platforms//os:windows": ["bcrypt.lib"],
+        "//conditions:default": [],
+    }),
+    local_defines = PLATFORM_DEFINES + NATIVE_CONFIG_DEFINES,
     visibility = [
         "//src/coreclr:__subpackages__",
         "//src/native:__subpackages__",

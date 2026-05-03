@@ -1,0 +1,45 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Dev10_535767",
+    srcs = ["dev10_535767.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TestAPIs",
+    srcs = [
+        "helper.cs",
+        "testapis.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TestGC",
+    srcs = [
+        "helper.cs",
+        "testgc.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "TestOverrides",
+    srcs = [
+        "helper.cs",
+        "testoverrides.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "test448035",
+    srcs = ["test448035.cs"],
+    pri = 1,
+    size = "medium",
+)

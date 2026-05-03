@@ -15,12 +15,19 @@ package(default_visibility = ["//src/coreclr:__subpackages__"])
 cc_library(
     name = "eventing_headers",
     hdrs = select({
-        "@platforms//os:macos": [
-            "bazel/darwin-arm64/clretwallmain.h",
-            "bazel/darwin-arm64/clreventpipewriteevents.h",
-            "bazel/darwin-arm64/clrproviders.h",
-            "bazel/darwin-arm64/clrxplatevents.h",
-            "bazel/darwin-arm64/etmdummy.h",
+        "//:macos_arm64": [
+            "bazel/osx-arm64/clretwallmain.h",
+            "bazel/osx-arm64/clreventpipewriteevents.h",
+            "bazel/osx-arm64/clrproviders.h",
+            "bazel/osx-arm64/clrxplatevents.h",
+            "bazel/osx-arm64/etmdummy.h",
+        ],
+        "//:macos_x64": [
+            "bazel/osx-x64/clretwallmain.h",
+            "bazel/osx-x64/clreventpipewriteevents.h",
+            "bazel/osx-x64/clrproviders.h",
+            "bazel/osx-x64/clrxplatevents.h",
+            "bazel/osx-x64/etmdummy.h",
         ],
         "//conditions:default": [
             "bazel/linux-glibc-x64/clretwallmain.h",
@@ -31,7 +38,8 @@ cc_library(
         ],
     }),
     strip_include_prefix = select({
-        "@platforms//os:macos": "bazel/darwin-arm64",
+        "//:macos_arm64": "bazel/osx-arm64",
+        "//:macos_x64": "bazel/osx-x64",
         "//conditions:default": "bazel/linux-glibc-x64",
     }),
 )
@@ -96,12 +104,19 @@ cc_library(
 filegroup(
     name = "eventpipe_gen_srcs",
     srcs = select({
-        "@platforms//os:macos": [
-            "bazel/darwin-arm64/eventpipe/dotnetruntime.cpp",
-            "bazel/darwin-arm64/eventpipe/dotnetruntimeprivate.cpp",
-            "bazel/darwin-arm64/eventpipe/dotnetruntimerundown.cpp",
-            "bazel/darwin-arm64/eventpipe/dotnetruntimestress.cpp",
-            "bazel/darwin-arm64/eventpipe/eventpipehelpers.cpp",
+        "//:macos_arm64": [
+            "bazel/osx-arm64/eventpipe/dotnetruntime.cpp",
+            "bazel/osx-arm64/eventpipe/dotnetruntimeprivate.cpp",
+            "bazel/osx-arm64/eventpipe/dotnetruntimerundown.cpp",
+            "bazel/osx-arm64/eventpipe/dotnetruntimestress.cpp",
+            "bazel/osx-arm64/eventpipe/eventpipehelpers.cpp",
+        ],
+        "//:macos_x64": [
+            "bazel/osx-x64/eventpipe/dotnetruntime.cpp",
+            "bazel/osx-x64/eventpipe/dotnetruntimeprivate.cpp",
+            "bazel/osx-x64/eventpipe/dotnetruntimerundown.cpp",
+            "bazel/osx-x64/eventpipe/dotnetruntimestress.cpp",
+            "bazel/osx-x64/eventpipe/eventpipehelpers.cpp",
         ],
         "//conditions:default": [
             "bazel/linux-glibc-x64/eventpipe/dotnetruntime.cpp",

@@ -12,6 +12,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.ComponentModel",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/IServiceProvider.cs",
         "src/System/ComponentModel/CancelEventArgs.cs",

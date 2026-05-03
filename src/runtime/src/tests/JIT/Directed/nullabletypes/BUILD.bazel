@@ -136,6 +136,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -143,6 +144,7 @@ coreclr_test(
     srcs = ["constructor.cs", "invokecommon.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -151,6 +153,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -159,6 +162,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -166,6 +170,7 @@ coreclr_test(
     srcs = ["gettype.cs"],
     pri = 1,
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -173,6 +178,7 @@ coreclr_test(
     srcs = ["gettype.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -194,6 +200,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -201,6 +208,7 @@ coreclr_test(
     srcs = ["hasvalue.cs", "invokecommon.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -209,6 +217,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -216,6 +225,7 @@ coreclr_test(
     srcs = ["invocation.cs", "invokecommon.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -224,6 +234,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -232,6 +243,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -239,6 +251,7 @@ coreclr_test(
     srcs = ["isinst2.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -246,6 +259,7 @@ coreclr_test(
     srcs = ["isinst2.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -254,6 +268,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -268,6 +283,7 @@ coreclr_test(
     srcs = ["isinst.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -275,6 +291,7 @@ coreclr_test(
     srcs = ["isinst.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -283,6 +300,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -291,6 +309,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -298,6 +317,7 @@ coreclr_test(
     srcs = ["isinstboxed.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -305,6 +325,7 @@ coreclr_test(
     srcs = ["isinstboxed.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -313,6 +334,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -321,6 +343,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -328,6 +351,7 @@ coreclr_test(
     srcs = ["isinstenum.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -335,6 +359,7 @@ coreclr_test(
     srcs = ["isinstenum.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -343,6 +368,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -351,6 +377,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -358,6 +385,7 @@ coreclr_test(
     srcs = ["isinstgenerics.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -365,6 +393,7 @@ coreclr_test(
     srcs = ["isinstgenerics.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -373,6 +402,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -381,6 +411,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -388,6 +419,7 @@ coreclr_test(
     srcs = ["isinstinterface.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -395,6 +427,7 @@ coreclr_test(
     srcs = ["isinstinterface.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -403,6 +436,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -417,6 +451,7 @@ coreclr_test(
     srcs = ["isinstvaluetype.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -424,6 +459,7 @@ coreclr_test(
     srcs = ["isinstvaluetype.cs", "//src/tests/JIT/Directed/nullabletypes/Desktop:StructDefinitions.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -432,6 +468,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -439,6 +476,7 @@ coreclr_test(
     srcs = ["tostring.cs", "invokecommon.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(

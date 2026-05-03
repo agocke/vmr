@@ -4,6 +4,7 @@ il_coreclr_test(
     name = "stfldstatic1_importer_r",
     srcs = ["stfldstatic1_r.il", "stfldstatic1.il"],
     pri = 1,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -11,6 +12,7 @@ il_coreclr_test(
     srcs = ["stfldstatic1_d.il", "stfldstatic1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +36,7 @@ il_coreclr_test(
     srcs = ["subovfun1_d.il", "subovfun1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -41,6 +45,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -49,6 +54,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -64,6 +70,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -72,6 +79,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -87,6 +95,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -100,6 +109,7 @@ il_coreclr_test(
     name = "subovfun1_r",
     srcs = ["subovfun1_r.il", "subovfun1.il"],
     pri = 1,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -120,4 +130,5 @@ il_coreclr_test(
     name = "ldfldstatic1_importer_r",
     srcs = ["ldfldstatic1.il"],
     pri = 1,
+    size = "medium",
 )

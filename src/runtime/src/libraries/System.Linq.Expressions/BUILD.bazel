@@ -18,6 +18,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Linq.Expressions",
+    library_import_generator = False,
     srcs = [
         # Common files
         "//src/libraries/Common:src/System/Obsoletions.cs",
@@ -229,7 +230,7 @@ netcoreapp_impl_assembly(
     defines = [
         "FEATURE_FAST_CREATE",
     ],
-    nowarn = ["CA1859"],
+    nowarn = ["CA1859", "CS1591"],
 )
 
 ref_impl_pair(

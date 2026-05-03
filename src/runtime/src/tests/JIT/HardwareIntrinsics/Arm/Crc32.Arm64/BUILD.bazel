@@ -1,0 +1,22 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Crc32.Arm64_r",
+    srcs = [
+        "Program.Crc32.Arm64.cs",
+        "//src/tests/JIT/HardwareIntrinsics/Arm/Shared:Helpers.cs",
+        "//src/tests/JIT/HardwareIntrinsics/Arm/Shared:Program.cs",
+    ],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "Crc32.Arm64_ro",
+    srcs = [
+        "Program.Crc32.Arm64.cs",
+        "//src/tests/JIT/HardwareIntrinsics/Arm/Shared:Helpers.cs",
+        "//src/tests/JIT/HardwareIntrinsics/Arm/Shared:Program.cs",
+    ],
+    optimize = True,
+    tags = ["manual"],  # Needs additional deps not yet available
+)

@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["binop_r.il", "binop.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -18,6 +19,7 @@ il_coreclr_test(
     srcs = ["binop_d.il", "binop.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -25,6 +27,7 @@ il_coreclr_test(
     srcs = ["box_d.il", "box.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -32,4 +35,5 @@ il_coreclr_test(
     srcs = ["box_r.il", "box.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "expl_double_1",
+    srcs = [
+        "body_double.cs",
+        "expl_double_1.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)

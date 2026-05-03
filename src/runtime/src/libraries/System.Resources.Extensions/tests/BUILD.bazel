@@ -1,0 +1,37 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+# NOTE: This test suite requires the System.Drawing.Common NuGet package
+# (Bitmap, Icon etc.) which is not available in the Bazel build.
+# The target_compatible_with constraint ensures it is skipped during builds.
+library_test(
+    name = "System.Resources.Extensions.Tests",
+    srcs = glob(["*.cs"]) + [
+        "//src/libraries/System.Resources.Extensions:src/System/Resources/Extensions/TypeNameComparer.cs",
+        "//src/libraries/System.Private.CoreLib:src/System/Numerics/Hashing/HashHelpers.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Resources.Extensions:impl_System.Resources.Extensions",
+        "//src/libraries/System.Runtime.Serialization.Formatters:impl_System.Runtime.Serialization.Formatters",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    resources = ["TestData.resources"],
+    resource_logical_names = {
+        "TestData.resources": "System.Resources.Extensions.Tests.TestData.resources",
+    },
+    nowarn = [
+        "SYSLIB0011",
+        "SYSLIB0050",
+        "SYSLIB0051",
+    ],
+    keyfile = OPEN_SNK,
+    target_compatible_with = ["@platforms//:incompatible"],
+)

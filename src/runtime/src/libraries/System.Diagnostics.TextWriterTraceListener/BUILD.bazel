@@ -7,18 +7,21 @@ netcoreapp_ref_assembly(
     ],
     deps = [
         "//src/libraries:ref_System.Runtime",
-        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
         "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
     ],
 )
 
 netcoreapp_impl_assembly(
     name = "impl_System.Diagnostics.TextWriterTraceListener",
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Diagnostics/ConsoleTraceListener.cs",
         "src/System/Diagnostics/DelimitedListTraceListener.cs",
         "src/System/Diagnostics/TextWriterTraceListener.cs",
         "src/System/Diagnostics/XmlWriterTraceListener.cs",
+    ],
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
     ],
     resx_file = "src/Resources/Strings.resx",
     deps = [

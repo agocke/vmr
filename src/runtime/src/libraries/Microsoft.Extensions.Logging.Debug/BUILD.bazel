@@ -1,0 +1,43 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Logging.Debug.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Logging.Debug",
+    srcs = [
+        "ref/Microsoft.Extensions.Logging.Debug.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Logging.Debug",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    exclude_sr = True,
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/Extensions/Logging/NullExternalScopeProvider.cs",
+        "//src/libraries/Common:src/Extensions/Logging/NullScope.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Logging.Debug",
+    ref = ":ref_Microsoft.Extensions.Logging.Debug",
+    lib = ":impl_Microsoft.Extensions.Logging.Debug",
+    visibility = ["//visibility:public"],
+)

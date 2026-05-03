@@ -28,7 +28,7 @@ csharp_binary(
     deps = [
         "//src/roslyn/src/Compilers/Core/Portable:Microsoft.CodeAnalysis",
         "//src/roslyn/src/Compilers/CSharp/Portable:Microsoft.CodeAnalysis.CSharp",
-        "@paket.main//microsoft.codeanalysis.visualbasic",
+        "@roslyn_paket//microsoft.codeanalysis.visualbasic",
     ],
     allow_unsafe_blocks = True,
     nullable = "enable",

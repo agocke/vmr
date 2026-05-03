@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "WebAssembly.Browser.RuntimeConfig.Test",
+    srcs = glob(["*.cs"]),
+    tags = ["manual"],  # Needs additional deps not yet available
+)

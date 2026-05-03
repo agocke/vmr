@@ -1,0 +1,38 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "ASPNETCORE_SNK")
+
+library_test(
+    name = "Microsoft.Extensions.Hosting.Systemd.Tests",
+    srcs = glob(["*.cs"]),
+    deps = [
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration.Binder:impl_Microsoft.Extensions.Configuration.Binder",
+        "//src/libraries/Microsoft.Extensions.Configuration.CommandLine:impl_Microsoft.Extensions.Configuration.CommandLine",
+        "//src/libraries/Microsoft.Extensions.Configuration.EnvironmentVariables:impl_Microsoft.Extensions.Configuration.EnvironmentVariables",
+        "//src/libraries/Microsoft.Extensions.Configuration.FileExtensions:impl_Microsoft.Extensions.Configuration.FileExtensions",
+        "//src/libraries/Microsoft.Extensions.Configuration.Json:impl_Microsoft.Extensions.Configuration.Json",
+        "//src/libraries/Microsoft.Extensions.Hosting.Systemd:impl_Microsoft.Extensions.Hosting.Systemd",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection:impl_Microsoft.Extensions.DependencyInjection",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:impl_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics:impl_Microsoft.Extensions.Diagnostics",
+        "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:impl_Microsoft.Extensions.Diagnostics.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:ref_Microsoft.Extensions.FileProviders.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Physical:impl_Microsoft.Extensions.FileProviders.Physical",
+        "//src/libraries/Microsoft.Extensions.Hosting:impl_Microsoft.Extensions.Hosting",
+        "//src/libraries/Microsoft.Extensions.Hosting.Abstractions:impl_Microsoft.Extensions.Hosting.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:impl_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Configuration:impl_Microsoft.Extensions.Logging.Configuration",
+        "//src/libraries/Microsoft.Extensions.Logging.Console:impl_Microsoft.Extensions.Logging.Console",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/Microsoft.Extensions.Options.ConfigurationExtensions:impl_Microsoft.Extensions.Options.ConfigurationExtensions",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = ASPNETCORE_SNK,
+)

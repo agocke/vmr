@@ -1,8 +1,11 @@
-load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
+load("//src/libraries:defs.bzl",
+    "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
 
 exports_files([
     "ref/System.Formats.Cbor.cs",
     "ref/System.Formats.Cbor.netcoreapp.cs",
+    "src/System/Formats/Cbor/CborInitialByte.cs",
 ])
 
 netcoreapp_ref_assembly(
@@ -18,8 +21,12 @@ netcoreapp_ref_assembly(
     ],
 )
 
-netcoreapp_impl_assembly(
+impl_assembly(
     name = "impl_System.Formats.Cbor",
+    keyfile = OPEN_SNK,
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    allow_unsafe_blocks = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
     srcs = [
         "//src/libraries/Common:src/System/Memory/PointerMemoryManager.cs",
         "//src/libraries/Common:src/System/Obsoletions.cs",

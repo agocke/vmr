@@ -1,4 +1,7 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//:defs.bzl", "OPEN_SNK")
+
+exports_files(["src/Resources/Strings.resx"])
 
 netcoreapp_ref_assembly(
     name = "ref_System.Net.HttpListener",
@@ -20,6 +23,9 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Net.HttpListener",
+    keyfile = OPEN_SNK,
+    com_interface_generator = True,
+    nowarn = ["CS1591"],
     os_targeted = "unix",
     srcs = glob(
         ["src/System/**/*.cs"],

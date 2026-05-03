@@ -1,0 +1,51 @@
+load("//src/libraries:defs.bzl", "live_csharp_library")
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
+
+# Helper assembly loaded at runtime by AssemblyCatalogTests and
+# DirectoryCatalogTests.  Built as a separate assembly so it can be discovered
+# by name ("System.ComponentModel.Composition.Noop.Assembly.dll").
+live_csharp_library(
+    name = "System.ComponentModel.Composition.Noop.Assembly",
+    srcs = ["System.ComponentModel.Composition.Noop.Assembly/TestClass.cs"],
+    deps = [
+        "//src/libraries/System.ComponentModel.Composition:impl_System.ComponentModel.Composition",
+    ],
+)
+
+library_test(
+    name = "System.ComponentModel.Composition.Tests",
+    srcs = glob(
+        ["**/*.cs"],
+        exclude = [
+            "System.ComponentModel.Composition.Noop.Assembly/**",
+            # References removed internal API (Microsoft.Internal.Assumes)
+            "System/ComponentModel/Composition/ImportSourceImportDefinitionHelpers.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:System/IO/TempDirectory.cs",
+        "//src/libraries/Common/tests:System/IO/TempFile.cs",
+    ],
+    deps = [
+        "//src/libraries/System.ComponentModel.Composition:impl_System.ComponentModel.Composition",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries:ref_System.Linq.Expressions",
+        "//src/libraries:ref_System.Text.RegularExpressions",
+        "//src/libraries/System.Linq.Queryable:ref_System.Linq.Queryable",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Emit.Lightweight:ref_System.Reflection.Emit.Lightweight",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    keyfile = OPEN_SNK,
+    data = [":System.ComponentModel.Composition.Noop.Assembly"],
+    size = "large",
+)

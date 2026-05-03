@@ -11,6 +11,7 @@ coreclr_test(
     srcs = ["Inline_RecursiveMethod21.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -18,6 +19,7 @@ coreclr_test(
     srcs = ["struct_opcodes.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -25,18 +27,21 @@ coreclr_test(
     srcs = ["GenericStructs.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "DelegStaticFtn",
     srcs = ["DelegStaticFtn.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "ifelse",
     srcs = ["ifelse.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -49,18 +54,21 @@ coreclr_test(
     name = "ReturnStruct_Method",
     srcs = ["ReturnStruct_Method.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "interfaceproperty",
     srcs = ["interfaceProperty.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "Inline_NormalizeStack",
     srcs = ["Inline_NormalizeStack.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -68,6 +76,7 @@ coreclr_test(
     srcs = ["StructInClass.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -75,6 +84,7 @@ coreclr_test(
     srcs = ["throwTest.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -82,24 +92,28 @@ coreclr_test(
     srcs = ["args3.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "mthdimpl",
     srcs = ["mthdimpl.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "LotsOfInlines",
     srcs = ["LotsOfInlines.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "array",
     srcs = ["array.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -111,12 +125,14 @@ coreclr_test(
     name = "Inline_Many",
     srcs = ["Inline_Many.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "args1",
     srcs = ["args1.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -124,18 +140,21 @@ coreclr_test(
     srcs = ["debug.cs"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 coreclr_test(
     name = "Inline_MultipleReturn",
     srcs = ["Inline_MultipleReturn.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "property",
     srcs = ["property.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -143,30 +162,35 @@ coreclr_test(
     srcs = ["Inline_RecursiveMethod.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "DelegInstanceFtn",
     srcs = ["DelegInstanceFtn.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "Inline_Recursion",
     srcs = ["Inline_Recursion.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "Inline_STARG",
     srcs = ["Inline_STARG.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "deepcall",
     srcs = ["deepcall.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -174,36 +198,42 @@ coreclr_test(
     srcs = ["indexer.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "Inline_SideAffects",
     srcs = ["Inline_SideAffects.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "interfaceCall",
     srcs = ["interfaceCall.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "trycatch",
     srcs = ["trycatch.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "fact",
     srcs = ["fact.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "Inline_handler",
     srcs = ["Inline_handler.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -211,12 +241,14 @@ coreclr_test(
     srcs = ["Inline_DelegateStruct.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "Inline_GenericMethods",
     srcs = ["Inline_GenericMethods.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -228,6 +260,7 @@ coreclr_test(
     name = "args2",
     srcs = ["args2.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -237,18 +270,21 @@ coreclr_test(
     debug_type = "pdbonly",
     optimize = True,
     allow_unsafe_blocks = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "StructAsParam_Method",
     srcs = ["StructAsParam_Method.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
     name = "Inline",
     srcs = ["Inline.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -267,10 +303,12 @@ coreclr_test(
     srcs = ["ArrayOfStructs.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
     name = "Inline_NewObj",
     srcs = ["Inline_NewObj.cs"],
     pri = 1,
+    size = "medium",
 )

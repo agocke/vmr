@@ -2,9 +2,9 @@ name: Bazel Build & Test
 
 on:
   push:
-    branches: [ bazel ]
+    branches: [ bazel, bazel-main ]
   pull_request:
-    branches: [ bazel, bazel-mac ]
+    branches: [ bazel, bazel-main, bazel-mac ]
 
 jobs:
   build:
@@ -12,18 +12,29 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: [self-hosted, Linux, X64]
             name: Linux release
             config: clr_release
-          - os: ubuntu-latest
+          - os: [self-hosted, Linux, X64]
             name: Linux checked
             config: clr_checked
-          - os: macos-latest
+            libs_config: libs_release
+          - os: [self-hosted, macOS, X64]
             name: macOS release
             config: clr_release
+            libs_config: libs_release
+          - os: windows-latest
+            name: Windows host
+            config: clr_release
+            libs_config: libs_release
+            targets: //src/native/corehost:all
 
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout
@@ -33,19 +44,26 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -qq -y clang-18 lld libkrb5-dev liblttng-ust-dev
+          sudo apt-get install -qq -y clang-18 lld libkrb5-dev liblttng-ust-dev libssl-dev
 
-      - name: Mount Bazel cache
-        uses: actions/cache@v4
+      - name: Restore Bazel cache
+        uses: actions/cache/restore@v5
         with:
           path: ~/.cache/bazel-disk
-          key: bazel-${{ runner.os }}-${{ matrix.config }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-${{ github.sha }}
+          key: bazel-${{ runner.os }}-${{ runner.arch }}-${{ matrix.config }}-${{ github.sha }}
           restore-keys: |
-            bazel-${{ runner.os }}-${{ matrix.config }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc') }}-
-            bazel-${{ runner.os }}-${{ matrix.config }}-
+            bazel-${{ runner.os }}-${{ runner.arch }}-${{ matrix.config }}-
 
       - name: Build
-        run: bazel build //... --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk
+        run: bazel build ${{ matrix.targets || '//...' }} --config=${{ matrix.config }} ${{ matrix.libs_config && format('--config={0}', matrix.libs_config) || '' }} --disk_cache=~/.cache/bazel-disk
 
       - name: Test
-        run: bazel test //... --config=${{ matrix.config }} --disk_cache=~/.cache/bazel-disk --test_output=errors
+        if: ${{ !matrix.targets && !matrix.skip_tests }}
+        run: bazel test //... --config=${{ matrix.config }} ${{ matrix.libs_config && format('--config={0}', matrix.libs_config) || '' }} --disk_cache=~/.cache/bazel-disk --test_output=errors
+
+      - name: Save Bazel cache
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/bazel-disk
+          key: bazel-${{ runner.os }}-${{ runner.arch }}-${{ matrix.config }}-${{ github.sha }}

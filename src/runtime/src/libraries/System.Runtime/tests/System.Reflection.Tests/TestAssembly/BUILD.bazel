@@ -1,0 +1,22 @@
+load("//:defs.bzl", "OPEN_SNK", "csharp_library")
+load("//src/libraries:defs.bzl", "DOWNLEVEL_GENERATOR_ANALYZERS")
+
+exports_files(
+    ["EquivalentValueType.cs"],
+    visibility = ["//src/libraries/System.Runtime/tests:__pkg__"],
+)
+
+csharp_library(
+    name = "TestAssembly",
+    analyzers = DOWNLEVEL_GENERATOR_ANALYZERS,
+    srcs = glob(["*.cs"]),
+    target_frameworks = ["netstandard2.0"],
+    nullable = "annotations",
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051", "nullable"],
+    keyfile = OPEN_SNK,
+    visibility = ["//src/libraries/System.Runtime/tests:__subpackages__"],
+)

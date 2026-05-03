@@ -1,0 +1,39 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "finalizearray",
+    srcs = ["finalizearray.cs"],
+)
+
+coreclr_test(
+    name = "finalizearraysleep",
+    srcs = ["finalizearraysleep.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "finalizedest",
+    srcs = ["finalizedest.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "finalizeexcep",
+    srcs = ["finalizeexcep.cs"],
+)
+
+coreclr_test(
+    name = "finalizeinherit",
+    srcs = ["finalizeinherit.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "finalizenested",
+    srcs = ["finalizenested.cs"],
+    pri = 1,
+    size = "medium",
+)

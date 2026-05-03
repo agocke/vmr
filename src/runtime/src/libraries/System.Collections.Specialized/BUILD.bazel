@@ -13,6 +13,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Collections.Specialized",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Collections/Specialized/BitVector32.cs",
         "src/System/Collections/Specialized/HybridDictionary.cs",

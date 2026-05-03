@@ -13,6 +13,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "full",
     deps = [":sinlib_cs"],
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -22,4 +23,5 @@ il_coreclr_test(
     debug_type = "pdbonly",
     optimize = True,
     deps = [":sinlib_cs"],
+    size = "medium",
 )

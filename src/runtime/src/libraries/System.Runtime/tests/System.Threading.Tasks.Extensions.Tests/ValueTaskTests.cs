@@ -5,7 +5,6 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Security.Policy;
 using System.Threading.Tasks.Sources;
 using System.Threading.Tasks.Sources.Tests;
 using Microsoft.DotNet.XUnitExtensions;

@@ -25,6 +25,7 @@ il_coreclr_test(
     srcs = ["castclass_valuetype.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(

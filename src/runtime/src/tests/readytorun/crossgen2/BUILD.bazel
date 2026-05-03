@@ -1,0 +1,26 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "crossgen2smoke",
+    srcs = glob(["*.cs"]),
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "crossgen2smoke_donotalwaysusecrossgen2",
+    srcs = glob(["*.cs"]),
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+coreclr_test(
+    name = "helperdll",
+    srcs = ["helperdll.cs"],
+    optimize = True,
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "helperildll",
+    srcs = ["helperildll.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

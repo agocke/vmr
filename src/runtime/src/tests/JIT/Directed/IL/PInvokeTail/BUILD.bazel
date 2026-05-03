@@ -1,0 +1,16 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "PInvokeTail",
+    srcs = ["PInvokeTail.il"],
+    optimize = True,
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "TailWinApi",
+    srcs = ["tailwinapi.il"],
+    optimize = True,
+    target_compatible_with = ["@platforms//os:windows"],
+)

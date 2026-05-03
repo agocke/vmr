@@ -79,7 +79,7 @@
         },
         {
             "name": "runtime",
-            "defaultRemote": "https://github.com/agocke/runtime"
+            "defaultRemote": "https://github.com/dotnet/runtime"
         },
         {
             "name": "scenario-tests",

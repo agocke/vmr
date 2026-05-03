@@ -12,6 +12,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.IO.FileSystem.DriveInfo",
+    com_interface_generator = True,
     os_targeted = "unix",
     srcs = [
         "src/System/IO/DriveInfo.cs",
@@ -43,14 +44,11 @@ netcoreapp_impl_assembly(
         "//src/libraries:ref_System.Runtime",
         "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
     ],
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     allow_unsafe_blocks = True,
     resx_file = "src/Resources/Strings.resx",
     nowarn = [
         "CS8500", # Address of a pointer to a managed type
+        "CS1591",
     ],
     supported_os_platforms = ["unix"],
 )

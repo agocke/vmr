@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["struct01_static.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -12,6 +13,7 @@ coreclr_test(
     srcs = ["class01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -19,6 +21,7 @@ coreclr_test(
     srcs = ["class01_Instance.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -26,6 +29,7 @@ coreclr_test(
     srcs = ["class01_static.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -33,6 +37,7 @@ coreclr_test(
     srcs = ["struct01.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -40,4 +45,5 @@ coreclr_test(
     srcs = ["struct01_Instance.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

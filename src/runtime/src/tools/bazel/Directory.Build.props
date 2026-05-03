@@ -1,0 +1,13 @@
+<Project>
+  <!-- Shield bazel tools from the repo's root Directory.Build.props/targets.
+       These are standalone utilities that don't need the runtime repo's
+       strict analyzer configuration, Arcade SDK, versioning, or packaging.
+       Import only eng/Versions.props for package version variables. -->
+
+  <Import Project="$(MSBuildThisFileDirectory)../../../eng/Versions.props" />
+
+  <PropertyGroup>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>

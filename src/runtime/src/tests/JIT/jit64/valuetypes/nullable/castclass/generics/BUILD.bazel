@@ -1,0 +1,431 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "castclass-generics001",
+    srcs = [
+        "castclass-generics001.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics002",
+    srcs = [
+        "castclass-generics002.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics003",
+    srcs = [
+        "castclass-generics003.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics004",
+    srcs = [
+        "castclass-generics004.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics005",
+    srcs = [
+        "castclass-generics005.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics006",
+    srcs = [
+        "castclass-generics006.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics007",
+    srcs = [
+        "castclass-generics007.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics008",
+    srcs = [
+        "castclass-generics008.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics009",
+    srcs = [
+        "castclass-generics009.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics010",
+    srcs = [
+        "castclass-generics010.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics011",
+    srcs = [
+        "castclass-generics011.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics012",
+    srcs = [
+        "castclass-generics012.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics013",
+    srcs = [
+        "castclass-generics013.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics014",
+    srcs = [
+        "castclass-generics014.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics015",
+    srcs = [
+        "castclass-generics015.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics016",
+    srcs = [
+        "castclass-generics016.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics017",
+    srcs = [
+        "castclass-generics017.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics018",
+    srcs = [
+        "castclass-generics018.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics019",
+    srcs = [
+        "castclass-generics019.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics020",
+    srcs = [
+        "castclass-generics020.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics021",
+    srcs = [
+        "castclass-generics021.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics022",
+    srcs = [
+        "castclass-generics022.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics023",
+    srcs = [
+        "castclass-generics023.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics024",
+    srcs = [
+        "castclass-generics024.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics025",
+    srcs = [
+        "castclass-generics025.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics026",
+    srcs = [
+        "castclass-generics026.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics027",
+    srcs = [
+        "castclass-generics027.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics028",
+    srcs = [
+        "castclass-generics028.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics029",
+    srcs = [
+        "castclass-generics029.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics030",
+    srcs = [
+        "castclass-generics030.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics031",
+    srcs = [
+        "castclass-generics031.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics032",
+    srcs = [
+        "castclass-generics032.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics033",
+    srcs = [
+        "castclass-generics033.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics034",
+    srcs = [
+        "castclass-generics034.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics037",
+    srcs = [
+        "castclass-generics037.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics038",
+    srcs = [
+        "castclass-generics038.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics039",
+    srcs = [
+        "castclass-generics039.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics040",
+    srcs = [
+        "castclass-generics040.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics041",
+    srcs = [
+        "castclass-generics041.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics042",
+    srcs = [
+        "castclass-generics042.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics043",
+    srcs = [
+        "castclass-generics043.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics044",
+    srcs = [
+        "castclass-generics044.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "castclass-generics045",
+    srcs = [
+        "castclass-generics045.cs",
+        "//src/tests/JIT/jit64/valuetypes/nullable/castclass:structdef.cs",
+    ],
+    pri = 1,
+    size = "medium",
+)

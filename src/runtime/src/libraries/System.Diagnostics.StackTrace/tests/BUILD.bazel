@@ -1,15 +1,23 @@
-load("//src/libraries:defs.bzl", "live_csharp_library")
+load("//:defs.bzl", "OPEN_SNK", "csharp_library")
+load("//src/libraries:defs.bzl", "DOWNLEVEL_GENERATOR_ANALYZERS")
 load("//src/tests:live_test.bzl", "library_test")
 
 # Separate helper assembly loaded at runtime via Assembly.LoadFrom() by
 # StackTraceTests.ToString_ShowILOffset.  Built without debug info to match
 # MSBuild's <DebugType>None</DebugType>.
-live_csharp_library(
+csharp_library(
     name = "ExceptionTestAssembly",
+    analyzers = DOWNLEVEL_GENERATOR_ANALYZERS,
+    keyfile = OPEN_SNK,
     srcs = ["ExceptionTestAssembly/ExceptionTestAssembly.cs"],
-    # MSBuild uses DebugType=None but rules_dotnet always declares a .pdb
-    # output.  Omit /debug- and let the default PDB be generated; the test
-    # assertions about IL offsets still pass with debug info present.
+    target_frameworks = ["netstandard2.0"],
+    nullable = "annotations",
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051", "nullable"],
+    debug_type = "none",
 )
 
 # This test requires PDB files to exist (StackTraceSymbolsDoNotLockFile asserts
@@ -39,6 +47,6 @@ library_test(
         "@paket.main//xunit.extensibility.core",
     ],
     allow_unsafe_blocks = True,
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
     writable_test_dir = True,
 )

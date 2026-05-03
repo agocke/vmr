@@ -17,6 +17,7 @@ il_coreclr_test(
     srcs = ["cond64_r.il", "cond64.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -30,6 +31,7 @@ il_coreclr_test(
     srcs = ["cond64_d.il", "cond64.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -37,6 +39,7 @@ il_coreclr_test(
     srcs = ["comp32_d.il", "comp32.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -44,6 +47,7 @@ il_coreclr_test(
     srcs = ["comp64_r.il", "comp64.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -51,6 +55,7 @@ il_coreclr_test(
     srcs = ["intrinsic_nonf_r.il", "intrinsic_nonf.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -58,6 +63,7 @@ il_coreclr_test(
     srcs = ["cond32_d.il", "cond32.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -65,6 +71,7 @@ il_coreclr_test(
     srcs = ["intrinsic_nonf_d.il", "intrinsic_nonf.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -78,6 +85,7 @@ il_coreclr_test(
     srcs = ["comp64_d.il", "comp64.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -85,6 +93,7 @@ il_coreclr_test(
     srcs = ["comp32_r.il", "comp32.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -92,4 +101,5 @@ il_coreclr_test(
     srcs = ["cond32_r.il", "cond32.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

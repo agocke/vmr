@@ -1,0 +1,16 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "lohcompactapi",
+    srcs = ["lohcompactapi.cs"],
+)
+
+coreclr_test(
+    name = "lohcompactapi_exceptions",
+    srcs = ["lohcompactapi_exceptions.cs"],
+)
+
+coreclr_test(
+    name = "lohpin",
+    srcs = ["lohpin.cs"],
+)

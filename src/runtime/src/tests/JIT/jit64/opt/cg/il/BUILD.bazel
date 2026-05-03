@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["ldftn_impl.il", "ldftn.il"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -13,6 +14,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -21,6 +23,7 @@ il_coreclr_test(
     pri = 1,
     debug_type = "pdbonly",
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -28,6 +31,7 @@ il_coreclr_test(
     srcs = ["jmp_impl.il", "jmp.il"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -35,6 +39,7 @@ il_coreclr_test(
     srcs = ["jmp_d.il", "jmp.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -42,4 +47,5 @@ il_coreclr_test(
     srcs = ["ldftn_d.il", "ldftn.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

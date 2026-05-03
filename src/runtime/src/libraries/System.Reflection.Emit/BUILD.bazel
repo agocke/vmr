@@ -19,6 +19,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Reflection.Emit",
+    nowarn = ["CS1591"],
     srcs = glob(["src/System/**/*.cs"]) + [
         "//src/libraries/System.Private.CoreLib:src/System/Reflection/Emit/MethodBuilderInstantiation.cs",
         "//src/libraries/System.Private.CoreLib:src/System/Reflection/Emit/SymbolType.cs",
@@ -28,10 +29,10 @@ netcoreapp_impl_assembly(
     resx_file = "src/Resources/Strings.resx",
     allow_unsafe_blocks = True,
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
         "//src/libraries:impl_System.Runtime",
-        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
-        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Collections.Immutable:impl_System.Collections.Immutable",
+        "//src/libraries/System.Reflection.Metadata:impl_System.Reflection.Metadata",
     ],
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Reflection.Emit",

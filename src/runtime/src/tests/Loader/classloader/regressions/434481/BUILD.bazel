@@ -1,0 +1,6 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "b434481_GenericRecurInit",
+    srcs = ["b434481_genericrecurinit.cs"],
+)

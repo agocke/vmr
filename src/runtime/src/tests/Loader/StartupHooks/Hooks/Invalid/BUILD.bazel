@@ -1,0 +1,26 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "InstanceMethod",
+    srcs = ["InvalidHook.cs"],
+)
+
+coreclr_test(
+    name = "MultipleIncorrectSignatures",
+    srcs = ["InvalidHook.cs"],
+)
+
+coreclr_test(
+    name = "NoInitializeMethod",
+    srcs = ["InvalidHook.cs"],
+)
+
+coreclr_test(
+    name = "NonVoidReturn",
+    srcs = ["InvalidHook.cs"],
+)
+
+coreclr_test(
+    name = "NotParameterless",
+    srcs = ["InvalidHook.cs"],
+)

@@ -4,10 +4,12 @@ load("//src/libraries:defs.bzl", "netcoreapp_impl_assembly")
 # Matches MSBuild's GeneratePlatformNotSupportedAssemblyMessage behavior.
 netcoreapp_impl_assembly(
     name = "impl_System.IO.Pipes.AccessControl",
+    nowarn = ["CS1591"],
     pnse = True,
     pnse_message = "SR.PlatformNotSupported_AccessControl",
     pnse_ref_srcs = [
         "//src/libraries/System.IO.Pipes.AccessControl:ref/System.IO.Pipes.AccessControl.cs",
+        "//src/libraries/System.IO.Pipes.AccessControl:ref/System.IO.Pipes.AccessControl.TypeForwards.cs",
     ],
     srcs = [],
     deps = [
@@ -19,5 +21,7 @@ netcoreapp_impl_assembly(
     ],
     resx_file = "Resources/Strings.resx",
     supported_os_platforms_short = ["windows"],
-    nullable = "annotations",
+    nullable = "enable",
+    include_editorconfig = False,
+    library_import_generator = False,
 )

@@ -1,15 +1,25 @@
-load("//:defs.bzl", "gen_resx_source")
+load("//:defs.bzl", "OPEN_SNK", "gen_resx_source", "resgen")
 load("//src/tests:live_test.bzl", "library_test")
 
 gen_resx_source(
     name = "gen_resx",
     out = "SR.g.cs",
-    assembly_name = "System.IO.IsolatedStorage",
-    resx_file = "//src/libraries/System.IO.IsolatedStorage:src/Resources/Strings.resx",
+    assembly_name = "System.IO.IsolatedStorage.Tests",
+    resx_file = "Resources/Strings.resx",
+)
+
+resgen(
+    name = "strings_resx",
+    out = "FxResources.System.IO.IsolatedStorage.Tests.SR.resources",
+    resx_file = "Resources/Strings.resx",
 )
 
 library_test(
     name = "System.IO.IsolatedStorage.Tests",
+    resources = [":strings_resx"],
+    resource_logical_names = {"FxResources.System.IO.IsolatedStorage.Tests.SR.resources": "FxResources.System.IO.IsolatedStorage.Tests.SR.resources"},
+    additionalfiles = ["Resources/Strings.resx"],
+    defines = select({"@platforms//os:linux": ["UNIX", "UNIX1_0"], "@platforms//os:macos": ["UNIX", "UNIX1_0"], "//conditions:default": []}),
     # TODO: Skip on macOS due to debug assertion in DispatchNativeException
     # when handling breakpoint exceptions without a debugger attached.
     # See: https://github.com/dotnet/runtime/issues/XXXXX
@@ -41,6 +51,7 @@ library_test(
         "//src/libraries/Common:src/System/SR.cs",
         ":gen_resx",
     ],
+    keyfile = OPEN_SNK,
     deps = [
         "//src/libraries/System.IO.IsolatedStorage:ref_System.IO.IsolatedStorage",
         "//src/libraries/System.Security.Cryptography:ref_System.Security.Cryptography",

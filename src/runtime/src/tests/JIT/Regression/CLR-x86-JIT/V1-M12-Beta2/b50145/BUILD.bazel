@@ -6,6 +6,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )
 
 coreclr_test(
@@ -13,6 +14,7 @@ coreclr_test(
     srcs = ["b50145a.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -20,6 +22,7 @@ coreclr_test(
     srcs = ["b50145c.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 coreclr_test(
@@ -27,4 +30,5 @@ coreclr_test(
     srcs = ["b50145b.cs"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )

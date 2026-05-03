@@ -1,0 +1,43 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "ConstrainedMethods",
+    srcs = ["ConstrainedMethods.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "MethodCalls",
+    srcs = ["MethodCalls.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "RecursiveGen",
+    srcs = ["RecursiveGen.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "SealedTypes",
+    srcs = ["SealedTypes.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Variance1",
+    srcs = ["Variance1.il"],
+    pri = 1,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "Variance2",
+    srcs = ["Variance2.il"],
+    pri = 1,
+    size = "medium",
+)

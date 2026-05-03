@@ -1,0 +1,47 @@
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Caching.Abstractions.cs",
+    "ref/Microsoft.Extensions.Caching.Abstractions.netcoreapp.cs",
+    "ref/Microsoft.Extensions.Caching.Abstractions.net10.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Caching.Abstractions",
+    srcs = [
+        "ref/Microsoft.Extensions.Caching.Abstractions.cs",
+        "ref/Microsoft.Extensions.Caching.Abstractions.netcoreapp.cs",
+        "ref/Microsoft.Extensions.Caching.Abstractions.net10.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Caching.Abstractions",
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    exclude_sr = True,
+    srcs = glob(["src/**/*.cs"]),
+    analyzers = [
+        "//src/libraries/System.Runtime.InteropServices:ComInterfaceGenerator",
+        "//src/libraries/System.Text.Json:JsonSourceGenerator",
+        "//src/libraries/System.Text.RegularExpressions:RegexGenerator",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Primitives:ref_Microsoft.Extensions.Primitives",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+    ],
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Caching.Abstractions",
+    ref = ":ref_Microsoft.Extensions.Caching.Abstractions",
+    lib = ":impl_Microsoft.Extensions.Caching.Abstractions",
+    visibility = ["//visibility:public"],
+)

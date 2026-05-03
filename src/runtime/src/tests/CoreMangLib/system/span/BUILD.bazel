@@ -1,0 +1,15 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "RefStructWithSpan",
+    srcs = ["RefStructWithSpan.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "SlowTailCallArgs",
+    srcs = ["SlowTailCallArgs.cs"],
+    pri = 1,
+    size = "medium",
+)

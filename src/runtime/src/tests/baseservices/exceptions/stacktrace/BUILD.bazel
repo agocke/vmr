@@ -1,0 +1,10 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Tier1StackTrace",
+    srcs = ["Tier1StackTrace.cs"],
+    optimize = True,
+    pri = 1,
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)

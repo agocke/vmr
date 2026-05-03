@@ -1,0 +1,97 @@
+load("//:defs.bzl", "ASPNETCORE_SNK", "csharp_library")
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Logging.Abstractions.cs",
+])
+
+# Source generator: Microsoft.Extensions.Logging.Generators
+# Used by System.Diagnostics.Tracing.Tests.
+csharp_library(
+    name = "LoggingGenerators",
+    out = "Microsoft.Extensions.Logging.Generators",
+    keyfile = ASPNETCORE_SNK,
+    srcs = glob(["gen/**/*.cs"], exclude = ["gen/LoggerMessageGenerator.Roslyn4.0.cs"]) + [
+        "//src/libraries/Common:src/Roslyn/DiagnosticDescriptorHelper.cs",
+        "//src/libraries/Common:src/Roslyn/GetBestTypeByMetadataName.cs",
+        "//src/libraries/Common:src/System/SR.cs",
+    ],
+    target_frameworks = ["netstandard2.0"],
+    langversion = "preview",
+    cls_compliant = False,
+    deps = [
+        "@paket.main//microsoft.codeanalysis.common",
+        "@paket.main//microsoft.codeanalysis.csharp",
+        "@paket.main//microsoft.codeanalysis.workspaces.common",
+        "@paket.main//microsoft.codeanalysis.csharp.workspaces",
+        "@paket.main//system.buffers",
+        "@paket.main//system.collections.immutable",
+        "@paket.main//system.memory",
+        "@paket.main//system.composition.attributedmodel",
+        "@paket.main//system.composition.convention",
+        "@paket.main//system.composition.hosting",
+        "@paket.main//system.composition.runtime",
+        "@paket.main//system.composition.typedparts",
+        "@paket.main//system.io.pipelines",
+        "@paket.illink//system.numerics.vectors",
+        "@paket.main//system.reflection.metadata",
+        "@paket.main//system.runtime.compilerservices.unsafe",
+        "@paket.illink//system.text.encoding.codepages",
+        "@paket.illink//system.threading.tasks.extensions",
+    ],
+    nullable = "enable",
+    resx_file = "gen/Resources/Strings.resx",
+    analyzers = [
+        "//:source_build_analyzers",
+    ],
+    additionalfiles = glob(["gen/Resources/*.resx"]),
+    msbuild_analyzer_config = "source",
+    editorconfig_name = "Microsoft.Extensions.Logging.Generators.Roslyn3.11",
+    include_syslib_warnaserror = False,
+    extra_editorconfig_content = "dotnet_diagnostic.RS1036.severity = none",
+    nowarn = ["nullable"],
+    visibility = ["//visibility:public"],
+)
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Logging.Abstractions",
+    srcs = [
+        "ref/Microsoft.Extensions.Logging.Abstractions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Logging.Abstractions",
+    allow_unsafe_blocks = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(["src/**/*.cs"]) + [
+        "//src/libraries/Common:src/Extensions/TypeNameHelper/TypeNameHelper.cs",
+        "//src/libraries/Common:src/Extensions/Logging/NullExternalScopeProvider.cs",
+        "//src/libraries/Common:src/Extensions/Logging/NullScope.cs",
+        "//src/libraries/Common:src/Extensions/Logging/DebuggerDisplayFormatting.cs",
+        "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",
+    ],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Threading:ref_System.Threading",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Logging.Abstractions",
+    ref = ":ref_Microsoft.Extensions.Logging.Abstractions",
+    lib = ":impl_Microsoft.Extensions.Logging.Abstractions",
+    visibility = ["//visibility:public"],
+)

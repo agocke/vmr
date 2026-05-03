@@ -1,0 +1,51 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "OPEN_SNK")
+
+netcoreapp_ref_assembly(
+    name = "ref_System.Diagnostics.EventLog",
+    srcs = [
+        "ref/System.Diagnostics.EventLog.cs",
+        "ref/System.Diagnostics.EventLog.netcoreapp.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.Diagnostics.EventLog",
+    keyfile = OPEN_SNK,
+    pnse = True,
+    pnse_message = "SR.PlatformNotSupported_EventLog",
+    pnse_ref_srcs = [
+        "ref/System.Diagnostics.EventLog.cs",
+        "ref/System.Diagnostics.EventLog.netcoreapp.cs",
+    ],
+    srcs = [],
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    allow_unsafe_blocks = True,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries:ref_System.ComponentModel.Primitives",
+        "//src/libraries/System.ComponentModel.TypeConverter:ref_System.ComponentModel.TypeConverter",
+        "//src/libraries/System.Diagnostics.TraceSource:ref_System.Diagnostics.TraceSource",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Security.Principal.Windows:ref_System.Security.Principal.Windows",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    supported_os_platforms_short = ["windows"],
+    nullable = "disable",
+    nowarn = MULTITARGET_NOWARN + ["nullable", "CP0003", "CS1591"],
+)
+
+ref_impl_pair(
+    name = "live_System.Diagnostics.EventLog",
+    ref = ":ref_System.Diagnostics.EventLog",
+    lib = ":impl_System.Diagnostics.EventLog",
+    visibility = ["//visibility:public"],
+)

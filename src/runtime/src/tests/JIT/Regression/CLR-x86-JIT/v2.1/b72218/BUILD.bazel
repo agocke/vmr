@@ -10,4 +10,5 @@ coreclr_test(
         "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
         "//src/libraries/System.Threading:ref_System.Threading",
     ],
+    size = "medium",
 )

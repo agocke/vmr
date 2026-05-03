@@ -1,4 +1,4 @@
-load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
+load("//src/libraries:defs.bzl", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly")
 
 exports_files([
     "src/System/Reflection/Metadata/AssemblyNameInfo.cs",
@@ -25,7 +25,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Reflection.Metadata",
-    multitarget = True,
+    com_interface_generator = True,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "CS1591"],
     srcs = glob(
         ["src/System/**/*.cs"],
         exclude = [

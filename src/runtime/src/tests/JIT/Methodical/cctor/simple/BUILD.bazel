@@ -5,6 +5,7 @@ il_coreclr_test(
     srcs = ["prefldinit1_r.il", "prefldinit1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -12,6 +13,7 @@ il_coreclr_test(
     srcs = ["prefldinit2_d.il", "prefldinit2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -19,6 +21,7 @@ il_coreclr_test(
     srcs = ["prefldinit4_r.il", "prefldinit4.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -26,6 +29,7 @@ il_coreclr_test(
     srcs = ["prefldinit2_r.il", "prefldinit2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -33,6 +37,7 @@ il_coreclr_test(
     srcs = ["prefldinit4_d.il", "prefldinit4.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -40,4 +45,5 @@ il_coreclr_test(
     srcs = ["prefldinit1_d.il", "prefldinit1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

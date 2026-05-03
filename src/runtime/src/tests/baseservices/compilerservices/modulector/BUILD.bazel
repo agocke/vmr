@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "il_coreclr_test")
+
+il_coreclr_test(
+    name = "moduleCctor",
+    srcs = ["moduleCctor.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

@@ -4,6 +4,7 @@ coreclr_test(
     name = "DevDiv_911875_r",
     srcs = ["DevDiv_911875.cs"],
     pri = 1,
+    size = "medium",
 )
 
 coreclr_test(
@@ -11,6 +12,7 @@ coreclr_test(
     srcs = ["DevDiv_911875.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -19,6 +21,7 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -27,4 +30,5 @@ coreclr_test(
     pri = 1,
     debug_type = "full",
     optimize = False,
+    size = "medium",
 )

@@ -1,6 +1,9 @@
 load("//src/libraries:defs.bzl", "netcoreapp_ref_assembly", "netcoreapp_impl_assembly", "ref_impl_pair")
 
-exports_files(["ref/System.Diagnostics.StackTrace.cs"])
+exports_files([
+    "ref/System.Diagnostics.StackTrace.cs",
+    "src/ILLink/ILLink.Descriptors.LibraryBuild.xml",
+])
 
 netcoreapp_ref_assembly(
     name = "ref_System.Diagnostics.StackTrace",
@@ -14,6 +17,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Diagnostics.StackTrace",
+    nowarn = ["CS1591"],
     srcs = [
         "src/System/Diagnostics/StackTraceSymbols.cs",
         "src/System/Diagnostics/SymbolStore/ISymbolBinder.cs",
@@ -31,11 +35,11 @@ netcoreapp_impl_assembly(
         "src/System/Diagnostics/SymbolStore/SymLanguageVendor.cs",
     ],
     deps = [
-        "//src/libraries:ref_System.Private.CoreLib",
+        "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",
         "//src/libraries:impl_System.Runtime",
-        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
-        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
-            "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Reflection.Metadata:impl_System.Reflection.Metadata",
+        "//src/libraries/System.Collections.Immutable:impl_System.Collections.Immutable",
+        "//src/libraries/System.Collections.Concurrent:impl_System.Collections.Concurrent",
 ],
     exclude_sr = True,
     allow_unsafe_blocks = True,

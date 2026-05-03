@@ -11,6 +11,7 @@ il_coreclr_test(
     srcs = ["refarg_i2_d.il", "refarg_i2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -48,6 +49,7 @@ il_coreclr_test(
     srcs = ["refarg_i2_r.il", "refarg_i2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -61,6 +63,7 @@ il_coreclr_test(
     srcs = ["refloc_i4_d.il", "refloc_i4.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -74,6 +77,7 @@ il_coreclr_test(
     srcs = ["refloc_o2_r.il", "refloc_o2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -87,6 +91,7 @@ il_coreclr_test(
     srcs = ["refloc_i1_r.il", "refloc_i1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -106,6 +111,7 @@ il_coreclr_test(
     srcs = ["refloc_o2_d.il", "refloc_o2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -119,6 +125,7 @@ il_coreclr_test(
     srcs = ["refarg_f8_r.il", "refarg_f8.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -126,6 +133,7 @@ il_coreclr_test(
     srcs = ["refloc_u2_d.il", "refloc_u2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -139,6 +147,7 @@ il_coreclr_test(
     srcs = ["refarg_i4_r.il", "refarg_i4.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -146,6 +155,7 @@ il_coreclr_test(
     srcs = ["refloc_i2_r.il", "refloc_i2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -165,6 +175,7 @@ il_coreclr_test(
     srcs = ["refloc_r8_d.il", "refloc_r8.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -208,6 +219,7 @@ il_coreclr_test(
     srcs = ["refarg_s_r.il", "refarg_s.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(

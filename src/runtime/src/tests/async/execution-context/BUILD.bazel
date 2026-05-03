@@ -1,0 +1,12 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "execution-context",
+    srcs = [
+        "execution-context.cs",
+        "//src/tests/async:RuntimeAsyncMethodGenerationAttribute.cs",
+    ],
+    optimize = True,
+    compiler_options = ["/features:runtime-async=on", "/nowarn:SYSLIB5007"],
+    tags = ["manual"],  # Requires runtime-async support not yet in Bazel runtime
+)

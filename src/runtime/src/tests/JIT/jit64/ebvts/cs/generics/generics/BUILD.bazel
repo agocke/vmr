@@ -5,4 +5,5 @@ coreclr_test(
     srcs = ["repro52.cs"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )

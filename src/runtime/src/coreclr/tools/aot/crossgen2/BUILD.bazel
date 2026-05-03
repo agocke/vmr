@@ -1,11 +1,22 @@
-load("//:defs.bzl", "csharp_binary")
+load("//:defs.bzl", "csharp_binary", "gen_assembly_info", "gen_target_framework_attrs")
 load("//:defs.bzl", "gen_resx_source", "resgen")
 load("@rules_dotnet//dotnet:defs.bzl", "publish_binary")
 
-genrule(
-    name = "AssemblyInfo",
-    outs = ["AssemblyInfo.g.cs"],
-    cmd = "echo '[assembly: System.Reflection.AssemblyFileVersion(\"10.0.0.0\")]' > $@",
+gen_assembly_info(
+    name = "assemblyinfo_crossgen2",
+    out = "crossgen2_inbuild.AssemblyInfo.cs",
+    assembly_name = "crossgen2",
+    cls_compliant = False,
+    is_aot_compatible = False,
+    include_serviceable = False,
+    include_description = False,
+    assembly_configuration = "Release",
+    include_dll_safe_search_path = 0,
+)
+
+gen_target_framework_attrs(
+    name = "tfmattrs_crossgen2",
+    out = ".NETCoreApp,Version=v10.0.AssemblyAttributes.cs",
 )
 
 gen_resx_source(
@@ -18,30 +29,42 @@ gen_resx_source(
 
 resgen(
     name = "Resources",
-    out = "crossgen2.Properties.Resources.resources",
+    out = "crossgen2_inbuild.Properties.Resources.resources",
     resx_file = "Properties/Resources.resx",
 )
 
 csharp_binary(
     name = "crossgen2",
+    interceptors_namespaces = ";Microsoft.AspNetCore.Http.Generated;Microsoft.Extensions.Configuration.Binder.SourceGeneration;Microsoft.Extensions.Validation.Generated",
     srcs = glob(["*.cs"]) + [
         "//src/coreclr/tools/Common:CommandLineHelpers.cs",
         "//src/coreclr/tools/Common:InstructionSetHelpers.cs",
         "//src/libraries/Common:src/System/SR.cs",
         ":SR",
-        ":AssemblyInfo",
+        ":assemblyinfo_crossgen2",
+        ":tfmattrs_crossgen2",
     ],
     resources = [":Resources"],
-    defines = ["READYTORUN"],
-    compiler_options = ["/unsafe"],
+    resource_logical_names = {
+        "crossgen2_inbuild.Properties.Resources.resources": "crossgen2_inbuild.Properties.Resources.resources",
+    },
+    compiler_options = ["/unsafe", "/warnaserror+:NU1605"],
     deps = [
+        "//src/coreclr/tools/aot/ILCompiler.Diagnostics",
         "//src/coreclr/tools/aot/ILCompiler.DependencyAnalysisFramework",
         "//src/coreclr/tools/aot/ILCompiler.ReadyToRun",
         "//src/coreclr/tools/aot/ILCompiler.TypeSystem",
+        "@paket.main//microsoft.diasymreader",
         "@paket.main//system.commandline",
     ],
     target_frameworks = ["net10.0"],
+    nowarn = ["1701", "1702", "8002", "CS8632", "IL2121", "NU1701", "NU5105"],
+    include_library_nowarn = False,
+    include_default_ruleset = False,
+    msbuild_analyzer_config = "style",
+    editorconfig_name = "crossgen2_inbuild",
     is_aot_compatible = True,
+    skip_analyzers = True,
     visibility = ["//visibility:public"],
 )
 
@@ -53,8 +76,5 @@ publish_binary(
     aot = True,
     optimization_mode = "speed",
     invariant_globalization = True,
-    # TODO: crossgen2 needs libjitinterface and libclrjit linked in.
-    # This requires adding a native_deps label_list attribute to publish_binary
-    # in rules_dotnet to support additional native library inputs during linking.
     visibility = ["//visibility:public"],
 )

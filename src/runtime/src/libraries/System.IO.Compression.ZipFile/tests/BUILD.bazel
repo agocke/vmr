@@ -1,7 +1,9 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.IO.Compression.ZipFile.Tests",
+    defines = select({"@platforms//os:linux": ["UNIX", "UNIX1_0"], "@platforms//os:macos": ["UNIX", "UNIX1_0"], "//conditions:default": []}),
     srcs = glob(["**/*.cs"]) + [
         "//src/libraries/Common/tests:System/IO/TempFile.cs",
         "//src/libraries/Common/tests:System/IO/TempDirectory.cs",
@@ -31,12 +33,8 @@ library_test(
         "@paket.main//xunit.extensibility.core",
     ],
     allow_unsafe_blocks = True,
-    analyzers = [
-        "//src/libraries/System.Runtime.InteropServices:LibraryImportGenerator",
-        "//src/libraries/System.Runtime.InteropServices:Microsoft.Interop.SourceGeneration",
-    ],
     data = ["@paket.main//system.io.compression.testdata:content_files"],
     size = "large",
     writable_test_dir = True,
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

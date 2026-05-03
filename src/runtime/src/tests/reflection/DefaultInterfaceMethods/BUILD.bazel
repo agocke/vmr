@@ -1,0 +1,19 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "Emit",
+    srcs = ["Emit.cs"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "GetInterfaceMapProvider",
+    srcs = ["GetInterfaceMapProvider.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "InvokeProvider",
+    srcs = ["InvokeProvider.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)

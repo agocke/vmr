@@ -1,0 +1,56 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+load("//:defs.bzl", "ECMA_SNK")
+
+exports_files([
+    "ref/System.ComponentModel.Composition.cs",
+    "ref/System.ComponentModel.Composition.Forwards.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_System.ComponentModel.Composition",
+    srcs = [
+        "ref/System.ComponentModel.Composition.cs",
+        "ref/System.ComponentModel.Composition.Forwards.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+    ],
+)
+
+impl_assembly(
+    name = "impl_System.ComponentModel.Composition",
+    keyfile = ECMA_SNK,
+    srcs = glob(["src/**/*.cs"]) + [
+        # Common linked files
+        "//src/libraries/Common:src/System/Composition/Diagnostics/CompositionTraceId.cs",
+        "//src/libraries/Common:src/System/Composition/Diagnostics/CompositionTraceSource.cs",
+        "//src/libraries/Common:src/System/Composition/Diagnostics/DebuggerTraceWriter.cs",
+        "//src/libraries/Common:src/System/Composition/Diagnostics/TraceWriter.cs",
+        "//src/libraries/Common:src/System/Obsoletions.cs",
+    ],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Linq.Expressions:ref_System.Linq.Expressions",
+        "//src/libraries/System.Linq.Queryable:ref_System.Linq.Queryable",
+        "//src/libraries/System.ObjectModel:ref_System.ObjectModel",
+        "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
+        "//src/libraries/System.Reflection.Emit.ILGeneration:ref_System.Reflection.Emit.ILGeneration",
+        "//src/libraries/System.Reflection.Primitives:ref_System.Reflection.Primitives",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    nowarn = MULTITARGET_NOWARN + ["CP0003", "NU5128", "CS1591"],
+)
+
+ref_impl_pair(
+    name = "live_System.ComponentModel.Composition",
+    ref = ":ref_System.ComponentModel.Composition",
+    lib = ":impl_System.ComponentModel.Composition",
+    visibility = ["//visibility:public"],
+)

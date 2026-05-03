@@ -15,6 +15,7 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.Serialization.Json",
+    nowarn = ["CS1591"],
     partial_facade = True,
     generate_facades = True,
     facade_contract_assembly = ":ref_System.Runtime.Serialization.Json",
@@ -24,4 +25,6 @@ netcoreapp_impl_assembly(
         "//src/libraries/System.Private.DataContractSerialization:impl_System.Private.DataContractSerialization",
     ],
     include_dll_safe_search_path = False,
+    include_editorconfig = False,
+    library_import_generator = False,
 )

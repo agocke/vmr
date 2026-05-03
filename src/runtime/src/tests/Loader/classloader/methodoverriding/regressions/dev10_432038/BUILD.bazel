@@ -1,0 +1,11 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "foo1",
+    srcs = ["foo1.cs"],
+)
+
+coreclr_test(
+    name = "interface",
+    srcs = ["interface.cs"],
+)

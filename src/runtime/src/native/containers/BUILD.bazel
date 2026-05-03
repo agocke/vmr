@@ -1,7 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//src/coreclr:coreclr_defs.bzl", "CLR_CONFIG_COPTS")
 
-# dn-containers for linux-x64 and darwin-arm64
+# dn-containers for linux-x64 and osx-arm64
 # Utility container library (allocator, list, queue, vector, umap, simdhash)
 # Used by eventpipe and other native code.
 
@@ -26,12 +26,14 @@ _HEADERS = glob(["*.h"]) + [
 ]
 
 _CONFIG_HDR = select({
-    "@platforms//os:macos": ["bazel/darwin-arm64/dn-config.h"],
+    "//:macos_arm64": ["bazel/osx-arm64/dn-config.h"],
+    "//:macos_x64": ["bazel/osx-x64/dn-config.h"],
     "//conditions:default": ["bazel/linux-glibc-x64/dn-config.h"],
 })
 
 _CONFIG_INCLUDES = select({
-    "@platforms//os:macos": ["bazel/darwin-arm64"],
+    "//:macos_arm64": ["bazel/osx-arm64"],
+    "//:macos_x64": ["bazel/osx-x64"],
     "//conditions:default": ["bazel/linux-glibc-x64"],
 })
 

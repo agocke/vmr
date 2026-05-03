@@ -118,8 +118,67 @@ cc_library(
     ],
 )
 
+# --- cee_wks_gc (GC sources compiled with VM defines) ---
+# Separated from cee_wks_core so that changes to GC-internal headers
+# (gcpriv.h, gcimpl.h, handletablepriv.h) only recompile these ~17 GC
+# files instead of all ~220 VM files. Uses implementation_deps to
+# prevent private GC headers from propagating to VM consumers.
+cc_library(
+    name = "cee_wks_gc",
+    srcs = [
+        "//src/coreclr/gc:gcbridge.cpp",
+        "//src/coreclr/gc:gccommon.cpp",
+        "//src/coreclr/gc:gcconfig.cpp",
+        "//src/coreclr/gc:gceesvr.cpp",
+        "//src/coreclr/gc:gceewks.cpp",
+        "//src/coreclr/gc:gceventstatus.cpp",
+        "//src/coreclr/gc:gchandletable.cpp",
+        "//src/coreclr/gc:gcload.cpp",
+        "//src/coreclr/gc:gcscan.cpp",
+        "//src/coreclr/gc:gcsvr.cpp",
+        "//src/coreclr/gc:gcwks.cpp",
+        "//src/coreclr/gc:handletable.cpp",
+        "//src/coreclr/gc:handletablecache.cpp",
+        "//src/coreclr/gc:handletablecore.cpp",
+        "//src/coreclr/gc:handletablescan.cpp",
+        "//src/coreclr/gc:objecthandle.cpp",
+        "//src/coreclr/gc:softwarewritewatch.cpp",
+    ],
+    textual_hdrs = [
+        "//src/coreclr/gc:gc.cpp",
+        "//src/coreclr/gc:gcee.cpp",
+    ],
+    copts = _VM_COPTS + select({
+        "@platforms//cpu:arm64": [],
+        "//conditions:default": ["-mcx16"],
+    }),
+    includes = _VM_INCLUDES,
+    local_defines = CLR_CONFIG_DEFINES + select({
+        "//:clr_debug": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//:clr_checked": ["FEATURE_CACHED_INTERFACE_DISPATCH"],
+        "//conditions:default": [],
+    }),
+    defines = _VM_DEFINES + ["GC_DESCRIPTOR"] + select({
+        "//:debug_mode": ["WRITE_BARRIER_CHECK"],
+        "//conditions:default": [],
+    }),
+    alwayslink = True,
+    linkstatic = True,
+    implementation_deps = [
+        "//src/coreclr/gc:gc_internal_headers",
+    ],
+    deps = [
+        "//src/coreclr/gc:gc_headers",
+        "//src/coreclr/inc:coreclr_inc",
+        "//src/coreclr/runtime:runtime_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+        "//src/native/eventpipe:eventpipe-headers",
+    ],
+)
+
 # --- cee_wks_core (VM core, workstation) ---
 # The main VM OBJECT library, containing ~220 .cpp files.
+# GC sources are in the separate cee_wks_gc target above.
 cc_library(
     name = "cee_wks_core",
     srcs = [
@@ -342,31 +401,10 @@ cc_library(
             "amd64/profiler.cpp",
             "amd64/stublinkeramd64.cpp",
         ],
-    }) + [
-        # GC sources (integrated into VM)
-        "//src/coreclr/gc:gcbridge.cpp",
-        "//src/coreclr/gc:gccommon.cpp",
-        "//src/coreclr/gc:gcconfig.cpp",
-        "//src/coreclr/gc:gceesvr.cpp",
-        "//src/coreclr/gc:gceewks.cpp",
-        "//src/coreclr/gc:gceventstatus.cpp",
-        "//src/coreclr/gc:gchandletable.cpp",
-        "//src/coreclr/gc:gcload.cpp",
-        "//src/coreclr/gc:gcscan.cpp",
-        "//src/coreclr/gc:gcsvr.cpp",
-        "//src/coreclr/gc:gcwks.cpp",
-        "//src/coreclr/gc:handletable.cpp",
-        "//src/coreclr/gc:handletablecache.cpp",
-        "//src/coreclr/gc:handletablecore.cpp",
-        "//src/coreclr/gc:handletablescan.cpp",
-        "//src/coreclr/gc:objecthandle.cpp",
-        "//src/coreclr/gc:softwarewritewatch.cpp",
-    ],
+    }),
     textual_hdrs = [
         "yieldprocessornormalizedshared.cpp",
         "i386/stublinkerx86.cpp",
-        "//src/coreclr/gc:gc.cpp",
-        "//src/coreclr/gc:gcee.cpp",
         "//src/coreclr/System.Private.CoreLib:src/System/Runtime/ExceptionServices/AsmOffsets.cs",
     ],
     copts = _VM_COPTS + select({
@@ -387,6 +425,7 @@ cc_library(
     linkstatic = True,
     deps = [
         ":cee_wks_asm",
+        ":cee_wks_gc",
         "//src/coreclr/classlibnative:classlibnative_headers",
         "//src/coreclr/gc:gc_headers",
         "//src/coreclr/inc:coreclr_inc",
@@ -447,6 +486,36 @@ _VM_DAC_DEFINES = CORECLR_DAC_DEFINES + [
     "FEATURE_HW_INTRINSICS",
     "FEATURE_MASKED_HW_INTRINSICS",
 ]
+
+# --- cee_dac_gc (GC handle table sources compiled with DAC defines) ---
+# Same cache-isolation pattern as cee_wks_gc: private GC headers don't
+# propagate to the ~90 DAC VM source files.
+cc_library(
+    name = "cee_dac_gc",
+    srcs = [
+        "//src/coreclr/gc:handletable.cpp",
+        "//src/coreclr/gc:handletablecore.cpp",
+        "//src/coreclr/gc:handletablescan.cpp",
+        "//src/coreclr/gc:objecthandle.cpp",
+    ],
+    copts = _VM_COPTS,
+    includes = _VM_INCLUDES + [
+        "../interop/inc",
+    ],
+    local_defines = CLR_CONFIG_DEFINES,
+    defines = _VM_DAC_DEFINES,
+    linkstatic = True,
+    implementation_deps = [
+        "//src/coreclr/gc:gc_internal_headers",
+    ],
+    deps = [
+        "//src/coreclr/gc:gc_headers",
+        "//src/coreclr/inc:coreclr_inc_dac",
+        "//src/coreclr/runtime:runtime_headers",
+        "//src/coreclr/vm/eventing:eventing_headers",
+        "//src/native/eventpipe:eventpipe-headers",
+    ],
+)
 
 cc_library(
     name = "cee_dac",
@@ -549,11 +618,6 @@ cc_library(
         # VM_SOURCES_DAC_ARCH
         "exceptionhandling.cpp",
         "peimagelayout.cpp",
-        # GC_SOURCES_DAC (handle table sources needed for linking)
-        "//src/coreclr/gc:handletable.cpp",
-        "//src/coreclr/gc:handletablecore.cpp",
-        "//src/coreclr/gc:handletablescan.cpp",
-        "//src/coreclr/gc:objecthandle.cpp",
     ] + select({
         "@platforms//cpu:arm64": [
             # VM_SOURCES_DAC_AND_WKS_ARCH (arm64)
@@ -578,6 +642,7 @@ cc_library(
     defines = _VM_DAC_DEFINES,
     linkstatic = True,
     deps = [
+        ":cee_dac_gc",
         "//src/coreclr/gc:gc_headers",
         "//src/coreclr/inc:coreclr_inc_dac",
         "//src/coreclr/interop:interop_headers",

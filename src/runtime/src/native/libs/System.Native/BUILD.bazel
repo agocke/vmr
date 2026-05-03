@@ -6,11 +6,8 @@ cc_library(
     name = "System.Native_lib",
     srcs = [
         "entrypoints.c",
-        "pal_autoreleasepool.c",
         "pal_console.c",
-        "pal_datetime.c",
         "pal_dynamicload.c",
-        "pal_environment.c",
         "pal_errno.c",
         "pal_interfaceaddresses.c",
         "pal_io.c",
@@ -25,7 +22,6 @@ cc_library(
         "pal_process.c",
         "pal_random.c",
         "pal_runtimeinformation.c",
-        "pal_searchpath.c",
         "pal_signal.c",
         "pal_string.c",
         "pal_sysctl.c",
@@ -33,7 +29,19 @@ cc_library(
         "pal_threading.c",
         "pal_time.c",
         "pal_uid.c",
-    ] + glob(["*.h"]),
+    ] + select({
+        # On Apple platforms, the Objective-C variants in System.Native_objc
+        # replace these C stubs. On other platforms, use the C fallbacks.
+        "@platforms//os:macos": [
+            "pal_datetime.c",
+        ],
+        "//conditions:default": [
+            "pal_autoreleasepool.c",
+            "pal_datetime.c",
+            "pal_environment.c",
+            "pal_searchpath.c",
+        ],
+    }) + glob(["*.h"]),
     copts = [
         "-Wno-declaration-after-statement",
     ],
@@ -71,7 +79,6 @@ cc_library(
     "pal_autoreleasepool.m",
     "pal_datetime.m",
     "pal_environment.m",
-    "pal_log.m",
     "pal_searchpath.m",
 ]]
 
@@ -81,7 +88,6 @@ cc_library(
         "pal_autoreleasepool_objc.c",
         "pal_datetime_objc.c",
         "pal_environment_objc.c",
-        "pal_log_objc.c",
         "pal_searchpath_objc.c",
     ] + glob(["*.h"]),
     copts = [

@@ -1,0 +1,7 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "iOS.Device.ParallelForEachAsync.Test",
+    srcs = ["Program.cs"],
+    target_compatible_with = ["@platforms//os:ios"],
+)

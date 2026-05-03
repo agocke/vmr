@@ -12,12 +12,6 @@ using Xunit;
 
 namespace Microsoft.CodeAnalysis.CSharp.UnitTests
 {
-    /// <summary>
-    /// Tests for <see cref="SyntaxNodeCache"/>. These tests must run serially because
-    /// the SyntaxNodeCache is a shared static resource and parallel test execution
-    /// can cause cache collisions leading to test failures.
-    /// </summary>
-    [Collection(nameof(SyntaxNodeCacheTests))]
     public class SyntaxNodeCacheTests : CSharpTestBase
     {
         [Fact]
@@ -80,14 +74,5 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
                 Assert.True(listOf3 != listOf2, $"{i} iterations");
             }
         }
-    }
-
-    /// <summary>
-    /// Defines a test collection for SyntaxNodeCacheTests to ensure they run
-    /// serially and not in parallel with other tests that may use the shared cache.
-    /// </summary>
-    [CollectionDefinition(nameof(SyntaxNodeCacheTests), DisableParallelization = true)]
-    public class SyntaxNodeCacheTestsCollection
-    {
     }
 }

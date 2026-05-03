@@ -1,4 +1,5 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
 
 library_test(
     name = "System.ObjectModel.Tests",
@@ -30,5 +31,5 @@ library_test(
     ],
     size = "large",
     nowarn = ["SYSLIB0011", "SYSLIB0050", "SYSLIB0051"],
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
 )

@@ -1,0 +1,34 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "varying-yields",
+    srcs = [
+        "varying-yields.cs",
+        "//src/tests/async:RuntimeAsyncMethodGenerationAttribute.cs",
+    ],
+    optimize = True,
+    compiler_options = ["/features:runtime-async=on", "/nowarn:SYSLIB5007"],
+    tags = ["manual"],  # Requires runtime-async support not yet in Bazel runtime
+)
+
+coreclr_test(
+    name = "varying-yields-task",
+    srcs = [
+        "varying-yields.cs",
+        "//src/tests/async:RuntimeAsyncMethodGenerationAttribute.cs",
+    ],
+    optimize = True,
+    compiler_options = ["/features:runtime-async=on", "/nowarn:SYSLIB5007"],
+    tags = ["manual"],  # Requires runtime-async support not yet in Bazel runtime
+)
+
+coreclr_test(
+    name = "varying-yields-valuetask",
+    srcs = [
+        "varying-yields.cs",
+        "//src/tests/async:RuntimeAsyncMethodGenerationAttribute.cs",
+    ],
+    optimize = True,
+    compiler_options = ["/features:runtime-async=on", "/nowarn:SYSLIB5007"],
+    tags = ["manual"],  # Requires runtime-async support not yet in Bazel runtime
+)

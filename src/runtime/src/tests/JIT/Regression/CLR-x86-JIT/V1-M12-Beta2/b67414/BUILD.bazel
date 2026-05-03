@@ -8,4 +8,5 @@ coreclr_test(
     deps = [
         "//src/libraries/System.Reflection.Emit:ref_System.Reflection.Emit",
     ],
+    size = "medium",
 )

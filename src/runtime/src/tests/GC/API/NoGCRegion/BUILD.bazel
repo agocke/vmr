@@ -1,0 +1,16 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Callback",
+    srcs = ["Callback.cs"],
+)
+
+coreclr_test(
+    name = "Callback_Svr",
+    srcs = ["Callback.cs"],
+)
+
+coreclr_test(
+    name = "NoGC",
+    srcs = ["NoGC.cs"],
+)

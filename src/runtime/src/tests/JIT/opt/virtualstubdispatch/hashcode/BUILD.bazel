@@ -168,6 +168,7 @@ coreclr_test(
         ":cderived19",
         ":cderived20",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -196,6 +197,7 @@ coreclr_test(
         ":cderived19",
         ":cderived20",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -225,6 +227,7 @@ coreclr_test(
         ":cderived19",
         ":cderived20",
     ],
+    size = "medium",
 )
 
 coreclr_test(
@@ -255,4 +258,5 @@ coreclr_test(
         ":cderived19",
         ":cderived20",
     ],
+    size = "medium",
 )

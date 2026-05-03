@@ -24,7 +24,8 @@ cc_library(
         "pal_timeZoneInfo.c",
     ] + glob(["*.h"]),
     hdrs = select({
-        "@platforms//os:macos": ["bazel/darwin-arm64/config.h"],
+        "//:macos_arm64": ["bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["bazel/osx-x64/config.h"],
         "//conditions:default": ["bazel/linux-glibc-x64/config.h"],
     }),
     copts = CLR_CONFIG_COPTS + [
@@ -49,7 +50,8 @@ cc_library(
         "../bazel",
         ".",
     ] + select({
-        "@platforms//os:macos": ["bazel/darwin-arm64"],
+        "//:macos_arm64": ["bazel/osx-arm64"],
+        "//:macos_x64": ["bazel/osx-x64"],
         "//conditions:default": ["bazel/linux-glibc-x64"],
     }),
     linkopts = select({
@@ -95,7 +97,10 @@ cc_library(
         "pal_normalization_objc.c",
         "pal_timeZoneInfo_objc.c",
     ] + glob(["*.h"]),
-    hdrs = ["bazel/darwin-arm64/config.h"],
+    hdrs = select({
+        "//:macos_arm64": ["bazel/osx-arm64/config.h"],
+        "//:macos_x64": ["bazel/osx-x64/config.h"],
+    }),
     copts = CLR_CONFIG_COPTS + [
         "-x", "objective-c",
         "-fobjc-arc",
@@ -116,8 +121,10 @@ cc_library(
         "../Common",
         "../bazel",
         ".",
-        "bazel/darwin-arm64",
-    ],
+    ] + select({
+        "//:macos_arm64": ["bazel/osx-arm64"],
+        "//:macos_x64": ["bazel/osx-x64"],
+    }),
     local_defines = NATIVE_CONFIG_DEFINES + PLATFORM_DEFINES,
     linkopts = ["-framework", "Foundation"],
     target_compatible_with = ["@platforms//os:macos"],

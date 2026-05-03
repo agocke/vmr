@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Avx10v1_ScalarUpper_r",
+    srcs = [
+        "Program.Avx10v1_ScalarUpper.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+)
+
+coreclr_test(
+    name = "Avx10v1_ScalarUpper_ro",
+    srcs = [
+        "Program.Avx10v1_ScalarUpper.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+    optimize = True,
+)

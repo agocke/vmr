@@ -12,6 +12,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Runtime.Numerics",
+    library_import_generator = False,
+    nowarn = ["CS1591"],
     srcs = glob(["src/**/*.cs"]) + [
         # Shared sources from Common
         "//src/libraries/Common:src/System/Text/ValueStringBuilder.cs",

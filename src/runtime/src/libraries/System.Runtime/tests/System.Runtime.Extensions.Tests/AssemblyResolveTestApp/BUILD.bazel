@@ -1,0 +1,20 @@
+load("//:defs.bzl", "NETCOREAPP_CURRENT", "OPEN_SNK", "csharp_library")
+load("//src/libraries:defs.bzl", "DOWNLEVEL_GENERATOR_ANALYZERS")
+
+csharp_library(
+    name = "AssemblyResolveTestApp",
+    analyzers = DOWNLEVEL_GENERATOR_ANALYZERS,
+    keyfile = OPEN_SNK,
+    srcs = [
+        "Class1.cs",
+        "ClassesSample.cs",
+    ],
+    target_frameworks = ["netstandard2.0"],
+    nullable = "annotations",
+    include_default_ruleset = False,
+    include_syslib_warnaserror = False,
+    skip_analyzers = True,
+    msbuild_analyzer_config = "style",
+    nowarn = ["IL2121", "SYSLIB0011", "SYSLIB0050", "SYSLIB0051", "nullable"],
+    visibility = ["//src/libraries/System.Runtime/tests:__subpackages__"],
+)

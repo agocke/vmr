@@ -1,0 +1,29 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "GenTypeItself",
+    srcs = ["GenTypeItself.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "RecursiveInheritance",
+    srcs = ["RecursiveInheritance.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "Struct_ImplementMscorlibGenInterface",
+    srcs = ["Struct_ImplementMscorlibGenInterface.cs"],
+    pri = 1,
+    size = "medium",
+)
+
+coreclr_test(
+    name = "genrecur",
+    srcs = ["genrecur.cs"],
+    pri = 1,
+    size = "medium",
+)

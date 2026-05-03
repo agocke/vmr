@@ -11,6 +11,7 @@ il_coreclr_test(
     srcs = ["subovfun1_r.il", "subovfun1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -18,6 +19,7 @@ il_coreclr_test(
     srcs = ["subovfun1_d.il", "subovfun1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -25,6 +27,7 @@ il_coreclr_test(
     srcs = ["ldfldstatic1_r.il", "ldfldstatic1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -32,6 +35,7 @@ il_coreclr_test(
     srcs = ["ldvirtftnsideeffect_d.il", "ldvirtftnsideeffect.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -39,6 +43,7 @@ il_coreclr_test(
     srcs = ["calli2_d.il", "calli2.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -46,6 +51,7 @@ il_coreclr_test(
     srcs = ["ldfldr4_d.il", "ldfldr4.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -53,6 +59,7 @@ il_coreclr_test(
     srcs = ["stfldstatic1_r.il", "stfldstatic1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -60,6 +67,7 @@ il_coreclr_test(
     srcs = ["badtailcall_r.il", "badtailcall.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -79,6 +87,7 @@ il_coreclr_test(
     srcs = ["refanytype1_r.il", "refanytype1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -92,6 +101,7 @@ il_coreclr_test(
     srcs = ["ldvirtftnsideeffect_r.il", "ldvirtftnsideeffect.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -99,6 +109,7 @@ il_coreclr_test(
     srcs = ["byrefsubbyref1_d.il", "byrefsubbyref1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -112,6 +123,7 @@ il_coreclr_test(
     srcs = ["byrefsubbyref1_r.il", "byrefsubbyref1.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -125,6 +137,7 @@ il_coreclr_test(
     srcs = ["refanytype1_d.il", "refanytype1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -132,6 +145,7 @@ il_coreclr_test(
     srcs = ["ldfldunboxedvt_r.il", "ldfldunboxedvt.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -145,6 +159,7 @@ il_coreclr_test(
     srcs = ["stfldstatic1_d.il", "stfldstatic1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -176,6 +191,7 @@ il_coreclr_test(
     srcs = ["ldfldr4_r.il", "ldfldr4.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -183,6 +199,7 @@ il_coreclr_test(
     srcs = ["calli2_r.il", "calli2.il"],
     pri = 1,
     debug_type = "pdbonly",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -196,6 +213,7 @@ il_coreclr_test(
     srcs = ["ldfldstatic1_d.il", "ldfldstatic1.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -203,6 +221,7 @@ il_coreclr_test(
     srcs = ["ldfldunboxedvt_d.il", "ldfldunboxedvt.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(
@@ -216,6 +235,7 @@ il_coreclr_test(
     srcs = ["badtailcall_d.il", "badtailcall.il"],
     pri = 1,
     debug_type = "full",
+    size = "medium",
 )
 
 il_coreclr_test(

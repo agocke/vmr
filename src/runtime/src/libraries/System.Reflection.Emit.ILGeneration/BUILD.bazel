@@ -17,6 +17,8 @@ netcoreapp_ref_assembly(
 
 netcoreapp_impl_assembly(
     name = "impl_System.Reflection.Emit.ILGeneration",
+    include_editorconfig = False,
+    nowarn = ["CS1591"],
     srcs = [],
     deps = [
         "//src/coreclr/System.Private.CoreLib:impl_System.Private.CoreLib",

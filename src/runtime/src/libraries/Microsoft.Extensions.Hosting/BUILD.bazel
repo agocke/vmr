@@ -1,0 +1,85 @@
+load("//src/libraries:defs.bzl", "COMMON_GENERATOR_ANALYZERS", "MULTITARGET_NOWARN", "netcoreapp_ref_assembly", "impl_assembly", "ref_impl_pair")
+
+exports_files([
+    "ref/Microsoft.Extensions.Hosting.cs",
+])
+
+netcoreapp_ref_assembly(
+    name = "ref_Microsoft.Extensions.Hosting",
+    srcs = [
+        "ref/Microsoft.Extensions.Hosting.cs",
+    ],
+    nowarn = ["CS0618"],
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection:ref_Microsoft.Extensions.DependencyInjection",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:ref_Microsoft.Extensions.Diagnostics.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:ref_Microsoft.Extensions.FileProviders.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Physical:ref_Microsoft.Extensions.FileProviders.Physical",
+        "//src/libraries/Microsoft.Extensions.Hosting.Abstractions:ref_Microsoft.Extensions.Hosting.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+    ],
+)
+
+impl_assembly(
+    name = "impl_Microsoft.Extensions.Hosting",
+    nowarn = MULTITARGET_NOWARN + ["CP0003"],
+    srcs = glob(
+        ["src/**/*.cs"],
+        exclude = [
+            "src/HostBuilder.notnetcoreapp.cs",
+            "src/Internal/ConsoleLifetime.notnetcoreapp.cs",
+        ],
+    ),
+    analyzers = COMMON_GENERATOR_ANALYZERS,
+    deps = [
+        "//src/libraries:ref_System.Runtime",
+        "//src/libraries/System.ComponentModel:ref_System.ComponentModel",
+        "//src/libraries/Microsoft.Extensions.Configuration:ref_Microsoft.Extensions.Configuration",
+        "//src/libraries/Microsoft.Extensions.Configuration.Abstractions:ref_Microsoft.Extensions.Configuration.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Configuration.Binder:ref_Microsoft.Extensions.Configuration.Binder",
+        "//src/libraries/Microsoft.Extensions.Configuration.CommandLine:ref_Microsoft.Extensions.Configuration.CommandLine",
+        "//src/libraries/Microsoft.Extensions.Configuration.EnvironmentVariables:ref_Microsoft.Extensions.Configuration.EnvironmentVariables",
+        "//src/libraries/Microsoft.Extensions.Configuration.FileExtensions:ref_Microsoft.Extensions.Configuration.FileExtensions",
+        "//src/libraries/Microsoft.Extensions.Configuration.Json:ref_Microsoft.Extensions.Configuration.Json",
+        "//src/libraries/Microsoft.Extensions.Configuration.UserSecrets:ref_Microsoft.Extensions.Configuration.UserSecrets",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection:ref_Microsoft.Extensions.DependencyInjection",
+        "//src/libraries/Microsoft.Extensions.DependencyInjection.Abstractions:ref_Microsoft.Extensions.DependencyInjection.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Diagnostics:ref_Microsoft.Extensions.Diagnostics",
+        "//src/libraries/Microsoft.Extensions.Diagnostics.Abstractions:ref_Microsoft.Extensions.Diagnostics.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Abstractions:ref_Microsoft.Extensions.FileProviders.Abstractions",
+        "//src/libraries/Microsoft.Extensions.FileProviders.Physical:ref_Microsoft.Extensions.FileProviders.Physical",
+        "//src/libraries/Microsoft.Extensions.Hosting.Abstractions:ref_Microsoft.Extensions.Hosting.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging:ref_Microsoft.Extensions.Logging",
+        "//src/libraries/Microsoft.Extensions.Logging.Abstractions:ref_Microsoft.Extensions.Logging.Abstractions",
+        "//src/libraries/Microsoft.Extensions.Logging.Configuration:ref_Microsoft.Extensions.Logging.Configuration",
+        "//src/libraries/Microsoft.Extensions.Logging.Console:ref_Microsoft.Extensions.Logging.Console",
+        "//src/libraries/Microsoft.Extensions.Logging.Debug:ref_Microsoft.Extensions.Logging.Debug",
+        "//src/libraries/Microsoft.Extensions.Logging.EventLog:ref_Microsoft.Extensions.Logging.EventLog",
+        "//src/libraries/Microsoft.Extensions.Logging.EventSource:ref_Microsoft.Extensions.Logging.EventSource",
+        "//src/libraries/Microsoft.Extensions.Options:ref_Microsoft.Extensions.Options",
+        "//src/libraries/System.Collections:ref_System.Collections",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Console:ref_System.Console",
+        "//src/libraries/System.Diagnostics.DiagnosticSource:ref_System.Diagnostics.DiagnosticSource",
+        "//src/libraries/System.Linq:ref_System.Linq",
+        "//src/libraries/System.Memory:ref_System.Memory",
+        "//src/libraries/System.Runtime.InteropServices:ref_System.Runtime.InteropServices",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+    ],
+    resx_file = "src/Resources/Strings.resx",
+)
+
+ref_impl_pair(
+    name = "live_Microsoft.Extensions.Hosting",
+    ref = ":ref_Microsoft.Extensions.Hosting",
+    lib = ":impl_Microsoft.Extensions.Hosting",
+    visibility = ["//visibility:public"],
+)

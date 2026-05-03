@@ -1,8 +1,9 @@
 load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK")
 
 genrule(
     name = "mono_testdata",
-    srcs = ["System.Data.DataSetExtensions.Tests/Mono/testdataset1.xml"],
+    srcs = ["//src/libraries/System.Data.Common/tests/System.Data.DataSetExtensions.Tests:Mono/testdataset1.xml"],
     outs = ["Mono/testdataset1.xml"],
     cmd = "cp $< $@",
 )
@@ -13,9 +14,8 @@ library_test(
         ["**/*.cs"],
         exclude = [
             "TrimmingTests/**",
-            # Requires System.Data.SqlClient NuGet package
-            "System/Data/FacadeTest.cs",
-            "System/Data/Common/DbProviderFactoriesTests.cs",
+            # Separate MSBuild test project (System.Data.DataSetExtensions.Tests)
+            "System.Data.DataSetExtensions.Tests/**",
         ],
     ) + [
         "//src/libraries/Common/tests:System/Diagnostics/Tracing/TestEventListener.cs",
@@ -38,13 +38,14 @@ library_test(
         "//src/libraries/System.Runtime.Numerics:ref_System.Runtime.Numerics",
         "//src/libraries/System.Text.Encoding.CodePages:ref_System.Text.Encoding.CodePages",
         "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//system.data.sqlclient",
         "@paket.main//microsoft.dotnet.remoteexecutor",
         "@paket.main//microsoft.dotnet.xunitassert",
         "@paket.main//microsoft.dotnet.xunitextensions",
         "@paket.main//xunit.abstractions",
         "@paket.main//xunit.extensibility.core",
     ],
-    keyfile = "@nuget.microsoft.dotnet.arcade.sdk.v10.0.0-beta.26102.102//:tools/snk/Open.snk",
+    keyfile = OPEN_SNK,
     data = [
         "@paket.main//system.data.common.testdata:content_files",
         ":mono_testdata",

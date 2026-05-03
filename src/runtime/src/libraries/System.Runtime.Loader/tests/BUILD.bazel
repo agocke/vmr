@@ -1,0 +1,57 @@
+load("//src/tests:live_test.bzl", "library_test")
+load("//:defs.bzl", "OPEN_SNK", "resgen")
+
+# MSBuild compiles MainStrings.resx to .resources before embedding.
+# Satellite .resx files (.en, .es-MX) are passed as additionalfiles only.
+resgen(
+    name = "resgen_MainStrings",
+    out = "System.Runtime.Loader.Tests.MainStrings.resources",
+    resx_file = "MainStrings.resx",
+)
+
+library_test(
+    name = "System.Runtime.Loader.Tests",
+    srcs = glob(
+        ["*.cs"],
+        exclude = [
+            # ApplyUpdate tests require hot-reload infrastructure and many
+            # dependent assemblies that are not available in Bazel.
+            "ApplyUpdateTest.cs",
+            "ApplyUpdateUtil.cs",
+            "MetadataUpdateHandlerAttributeTest.cs",
+            # These tests depend on external test assemblies deployed at
+            # specific runtime paths (satellite assemblies, loader link tests,
+            # contextual reflection) not yet supported in Bazel.
+            "AssemblyLoadContextTest.cs",
+            "AssemblyResolutionDowngradeTest.cs",
+            "CollectibleAssemblyLoadContextTest.cs",
+            "ContextualReflection.cs",
+            "LoaderLinkTest.cs",
+            "ResourceAssemblyLoadContext.cs",
+            "SatelliteAssemblies.cs",
+        ],
+    ) + [
+        "//src/libraries/Common/tests:TestUtilities/System/DisableParallelization.cs",
+    ],
+    deps = [
+        "//src/libraries/System.Reflection.Metadata:ref_System.Reflection.Metadata",
+        "//src/libraries/System.Collections.Concurrent:ref_System.Collections.Concurrent",
+        "//src/libraries/System.Collections.Immutable:ref_System.Collections.Immutable",
+        "//src/libraries/System.Threading:ref_System.Threading",
+        "//src/libraries/System.Threading.Thread:ref_System.Threading.Thread",
+        "//src/libraries/Common/tests:TestUtilities",
+        "@paket.main//microsoft.dotnet.remoteexecutor",
+        "@paket.main//microsoft.dotnet.xunitassert",
+        "@paket.main//microsoft.dotnet.xunitextensions",
+        "@paket.main//xunit.abstractions",
+        "@paket.main//xunit.extensibility.core",
+    ],
+    allow_unsafe_blocks = True,
+    resources = [":resgen_MainStrings"],
+    resource_logical_names = {
+        "System.Runtime.Loader.Tests.MainStrings.resources": "System.Runtime.Loader.Tests.MainStrings.resources",
+    },
+    additionalfiles = glob(["MainStrings*.resx"]),
+    keyfile = OPEN_SNK,
+    size = "large",
+)

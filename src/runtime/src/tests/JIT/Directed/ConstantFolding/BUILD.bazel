@@ -5,6 +5,7 @@ coreclr_test(
     srcs = ["value_numbering_checked_integer_arithmetic_with_constants.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 coreclr_test(
@@ -12,6 +13,7 @@ coreclr_test(
     srcs = ["value_numbering_unordered_comparisons_of_constants.cs"],
     pri = 1,
     optimize = True,
+    size = "medium",
 )
 
 il_coreclr_test(

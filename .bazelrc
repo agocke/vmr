@@ -1,2 +1,11 @@
 # Import runtime build configuration
 import %workspace%/src/runtime/.bazelrc
+
+# Skip targets incompatible with the current platform (e.g. Linux-only
+# native libs when building on macOS) instead of failing.
+build --skip_incompatible_explicit_targets
+
+# Cache downloaded external repositories (NuGet packages, etc.) across
+# Bazel server restarts.  Avoids re-fetching and 404 retries on feeds
+# that don't carry a given package.
+common --repository_cache=~/.cache/bazel-repos

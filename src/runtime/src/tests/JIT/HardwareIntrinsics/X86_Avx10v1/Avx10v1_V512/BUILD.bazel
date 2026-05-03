@@ -1,0 +1,18 @@
+load("//src/tests:live_test.bzl", "coreclr_test")
+
+coreclr_test(
+    name = "Avx10v1_V512_r",
+    srcs = [
+        "Program.Avx10v1_V512.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+)
+
+coreclr_test(
+    name = "Avx10v1_V512_ro",
+    srcs = [
+        "Program.Avx10v1_V512.cs",
+        "//src/tests/JIT/HardwareIntrinsics/X86/Shared:Program.cs",
+    ],
+    optimize = True,
+)

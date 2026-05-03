@@ -29,24 +29,58 @@ cc_library(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# --- Generated config headers (darwin-arm64) for DAC ---
+# --- Generated config headers (darwin) for DAC ---
 
 cc_library(
-    name = "libunwind_config_macos",
+    name = "libunwind_config_macos_arm64",
     hdrs = [
-        "bazel/darwin-arm64/include/libunwind-common.h",
-        "bazel/darwin-arm64/include/libunwind.h",
-        "bazel/darwin-arm64/include/tdep/libunwind_i.h",
+        "bazel/osx-arm64/include/libunwind-common.h",
+        "bazel/osx-arm64/include/libunwind.h",
+        "bazel/osx-arm64/include/tdep/libunwind_i.h",
     ],
-    strip_include_prefix = "bazel/darwin-arm64/include",
-    target_compatible_with = ["@platforms//os:macos"],
+    strip_include_prefix = "bazel/osx-arm64/include",
+    target_compatible_with = ["@platforms//os:macos", "@platforms//cpu:arm64"],
 )
 
 cc_library(
+    name = "libunwind_internal_config_macos_arm64",
+    hdrs = ["bazel/osx-arm64/include/config.h"],
+    strip_include_prefix = "bazel/osx-arm64/include",
+    target_compatible_with = ["@platforms//os:macos", "@platforms//cpu:arm64"],
+)
+
+cc_library(
+    name = "libunwind_config_macos_x64",
+    hdrs = [
+        "bazel/osx-x64/include/libunwind-common.h",
+        "bazel/osx-x64/include/libunwind.h",
+        "bazel/osx-x64/include/tdep/libunwind_i.h",
+    ],
+    strip_include_prefix = "bazel/osx-x64/include",
+    target_compatible_with = ["@platforms//os:macos", "@platforms//cpu:x86_64"],
+)
+
+cc_library(
+    name = "libunwind_internal_config_macos_x64",
+    hdrs = ["bazel/osx-x64/include/config.h"],
+    strip_include_prefix = "bazel/osx-x64/include",
+    target_compatible_with = ["@platforms//os:macos", "@platforms//cpu:x86_64"],
+)
+
+alias(
+    name = "libunwind_config_macos",
+    actual = select({
+        "@platforms//cpu:arm64": ":libunwind_config_macos_arm64",
+        "@platforms//cpu:x86_64": ":libunwind_config_macos_x64",
+    }),
+)
+
+alias(
     name = "libunwind_internal_config_macos",
-    hdrs = ["bazel/darwin-arm64/include/config.h"],
-    strip_include_prefix = "bazel/darwin-arm64/include",
-    target_compatible_with = ["@platforms//os:macos"],
+    actual = select({
+        "@platforms//cpu:arm64": ":libunwind_internal_config_macos_arm64",
+        "@platforms//cpu:x86_64": ":libunwind_internal_config_macos_x64",
+    }),
 )
 
 # --- Shared copts and defines ---
@@ -235,84 +269,111 @@ cc_library(
 # On macOS, the normal runtime uses system libunwind, but DAC needs the bundled
 # GNU libunwind for remote unwinding (debugging another process).
 # Matches CMake: LIBUNWIND_SOURCES_BASE for CLR_CMAKE_HOST_APPLE
+
+_LIBUNWIND_DAC_MACOS_COMMON_SRCS = [
+    "src/remote/mac/missing-functions.c",
+    "src/mi/init.c",
+    "src/mi/flush_cache.c",
+    "src/mi/mempool.c",
+    "src/mi/strerror.c",
+    "src/mi/Gdyn-extract.c",
+    "src/mi/Gdyn-remote.c",
+    "src/mi/Gfind_dynamic_proc_info.c",
+    "src/mi/Gget_proc_info_by_ip.c",
+    "src/mi/Gget_proc_name.c",
+    "src/mi/Gput_dynamic_unwind_info.c",
+    "src/mi/Gdestroy_addr_space.c",
+    "src/mi/Gget_reg.c",
+    "src/mi/Gset_reg.c",
+    "src/mi/Gget_fpreg.c",
+    "src/mi/Gset_fpreg.c",
+    "src/mi/Gset_caching_policy.c",
+    "src/mi/Gset_cache_size.c",
+    "src/mi/Gaddress_validator.c",
+    "src/dwarf/global.c",
+    "src/dwarf/Gexpr.c",
+    "src/dwarf/Gfde.c",
+    "src/dwarf/Gparser.c",
+    "src/dwarf/Gpe.c",
+    "src/dwarf/Gfind_proc_info-lsb.c",
+    "src/dwarf/Gfind_unwind_table.c",
+    "src/dwarf/Gget_proc_info_in_range.c",
+]
+
+_LIBUNWIND_DAC_MACOS_AARCH64_SRCS = [
+    "src/aarch64/is_fpreg.c",
+    "src/aarch64/regname.c",
+    "src/aarch64/Gapply_reg_state.c",
+    "src/aarch64/Greg_states_iterate.c",
+    "src/aarch64/Gcreate_addr_space.c",
+    "src/aarch64/Gget_proc_info.c",
+    "src/aarch64/Gget_save_loc.c",
+    "src/aarch64/Gglobal.c",
+    "src/aarch64/Ginit.c",
+    "src/aarch64/Ginit_local.c",
+    "src/aarch64/Ginit_remote.c",
+    "src/aarch64/Gis_signal_frame.c",
+    "src/aarch64/Gregs.c",
+    "src/aarch64/Gresume.c",
+    "src/aarch64/Gstash_frame.c",
+    "src/aarch64/Gstep.c",
+    "src/aarch64/Gtrace.c",
+]
+
+_LIBUNWIND_DAC_MACOS_X64_SRCS = [
+    "src/x86_64/is_fpreg.c",
+    "src/x86_64/regname.c",
+    "src/x86_64/Gapply_reg_state.c",
+    "src/x86_64/Greg_states_iterate.c",
+    "src/x86_64/Gcreate_addr_space.c",
+    "src/x86_64/Gget_proc_info.c",
+    "src/x86_64/Gget_save_loc.c",
+    "src/x86_64/Gglobal.c",
+    "src/x86_64/Ginit.c",
+    "src/x86_64/Ginit_local.c",
+    "src/x86_64/Ginit_remote.c",
+    "src/x86_64/Gregs.c",
+    "src/x86_64/Gresume.c",
+    "src/x86_64/Gstash_frame.c",
+    "src/x86_64/Gstep.c",
+    "src/x86_64/Gtrace.c",
+]
+
 cc_library(
     name = "libunwind_dac_macos",
-    srcs = [
-        # remote/mac/missing-functions.c
-        "src/remote/mac/missing-functions.c",
-        # libunwind_la_SOURCES_aarch64_common (subset - no OS-specific files)
-        "src/mi/init.c",
-        "src/mi/flush_cache.c",
-        "src/mi/mempool.c",
-        "src/mi/strerror.c",
-        "src/aarch64/is_fpreg.c",
-        "src/aarch64/regname.c",
-        # libunwind_aarch64_la_SOURCES_aarch64 (remote/generic)
-        "src/mi/Gdyn-extract.c",
-        "src/mi/Gdyn-remote.c",
-        "src/mi/Gfind_dynamic_proc_info.c",
-        "src/mi/Gget_proc_info_by_ip.c",
-        "src/mi/Gget_proc_name.c",
-        "src/mi/Gput_dynamic_unwind_info.c",
-        "src/mi/Gdestroy_addr_space.c",
-        "src/mi/Gget_reg.c",
-        "src/mi/Gset_reg.c",
-        "src/mi/Gget_fpreg.c",
-        "src/mi/Gset_fpreg.c",
-        "src/mi/Gset_caching_policy.c",
-        "src/mi/Gset_cache_size.c",
-        "src/mi/Gaddress_validator.c",
-        "src/aarch64/Gapply_reg_state.c",
-        "src/aarch64/Greg_states_iterate.c",
-        "src/aarch64/Gcreate_addr_space.c",
-        "src/aarch64/Gget_proc_info.c",
-        "src/aarch64/Gget_save_loc.c",
-        "src/aarch64/Gglobal.c",
-        "src/aarch64/Ginit.c",
-        "src/aarch64/Ginit_local.c",
-        "src/aarch64/Ginit_remote.c",
-        "src/aarch64/Gis_signal_frame.c",
-        "src/aarch64/Gregs.c",
-        "src/aarch64/Gresume.c",
-        "src/aarch64/Gstash_frame.c",
-        "src/aarch64/Gstep.c",
-        "src/aarch64/Gtrace.c",
-        # libunwind_dwarf_common_la_SOURCES
-        "src/dwarf/global.c",
-        # libunwind_dwarf_generic_la_SOURCES
-        "src/dwarf/Gexpr.c",
-        "src/dwarf/Gfde.c",
-        "src/dwarf/Gparser.c",
-        "src/dwarf/Gpe.c",
-        "src/dwarf/Gfind_proc_info-lsb.c",
-        "src/dwarf/Gfind_unwind_table.c",
-        "src/dwarf/Gget_proc_info_in_range.c",
-        # Note: NO elf64.c on macOS - macOS uses Mach-O, not ELF
-    ] + LIBUNWIND_INTERNAL_HDRS_AARCH64,
+    srcs = _LIBUNWIND_DAC_MACOS_COMMON_SRCS + select({
+        "@platforms//cpu:arm64": _LIBUNWIND_DAC_MACOS_AARCH64_SRCS + LIBUNWIND_INTERNAL_HDRS_AARCH64,
+        "@platforms//cpu:x86_64": _LIBUNWIND_DAC_MACOS_X64_SRCS + LIBUNWIND_INTERNAL_HDRS,
+    }),
     textual_hdrs = glob(
         [
             "src/mi/G*.c",
             "src/dwarf/G*.c",
-            "src/aarch64/G*.c",
         ],
         allow_empty = True,
-    ),
+    ) + select({
+        "@platforms//cpu:arm64": glob(["src/aarch64/G*.c"], allow_empty = True),
+        "@platforms//cpu:x86_64": glob(["src/x86_64/G*.c"], allow_empty = True),
+    }),
     copts = LIBUNWIND_COPTS + CLR_CONFIG_COPTS + [
         "-Wno-sometimes-uninitialized",
         "-Wno-implicit-function-declaration",
     ],
     defines = LIBUNWIND_DEFINES + [
         "UNW_REMOTE_ONLY",
-        # TARGET_ARM64 required by missing-functions.c
-        "TARGET_ARM64",
-    ],
+    ] + select({
+        "@platforms//cpu:arm64": ["TARGET_ARM64"],
+        "@platforms//cpu:x86_64": ["TARGET_AMD64"],
+    }),
     hdrs = glob([
         "include/*.h",
         "include/tdep/*.h",
-        "include/tdep-aarch64/*.h",
         "include/remote/*.h",
         "include/remote/mac/*.h",
-    ]),
+    ]) + select({
+        "@platforms//cpu:arm64": glob(["include/tdep-aarch64/*.h"]),
+        "@platforms//cpu:x86_64": glob(["include/tdep-x86_64/*.h"]),
+    }),
     includes = [
         "include",
         "include/tdep",

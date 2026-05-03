@@ -1,0 +1,37 @@
+load("//src/tests:live_test.bzl", "coreclr_test", "il_coreclr_test")
+
+coreclr_test(
+    name = "VSW491577",
+    srcs = ["vsw491577.cs"],
+    pri = 1,
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "nesting16",
+    srcs = ["nesting16.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "nesting18",
+    srcs = ["nesting18.il"],
+    pri = 1,
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)
+
+il_coreclr_test(
+    name = "nesting3",
+    srcs = ["nesting3.il"],
+    tags = ["manual"],  # Needs additional deps not yet available
+)
+
+il_coreclr_test(
+    name = "nesting31",
+    srcs = ["nesting31.il"],
+    pri = 1,
+    tags = ["manual"],  # Needs additional deps not yet available,
+    size = "medium",
+)
