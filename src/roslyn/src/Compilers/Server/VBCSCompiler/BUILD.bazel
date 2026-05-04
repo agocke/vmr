@@ -8,6 +8,8 @@ csharp_binary(
         "BuildProtocolUtil.cs",
         "BuildServerController.cs",
         "ClientConnectionHandler.cs",
+        "CompilationCache.cs",
+        "CompilationCacheUtilities.cs",
         "CompilerRequestHandler.cs",
         "CompletionData.cs",
         "CSharpCompilerServer.cs",
