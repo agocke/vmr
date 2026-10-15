@@ -78,6 +78,32 @@ namespace Microsoft.NET.Build.Tests
         }
 
         [TestMethod]
+        public void MissingRuntimeConfigDevFileIsNotRecordedForClean()
+        {
+            var testAsset = TestAssetsManager
+                .CopyTestAsset("HelloWorld", identifier: "MissingRuntimeConfigDevFile")
+                .WithSource()
+                .WithTargetFramework(ToolsetInfo.CurrentTargetFramework);
+
+            var buildCommand = new BuildCommand(testAsset);
+            var outputDirectory = buildCommand.GetOutputDirectory(ToolsetInfo.CurrentTargetFramework).FullName;
+            var intermediateDirectory = buildCommand.GetIntermediateDirectory(ToolsetInfo.CurrentTargetFramework).FullName;
+            var runtimeConfigDevPath = Path.Combine(outputDirectory, "not-generated.runtimeconfig.dev.json");
+            var fileListPath = Path.Combine(intermediateDirectory, "HelloWorld.csproj.FileListAbsolute.txt");
+
+            buildCommand.Execute(
+                    $"/p:ProjectRuntimeConfigDevFilePath={runtimeConfigDevPath}",
+                    "/p:GenerateRuntimeConfigDevFile=false",
+                    "/p:GenerateProbingPathsToRuntimeConfigDevFile=false",
+                    "/p:EnableHotReloadInRuntimeConfigDevFile=false")
+                .Should()
+                .Pass();
+
+            File.Exists(runtimeConfigDevPath).Should().BeFalse();
+            File.ReadAllLines(fileListPath).Should().NotContain(runtimeConfigDevPath);
+        }
+
+        [TestMethod]
         [DataRow("netcoreapp1.1")]
         [DataRow(ToolsetInfo.CurrentTargetFramework)]
         public void ResolvePackageAssets_runs_incrementally(string targetFramework)

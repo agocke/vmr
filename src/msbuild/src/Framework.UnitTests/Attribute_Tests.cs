@@ -40,6 +40,23 @@ namespace Microsoft.Build.UnitTests
                 typeof(X).GetMember("TestValue", BindingFlags.NonPublic | BindingFlags.Static)[0].GetCustomAttribute<RequiredAttribute>();
             attribute.ShouldNotBeNull();
         }
+
+        [Fact]
+        public void MSBuildDeclaredIOAttributesAreNotInherited()
+        {
+            MSBuildDeclaredIOTaskAttribute task =
+                typeof(DeclaredIOTask).GetCustomAttribute<MSBuildDeclaredIOTaskAttribute>();
+            MSBuildDeclaredIORequiresUnsetAttribute requiresUnset =
+                typeof(DeclaredIOTask).GetCustomAttribute<MSBuildDeclaredIORequiresUnsetAttribute>();
+
+            task.ShouldNotBeNull();
+            requiresUnset.ShouldNotBeNull();
+            requiresUnset.ParameterName.ShouldBe("LegacyDirectory");
+            typeof(DerivedDeclaredIOTask).GetCustomAttribute<MSBuildDeclaredIOTaskAttribute>()
+                .ShouldBeNull();
+            typeof(DerivedDeclaredIOTask).GetCustomAttribute<MSBuildDeclaredIORequiresUnsetAttribute>()
+                .ShouldBeNull();
+        }
     }
 
     /// <summary>
@@ -66,4 +83,10 @@ namespace Microsoft.Build.UnitTests
             }
         }
     }
+
+    [MSBuildDeclaredIOTask]
+    [MSBuildDeclaredIORequiresUnset("LegacyDirectory")]
+    internal class DeclaredIOTask;
+
+    internal sealed class DerivedDeclaredIOTask : DeclaredIOTask;
 }

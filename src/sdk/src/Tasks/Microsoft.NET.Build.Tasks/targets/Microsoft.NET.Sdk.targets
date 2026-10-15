@@ -343,7 +343,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     <ItemGroup>
       <!-- Do this in an ItemGroup instead of as an output parameter of the GenerateDepsFile task so that it still gets added to the item set
            during incremental builds when the task is skipped -->
-      <FileWrites Include="$(ProjectDepsFilePath)" Condition="Exists('$(ProjectDepsFilePath)')"/>
+      <FileWrites Include="$(ProjectDepsFilePath)" Condition="'$(MSBuildHardenedGraph)' == 'true' Or Exists('$(ProjectDepsFilePath)')"/>
     </ItemGroup>
   </Target>
 
@@ -371,8 +371,18 @@ Copyright (c) .NET Foundation. All rights reserved.
     </Hash>
 
     <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' != 'true'"
       Lines="$(_GenerateRuntimeConfigurationPropertyInputsCacheHash)"
       File="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
+      Overwrite="True"
+      WriteOnlyWhenDifferent="True" />
+
+    <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+      Lines="$(_GenerateRuntimeConfigurationPropertyInputsCacheHash)"
+      File="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
+      DeclaredInputs="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
+      DeclaredOutputs="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
       Overwrite="True"
       WriteOnlyWhenDifferent="True" />
 
@@ -433,8 +443,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     <ItemGroup>
       <!-- Do this in an ItemGroup instead of as an output parameter of the GenerateDepsFile task so that it still gets added to the item set
           during incremental builds when the task is skipped -->
-      <FileWrites Include="$(ProjectRuntimeConfigFilePath)" Condition="Exists('$(ProjectRuntimeConfigFilePath)')"/>
-      <FileWrites Include="$(ProjectRuntimeConfigDevFilePath)" Condition="Exists('$(ProjectRuntimeConfigDevFilePath)')"/>
+      <FileWrites Include="$(ProjectRuntimeConfigFilePath)" Condition="'$(MSBuildHardenedGraph)' == 'true' Or Exists('$(ProjectRuntimeConfigFilePath)')"/>
+      <FileWrites Include="$(ProjectRuntimeConfigDevFilePath)"
+                  Condition="'$(ProjectRuntimeConfigDevFilePath)' != '' And ('$(MSBuildHardenedGraph)' == 'true' Or Exists('$(ProjectRuntimeConfigDevFilePath)'))"/>
     </ItemGroup>
 
   </Target>
@@ -855,8 +866,8 @@ Copyright (c) .NET Foundation. All rights reserved.
           DependsOnTargets="_GetAppHostPaths;_GetAppHostCreationConfiguration;CoreCompile"
           Condition="'$(ComputeNETCoreBuildOutputFiles)' == 'true' and
                      '$(AppHostSourcePath)' != '' and
-                     Exists('@(IntermediateAssembly)') and
-                     Exists('$(AppHostSourcePath)')">
+                     ('$(_UsingFrameworkReferenceManifest)' == 'true' or
+                     (Exists('@(IntermediateAssembly)') and Exists('$(AppHostSourcePath)')))">
     <CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
                    AppHostDestinationPath="$(AppHostIntermediatePath)"
                    AppBinaryName="$(AssemblyName)$(TargetExt)"
@@ -889,9 +900,9 @@ Copyright (c) .NET Foundation. All rights reserved.
       <AppHostSourcePath Condition="'$(UseAppHostFromAssetsFile)' == 'true'">@(_NativeRestoredAppHostNETCore)</AppHostSourcePath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(UseAppHostFromAssetsFile)' == 'false' Or '@(_NativeRestoredAppHostNETCore)' != ''">
-      <AppHostIntermediatePath>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)apphost$(_NativeExecutableExtension)'))</AppHostIntermediatePath>
-      <AppHostForPublishIntermediatePath>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)apphost_publish$(_NativeExecutableExtension)'))</AppHostForPublishIntermediatePath>
-      <SingleFileHostIntermediatePath>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)singlefilehost$(_NativeExecutableExtension)'))</SingleFileHostIntermediatePath>
+      <AppHostIntermediatePath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)apphost$(_NativeExecutableExtension)'))</AppHostIntermediatePath>
+      <AppHostForPublishIntermediatePath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)apphost_publish$(_NativeExecutableExtension)'))</AppHostForPublishIntermediatePath>
+      <SingleFileHostIntermediatePath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)singlefilehost$(_NativeExecutableExtension)'))</SingleFileHostIntermediatePath>
     </PropertyGroup>
 
   </Target>

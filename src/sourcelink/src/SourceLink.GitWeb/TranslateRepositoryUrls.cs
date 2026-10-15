@@ -14,6 +14,7 @@ namespace Microsoft.SourceLink.GitWeb
     /// <see cref="GetSourceLinkUrl"/> Task converts the URLs to HTTP content URLs which GitWeb does
     /// support. The output of this Task is independent of <see cref="GetSourceLinkUrl"/>.
     /// </summary>
+    [MSBuildPureTask]
     [MSBuildMultiThreadableTask]
     public sealed class TranslateRepositoryUrls : TranslateRepositoryUrlsGitTask
     {

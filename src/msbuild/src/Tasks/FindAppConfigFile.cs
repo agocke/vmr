@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
+using Microsoft.Build.Utilities;
 
 #nullable disable
 
@@ -122,11 +123,11 @@ namespace Microsoft.Build.Tasks
         {
             try
             {
-                string filename = (matchWholeItemSpec ? item.ItemSpec : Path.GetFileName(item.ItemSpec));
+                string filename = matchWholeItemSpec ? item.ItemSpec : GetFileName(item.ItemSpec);
 
                 if (String.Equals(filename, appConfigFile, StringComparison.OrdinalIgnoreCase))
                 {
-                    AppConfigFile = item;
+                    AppConfigFile = CreateOutputItem(item);
 
                     // Originally the app.config was found in such a way that it's "OriginalItemSpec"
                     // metadata was cleared out. Although it doesn't really matter, for compatibility,
@@ -146,6 +147,51 @@ namespace Microsoft.Build.Tasks
                 Log.LogMessageFromResources(MessageImportance.Low, "FindInList.InvalidPath", item.ItemSpec, ex.Message);
             }
             return false;
+        }
+
+        private protected virtual string GetFileName(string itemSpec)
+        {
+            return Path.GetFileName(itemSpec);
+        }
+
+        private protected virtual ITaskItem CreateOutputItem(ITaskItem item)
+        {
+            return item;
+        }
+    }
+
+    /// <summary>
+    /// Finds the app.config file using host path semantics without mutating input items.
+    /// </summary>
+    [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
+    public sealed class FindAppConfigFileWithDeterministicSemantics : FindAppConfigFile
+    {
+        /// <summary>
+        /// Gets or sets the declared file inputs, which are empty for this zero-I/O task.
+        /// </summary>
+        public ITaskItem[] DeclaredInputs { get; set; } = [];
+
+        /// <summary>
+        /// Gets or sets the declared file outputs, which are empty for this zero-I/O task.
+        /// </summary>
+        public ITaskItem[] DeclaredOutputs { get; set; } = [];
+
+        private protected override string GetFileName(string itemSpec)
+        {
+            int fileNameStart = itemSpec.LastIndexOf('/');
+            if (NativeMethodsShared.IsWindows)
+            {
+                fileNameStart = Math.Max(fileNameStart, itemSpec.LastIndexOf('\\'));
+            }
+
+            fileNameStart++;
+            return itemSpec.Substring(fileNameStart);
+        }
+
+        private protected override ITaskItem CreateOutputItem(ITaskItem item)
+        {
+            return new TaskItem(item);
         }
     }
 }

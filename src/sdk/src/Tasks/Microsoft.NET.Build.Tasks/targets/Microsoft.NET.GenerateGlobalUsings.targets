@@ -43,8 +43,18 @@ Copyright (c) .NET Foundation. All rights reserved.
     </GenerateGlobalUsings>
 
     <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' != 'true'"
       File="$(GeneratedGlobalUsingsFile)"
       Lines="@(_GlobalUsingLines)"
+      Overwrite="true"
+      WriteOnlyWhenDifferent="true" />
+
+    <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+      File="$(GeneratedGlobalUsingsFile)"
+      Lines="@(_GlobalUsingLines)"
+      DeclaredInputs="$(GeneratedGlobalUsingsFile)"
+      DeclaredOutputs="$(GeneratedGlobalUsingsFile)"
       Overwrite="true"
       WriteOnlyWhenDifferent="true" />
 

@@ -22,6 +22,32 @@ Copyright (c) .NET Foundation. All rights reserved.
   <UsingTask TaskName="CheckForDuplicateFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="ProcessFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="ResolveAppHosts" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="WriteFrameworkReferenceFetchManifest" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+
+  <Target Name="_CollectFrameworkReferenceFetchManifestRuntimeFrameworks"
+          DependsOnTargets="ProcessFrameworkReferences">
+    <ItemGroup>
+      <_FrameworkReferenceFetchManifestRuntimeFramework Include="@(RuntimeFramework)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GenerateFrameworkReferenceFetchManifest"
+          AfterTargets="Restore"
+          DependsOnTargets="_CollectFrameworkReferenceFetchManifestRuntimeFrameworks;ResolveTargetingPackAssets;_GetAppHostPaths"
+          Condition="'$(MSBuildHardenedGraph)' != 'true' and
+                     ('$(MSBuildRestoreGraphInputs)' == 'true' or
+                      ('$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true')) and
+                     '$(_FrameworkReferenceFetchManifestProfileSupported)' == 'true'">
+    <WriteFrameworkReferenceFetchManifest
+      OutputFile="$(FrameworkReferenceFetchManifestPath)"
+      TargetFramework="$(TargetFramework)"
+      FrameworkReferences="@(FrameworkReference)"
+      CompileReferences="@(Reference)"
+      RuntimeFrameworks="@(_FrameworkReferenceFetchManifestRuntimeFramework)"
+      ResolvedFrameworkReferences="@(ResolvedFrameworkReference)"
+      AppHostSourcePath="$(AppHostSourcePath)"
+      AppHostRuntimeIdentifier="$(AppHostRuntimeIdentifier)" />
+  </Target>
 
 
   <!-- Don't add Windows SDK framework reference for C++ by default, as C++ doesn't use it and it would be an unnecessary download for possible
@@ -90,7 +116,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Target Name="ProcessFrameworkReferences" BeforeTargets="_CheckForInvalidConfigurationAndPlatform;CollectPackageReferences;CollectPackageDownloads"
           DependsOnTargets="_ComputeTargetLatestRuntimePatch;AddWindowsSdkKnownFrameworkReferences"
-          Condition="'@(FrameworkReference)' != '' Or '$(_RequiresILLinkPack)' == 'true'">
+          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And ('@(FrameworkReference)' != '' Or '$(_RequiresILLinkPack)' == 'true')">
 
     <CheckForDuplicateFrameworkReferences
         FrameworkReferences="@(FrameworkReference)"
@@ -266,6 +292,38 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <UsingTask TaskName="ResolveFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
+  <Target Name="_ResolveFrameworkReferenceManifest"
+          BeforeTargets="ResolveFrameworkReferences;ResolveTargetingPackAssets"
+          Condition="'$(_UsingFrameworkReferenceManifest)' == 'true'">
+    <ItemGroup>
+      <ResolvedFrameworkReference Include="@(_FrameworkReferenceManifestFrameworkReference)"
+                                  Condition="'%(_FrameworkReferenceManifestFrameworkReference.TargetFramework)' == '$(TargetFramework)' and
+                                             '%(_FrameworkReferenceManifestFrameworkReference.Identity)' == '@(FrameworkReference)'"
+                                  RemoveMetadata="TargetFramework" />
+      <RuntimeFramework Include="@(_FrameworkReferenceManifestRuntimeFramework)"
+                        Condition="'%(_FrameworkReferenceManifestRuntimeFramework.TargetFramework)' == '$(TargetFramework)' and
+                                   '%(_FrameworkReferenceManifestRuntimeFramework.FrameworkReference)' == '@(FrameworkReference)'"
+                        RemoveMetadata="TargetFramework;FrameworkReference" />
+      <ReferencePath Include="@(_FrameworkReferenceManifestCompileReference)"
+                     Condition="'%(_FrameworkReferenceManifestCompileReference.TargetFramework)' == '$(TargetFramework)' and
+                                '%(_FrameworkReferenceManifestCompileReference.FrameworkReference)' == '@(FrameworkReference)'"
+                     RemoveMetadata="TargetFramework;FrameworkReference">
+        <Private>false</Private>
+        <ExternallyResolved>true</ExternallyResolved>
+        <ReferenceSourceTarget>FrameworkReferenceManifest</ReferenceSourceTarget>
+      </ReferencePath>
+      <_SelectedFrameworkReferenceManifestAppHost Include="@(_FrameworkReferenceManifestAppHost)"
+                                                  Condition="'%(_FrameworkReferenceManifestAppHost.TargetFramework)' == '$(TargetFramework)' and
+                                                             '%(_FrameworkReferenceManifestAppHost.FrameworkReference)' == '@(FrameworkReference)'"
+                                                  RemoveMetadata="TargetFramework;FrameworkReference" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'@(_SelectedFrameworkReferenceManifestAppHost)' != ''">
+      <AppHostSourcePath Condition="'$(AppHostSourcePath)' == ''">@(_SelectedFrameworkReferenceManifestAppHost)</AppHostSourcePath>
+      <AppHostRuntimeIdentifier Condition="'$(AppHostRuntimeIdentifier)' == ''">@(_SelectedFrameworkReferenceManifestAppHost->'%(RuntimeIdentifier)')</AppHostRuntimeIdentifier>
+    </PropertyGroup>
+  </Target>
+
   <!--
     ============================================================
                                         ResolveFrameworkReferences
@@ -277,7 +335,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     ============================================================
     -->
   <Target Name="ResolveFrameworkReferences" DependsOnTargets="ProcessFrameworkReferences;ResolvePackageAssets"
-          Condition="'@(FrameworkReference)' != ''"
+          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And '@(FrameworkReference)' != ''"
           Returns="@(ResolvedFrameworkReference)">
 
     <GetPackageDirectory
@@ -431,7 +489,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     ============================================================
     -->
   <Target Name="ResolveTargetingPackAssets" DependsOnTargets="ResolveFrameworkReferences"
-          Condition="'@(FrameworkReference)' != ''">
+          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And '@(FrameworkReference)' != ''">
 
     <!-- For design-time builds, don't generate an error if a targeting pack isn't available (ie because it hasn't been restored yet) -->
     <PropertyGroup Condition="'$(GenerateErrorForMissingTargetingPacks)' == ''">

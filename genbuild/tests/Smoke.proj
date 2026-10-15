@@ -1,0 +1,50 @@
+<Project DefaultTargets="Test">
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <GenBuildApp Condition="'$(GenBuildApp)' == ''">$(MSBuildThisFileDirectory)../../artifacts/bin/genbuild/$(Configuration)/genbuild.dll</GenBuildApp>
+    <GenBuildTestHost Condition="'$(GenBuildTestHost)' == ''">$(DOTNET_HOST_PATH)</GenBuildTestHost>
+    <_TestDirectory>$(MSBuildThisFileDirectory)../../artifacts/obj/genbuild-smoke/$([System.Guid]::NewGuid())/with spaces/</_TestDirectory>
+    <_App>&quot;$(GenBuildTestHost)&quot; &quot;$(GenBuildApp)&quot;</_App>
+    <_AppDirectory>$([System.IO.Path]::GetDirectoryName('$(GenBuildApp)'))</_AppDirectory>
+  </PropertyGroup>
+  <Target Name="Test">
+    <Error Condition="!Exists('$(GenBuildApp)') or !Exists('$(GenBuildTestHost)')" Text="Build genbuild.proj first and set GenBuildTestHost to an external dotnet runtime." />
+    <Error Condition="Exists('$(_AppDirectory)/shared') or Exists('$(_AppDirectory)/host') or Exists('$(_AppDirectory)/sdk')" Text="The app must not bundle a runtime or an SDK installation." />
+    <MakeDir Directories="$(_TestDirectory)" />
+    <WriteLinesToFile File="$(_TestDirectory)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Action.proj;$(MSBuildThisFileDirectory)HelloWorld.csproj;$(MSBuildThisFileDirectory)HelloWorld.cs" DestinationFolder="$(_TestDirectory)" />
+    <Exec Command="$(_App) --help" />
+    <Exec Command="$(_App) invalid" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_InvalidExitCode" />
+    </Exec>
+    <Error Condition="'$(_InvalidExitCode)' == '0'" Text="Invalid commands must fail." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
+    </Exec>
+    <Error Condition="'$(_MissingExitCode)' == '0'" Text="The app must propagate MSBuild failure." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)Action.proj&quot; -bl:&quot;$(_TestDirectory)graph-{}.binlog&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)action.txt')" Text="Graph construction must not execute actions." />
+    <Error Condition="!Exists('$(_TestDirectory)obj/genbuild/build.ninja')" Text="Graph construction did not emit the default Ninja file." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f obj/genbuild/build.ninja" />
+    <ReadLinesFromFile File="$(_TestDirectory)action.txt">
+      <Output TaskParameter="Lines" ItemName="_ActionContents" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_ActionContents)' != 'executed outside MSBuild'" Text="The independent action host did not produce the expected contents." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
+    <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
+    <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_CompileReference" />
+    </XmlPeek>
+    <Error Condition="'@(_CompileReference)' == ''" Text="Restore did not capture compiler reference inputs." />
+    <WriteLinesToFile File="$(_TestDirectory)compile.rsp" Lines="@(_CompileReference->'-r:&quot;%(Identity)&quot;');&quot;$(_TestDirectory)HelloWorld.cs&quot;" Overwrite="true" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_TestDirectory)HelloWorld.dll&quot; @&quot;$(_TestDirectory)compile.rsp&quot;" />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_TestDirectory)HelloWorld.runtimeconfig.json" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_TestDirectory)HelloWorld.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
+    </Exec>
+    <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+  </Target>
+</Project>

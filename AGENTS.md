@@ -91,5 +91,13 @@ Repos are categorized in `eng/VmrLayout.props` as `SharedRepositoryReference` it
 
 Each constituent repo may have its own AI assistant instructions (i.e. `AGENTS.md`, `copilot-instructions.md` file) with repo-specific build, test, and coding conventions. **Always refer to these when working within a specific `src/<repo>/` directory.**
 
+## genbuild prototype
+
+[`genbuild/genbuild.proj`](genbuild/genbuild.proj) builds the experimental standalone
+restore/action-graph app from selected component projects. This product uses an
+external .NET runtime; do not route its build through SDK redist or bundle a runtime.
+See the [prototype roadmap](src/msbuild/documentation/specs/proposed/hardened-static-graph-implementation.md#standalone-genbuild-app)
+for build commands, the toolset profile, and runtime-only smoke checks.
+
 ## Working with pull requests
 Most pull requests are code flow from constituent repos (their name contains `Source code updates from `), **NEVER** force push to those pull requests.

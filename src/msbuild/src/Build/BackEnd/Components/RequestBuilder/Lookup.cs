@@ -10,6 +10,7 @@ using Microsoft.Build.Collections;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Graph.Hardened;
 using Microsoft.Build.Shared;
 using ReservedPropertyNames = Microsoft.Build.Internal.ReservedPropertyNames;
 
@@ -92,6 +93,15 @@ namespace Microsoft.Build.BackEnd
         /// </summary>
         private Dictionary<ProjectItemInstance, ProjectItemInstance> _cloneTable;
 
+        /// <summary>
+        /// Optional availability and origin state used only by hardened validation.
+        /// </summary>
+        private HardenedLookupState _hardenedState;
+
+        private HardenedItemOperationPlan _hardenedItemOperationPlan;
+
+        private HardenedItemOperationPlan.HardenedBucketPath _hardenedBucketPath;
+
         #endregion
 
         #region Constructors
@@ -120,6 +130,32 @@ namespace Microsoft.Build.BackEnd
             // Clones need to share an (item)clone table; the batching engine asks for items from the lookup,
             // then populates buckets with them, which have clone lookups.
             _cloneTable = that._cloneTable;
+            _hardenedState = that._hardenedState is null
+                ? null
+                : HardenedLookupState.Create(this);
+            _hardenedItemOperationPlan = that._hardenedItemOperationPlan;
+            _hardenedBucketPath = that._hardenedBucketPath;
+        }
+
+        private Lookup(
+            Lookup that,
+            bool snapshotHardenedState,
+            bool cloneConcreteState)
+        {
+            Assumed.True(snapshotHardenedState);
+
+            _baseItems = that._baseItems;
+            _lookupScopes = Scope.CloneChain(
+                this,
+                that._lookupScopes,
+                cloneHardenedState: true,
+                cloneConcreteState);
+            _cloneTable = !cloneConcreteState || that._cloneTable is null
+                ? that._cloneTable
+                : new Dictionary<ProjectItemInstance, ProjectItemInstance>(that._cloneTable);
+            _hardenedState = HardenedLookupState.Create(this);
+            _hardenedItemOperationPlan = that._hardenedItemOperationPlan;
+            _hardenedBucketPath = that._hardenedBucketPath;
         }
 
         #endregion
@@ -242,6 +278,83 @@ namespace Microsoft.Build.BackEnd
             return new Lookup(this);
         }
 
+        internal HardenedLookupState HardenedState => _hardenedState;
+
+        internal HardenedItemOperationPlan HardenedItemOperationPlan => _hardenedItemOperationPlan;
+
+        internal HardenedItemOperationPlan.HardenedBucketPath HardenedBucketPath
+            => _hardenedBucketPath ?? HardenedItemOperationPlan.HardenedBucketPath.Root;
+
+        internal void ConfigureHardenedItemOperationPlan(HardenedItemOperationPlan plan)
+        {
+            _hardenedItemOperationPlan = plan;
+            _hardenedBucketPath = HardenedItemOperationPlan.HardenedBucketPath.Root;
+        }
+
+        internal void EnterHardenedBucket(object owner, int sequenceNumber)
+        {
+            if (_hardenedItemOperationPlan is not null && owner is not null)
+            {
+                _hardenedBucketPath = HardenedBucketPath.Append(owner, sequenceNumber);
+            }
+        }
+
+        internal void RestoreHardenedBucketPath(
+            HardenedItemOperationPlan.HardenedBucketPath bucketPath)
+        {
+            _hardenedBucketPath = bucketPath;
+        }
+
+        internal HardenedLookupState EnableHardenedState()
+        {
+            if (_hardenedState is null)
+            {
+                Assumed.Null(
+                    _lookupScopes.Parent,
+                    "Hardened state must be enabled before entering lookup scopes.");
+
+                // Lookup clones normally share their scope chain. Hardened validation is opt-in,
+                // so detach the existing scopes before attaching state to avoid mutating a
+                // feature-disabled lookup that shares them.
+                _lookupScopes = Scope.CloneChain(this, _lookupScopes, cloneHardenedState: false);
+                _hardenedState = HardenedLookupState.Create(this);
+            }
+
+            _hardenedState.InitializeCurrentScope();
+            return _hardenedState;
+        }
+
+        internal Lookup SnapshotHardenedLookup()
+        {
+            Assumed.NotNull(_hardenedState);
+            return new Lookup(this, snapshotHardenedState: true, cloneConcreteState: false);
+        }
+
+        internal Lookup SnapshotHardenedLookupForBranching()
+        {
+            Assumed.NotNull(_hardenedState);
+            return new Lookup(this, snapshotHardenedState: true, cloneConcreteState: true);
+        }
+
+        internal void ApplyHardenedScopeSnapshot(Lookup source)
+        {
+            Assumed.NotNull(_hardenedState);
+            Assumed.NotNull(source);
+            Assumed.NotNull(source._hardenedState);
+            Assumed.NotNull(source._lookupScopes.Parent);
+
+            Scope scope = new Scope(
+                this,
+                source._lookupScopes,
+                _lookupScopes,
+                cloneHardenedState: true,
+                cloneConcreteState: true);
+            _lookupScopes = scope;
+            LeaveScope(scope);
+        }
+
+        internal Scope CurrentScope => _lookupScopes;
+
         /// <summary>
         /// Enters the scope using the specified description.
         /// Callers keep the scope in order to pass it to <see cref="LeaveScope">LeaveScope</see>.
@@ -251,6 +364,7 @@ namespace Microsoft.Build.BackEnd
             // We don't create the tables unless we need them
             Scope scope = new Scope(this, description, null);
             _lookupScopes = scope;
+            _hardenedState?.InitializeCurrentScope();
             return scope;
         }
 
@@ -279,6 +393,8 @@ namespace Microsoft.Build.BackEnd
             {
                 MergeScopeIntoNotLastScope();
             }
+
+            _hardenedState?.MergeCurrentScopeIntoParent();
 
             // Let go of our pointer into the clone table; we assume we won't need it after leaving scope and want to save memory.
             // This is an assumption on IntrinsicTask, that it won't ask to remove or modify a clone in a higher scope than it was handed out in.
@@ -682,6 +798,7 @@ namespace Microsoft.Build.BackEnd
             Assumed.Null(existing, "Cannot add an itemgroup of this type.");
 
             PrimaryTable.ImportItemsOfType(itemType, group);
+            _hardenedState?.PopulateWithItems(itemType, group, RetrieveOriginalFromCloneTable);
         }
 
         /// <summary>
@@ -696,6 +813,7 @@ namespace Microsoft.Build.BackEnd
 
             PrimaryTable ??= new ItemDictionarySlim();
             PrimaryTable.Add(item);
+            _hardenedState?.PopulateWithItem(item, RetrieveOriginalFromCloneTable(item));
         }
 
         /// <summary>
@@ -725,12 +843,25 @@ namespace Microsoft.Build.BackEnd
             // Put in the set table
             PrimaryPropertySets ??= new PropertyDictionary<ProjectPropertyInstance>();
             PrimaryPropertySets.Set(property);
+            _hardenedState?.SetConcreteProperty(property.Name, property.EvaluatedValue);
+        }
+
+        /// <summary>
+        /// Applies an engine-owned property to the outer scope for the lifetime of this lookup.
+        /// </summary>
+        internal void SetBuiltInProperty(ProjectPropertyInstance property)
+        {
+            Assumed.Null(_lookupScopes.Parent, "Built-in properties must be set before entering lookup scopes.");
+
+            PrimaryPropertySets ??= new PropertyDictionary<ProjectPropertyInstance>();
+            PrimaryPropertySets.Set(property);
+            _hardenedState?.SetConcreteProperty(property.Name, property.EvaluatedValue);
         }
 
         /// <summary>
         /// Implements a true add, an item that has been created in a batch.
         /// </summary>
-        internal void AddNewItemsOfItemType(string itemType, ICollection<ProjectItemInstance> group, bool doNotAddDuplicates = false, Action<IList> logFunction = null)
+        internal ICollection<ProjectItemInstance> AddNewItemsOfItemType(string itemType, ICollection<ProjectItemInstance> group, bool doNotAddDuplicates = false, Action<IList> logFunction = null)
         {
             // Adding to outer scope could be easily implemented, but our code does not do it at present
             MustNotBeOuterScope();
@@ -744,7 +875,7 @@ namespace Microsoft.Build.BackEnd
 
             if (group.Count == 0)
             {
-                return;
+                return group;
             }
 
             // Put them in the add table
@@ -782,6 +913,8 @@ namespace Microsoft.Build.BackEnd
             }
 
             PrimaryAddTable.ImportItemsOfType(itemType, itemsToAdd);
+            _hardenedState?.AddConcreteItems(itemType, itemsToAdd);
+            return itemsToAdd as ICollection<ProjectItemInstance> ?? itemsToAdd.ToList();
         }
 
         /// <summary>
@@ -801,6 +934,7 @@ namespace Microsoft.Build.BackEnd
             // Put in the add table
             PrimaryAddTable ??= new ItemDictionarySlim();
             PrimaryAddTable.Add(item);
+            _hardenedState?.AddConcreteItems(item.ItemType, [item]);
         }
 
         /// <summary>
@@ -821,6 +955,7 @@ namespace Microsoft.Build.BackEnd
 
             IEnumerable<ProjectItemInstance> itemsToRemove = items.Select(RetrieveOriginalFromCloneTable);
             PrimaryRemoveTable.ImportItemsOfType(itemType, itemsToRemove);
+            _hardenedState?.RemoveItems(items, RetrieveOriginalFromCloneTable);
 
             // No need to remove these items from the primary add table if it's
             // already there -- we always apply removes after adds, so that add
@@ -882,6 +1017,11 @@ namespace Microsoft.Build.BackEnd
                 var modify = new KeyValuePair<ProjectItemInstance, MetadataModifications>(actualItem, metadataChangeCopy);
                 MergeModificationsIntoModificationTable(modifiesOfType, modify, ModifyMergeType.SecondWins);
             }
+
+            _hardenedState?.ApplyConcreteMetadataModifications(
+                group,
+                metadataChanges,
+                RetrieveOriginalFromCloneTable);
         }
 
         #endregion
@@ -1460,10 +1600,43 @@ namespace Microsoft.Build.BackEnd
                 Parent = lookup._lookupScopes;
             }
 
+            internal Scope(
+                Lookup lookup,
+                Scope source,
+                Scope parent,
+                bool cloneHardenedState,
+                bool cloneConcreteState = false)
+            {
+                _owningLookup = lookup;
+                _description = source._description;
+                _items = cloneConcreteState ? source._items?.Clone() : source._items;
+                _adds = cloneConcreteState ? source._adds?.Clone() : source._adds;
+                _removes = cloneConcreteState ? source._removes?.Clone() : source._removes;
+                _modifies = cloneConcreteState
+                    ? CloneModifications(source._modifies)
+                    : source._modifies;
+                _properties = cloneConcreteState && source._properties is not null
+                    ? new PropertyDictionary<ProjectPropertyInstance>(source._properties)
+                    : source._properties;
+                _propertySets = cloneConcreteState && source._propertySets is not null
+                    ? new PropertyDictionary<ProjectPropertyInstance>(source._propertySets)
+                    : source._propertySets;
+                _itemTypesToTruncateAtThisScope = source._itemTypesToTruncateAtThisScope;
+                HardenedState = cloneHardenedState
+                    ? source.HardenedState?.Clone()
+                    : null;
+                Parent = parent;
+            }
+
             /// <summary>
             /// The parent scope in the stack, if any.
             /// </summary>
             internal Scope Parent { get; }
+
+            /// <summary>
+            /// Optional availability and origin payload for this concrete lookup scope.
+            /// </summary>
+            internal HardenedLookupState.ScopeState HardenedState { get; set; }
 
             /// <summary>
             /// The total number of scopes in the chain.
@@ -1561,6 +1734,52 @@ namespace Microsoft.Build.BackEnd
             internal void LeaveScope()
             {
                 _owningLookup.LeaveScope(this);
+            }
+
+            internal static Scope CloneChain(
+                Lookup lookup,
+                Scope scope,
+                bool cloneHardenedState = true,
+                bool cloneConcreteState = false)
+            {
+                Scope parent = scope.Parent is null
+                    ? null
+                    : CloneChain(
+                        lookup,
+                        scope.Parent,
+                        cloneHardenedState,
+                        cloneConcreteState);
+                return new Scope(
+                    lookup,
+                    scope,
+                    parent,
+                    cloneHardenedState,
+                    cloneConcreteState);
+            }
+
+            private static ItemTypeToItemsMetadataUpdateDictionary CloneModifications(
+                ItemTypeToItemsMetadataUpdateDictionary source)
+            {
+                if (source is null)
+                {
+                    return null;
+                }
+
+                var clone = new ItemTypeToItemsMetadataUpdateDictionary(
+                    MSBuildNameIgnoreCaseComparer.Default);
+                foreach (KeyValuePair<string, Dictionary<ProjectItemInstance, MetadataModifications>> itemType in source)
+                {
+                    var itemModifications =
+                        new Dictionary<ProjectItemInstance, MetadataModifications>(itemType.Value.Count);
+                    foreach (KeyValuePair<ProjectItemInstance, MetadataModifications> item in itemType.Value)
+                    {
+                        itemModifications.Add(item.Key, item.Value.Clone());
+                    }
+
+                    clone.Add(itemType.Key, itemModifications);
+                }
+
+                return clone;
             }
         }
     }

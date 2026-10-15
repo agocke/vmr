@@ -10,6 +10,18 @@ Copyright (c) .NET Foundation. All rights reserved.
 ***********************************************************************************************
 -->
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Restore captures with MSBuildRestoreGraphInputs; hardened evaluation only enables replay. -->
+  <PropertyGroup>
+    <EnableFrameworkReferenceFetchManifest Condition="'$(EnableFrameworkReferenceFetchManifest)' == '' and '$(MSBuildHardenedGraph)' == 'true'">true</EnableFrameworkReferenceFetchManifest>
+    <FrameworkReferenceFetchManifestPath Condition="('$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true') and '$(FrameworkReferenceFetchManifestPath)' == ''">$(MSBuildProjectExtensionsPath)frameworkreferences/$(MSBuildProjectFile).g.props</FrameworkReferenceFetchManifestPath>
+    <FrameworkReferenceFetchManifestPath Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(FrameworkReferenceFetchManifestPath)'))</FrameworkReferenceFetchManifestPath>
+  </PropertyGroup>
+
+  <Import Project="$(FrameworkReferenceFetchManifestPath)"
+          Condition="'$(EnableFrameworkReferenceFetchManifest)' == 'true' and
+                     '$(MSBuildIsRestoring)' != 'true' and
+                     ('$(MSBuildHardenedGraph)' == 'true' or '$(MSBuildRestoreGraphInputs)' != 'true')" />
+
   <Import Project="$(BeforeMicrosoftNETSdkTargets)" Condition="'$(BeforeMicrosoftNETSdkTargets)' != ''"/>
 
   <!-- Using the same property as Microsoft.CSharp.targets and presumably Microsoft.VisualBasic.targets here -->
@@ -65,4 +77,98 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Import Project="$(_ContainersTargetsDir)Microsoft.NET.Build.Containers.targets"
     Condition="$(_IsNotSetContainersTargetsDir) AND Exists('$(_ContainersTargetsDir)Microsoft.NET.Build.Containers.targets')" />
+
+  <Target Name="_ComputeFrameworkReferenceFetchManifestProfile"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true'">
+    <ItemGroup>
+      <_SupportedFrameworkReferenceFetchManifestFrameworkReference
+        Include="@(FrameworkReference)"
+        Condition="'%(FrameworkReference.Identity)' == 'Microsoft.NETCore.App' and
+                   '%(FrameworkReference.IsImplicitlyDefined)' == 'true'" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_FrameworkReferenceFetchManifestFrameworkReferences>@(FrameworkReference, ', ')</_FrameworkReferenceFetchManifestFrameworkReferences>
+      <_FrameworkReferenceFetchManifestPackageReferences>@(PackageReference, ', ')</_FrameworkReferenceFetchManifestPackageReferences>
+      <_FrameworkReferenceFetchManifestProjectReferences>@(ProjectReference, ', ')</_FrameworkReferenceFetchManifestProjectReferences>
+      <_FrameworkReferenceFetchManifestReferences>@(Reference, ', ')</_FrameworkReferenceFetchManifestReferences>
+      <_FrameworkReferenceFetchManifestProfileSupported
+        Condition="'$(IsCrossTargetingBuild)' != 'true' and
+                   '$(TargetFrameworks)' == '' and
+                   '@(FrameworkReference->Count())' == '1' and
+                   '@(_SupportedFrameworkReferenceFetchManifestFrameworkReference->Count())' == '1' and
+                   '@(PackageReference->Count())' == '0' and
+                   '@(ProjectReference->Count())' == '0' and
+                   '@(Reference->Count())' == '0' and
+                   '$(RuntimeIdentifier)' == '' and
+                   '$(RuntimeIdentifiers)' == ''">true</_FrameworkReferenceFetchManifestProfileSupported>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_InvalidateUnsupportedFrameworkReferenceFetchManifest"
+          DependsOnTargets="_ComputeFrameworkReferenceFetchManifestProfile"
+          BeforeTargets="Restore"
+          Condition="'$(MSBuildHardenedGraph)' != 'true' and
+                     ('$(MSBuildRestoreGraphInputs)' == 'true' or
+                      ('$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))">
+    <Delete Files="$(FrameworkReferenceFetchManifestPath)"
+            Condition="'$(_FrameworkReferenceFetchManifestProfileSupported)' != 'true'" />
+  </Target>
+
+  <Target Name="_ReportUnsupportedFrameworkReferenceFetchManifestProfile"
+          DependsOnTargets="_ComputeFrameworkReferenceFetchManifestProfile"
+          Condition="'$(_FrameworkReferenceFetchManifestProfileSupported)' != 'true'">
+    <NETSdkError
+      Condition="'$(IsCrossTargetingBuild)' == 'true' or '$(TargetFrameworks)' != ''"
+      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
+      FormatArguments="TargetFrameworks;$([MSBuild]::Escape('$(TargetFrameworks)'))"
+      ContinueOnError="ErrorAndContinue" />
+    <NETSdkError
+      Condition="'$(IsCrossTargetingBuild)' != 'true' and
+                 ('@(FrameworkReference->Count())' != '1' or
+                  '@(_SupportedFrameworkReferenceFetchManifestFrameworkReference->Count())' != '1')"
+      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
+      FormatArguments="FrameworkReference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestFrameworkReferences)'))"
+      ContinueOnError="ErrorAndContinue" />
+    <NETSdkError
+      Condition="'@(PackageReference)' != ''"
+      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
+      FormatArguments="PackageReference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestPackageReferences)'))"
+      ContinueOnError="ErrorAndContinue" />
+    <NETSdkError
+      Condition="'@(ProjectReference)' != ''"
+      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
+      FormatArguments="ProjectReference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestProjectReferences)'))"
+      ContinueOnError="ErrorAndContinue" />
+    <NETSdkError
+      Condition="'@(Reference)' != ''"
+      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
+      FormatArguments="Reference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestReferences)'))"
+      ContinueOnError="ErrorAndContinue" />
+    <NETSdkError
+      Condition="'$(RuntimeIdentifier)' != ''"
+      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
+      FormatArguments="RuntimeIdentifier;$([MSBuild]::Escape('$(RuntimeIdentifier)'))"
+      ContinueOnError="ErrorAndContinue" />
+    <NETSdkError
+      Condition="'$(RuntimeIdentifiers)' != ''"
+      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
+      FormatArguments="RuntimeIdentifiers;$([MSBuild]::Escape('$(RuntimeIdentifiers)'))"
+      ContinueOnError="ErrorAndContinue" />
+    <NETSdkError
+      Condition="'$(_FrameworkReferenceFetchManifestProfileSupported)' != 'true'"
+      ResourceName="FrameworkReferenceFetchManifestUnsupportedProfile" />
+  </Target>
+
+  <Target Name="_ValidateFrameworkReferenceFetchManifestProfileForRestore"
+          DependsOnTargets="_InvalidateUnsupportedFrameworkReferenceFetchManifest;_ReportUnsupportedFrameworkReferenceFetchManifestProfile"
+          BeforeTargets="ProcessFrameworkReferences;Restore"
+          Condition="'$(MSBuildHardenedGraph)' != 'true' and
+                     ('$(MSBuildRestoreGraphInputs)' == 'true' or
+                      ('$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))" />
+
+  <Target Name="_ValidateImportedFrameworkReferenceFetchManifestProfile"
+          DependsOnTargets="_ReportUnsupportedFrameworkReferenceFetchManifestProfile"
+          BeforeTargets="_CheckForInvalidConfigurationAndPlatform;Build"
+          Condition="'$(_UsingFrameworkReferenceManifest)' == 'true'" />
 </Project>

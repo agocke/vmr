@@ -865,6 +865,76 @@ namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
         }
 
         [Fact]
+        public void RestoreGraphInputsPreservesAnalyzerSemaphoreTimestamp()
+        {
+            var intermediatePath = Temp.CreateDirectory().Path + Path.DirectorySeparatorChar;
+            using var xmlReader = XmlReader.Create(new StringReader($"""
+                <Project>
+                  <PropertyGroup>
+                    <IntermediateOutputPath>{intermediatePath}</IntermediateOutputPath>
+                    <MSBuildRestoreGraphInputs>true</MSBuildRestoreGraphInputs>
+                  </PropertyGroup>
+                  <Import Project="Microsoft.Managed.Core.targets" />
+                  <Target Name="Restore" />
+                </Project>
+                """));
+            var project = new Project(xmlReader);
+            project.Xml.AddUsingTask("WriteLinesToFile", "", typeof(Microsoft.Build.Tasks.WriteLinesToFile).Assembly.FullName);
+            var instance = project.CreateProjectInstance();
+            string marker = intermediatePath + instance.GetPropertyValue("MSBuildProjectFile") + ".BuildWithSkipAnalyzers";
+            var log = new System.Text.StringBuilder();
+            var logger = new Microsoft.Build.Logging.ConsoleLogger(
+                LoggerVerbosity.Minimal, message => log.Append(message), _ => { }, () => { });
+
+            Assert.True(instance.Build("Restore", [logger]), log.ToString());
+            Assert.True(File.Exists(marker));
+            File.SetLastWriteTimeUtc(marker, DateTime.UtcNow.AddDays(-1));
+            DateTime timestamp = File.GetLastWriteTimeUtc(marker);
+
+            Assert.True(project.CreateProjectInstance().Build("Restore", [logger]), log.ToString());
+            Assert.Equal(timestamp, File.GetLastWriteTimeUtc(marker));
+        }
+
+        [Theory]
+        [InlineData("Restore", true, false, true)]
+        [InlineData("_GenerateProjectRestoreGraphPerFramework", true, false, true)]
+        [InlineData("Restore", false, false, false)]
+        [InlineData("_GenerateProjectRestoreGraphPerFramework", false, false, false)]
+        [InlineData("Restore", true, true, false)]
+        [InlineData("_ComputeSkipAnalyzers", true, true, false)]
+        public void AnalyzerSemaphoreIsInitializedOnlyDuringRestore(
+            string target, bool captureGraphInputs, bool hardenedGraph, bool expectedFileExists)
+        {
+            var intermediatePath = Temp.CreateDirectory().Path + Path.DirectorySeparatorChar;
+            using var xmlReader = XmlReader.Create(new StringReader($"""
+                <Project>
+                  <PropertyGroup>
+                    <IntermediateOutputPath>{intermediatePath}</IntermediateOutputPath>
+                    <MSBuildRestoreGraphInputs>{captureGraphInputs}</MSBuildRestoreGraphInputs>
+                    <MSBuildHardenedGraph>{hardenedGraph}</MSBuildHardenedGraph>
+                  </PropertyGroup>
+                  <Import Project="Microsoft.Managed.Core.targets" />
+                  <Target Name="Restore" />
+                  <Target Name="_GenerateProjectRestoreGraphPerFramework" />
+                </Project>
+                """));
+            var project = new Project(xmlReader);
+            project.Xml.AddUsingTask("WriteLinesToFile", "", typeof(Microsoft.Build.Tasks.WriteLinesToFile).Assembly.FullName);
+            var instance = project.CreateProjectInstance();
+            string marker = intermediatePath + instance.GetPropertyValue("MSBuildProjectFile") + ".BuildWithSkipAnalyzers";
+            var log = new System.Text.StringBuilder();
+            var logger = new Microsoft.Build.Logging.ConsoleLogger(
+                LoggerVerbosity.Minimal, message => log.Append(message), _ => { }, () => { });
+
+            Assert.True(instance.Build(target, [logger]), log.ToString());
+            Assert.Equal(expectedFileExists, File.Exists(marker));
+            if (target == "_ComputeSkipAnalyzers")
+            {
+                Assert.Equal(marker, Assert.Single(instance.GetItems("CustomAdditionalCompileInputs")).EvaluatedInclude);
+            }
+        }
+
+        [Fact]
         public void ProjectCapabilityIsNotAddedWhenRoslynComponentIsUnspecified()
         {
             XmlReader xmlReader = XmlReader.Create(new StringReader($@"
@@ -933,6 +1003,8 @@ namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
             // create a dummy WriteLinesToFile task
             addTask(proj, "WriteLinesToFile", new()
             {
+                { "DeclaredInputs", "Microsoft.Build.Framework.ITaskItem[]" },
+                { "DeclaredOutputs", "Microsoft.Build.Framework.ITaskItem[]" },
                 { "Lines", "System.String[]" },
                 { "File", "System.String" },
                 { "Overwrite", "System.Boolean" },

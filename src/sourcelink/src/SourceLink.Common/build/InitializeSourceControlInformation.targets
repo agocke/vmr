@@ -21,9 +21,13 @@
     Notes: No error is reported if InitializeSourceControlInformation is not defined.
   -->
   <Target Name="_InitializeSourceControlInformationFromSourceControlManager"
-          DependsOnTargets="InitializeSourceControlInformationFromSourceControlManager;_SourceLinkHasSingleProvider;$(SourceControlManagerUrlTranslationTargets);SourceControlManagerPublishTranslatedUrls"
+          DependsOnTargets="InitializeSourceControlInformationFromSourceControlManager;SourceControlManagerTranslateUrls;SourceControlManagerPublishTranslatedUrls"
           BeforeTargets="InitializeSourceControlInformation"
           Condition="'$(EnableSourceControlManagerQueries)' == 'true'" />
+
+  <Target Name="SourceControlManagerTranslateUrls"
+          DependsOnTargets="_SourceLinkHasSingleProvider;$(SourceControlManagerUrlTranslationTargets)"
+          Condition="'$(_SourceLinkFetchManifestContainsTranslatedUrls)' != 'true'" />
 
   <Target Name="SourceControlManagerPublishTranslatedUrls">
     <PropertyGroup>

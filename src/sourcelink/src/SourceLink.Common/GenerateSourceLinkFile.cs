@@ -13,6 +13,7 @@ using Microsoft.Build.Utilities;
 
 namespace Microsoft.SourceLink.Common
 {
+    [MSBuildDeclaredIOTask]
     [MSBuildMultiThreadableTask]
     public sealed class GenerateSourceLinkFile : Task
     {
@@ -21,6 +22,9 @@ namespace Microsoft.SourceLink.Common
 
         [Required, NotNull]
         public string? OutputFile { get; set; }
+
+        public ITaskItem[]? DeclaredInputs { get; set; }
+        public ITaskItem[]? DeclaredOutputs { get; set; }
 
         /// <summary>
         /// Set to <see cref="OutputFile"/> if the output Source Link file should be passed to the compiler.

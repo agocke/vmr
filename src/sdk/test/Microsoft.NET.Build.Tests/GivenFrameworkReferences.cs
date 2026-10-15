@@ -978,6 +978,396 @@ namespace FrameworkReferenceTest
                 .NotHaveStdOutContaining("Microsoft.AspNetCore.App");
         }
 
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void DirectRestoreCapturesFrameworkReferencesOnlyWhenRequested(bool captureGraphInputs)
+        {
+            var project = CreateFrameworkManifestTestProject();
+            var asset = TestAssetsManager.CreateTestProject(project, identifier: captureGraphInputs.ToString());
+            string projectFolder = Path.Combine(asset.TestRoot, project.Name);
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name);
+
+            new MSBuildCommand(asset, "Restore")
+                .ExecuteWithoutRestore($"-p:MSBuildRestoreGraphInputs={captureGraphInputs}")
+                .Should().Pass();
+
+            File.Exists(manifestPath).Should().Be(captureGraphInputs);
+        }
+
+        [TestMethod]
+        public void RestoreGraphInputsRefreshesFrameworkSnapshotWithoutImportingIt()
+        {
+            var project = CreateFrameworkManifestTestProject();
+            var asset = TestAssetsManager.CreateTestProject(project);
+            string projectFolder = Path.Combine(asset.TestRoot, project.Name);
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name);
+
+            new MSBuildCommand(asset, "Restore")
+                .ExecuteWithoutRestore("-p:MSBuildRestoreGraphInputs=true")
+                .Should().Pass();
+
+            string manifestContents = File.ReadAllText(manifestPath);
+            DateTime timestamp = DateTime.UtcNow.AddDays(-1);
+            File.SetLastWriteTimeUtc(manifestPath, timestamp);
+            timestamp = File.GetLastWriteTimeUtc(manifestPath);
+
+            new MSBuildCommand(asset, "Restore")
+                .ExecuteWithoutRestore("-p:MSBuildRestoreGraphInputs=true")
+                .Should().Pass();
+            File.GetLastWriteTimeUtc(manifestPath).Should().Be(timestamp);
+
+            File.WriteAllText(manifestPath, "not an MSBuild project");
+            new MSBuildCommand(asset, "Restore")
+                .ExecuteWithoutRestore("-p:MSBuildRestoreGraphInputs=true", "-p:EnableFrameworkReferenceFetchManifest=true")
+                .Should().Pass();
+            File.ReadAllText(manifestPath).Should().Be(manifestContents);
+
+            File.Delete(Path.Combine(projectFolder, "obj", "project.assets.json"));
+            var references = new GetValuesCommand(
+                Log, projectFolder, project.TargetFrameworks, "ReferencePath", GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveReferences",
+                MetadataNames = { "ReferenceSourceTarget" },
+            };
+
+            references.ExecuteWithoutRestore("-p:EnableFrameworkReferenceFetchManifest=true")
+                .Should().Pass();
+            references.GetValuesWithMetadata().Should().NotBeEmpty()
+                .And.OnlyContain(reference => reference.metadata["ReferenceSourceTarget"] == "FrameworkReferenceManifest");
+        }
+
+        [TestMethod]
+        public void FrameworkReferenceManifestCandidatesCanResolveCompileReferencesAndAppHostWithoutRestore()
+        {
+            var baselineProject = CreateFrameworkManifestTestProject();
+            var baselineAsset = TestAssetsManager.CreateTestProject(baselineProject, identifier: "baseline");
+            var baselineBuild = new BuildCommand(baselineAsset);
+
+            baselineBuild.Execute().Should().Pass();
+
+            string baselineProjectFolder = Path.Combine(baselineAsset.TestRoot, baselineProject.Name);
+            var baselineReferencesCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "ReferencePath",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveReferences",
+                MetadataNames = { "ReferenceAssembly" },
+            };
+
+            baselineReferencesCommand.ExecuteWithoutRestore().Should().Pass();
+            List<(string value, Dictionary<string, string> metadata)> baselineReferences =
+                baselineReferencesCommand.GetValuesWithMetadata();
+
+            var runtimeFrameworkCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "RuntimeFramework",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveFrameworkReferences",
+                MetadataNames = { "FrameworkName", "Version", "Profile" },
+            };
+
+            runtimeFrameworkCommand.ExecuteWithoutRestore().Should().Pass();
+            List<(string value, Dictionary<string, string> metadata)> runtimeFrameworks =
+                runtimeFrameworkCommand.GetValuesWithMetadata();
+
+            var resolvedFrameworkReferenceCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "ResolvedFrameworkReference",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveFrameworkReferences",
+                MetadataNames = { "IsImplicitlyDefined", "TargetingPackName", "TargetingPackVersion", "TargetingPackPath", "OriginalItemSpec", "Profile" },
+            };
+
+            resolvedFrameworkReferenceCommand.ExecuteWithoutRestore().Should().Pass();
+            List<(string value, Dictionary<string, string> metadata)> resolvedFrameworkReferences =
+                resolvedFrameworkReferenceCommand.GetValuesWithMetadata();
+
+            var appHostSourcePathCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "AppHostSourcePath")
+            {
+                DependsOnTargets = "_GetAppHostPaths",
+            };
+
+            appHostSourcePathCommand.ExecuteWithoutRestore().Should().Pass();
+            string appHostSourcePath = appHostSourcePathCommand.GetValues().Single();
+
+            var appHostRuntimeIdentifierCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "AppHostRuntimeIdentifier")
+            {
+                DependsOnTargets = "_GetAppHostPaths",
+            };
+
+            appHostRuntimeIdentifierCommand.ExecuteWithoutRestore().Should().Pass();
+            string appHostRuntimeIdentifier = appHostRuntimeIdentifierCommand.GetValues().Single();
+
+            var manifestProject = CreateFrameworkManifestTestProject();
+            manifestProject.AdditionalProperties["EnableFrameworkReferenceFetchManifest"] = "true";
+
+            var manifestAsset = TestAssetsManager.CreateTestProject(manifestProject, identifier: "manifest");
+            string manifestProjectFolder = Path.Combine(manifestAsset.TestRoot, manifestProject.Name);
+            new RestoreCommand(manifestAsset).Execute().Should().Pass();
+
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(manifestProjectFolder, manifestProject.Name);
+            File.Exists(manifestPath).Should().BeTrue();
+
+            string projectAssetsFile = Path.Combine(manifestProjectFolder, "obj", "project.assets.json");
+            File.Delete(projectAssetsFile);
+
+            var manifestBuild = new BuildCommand(manifestAsset);
+            manifestBuild.ExecuteWithoutRestore().Should().Pass();
+
+            File.Exists(projectAssetsFile).Should().BeFalse();
+
+            var manifestReferencesCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "ReferencePath",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveReferences",
+                MetadataNames = { "ReferenceSourceTarget" },
+            };
+
+            manifestReferencesCommand.ExecuteWithoutRestore().Should().Pass();
+            List<(string value, Dictionary<string, string> metadata)> manifestReferences =
+                manifestReferencesCommand.GetValuesWithMetadata();
+
+            manifestReferences.Select(reference => reference.value)
+                .Should().Equal(baselineReferences.Select(reference => reference.value));
+            manifestReferences.Should().OnlyContain(
+                reference => reference.metadata["ReferenceSourceTarget"] == "FrameworkReferenceManifest");
+
+            var manifestRuntimeFrameworkCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "RuntimeFramework",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveFrameworkReferences",
+                MetadataNames = { "FrameworkName", "Version", "Profile" },
+            };
+
+            manifestRuntimeFrameworkCommand.ExecuteWithoutRestore().Should().Pass();
+            manifestRuntimeFrameworkCommand.GetValuesWithMetadata()
+                .Should().BeEquivalentTo(runtimeFrameworks, options => options.WithStrictOrdering());
+
+            var manifestResolvedFrameworkReferenceCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "ResolvedFrameworkReference",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveFrameworkReferences",
+                MetadataNames = { "IsImplicitlyDefined", "TargetingPackName", "TargetingPackVersion", "TargetingPackPath", "OriginalItemSpec", "Profile" },
+            };
+
+            manifestResolvedFrameworkReferenceCommand.ExecuteWithoutRestore().Should().Pass();
+            manifestResolvedFrameworkReferenceCommand.GetValuesWithMetadata()
+                .Should().BeEquivalentTo(resolvedFrameworkReferences, options => options.WithStrictOrdering());
+
+            var manifestAppHostSourcePathCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "AppHostSourcePath")
+            {
+                DependsOnTargets = "_GetAppHostPaths",
+            };
+
+            manifestAppHostSourcePathCommand.ExecuteWithoutRestore().Should().Pass();
+            manifestAppHostSourcePathCommand.GetValues().Single().Should().Be(appHostSourcePath);
+
+            var manifestAppHostRuntimeIdentifierCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "AppHostRuntimeIdentifier")
+            {
+                DependsOnTargets = "_GetAppHostPaths",
+            };
+
+            manifestAppHostRuntimeIdentifierCommand.ExecuteWithoutRestore().Should().Pass();
+            manifestAppHostRuntimeIdentifierCommand.GetValues().Single().Should().Be(appHostRuntimeIdentifier);
+
+            DirectoryInfo outputDirectory = manifestBuild.GetOutputDirectory(manifestProject.TargetFrameworks);
+            outputDirectory.Should().HaveFile(manifestProject.Name + ".dll");
+            outputDirectory.Should().HaveFile(manifestProject.Name + EnvironmentInfo.ExecutableExtension);
+        }
+
+        [TestMethod]
+        [DataRow("FrameworkReference", "Microsoft.AspNetCore.App")]
+        [DataRow("FrameworkReference", "Microsoft.NETCore.App")]
+        [DataRow("PackageReference", "Unsupported.Package")]
+        [DataRow("ProjectReference", "missing-project.csproj")]
+        [DataRow("Reference", "Unsupported.Assembly")]
+        [DataRow("RuntimeIdentifier", "unsupported-rid")]
+        [DataRow("RuntimeIdentifiers", "unsupported-rid-1;unsupported-rid-2")]
+        [DataRow("TargetFrameworks", "multiple")]
+        public void FrameworkReferenceFetchManifestRejectsUnsupportedInputsAndRemovesStaleManifest(
+            string inputName,
+            string inputValue)
+        {
+            if (inputName == "TargetFrameworks")
+            {
+                inputValue = $"net10.0;{ToolsetInfo.CurrentTargetFramework}";
+            }
+
+            var project = CreateFrameworkManifestTestProject();
+            project.AdditionalProperties["EnableFrameworkReferenceFetchManifest"] = "true";
+
+            var testAsset = TestAssetsManager.CreateTestProject(project, identifier: inputName);
+            string projectFolder = Path.Combine(testAsset.TestRoot, project.Name);
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name);
+
+            new RestoreCommand(testAsset).Execute().Should().Pass();
+            File.Exists(manifestPath).Should().BeTrue();
+
+            AddUnsupportedFrameworkReferenceFetchManifestInput(
+                Path.Combine(projectFolder, $"{project.Name}.csproj"),
+                inputName,
+                inputValue);
+
+            new BuildCommand(testAsset)
+                .ExecuteWithoutRestore()
+                .Should()
+                .Fail()
+                .And
+                .HaveStdOutContaining("NETSDK1247")
+                .And
+                .HaveStdOutContaining($"MSBuild input '{inputName}'")
+                .And
+                .HaveStdOutContaining(inputValue);
+
+            File.Exists(manifestPath).Should().BeTrue();
+
+            new RestoreCommand(testAsset)
+                .Execute()
+                .Should()
+                .Fail()
+                .And
+                .HaveStdOutContaining("NETSDK1247")
+                .And
+                .HaveStdOutContaining($"MSBuild input '{inputName}'")
+                .And
+                .HaveStdOutContaining(inputValue);
+
+            File.Exists(manifestPath).Should().BeFalse();
+        }
+
+        [TestMethod]
+        public void FrameworkReferenceFetchManifestReportsAllUnsupportedInputsBeforeStopping()
+        {
+            var project = CreateFrameworkManifestTestProject();
+            project.AdditionalProperties["EnableFrameworkReferenceFetchManifest"] = "true";
+
+            var testAsset = TestAssetsManager.CreateTestProject(project, identifier: "all-unsupported-inputs");
+            string projectFolder = Path.Combine(testAsset.TestRoot, project.Name);
+            string projectPath = Path.Combine(projectFolder, $"{project.Name}.csproj");
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name);
+
+            new RestoreCommand(testAsset).Execute().Should().Pass();
+            File.Exists(manifestPath).Should().BeTrue();
+
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "FrameworkReference", "Microsoft.AspNetCore.App");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "PackageReference", "Unsupported.Package");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "ProjectReference", "missing-project.csproj");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "Reference", "Unsupported.Assembly");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "RuntimeIdentifier", "unsupported-rid");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "RuntimeIdentifiers", "unsupported-rid-1;unsupported-rid-2");
+
+            new RestoreCommand(testAsset)
+                .Execute()
+                .Should()
+                .Fail()
+                .And
+                .HaveStdOutContaining("Microsoft.AspNetCore.App")
+                .And
+                .HaveStdOutContaining("Unsupported.Package")
+                .And
+                .HaveStdOutContaining("missing-project.csproj")
+                .And
+                .HaveStdOutContaining("Unsupported.Assembly")
+                .And
+                .HaveStdOutContaining("unsupported-rid")
+                .And
+                .HaveStdOutContaining("unsupported-rid-1;unsupported-rid-2")
+                .And
+                .HaveStdOutContaining("NETSDK1248");
+
+            File.Exists(manifestPath).Should().BeFalse();
+        }
+
+        private static TestProject CreateFrameworkManifestTestProject()
+        {
+            var project = new TestProject
+            {
+                Name = "FrameworkReferenceManifest",
+                TargetFrameworks = ToolsetInfo.CurrentTargetFramework,
+                IsExe = true,
+            };
+
+            project.AdditionalProperties["GenerateDependencyFile"] = "false";
+            project.AdditionalProperties["GenerateRuntimeConfigurationFiles"] = "false";
+            return project;
+        }
+
+        private static string GetFrameworkReferenceFetchManifestPath(string projectFolder, string projectName)
+            => Path.Combine(projectFolder, "obj", "frameworkreferences", $"{projectName}.csproj.g.props");
+
+        private static void AddUnsupportedFrameworkReferenceFetchManifestInput(
+            string projectPath,
+            string inputName,
+            string inputValue)
+        {
+            XDocument project = XDocument.Load(projectPath);
+            XNamespace ns = project.Root.Name.Namespace;
+
+            if (inputName is "RuntimeIdentifier" or "RuntimeIdentifiers")
+            {
+                project.Root.Element(ns + "PropertyGroup").Add(new XElement(ns + inputName, inputValue));
+            }
+            else if (inputName == "TargetFrameworks")
+            {
+                XElement targetFramework = project.Root.Descendants(ns + "TargetFramework").Single();
+                targetFramework.Name = ns + "TargetFrameworks";
+                targetFramework.Value = inputValue;
+            }
+            else
+            {
+                if (inputName == "FrameworkReference" && inputValue == "Microsoft.NETCore.App")
+                {
+                    project.Root.Element(ns + "PropertyGroup").Add(
+                        new XElement(ns + "DisableImplicitFrameworkReferences", "true"));
+                }
+
+                project.Root.Add(
+                    new XElement(
+                        ns + "ItemGroup",
+                        new XElement(ns + inputName, new XAttribute("Include", inputValue))));
+            }
+
+            project.Save(projectPath);
+        }
+
         private void TestFrameworkReferenceProfiles(
             IEnumerable<string> frameworkReferences,
             IEnumerable<string> expectedReferenceNames,

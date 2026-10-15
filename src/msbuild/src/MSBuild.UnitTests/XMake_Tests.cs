@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -2895,6 +2895,95 @@ $@"<Project>
             string logContents = ExecuteMSBuildExeExpectSuccess(projectContents, arguments: arguments);
 
             logContents.ShouldContain("MSBuildInteractive = [true]");
+        }
+
+        [Fact]
+        public void HardenedGraphFalseDoesNotRunValidation()
+        {
+            string projectContents = """
+                <Project>
+                  <Target Name="Build">
+                    <PropertyGroup>
+                      <Value>$([System.Guid]::NewGuid())</Value>
+                    </PropertyGroup>
+                  </Target>
+                </Project>
+                """;
+
+            ExecuteMSBuildExeExpectSuccess(projectContents, arguments: "--hardened-graph:false");
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("--hardened-graph:false")]
+        public void HardenedGraphBuiltInPropertyIsEmptyWhenDisabled(string arguments)
+        {
+            string projectContents = """
+                <Project>
+                  <Target Name="Build">
+                    <Message Text="MSBuildHardenedGraph=[$(MSBuildHardenedGraph)]" />
+                  </Target>
+                </Project>
+                """;
+
+            string logContents = ExecuteMSBuildExeExpectSuccess(projectContents, arguments: arguments);
+
+            logContents.ShouldContain("MSBuildHardenedGraph=[]");
+        }
+
+        [Fact]
+        public void HardenedGraphBuiltInPropertyCannotBeOverriddenByProject()
+        {
+            string projectContents = """
+                <Project>
+                  <PropertyGroup>
+                    <MSBuildHardenedGraph>false</MSBuildHardenedGraph>
+                  </PropertyGroup>
+                  <Target Name="Build" />
+                </Project>
+                """;
+
+            string logContents = ExecuteMSBuildExeExpectFailure(projectContents, arguments: "--hardened-graph");
+
+            logContents.ShouldContain("MSBuildHardenedGraph");
+            logContents.ShouldContain("MSB4004");
+        }
+
+        [Fact]
+        public void HardenedGraphOutputExistenceChecksPreserveOrdinaryBehavior()
+        {
+            string projectContents = """
+                <Project>
+                  <Target Name="Build">
+                    <WriteLinesToFile File="existing.output" Lines="content" Overwrite="true" />
+                    <ItemGroup>
+                      <FileWrites Include="existing.output"
+                                  Condition="'$(MSBuildHardenedGraph)' == 'true' Or Exists('existing.output')" />
+                      <FileWrites Include="missing.output"
+                                  Condition="'$(MSBuildHardenedGraph)' == 'true' Or Exists('missing.output')" />
+                    </ItemGroup>
+                    <Message Text="FileWrites=[@(FileWrites)]" />
+                  </Target>
+                </Project>
+                """;
+
+            string logContents = ExecuteMSBuildExeExpectSuccess(projectContents);
+
+            logContents.ShouldContain("FileWrites=[existing.output]");
+        }
+
+        [Fact]
+        public void HardenedGraphSwitchRejectsInvalidBoolean()
+        {
+            string projectContents = """
+                <Project>
+                  <Target Name="Build" />
+                </Project>
+                """;
+
+            string logContents = ExecuteMSBuildExeExpectFailure(projectContents, arguments: "--hardened-graph:invalid");
+
+            logContents.ShouldContain("MSB1074");
         }
 
         /// <summary>

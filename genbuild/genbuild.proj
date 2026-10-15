@@ -1,0 +1,120 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <GenBuildRoot>$(MSBuildThisFileDirectory)../</GenBuildRoot>
+    <GenBuildOutputDirectory Condition="'$(GenBuildOutputDirectory)' == ''">$(GenBuildRoot)artifacts/bin/genbuild/$(Configuration)/</GenBuildOutputDirectory>
+    <GenBuildOutputDirectory>$([MSBuild]::NormalizeDirectory('$(GenBuildOutputDirectory)'))</GenBuildOutputDirectory>
+    <GenBuildToolsetDirectory>$(GenBuildOutputDirectory)toolset/</GenBuildToolsetDirectory>
+    <GenBuildBootstrapSdk Condition="'$(GenBuildBootstrapSdk)' == ''">$(MSBuildToolsPath)/</GenBuildBootstrapSdk>
+    <GenBuildDotNetHost Condition="'$(GenBuildDotNetHost)' == ''">$(DOTNET_HOST_PATH)</GenBuildDotNetHost>
+    <GenBuildDotNetHost Condition="'$(GenBuildDotNetHost)' == '' and '$(OS)' != 'Windows_NT'">$([MSBuild]::NormalizePath('$(GenBuildBootstrapSdk)', '../../dotnet'))</GenBuildDotNetHost>
+    <GenBuildDotNetHost Condition="'$(GenBuildDotNetHost)' == ''">$([MSBuild]::NormalizePath('$(GenBuildBootstrapSdk)', '../../dotnet.exe'))</GenBuildDotNetHost>
+    <_MSBuild>&quot;$(GenBuildDotNetHost)&quot; &quot;$(GenBuildBootstrapSdk)MSBuild.dll&quot;</_MSBuild>
+    <_BuildArguments>-p:Configuration=$(Configuration) -m:1 -nr:false -v:minimal</_BuildArguments>
+    <_MSBuildOutput>$(GenBuildRoot)src/msbuild/artifacts/bin/MSBuild/$(Configuration)/net11.0/</_MSBuildOutput>
+    <_RoslynOutput>$(GenBuildRoot)src/roslyn/artifacts/bin/</_RoslynOutput>
+    <_Sdk>$(GenBuildToolsetDirectory)Sdks/Microsoft.NET.Sdk/</_Sdk>
+    <_SdkSources>$(GenBuildRoot)src/sdk/src/Tasks/Microsoft.NET.Build.Tasks/</_SdkSources>
+    <_SdkOutput>$(GenBuildRoot)src/sdk/artifacts/bin/$(Configuration)/Sdks/Microsoft.NET.Sdk/</_SdkOutput>
+    <_NetAnalyzers>$(GenBuildRoot)src/sdk/artifacts/bin/Microsoft.CodeAnalysis.NetAnalyzers.Package/</_NetAnalyzers>
+    <_SourceLinkOutput>$(GenBuildRoot)src/sourcelink/artifacts/bin/</_SourceLinkOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Component Include="$(GenBuildRoot)src/msbuild/src/MSBuild/MSBuild.csproj;$(GenBuildRoot)src/msbuild/src/MSBuild.ActionTaskHost/MSBuild.ActionTaskHost.csproj;$(GenBuildRoot)src/sdk/src/Tasks/Microsoft.NET.Build.Tasks/Microsoft.NET.Build.Tasks.csproj" Tfm="net11.0" />
+    <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/MSBuild/Microsoft.Build.Tasks.CodeAnalysis.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/Tools/CodeStyleConfigFileGenerator.csproj" Tfm="net10.0" />
+    <Component Include="$(GenBuildRoot)src/roslyn/src/CodeStyle/CSharp/CodeFixes/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/VisualBasic/CodeFixes/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes.vbproj" Tfm="netstandard2.0" />
+    <Component Include="$(GenBuildRoot)src/sdk/src/Microsoft.CodeAnalysis.NetAnalyzers/src/Microsoft.CodeAnalysis.NetAnalyzers.Package.csproj" />
+    <SourceLink Include="Microsoft.Build.Tasks.Git" Source="Microsoft.Build.Tasks.Git" />
+    <SourceLink Include="Microsoft.SourceLink.Common" Source="SourceLink.Common" />
+    <SourceLink Include="Microsoft.SourceLink.AzureRepos.Git" Source="SourceLink.AzureRepos.Git" />
+    <SourceLink Include="Microsoft.SourceLink.Bitbucket.Git" Source="SourceLink.Bitbucket.Git" />
+    <SourceLink Include="Microsoft.SourceLink.GitHub" Source="SourceLink.GitHub" />
+    <SourceLink Include="Microsoft.SourceLink.GitLab" Source="SourceLink.GitLab" />
+    <Component Include="@(SourceLink->'$(GenBuildRoot)src/sourcelink/src/%(Source)/%(Identity).csproj')" Tfm="net10.0" />
+    <Component Update="@(Component)">
+      <FrameworkArgument Condition="'%(Component.Tfm)' != ''">-p:TargetFramework=%(Component.Tfm)</FrameworkArgument>
+    </Component>
+  </ItemGroup>
+
+  <Target Name="ValidateInputs">
+    <Error Condition="!Exists('$(GenBuildDotNetHost)') or !Exists('$(GenBuildBootstrapSdk)MSBuild.dll')" Text="Build with a .NET 11 SDK. Set GenBuildDotNetHost and GenBuildBootstrapSdk to explicit build-time tool paths if needed." />
+    <MakeDir Directories="$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)" />
+  </Target>
+
+  <Target Name="BuildComponents" DependsOnTargets="ValidateInputs" Condition="'$(GenBuildSkipComponentBuild)' != 'true'">
+    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;%(Component.Identity)&quot; -t:Restore $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/%(Component.Filename)-restore-{}.binlog&quot;" />
+    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;%(Component.Identity)&quot; -t:Build %(Component.FrameworkArgument) -p:CreateBootstrap=false $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/%(Component.Filename)-build-{}.binlog&quot;" />
+  </Target>
+
+  <Target Name="BuildApp" DependsOnTargets="ValidateInputs">
+    <XmlPeek XmlInputPath="$(GenBuildBootstrapSdk)Microsoft.NETCoreSdk.BundledVersions.props" Query="/Project/ItemGroup/KnownFrameworkReference[@Include='Microsoft.NETCore.App' and @TargetFramework='net11.0']/@TargetingPackVersion">
+      <Output TaskParameter="Result" PropertyName="GenBuildTargetingPackVersion" />
+    </XmlPeek>
+    <Error Condition="'$(GenBuildTargetingPackVersion)' == ''" Text="The build-time SDK must declare the .NET 11 targeting-pack version." />
+    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)genbuild.csproj&quot; -t:Restore $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/app-restore-{}.binlog&quot;" />
+    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)genbuild.csproj&quot; -t:Build -p:OutputPath=&quot;$(GenBuildOutputDirectory)&quot; $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/app-build-{}.binlog&quot;" />
+    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)toolset/Toolset.csproj&quot; -t:Restore -p:GenBuildTargetingPackVersion=$(GenBuildTargetingPackVersion) $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/tools-restore-{}.binlog&quot;" />
+    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)toolset/Toolset.csproj&quot; -t:Build -p:GenBuildTargetingPackVersion=$(GenBuildTargetingPackVersion) -p:GenBuildToolsetDirectory=&quot;$(GenBuildToolsetDirectory)&quot; $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/tools-build-{}.binlog&quot;" />
+  </Target>
+
+  <Target Name="GenerateAnalyzerManifests" DependsOnTargets="BuildComponents">
+    <Exec Command="&quot;$(GenBuildDotNetHost)&quot; --roll-forward Major &quot;$(_RoslynOutput)CodeStyleConfigFileGenerator/$(Configuration)/net10.0/CodeStyleConfigFileGenerator.dll&quot; CSharp &quot;$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes/$(Configuration)/netstandard2.0&quot; Microsoft.CodeAnalysis.CSharp.CodeStyle.targets &quot;$(_RoslynOutput)Microsoft.CodeAnalysis.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.CodeStyle.dll&quot;" />
+    <Exec Command="&quot;$(GenBuildDotNetHost)&quot; --roll-forward Major &quot;$(_RoslynOutput)CodeStyleConfigFileGenerator/$(Configuration)/net10.0/CodeStyleConfigFileGenerator.dll&quot; VisualBasic &quot;$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes/$(Configuration)/netstandard2.0&quot; Microsoft.CodeAnalysis.VisualBasic.CodeStyle.targets &quot;$(_RoslynOutput)Microsoft.CodeAnalysis.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.dll&quot;" />
+  </Target>
+
+  <Target Name="Assemble" DependsOnTargets="BuildComponents;BuildApp;GenerateAnalyzerManifests">
+    <Error Condition="!Exists('$(_MSBuildOutput)MSBuild.dll') or !Exists('$(_SdkOutput)tools/net11.0/Microsoft.NET.Build.Tasks.dll')" Text="The locally-built MSBuild or SDK tasks are missing. Run without GenBuildSkipComponentBuild." />
+    <ItemGroup>
+      <_Engine Include="$(_MSBuildOutput)**/*" Exclude="$(_MSBuildOutput)MSBuild;$(_MSBuildOutput)MSBuild.exe;$(_MSBuildOutput)Directory.*;$(_MSBuildOutput)**/*.runtimeconfig.dev.json;$(_MSBuildOutput)**/publish/**/*" />
+      <_CommonEntry Include="$(_MSBuildOutput)Microsoft.Common.props;$(_MSBuildOutput)Microsoft.Common.targets;$(_MSBuildOutput)Microsoft.Common.CrossTargeting.targets" />
+      <_Host Include="$(GenBuildRoot)src/msbuild/artifacts/bin/MSBuild.ActionTaskHost/$(Configuration)/net11.0/**/*" Exclude="**/*.runtimeconfig.dev.json" />
+      <_SdkEntry Include="$(_SdkSources)sdk/**/*" />
+      <_SdkTarget Include="$(_SdkSources)targets/**/*;$(GenBuildRoot)src/sdk/src/Tasks/Common/targets/**/*" />
+      <_SdkTask Include="$(_SdkOutput)tools/net11.0/**/*" />
+      <_BootstrapData Include="$(GenBuildBootstrapSdk)Microsoft.NETCoreSdk.BundledVersions.props;$(GenBuildBootstrapSdk)RuntimeIdentifierGraph.json;$(GenBuildBootstrapSdk)PortableRuntimeIdentifierGraph.json" />
+      <_PruneData Include="$(GenBuildBootstrapSdk)PrunePackageData/**/*" />
+      <_RoslynTask Include="$(_RoslynOutput)Microsoft.Build.Tasks.CodeAnalysis/$(Configuration)/net10.0/Microsoft.Build.Tasks.CodeAnalysis.dll;$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/*.targets" />
+      <_SourceLinkBuild Include="$(GenBuildRoot)src/sourcelink/src/%(SourceLink.Source)/build/**/*">
+        <Package>%(SourceLink.Identity)</Package>
+      </_SourceLinkBuild>
+      <_SourceLinkTask Include="$(_SourceLinkOutput)%(SourceLink.Identity)/$(Configuration)/net10.0/**/*">
+        <Package>%(SourceLink.Identity)</Package>
+      </_SourceLinkTask>
+    </ItemGroup>
+    <Copy SourceFiles="@(_Engine)" DestinationFiles="@(_Engine->'$(GenBuildToolsetDirectory)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_CommonEntry)" DestinationFolder="$(GenBuildToolsetDirectory)Current/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_Host)" DestinationFiles="@(_Host->'$(GenBuildToolsetDirectory)action-host/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_SdkEntry)" DestinationFiles="@(_SdkEntry->'$(_Sdk)Sdk/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_SdkTarget)" DestinationFiles="@(_SdkTarget->'$(_Sdk)targets/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_SdkTask)" DestinationFiles="@(_SdkTask->'$(_Sdk)tools/net11.0/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_BootstrapData)" DestinationFiles="@(_BootstrapData->'$(GenBuildToolsetDirectory)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_PruneData)" DestinationFiles="@(_PruneData->'$(GenBuildToolsetDirectory)PrunePackageData/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_RoslynTask)" DestinationFolder="$(GenBuildToolsetDirectory)Roslyn/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_SourceLinkBuild)" DestinationFiles="@(_SourceLinkBuild->'$(GenBuildToolsetDirectory)Sdks/%(Package)/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_SourceLinkTask)" DestinationFiles="@(_SourceLinkTask->'$(GenBuildToolsetDirectory)Sdks/%(Package)/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <_NetAnalyzerBuild Include="$(_NetAnalyzers)Build/**/*" />
+      <_NetAnalyzerConfig Include="$(_NetAnalyzers)GlobalAnalyzerConfigs/**/*" />
+      <_NetAnalyzerAssembly Include="$(GenBuildRoot)src/sdk/artifacts/bin/Microsoft.CodeAnalysis.NetAnalyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.NetAnalyzers.dll;$(GenBuildRoot)src/sdk/artifacts/bin/Microsoft.CodeAnalysis.CSharp.NetAnalyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll;$(GenBuildRoot)src/sdk/artifacts/bin/Microsoft.CodeAnalysis.VisualBasic.NetAnalyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.NetAnalyzers.dll" />
+      <_CodeStyleCommon Include="$(_RoslynOutput)Microsoft.CodeAnalysis.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.CodeStyle.Fixes/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CodeStyle.Fixes.dll" />
+      <_CSharpCodeStyle Include="$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.dll" />
+      <_VisualBasicCodeStyle Include="$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes.dll" />
+      <_CSharpConfig Include="$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes/$(Configuration)/netstandard2.0/config/**/*" />
+      <_VisualBasicConfig Include="$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes/$(Configuration)/netstandard2.0/config/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_NetAnalyzerBuild)" DestinationFiles="@(_NetAnalyzerBuild->'$(_Sdk)analyzers/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_NetAnalyzerConfig)" DestinationFiles="@(_NetAnalyzerConfig->'$(_Sdk)analyzers/build/config/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_NetAnalyzerAssembly)" DestinationFolder="$(_Sdk)analyzers/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_CodeStyleCommon);@(_CSharpCodeStyle)" DestinationFolder="$(_Sdk)codestyle/cs/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_CodeStyleCommon);@(_VisualBasicCodeStyle)" DestinationFolder="$(_Sdk)codestyle/vb/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.CodeStyle.targets" DestinationFolder="$(_Sdk)codestyle/cs/build/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.targets" DestinationFolder="$(_Sdk)codestyle/vb/build/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_CSharpConfig)" DestinationFiles="@(_CSharpConfig->'$(_Sdk)codestyle/cs/build/config/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_VisualBasicConfig)" DestinationFiles="@(_VisualBasicConfig->'$(_Sdk)codestyle/vb/build/config/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <WriteLinesToFile File="$(GenBuildOutputDirectory)component-inputs.txt" Lines="VMR=$(GenBuildRoot);BootstrapSdk=$(GenBuildBootstrapSdk);Configuration=$(Configuration);Compiler and NuGet versions: src/sdk/eng/Version.Details.props" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <Message Importance="high" Text="genbuild app: $(GenBuildOutputDirectory)genbuild.dll (external .NET runtime required; no SDK redist)" />
+  </Target>
+
+  <Target Name="Build" DependsOnTargets="Assemble" />
+</Project>

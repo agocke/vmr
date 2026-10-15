@@ -30,6 +30,8 @@ namespace Microsoft.Build.Tasks
     /// <comment>
     /// Currently only supports writing .NET attributes.
     /// </comment>
+    [MSBuildDeclaredIOTask]
+    [MSBuildDeclaredIORequiresUnset(nameof(OutputDirectory))]
     [MSBuildMultiThreadableTask]
     public class WriteCodeFragment : TaskExtension, IMultiThreadableTask
     {
@@ -77,6 +79,18 @@ namespace Microsoft.Build.Tasks
         public ITaskItem OutputFile { get; set; }
 
         /// <summary>
+        /// Exact file paths whose pre-invocation state may affect this invocation.
+        /// This declaration does not affect task execution.
+        /// </summary>
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        /// <summary>
+        /// Exact persistent file paths that this invocation may create or modify.
+        /// This declaration does not affect task execution.
+        /// </summary>
+        public ITaskItem[] DeclaredOutputs { get; set; }
+
+        /// <summary>
         /// Main entry point.
         /// </summary>
         [UnconditionalSuppressMessage("TrimAnalysis", "IL2026:RequiresUnreferencedCode",
@@ -102,10 +116,10 @@ namespace Microsoft.Build.Tasks
                 return false;
             }
 
-            if (code.Length == 0)
+            // An explicitly named output is part of the task contract even when its contents are empty.
+            if (code.Length == 0 && OutputFile == null)
             {
                 Log.LogMessageFromResources(MessageImportance.Low, "WriteCodeFragment.NoWorkToDo");
-                OutputFile = null;
                 return true;
             }
 

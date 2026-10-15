@@ -179,7 +179,21 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="HashResult" PropertyName="_AssemblyAttributesHash" />
     </Hash>
 
-    <WriteLinesToFile Lines="$(_AssemblyAttributesHash)" File="$(GeneratedAssemblyInfoInputsCacheFile)" Overwrite="True" WriteOnlyWhenDifferent="True" />
+    <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' != 'true'"
+      Lines="$(_AssemblyAttributesHash)"
+      File="$(GeneratedAssemblyInfoInputsCacheFile)"
+      Overwrite="True"
+      WriteOnlyWhenDifferent="True" />
+
+    <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+      Lines="$(_AssemblyAttributesHash)"
+      File="$(GeneratedAssemblyInfoInputsCacheFile)"
+      DeclaredInputs="$(GeneratedAssemblyInfoInputsCacheFile)"
+      DeclaredOutputs="$(GeneratedAssemblyInfoInputsCacheFile)"
+      Overwrite="True"
+      WriteOnlyWhenDifferent="True" />
 
     <ItemGroup>
       <FileWrites Include="$(GeneratedAssemblyInfoInputsCacheFile)" />
@@ -196,10 +210,25 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Compile Remove="$(GeneratedAssemblyInfoFile)" />
     </ItemGroup>
 
-    <WriteCodeFragment AssemblyAttributes="@(AssemblyAttribute)" Language="$(Language)" OutputFile="$(GeneratedAssemblyInfoFile)">
+    <WriteCodeFragment AssemblyAttributes="@(AssemblyAttribute)"
+                       Language="$(Language)"
+                       OutputFile="$(GeneratedAssemblyInfoFile)"
+                       Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <Output TaskParameter="OutputFile" ItemName="Compile" />
       <Output TaskParameter="OutputFile" ItemName="FileWrites" />
     </WriteCodeFragment>
+
+    <WriteCodeFragment AssemblyAttributes="@(AssemblyAttribute)"
+                       Language="$(Language)"
+                       OutputFile="$(GeneratedAssemblyInfoFile)"
+                       DeclaredInputs=""
+                       DeclaredOutputs="$(GeneratedAssemblyInfoFile)"
+                       Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <Compile Include="$(GeneratedAssemblyInfoFile)" />
+      <FileWrites Include="$(GeneratedAssemblyInfoFile)" />
+    </ItemGroup>
   </Target>
 
 
@@ -214,8 +243,8 @@ Copyright (c) .NET Foundation. All rights reserved.
         <Version>1.2.3-beta.4</Version>
 
     implies:
-        <AssemblyVersion>1.2.3</AssemblyVersion>
-        <FileVersion>1.2.3</FileVersion>
+        <AssemblyVersion>1.2.3.0</AssemblyVersion>
+        <FileVersion>1.2.3.0</FileVersion>
 
     Note that if $(AssemblyVersion) or $(FileVersion) are are already set, it
     is considered an override of the default inference from $(Version) and they

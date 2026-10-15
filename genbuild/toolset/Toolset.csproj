@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../src/sdk/eng/Version.Details.props" />
+  <PropertyGroup>
+    <RestoreConfigFile>$(MSBuildThisFileDirectory)../../src/sdk/NuGet.config</RestoreConfigFile>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NuGet.Build.Tasks" Version="$(NuGetBuildTasksPackageVersion)" GeneratePathProperty="true" IncludeAssets="compile;runtime" />
+    <PackageReference Include="Microsoft.NET.HostModel" Version="$(MicrosoftNETHostModelPackageVersion)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="$(MicrosoftExtensionsDependencyModelPackageVersion)" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="$(SystemSecurityCryptographyPkcsPackageVersion)" />
+    <PackageReference Include="System.IO.Hashing" Version="$(SystemIOHashingPackageVersion)" />
+    <PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="$(MicrosoftNetCompilersToolsetPackageVersion)" GeneratePathProperty="true" ExcludeAssets="all" />
+    <PackageDownload Include="Microsoft.NETCore.App.Ref" Version="[$(GenBuildTargetingPackVersion)]" Condition="'$(GenBuildTargetingPackVersion)' != ''" />
+  </ItemGroup>
+  <Target Name="StageToolDependencies" AfterTargets="Build" Condition="'$(GenBuildToolsetDirectory)' != ''">
+    <ItemGroup>
+      <_Dependency Include="@(ReferenceCopyLocalPaths)" Exclude="@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Framework'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Utilities.Core'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Tasks.Core'))" />
+      <_Compiler Include="$(PkgMicrosoft_Net_Compilers_Toolset)/tasks/netcore/bincore/**/*" />
+      <_NuGetTarget Include="$(PkgNuGet_Build_Tasks)/runtimes/any/native/**/*" />
+    </ItemGroup>
+    <Error Condition="'@(_Compiler)' == '' or '@(_NuGetTarget)' == ''" Text="The pinned compiler or NuGet restore targets are missing from their packages." />
+    <Copy SourceFiles="@(_Dependency)" DestinationFiles="@(_Dependency->'$(GenBuildToolsetDirectory)%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_Compiler)" DestinationFiles="@(_Compiler->'$(GenBuildToolsetDirectory)Roslyn/bincore/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_NuGetTarget)" DestinationFiles="@(_NuGetTarget->'$(GenBuildToolsetDirectory)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetPath);$(ProjectDepsFilePath)" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />
+    <Error Condition="'$(GenBuildTargetingPackVersion)' == ''" Text="Use genbuild.proj to select the targeting-pack metadata matching its bundled framework definitions." />
+    <Copy SourceFiles="$(NuGetPackageRoot)microsoft.netcore.app.ref/$(GenBuildTargetingPackVersion)/data/PackageOverrides.txt" DestinationFolder="$(GenBuildToolsetDirectory)PrunePackageData/$(TargetFrameworkVersion.TrimStart('v'))/Microsoft.NETCore.App/" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

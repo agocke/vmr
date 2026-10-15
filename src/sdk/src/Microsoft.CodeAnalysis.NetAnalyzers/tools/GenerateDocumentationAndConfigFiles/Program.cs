@@ -53,6 +53,7 @@ namespace GenerateDocumentationAndConfigFiles
             }
 
             var fileNamesWithValidationFailures = new List<string>();
+            var globalConfigFileNames = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
 
             string analyzerRulesetsDir = args[1];
             string analyzerEditorconfigsDir = args[2];
@@ -220,7 +221,12 @@ namespace GenerateDocumentationAndConfigFiles
                 return 2;
             }
 
-            CreateTargetsFile(targetsFileDir, targetsFileName, analyzerPackageName, categories.OrderBy(c => c));
+            CreateTargetsFile(
+                targetsFileDir,
+                targetsFileName,
+                analyzerPackageName,
+                categories.OrderBy(c => c),
+                globalConfigFileNames);
 
             return 0;
 
@@ -843,9 +849,12 @@ namespace GenerateDocumentationAndConfigFiles
                         description += " Enabled rules with 'warning' severity are escalated to 'error' severity to respect 'CodeAnalysisTreatWarningsAsErrors' MSBuild property.";
                     }
 
+                    string globalConfigFileNameWithExtension = $"{globalconfigFileName}.globalconfig";
+                    globalConfigFileNames.Add(globalConfigFileNameWithExtension.ToLowerInvariant());
+
                     CreateGlobalconfig(
                         analyzerGlobalconfigsDir,
-                        $"{globalconfigFileName}.globalconfig",
+                        globalConfigFileNameWithExtension,
                         title,
                         description,
                         warnAsError,
@@ -1403,7 +1412,12 @@ namespace GenerateDocumentationAndConfigFiles
             };
         }
 
-        private static void CreateTargetsFile(string targetsFileDir, string targetsFileName, string packageName, IOrderedEnumerable<string> categories)
+        private static void CreateTargetsFile(
+            string targetsFileDir,
+            string targetsFileName,
+            string packageName,
+            IOrderedEnumerable<string> categories,
+            IEnumerable<string> globalConfigFileNames)
         {
             if (string.IsNullOrEmpty(targetsFileDir) || string.IsNullOrEmpty(targetsFileName))
             {
@@ -1412,21 +1426,35 @@ namespace GenerateDocumentationAndConfigFiles
 
             var fileContents =
                 $"""
-                <Project>{GetCommonContents(packageName, categories)}
+                <Project>{GetCommonContents(packageName, categories, globalConfigFileNames)}
                 </Project>
                 """;
             var directory = Directory.CreateDirectory(targetsFileDir);
             var fileWithPath = Path.Combine(directory.FullName, targetsFileName);
             File.WriteAllText(fileWithPath, fileContents);
 
-            static string GetCommonContents(string packageName, IOrderedEnumerable<string> categories)
+            static string GetCommonContents(
+                string packageName,
+                IOrderedEnumerable<string> categories,
+                IEnumerable<string> globalConfigFileNames)
             {
                 var stringBuilder = new StringBuilder();
+                string assetItemName = $"_GlobalAnalyzerConfigAsset_{packageName.Replace(".", string.Empty, StringComparison.Ordinal)}";
 
-                stringBuilder.Append(GetGlobalAnalyzerConfigTargetContents(packageName, category: null));
+                stringBuilder.AppendLine();
+                stringBuilder.AppendLine("  <ItemGroup>");
+                foreach (string globalConfigFileName in globalConfigFileNames)
+                {
+                    stringBuilder.AppendLine(
+                        $"""    <{assetItemName} Include="$(MSBuildThisFileDirectory)config\{globalConfigFileName}" />""");
+                }
+
+                stringBuilder.AppendLine("  </ItemGroup>");
+
+                stringBuilder.Append(GetGlobalAnalyzerConfigTargetContents(packageName, category: null, assetItemName));
                 foreach (var category in categories)
                 {
-                    stringBuilder.Append(GetGlobalAnalyzerConfigTargetContents(packageName, category));
+                    stringBuilder.Append(GetGlobalAnalyzerConfigTargetContents(packageName, category, assetItemName));
                 }
 
                 stringBuilder.Append(GetMSBuildContentForPropertyAndItemOptions());
@@ -1434,7 +1462,10 @@ namespace GenerateDocumentationAndConfigFiles
                 return stringBuilder.ToString();
             }
 
-            static string GetGlobalAnalyzerConfigTargetContents(string packageName, string? category)
+            static string GetGlobalAnalyzerConfigTargetContents(
+                string packageName,
+                string? category,
+                string assetItemName)
             {
                 var analysisLevelPropName = "AnalysisLevel";
                 var analysisLevelPrefixPropName = "AnalysisLevelPrefix";
@@ -1489,12 +1520,19 @@ namespace GenerateDocumentationAndConfigFiles
                           <_GlobalAnalyzerConfigFileName_{trimmedPackageName} Condition="'$({packageVersionPropName})' != ''">{analysisLevelPropName}_$({packageVersionPropName}.Replace(".","_"))_$(_GlobalAnalyzerConfigAnalysisMode_{trimmedPackageName})$(_GlobalAnalyzerConfigFileName_{trimmedPackageName}_WarnAsErrorSuffix).globalconfig</_GlobalAnalyzerConfigFileName_{trimmedPackageName}>
                           <_GlobalAnalyzerConfigFileName_{trimmedPackageName}>$(_GlobalAnalyzerConfigFileName_{trimmedPackageName}.ToLowerInvariant())</_GlobalAnalyzerConfigFileName_{trimmedPackageName}>
 
+                          <_UseDeclaredGlobalAnalyzerConfigs_{trimmedPackageName} Condition="'$(_GlobalAnalyzerConfigDir_{trimmedPackageName})' == ''">true</_UseDeclaredGlobalAnalyzerConfigs_{trimmedPackageName}>
                           <_GlobalAnalyzerConfigDir_{trimmedPackageName} Condition="'$(_GlobalAnalyzerConfigDir_{trimmedPackageName})' == ''">$(MSBuildThisFileDirectory)config</_GlobalAnalyzerConfigDir_{trimmedPackageName}>
                           <_GlobalAnalyzerConfigFile_{trimmedPackageName} Condition="'$(_GlobalAnalyzerConfigFileName_{trimmedPackageName})' != ''">$(_GlobalAnalyzerConfigDir_{trimmedPackageName})\$(_GlobalAnalyzerConfigFileName_{trimmedPackageName})</_GlobalAnalyzerConfigFile_{trimmedPackageName}>
                         </PropertyGroup>
 
-                        <ItemGroup Condition="Exists('$(_GlobalAnalyzerConfigFile_{trimmedPackageName})')">
+                        <ItemGroup Condition="('$(MSBuildHardenedGraph)' != 'true' or '$(_UseDeclaredGlobalAnalyzerConfigs_{trimmedPackageName})' != 'true') and Exists('$(_GlobalAnalyzerConfigFile_{trimmedPackageName})')">
                           <EditorConfigFiles Include="$(_GlobalAnalyzerConfigFile_{trimmedPackageName})" />
+                        </ItemGroup>
+
+                        <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(_UseDeclaredGlobalAnalyzerConfigs_{trimmedPackageName})' == 'true'">
+                          <EditorConfigFiles
+                              Include="@({assetItemName})"
+                              Condition="'%({assetItemName}.Filename)%({assetItemName}.Extension)' == '$(_GlobalAnalyzerConfigFileName_{trimmedPackageName})'" />
                         </ItemGroup>
                       </Target>
 

@@ -162,6 +162,7 @@
     <Compile Include="BootstrapperUtil\*.cs" />
     <Compile Include="CallTarget.cs" />
     <Compile Include="CombinePath.cs" />
+    <Compile Include="ValidateHardenedAssemblySearchPaths.cs" />
     <Compile Include="CommandLineBuilderExtension.cs" />
     <Compile Include="ResourceHandling\*.cs" />
     <Compile Include="GetCompatiblePlatform.cs" />
@@ -171,7 +172,12 @@
     <Compile Include="DownloadFile.cs" />
     <Compile Include="FileIO\GetFileHash.cs" />
     <Compile Include="FileIO\HashEncoding.cs" />
+    <Compile Include="FileIO\ReconcileCleanFileWrites.cs" />
     <Compile Include="FileIO\VerifyFileHash.cs" />
+    <Compile Include="FileIO\WriteCleanFileWritesImport.cs" />
+    <Compile Include="FileIO\WritePlatformSDKRestoreImport.cs" />
+    <Compile Include="FileIO\WriteFileFingerprint.cs" />
+    <Compile Include="FileIO\WriteUnmanagedRegistrationCacheImport.cs" />
     <Compile Include="FileState.cs" />
     <Compile Include="Copy.cs" />
     <Compile Include="CreateCSharpManifestResourceName.cs" />
@@ -266,6 +272,7 @@
     <Compile Include="AssignCulture.cs" />
     <Compile Include="Culture.cs" />
     <Compile Include="CultureInfoCache.cs" />
+    <Compile Include="DeterministicCultureInfoCache.cs" />
     <Compile Include="WriteCodeFragment.cs" />
     <Compile Include="XmlPeek.cs" />
     <Compile Include="XmlPoke.cs" />
@@ -364,6 +371,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Microsoft.Common.CurrentVersion.targets">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Microsoft.Common.PlatformSDK.targets">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Microsoft.Common.CrossTargeting.targets">
@@ -476,6 +486,9 @@
       <SubType>Designer</SubType>
     </DataFile>
     <DataFile Include="Microsoft.Common.CurrentVersion.targets">
+      <SubType>Designer</SubType>
+    </DataFile>
+    <DataFile Include="Microsoft.Common.PlatformSDK.targets">
       <SubType>Designer</SubType>
     </DataFile>
     <DataFile Include="Microsoft.Common.CrossTargeting.targets">

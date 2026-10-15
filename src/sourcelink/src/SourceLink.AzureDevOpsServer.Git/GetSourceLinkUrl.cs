@@ -8,6 +8,7 @@ using Microsoft.Build.Tasks.SourceControl;
 
 namespace Microsoft.SourceLink.AzureDevOpsServer.Git
 {
+    [MSBuildPureTask]
     [MSBuildMultiThreadableTask]
     public sealed class GetSourceLinkUrl : GetSourceLinkUrlGitTask
     {

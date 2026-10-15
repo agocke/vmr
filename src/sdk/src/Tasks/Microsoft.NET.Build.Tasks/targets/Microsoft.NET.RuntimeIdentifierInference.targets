@@ -379,9 +379,10 @@ Copyright (c) .NET Foundation. All rights reserved.
                   AND '$(NoWarn)' != ''
                   AND $(NoWarn.Contains('NETSDK1057'))">true</SuppressNETCoreSdkPreviewMessage>
   </PropertyGroup>
+  <!-- The preview banner produces no build artifacts and is omitted during hardened graph construction. -->
   <Target Name="_CheckForNETCoreSdkIsPreview"
           BeforeTargets="_CheckForInvalidConfigurationAndPlatform"
-          Condition=" '$(_NETCoreSdkIsPreview)' == 'true' AND '$(SuppressNETCoreSdkPreviewMessage)' != 'true' ">
+          Condition=" '$(_NETCoreSdkIsPreview)' == 'true' AND '$(SuppressNETCoreSdkPreviewMessage)' != 'true' AND '$(MSBuildHardenedGraph)' != 'true' ">
     <ShowPreviewMessage />
   </Target>
 

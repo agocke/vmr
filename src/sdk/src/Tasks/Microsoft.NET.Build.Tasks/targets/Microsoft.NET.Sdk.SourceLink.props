@@ -16,6 +16,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     <!-- Suppress implicit SourceLink inclusion if any Microsoft.SourceLink package is referenced. -->
     <SuppressImplicitGitSourceLink Condition="'$(PkgMicrosoft_SourceLink_Common)' != ''">true</SuppressImplicitGitSourceLink>
 
+    <!-- Restore capture uses MSBuildRestoreGraphInputs independently of this replay default. -->
+    <EnableSourceControlFetchManifest Condition="'$(EnableSourceControlFetchManifest)' == '' and '$(MSBuildHardenedGraph)' == 'true'">true</EnableSourceControlFetchManifest>
+
     <_SourceLinkPropsImported>true</_SourceLinkPropsImported>
   </PropertyGroup>
 

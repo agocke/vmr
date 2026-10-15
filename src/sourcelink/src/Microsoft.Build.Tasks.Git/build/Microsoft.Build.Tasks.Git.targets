@@ -1,7 +1,21 @@
 ﻿<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the License.txt file in the project root for more information. -->
 <Project>
+  <PropertyGroup>
+    <!-- Keep replay outside Common's automatic project-extension imports so Restore can skip stale snapshots. -->
+    <SourceControlFetchManifestPath Condition="'$(SourceControlFetchManifestPath)' == ''">$(MSBuildProjectExtensionsPath)sourcelink/$(MSBuildProjectFile).g.targets</SourceControlFetchManifestPath>
+    <SourceControlFetchManifestPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(SourceControlFetchManifestPath)'))</SourceControlFetchManifestPath>
+  </PropertyGroup>
+
+  <Import Project="$(SourceControlFetchManifestPath)"
+          Condition="'$(EnableSourceControlFetchManifest)' == 'true' and
+                     '$(EnableSourceControlManagerQueries)' == 'true' and
+                     '$(_SourceLinkFetchManifestImported)' != 'true' and
+                     ('$(MSBuildHardenedGraph)' == 'true' or '$(MSBuildRestoreGraphInputs)' != 'true') and
+                     ('$(MSBuildHardenedGraph)' == 'true' or Exists('$(SourceControlFetchManifestPath)'))" />
+
   <UsingTask TaskName="Microsoft.Build.Tasks.Git.LocateRepository" AssemblyFile="$(MicrosoftBuildTasksGitAssemblyFile)"/>
   <UsingTask TaskName="Microsoft.Build.Tasks.Git.GetUntrackedFiles" AssemblyFile="$(MicrosoftBuildTasksGitAssemblyFile)"/>
+  <UsingTask TaskName="Microsoft.Build.Tasks.Git.WriteSourceControlFetchManifest" AssemblyFile="$(MicrosoftBuildTasksGitAssemblyFile)"/>
 
   <PropertyGroup>
     <!--
@@ -17,7 +31,96 @@
     <GitRepositoryConfigurationScope Condition="'$(GitRepositoryConfigurationScope)' == '' and '$(ContinuousIntegrationBuild)' == 'true'">local</GitRepositoryConfigurationScope>
   </PropertyGroup>
 
-  <Target Name="InitializeSourceControlInformationFromSourceControlManager">
+  <Target Name="_CollectSourceControlFetchManifest"
+          Condition="'$(MSBuildHardenedGraph)' != 'true' and
+                     ('$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableSourceControlFetchManifest)' == 'true') and
+                     '$(EnableSourceControlManagerQueries)' == 'true'">
+    <Microsoft.Build.Tasks.Git.LocateRepository
+      Path="$(MSBuildProjectDirectory)"
+      RemoteName="$(GitRepositoryRemoteName)"
+      ConfigurationScope="$(GitRepositoryConfigurationScope)"
+      NoWarnOnMissingInfo="$(PkgMicrosoft_Build_Tasks_Git.Equals(''))">
+
+      <Output TaskParameter="RepositoryId" PropertyName="_SourceLinkFetchRepositoryId" />
+      <Output TaskParameter="WorkingDirectory" PropertyName="_SourceLinkFetchRepositoryRoot" />
+      <Output TaskParameter="Url" PropertyName="_SourceLinkFetchRepositoryUrl" />
+      <Output TaskParameter="Roots" ItemName="_SourceLinkFetchSourceRoot" />
+      <Output TaskParameter="RevisionId" PropertyName="_SourceLinkFetchRevisionId" />
+      <Output TaskParameter="BranchName" PropertyName="_SourceLinkFetchBranchName" />
+    </Microsoft.Build.Tasks.Git.LocateRepository>
+
+    <Microsoft.Build.Tasks.Git.GetUntrackedFiles
+      RepositoryId="$(_SourceLinkFetchRepositoryId)"
+      ConfigurationScope="$(GitRepositoryConfigurationScope)"
+      NoWarnOnMissingInfo="true"
+      ProjectDirectory="$(MSBuildProjectDirectory)"
+      Files="@(Compile)">
+
+      <Output TaskParameter="UntrackedFiles" ItemName="_SourceLinkFetchUntrackedFile" />
+    </Microsoft.Build.Tasks.Git.GetUntrackedFiles>
+  </Target>
+
+  <Target Name="_PrepareSourceControlFetchManifestTranslation"
+          DependsOnTargets="_CollectSourceControlFetchManifest">
+    <PropertyGroup>
+      <_SourceLinkFetchOriginalScmRepositoryUrl>$(ScmRepositoryUrl)</_SourceLinkFetchOriginalScmRepositoryUrl>
+      <ScmRepositoryUrl>$(_SourceLinkFetchRepositoryUrl)</ScmRepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_SourceLinkFetchOriginalSourceRoot Include="@(SourceRoot)" />
+      <SourceRoot Remove="@(SourceRoot)" />
+      <SourceRoot Include="@(_SourceLinkFetchSourceRoot)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_TranslateSourceControlFetchManifestUrls"
+          DependsOnTargets="_PrepareSourceControlFetchManifestTranslation;_SourceLinkHasSingleProvider;$(SourceControlManagerUrlTranslationTargets)"
+          Condition="'$(SourceControlManagerUrlTranslationTargets)' != ''">
+    <PropertyGroup>
+      <_SourceLinkFetchManifestUrlsTranslated>true</_SourceLinkFetchManifestUrlsTranslated>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_GenerateSourceControlFetchManifest"
+          DependsOnTargets="_CollectSourceControlFetchManifest;_TranslateSourceControlFetchManifestUrls"
+          AfterTargets="Restore"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
+          Condition="'$(MSBuildHardenedGraph)' != 'true' and
+                     ('$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableSourceControlFetchManifest)' == 'true') and
+                     '$(EnableSourceControlManagerQueries)' == 'true'">
+    <PropertyGroup>
+      <_SourceLinkFetchManifestRepositoryUrl Condition="'$(_SourceLinkFetchManifestUrlsTranslated)' == 'true'">$(ScmRepositoryUrl)</_SourceLinkFetchManifestRepositoryUrl>
+      <_SourceLinkFetchManifestRepositoryUrl Condition="'$(_SourceLinkFetchManifestUrlsTranslated)' != 'true'">$(_SourceLinkFetchRepositoryUrl)</_SourceLinkFetchManifestRepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <_SourceLinkFetchManifestSourceRoot Include="@(SourceRoot)" Condition="'$(_SourceLinkFetchManifestUrlsTranslated)' == 'true'" />
+      <_SourceLinkFetchManifestSourceRoot Include="@(_SourceLinkFetchSourceRoot)" Condition="'$(_SourceLinkFetchManifestUrlsTranslated)' != 'true'" />
+    </ItemGroup>
+
+    <Microsoft.Build.Tasks.Git.WriteSourceControlFetchManifest
+      OutputFile="$(SourceControlFetchManifestPath)"
+      RepositoryRoot="$(_SourceLinkFetchRepositoryRoot)"
+      RepositoryUrl="$(_SourceLinkFetchManifestRepositoryUrl)"
+      RevisionId="$(_SourceLinkFetchRevisionId)"
+      BranchName="$(_SourceLinkFetchBranchName)"
+      SourceRoots="@(_SourceLinkFetchManifestSourceRoot)"
+      UntrackedFiles="@(_SourceLinkFetchUntrackedFile)"
+      RepositoryUrlsTranslated="$(_SourceLinkFetchManifestUrlsTranslated)" />
+
+    <PropertyGroup Condition="'$(_SourceLinkFetchManifestUrlsTranslated)' == 'true'">
+      <ScmRepositoryUrl>$(_SourceLinkFetchOriginalScmRepositoryUrl)</ScmRepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(_SourceLinkFetchManifestUrlsTranslated)' == 'true'">
+      <SourceRoot Remove="@(SourceRoot)" />
+      <SourceRoot Include="@(_SourceLinkFetchOriginalSourceRoot)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="InitializeSourceControlInformationFromSourceControlManager"
+          Condition="'$(_SourceLinkFetchManifestImported)' != 'true'">
     <!--
       Reports a warning if the given project doesn't belong to a repository under source control,
       unless the targets were implicily imported from an SDK without a package reference.
@@ -47,12 +150,16 @@
   <Target Name="SetEmbeddedFilesFromSourceControlManagerUntrackedFiles"
           DependsOnTargets="InitializeSourceControlInformationFromSourceControlManager">
 
+    <ItemGroup Condition="'$(_SourceLinkFetchManifestImported)' == 'true'">
+      <EmbeddedFiles Include="@(_SourceLinkFetchedUntrackedFile)" />
+    </ItemGroup>
+
     <Microsoft.Build.Tasks.Git.GetUntrackedFiles
       RepositoryId="$(_GitRepositoryId)"
       ConfigurationScope="$(GitRepositoryConfigurationScope)"
       ProjectDirectory="$(MSBuildProjectDirectory)"
       Files="@(Compile)"
-      Condition="'$(_GitRepositoryId)' != ''">
+      Condition="'$(_SourceLinkFetchManifestImported)' != 'true' and '$(_GitRepositoryId)' != ''">
 
       <Output TaskParameter="UntrackedFiles" ItemName="EmbeddedFiles" />
     </Microsoft.Build.Tasks.Git.GetUntrackedFiles>

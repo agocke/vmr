@@ -59,6 +59,36 @@ namespace Microsoft.NET.Build.Tests
 
         [TestMethod]
         [CoreMSBuildOnly]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void It_skips_target_framework_telemetry_only_for_hardened_graph_construction(bool hardened)
+        {
+            var testProject = new TestProject()
+            {
+                Name = "HardenedFrameworkTelemetryTest",
+                TargetFrameworks = ToolsetInfo.CurrentTargetFramework,
+            };
+            var testAsset = TestAssetsManager.CreateTestProject(testProject, identifier: hardened.ToString());
+            Type loggerType = typeof(LogTelemetryToStdOutForTest);
+            var result = new MSBuildCommand(testAsset, "_CollectTargetFrameworkForTelemetry")
+                .Execute(
+                    $"-p:MSBuildHardenedGraph={hardened}",
+                    $"/Logger:{loggerType.FullName},{loggerType.GetTypeInfo().Assembly.Location}");
+
+            result.Should().Pass();
+            if (hardened)
+            {
+                result.StdOut.Should().NotContain("\"EventName\":\"targetframeworkeval\"");
+            }
+            else
+            {
+                result.StdOut.Should().Contain(CreateTargetFrameworkEvalTelemetryJson(
+                    $".NETCoreApp,Version=v{ToolsetInfo.CurrentTargetFrameworkVersion}"));
+            }
+        }
+
+        [TestMethod]
+        [CoreMSBuildOnly]
         public void It_collects_multi_TargetFramework_version_and_other_properties()
         {
             string targetFramework = $"net46;{ToolsetInfo.CurrentTargetFramework}";

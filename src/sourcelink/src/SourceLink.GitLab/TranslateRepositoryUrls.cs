@@ -7,6 +7,7 @@ using Microsoft.Build.Tasks.SourceControl;
 
 namespace Microsoft.SourceLink.GitLab
 {
+    [MSBuildPureTask]
     [MSBuildMultiThreadableTask]
     public sealed class TranslateRepositoryUrls : TranslateRepositoryUrlsGitTask
     {

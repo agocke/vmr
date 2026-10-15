@@ -149,7 +149,10 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <UsingTask TaskName="AllowEmptyTelemetry" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
-  <Target Name="_CollectTargetFrameworkForTelemetry" AfterTargets="_CheckForUnsupportedTargetFramework">
+  <!-- Telemetry produces no build artifacts and is omitted during hardened action-graph construction. -->
+  <Target Name="_CollectTargetFrameworkForTelemetry"
+          AfterTargets="_CheckForUnsupportedTargetFramework"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'">
     <ItemGroup>
       <TFTelemetry Include="TargetFrameworkVersion" Value="$([MSBuild]::Escape('$(TargetFrameworkMoniker)'))" />
       <TFTelemetry Include="RuntimeIdentifier" Value="$(RuntimeIdentifier)" />

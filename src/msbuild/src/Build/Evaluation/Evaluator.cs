@@ -222,6 +222,8 @@ namespace Microsoft.Build.Evaluation
 
         private readonly bool _interactive;
 
+        private readonly bool _hardenedGraphValidation;
+
         private readonly bool _isRunningInVisualStudio;
 
         /// <summary>
@@ -244,6 +246,7 @@ namespace Microsoft.Build.Evaluation
             EvaluationContext evaluationContext,
             bool profileEvaluation,
             bool interactive,
+            bool hardenedGraphValidation,
             EvaluationLoggingContext evaluationLoggingContext,
             string evaluationMeasurementProjectFile,
             int evaluationMeasurementId,
@@ -299,6 +302,7 @@ namespace Microsoft.Build.Evaluation
             // In 15.9 we added support for the global property "NuGetInteractive" to allow SDK resolvers to be interactive.
             // In 16.0 we added the /interactive command-line argument so the line below keeps back-compat
             _interactive = interactive || string.Equals("true", _data.GlobalPropertiesDictionary.GetProperty("NuGetInteractive")?.EvaluatedValue, StringComparison.OrdinalIgnoreCase);
+            _hardenedGraphValidation = hardenedGraphValidation;
 
             // The last modified project is the project itself unless its an in-memory project
             if (projectRootElement.FullPath != null)
@@ -349,6 +353,7 @@ namespace Microsoft.Build.Evaluation
             int submissionId,
             EvaluationContext evaluationContext,
             bool interactive = false,
+            bool hardenedGraphValidation = false,
             ProjectEvaluationStage evaluationStage = ProjectEvaluationStage.Full)
         {
             string projectFile = root.ProjectFileLocation.File ?? string.Empty;
@@ -384,6 +389,7 @@ namespace Microsoft.Build.Evaluation
                     evaluationContext,
                     profileEvaluation,
                     interactive,
+                    hardenedGraphValidation,
                     evaluationLoggingContext,
                     projectFile,
                     evaluationId,
@@ -739,6 +745,18 @@ namespace Microsoft.Build.Evaluation
                     {
                         SetBuiltInProperty(ReservedPropertyNames.interactive, "true");
                     }
+
+                    if (_hardenedGraphValidation)
+                    {
+                        SetBuiltInProperty(ReservedPropertyNames.hardenedGraph, "true");
+                    }
+
+                    if (!string.IsNullOrEmpty(_data.GetProperty("MSBuildEmitActionGraph")?.EvaluatedValue))
+                    {
+                        Graph.Hardened.HardenedActionGraph.GetHostOS(
+                            _data.GlobalPropertiesDictionary.GetProperty(Graph.Hardened.HardenedActionGraph.HostOSProperty)?.EvaluatedValue,
+                            _projectRootElement.ProjectFileLocation);
+                    }
                 }
 
                 Assumed.NotEqual(_data.EvaluationId, BuildEventContext.InvalidEvaluationId, "Evaluation should produce an evaluation ID");
@@ -1027,6 +1045,13 @@ namespace Microsoft.Build.Evaluation
                     foreach (string propertyName in _expander.ExpandIntoStringListLeaveEscaped(currentProjectOrImport.TreatAsLocalProperty, ExpanderOptions.ExpandProperties, currentProjectOrImport.TreatAsLocalPropertyLocation))
                     {
                         XmlUtilities.VerifyThrowProjectValidElementName(propertyName, currentProjectOrImport.Location);
+                        ProjectErrorUtilities.VerifyThrowInvalidProject(
+                            string.IsNullOrEmpty(_data.GetProperty("MSBuildEmitActionGraph")?.EvaluatedValue) ||
+                            !MSBuildNameIgnoreCaseComparer.Default.Equals(propertyName, Graph.Hardened.HardenedActionGraph.HostOSProperty),
+                            currentProjectOrImport.TreatAsLocalPropertyLocation,
+                            "HardenedGraphUnsupportedConstruct",
+                            $"TreatAsLocalProperty for immutable construction input '{propertyName}'",
+                            "action graph construction");
                         _data.GlobalPropertiesToTreatAsLocal.Add(propertyName);
                     }
                 }

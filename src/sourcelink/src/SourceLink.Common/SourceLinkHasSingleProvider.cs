@@ -8,6 +8,7 @@ using Microsoft.Build.Utilities;
 
 namespace Microsoft.SourceLink.Common
 {
+    [MSBuildPureTask]
     [MSBuildMultiThreadableTask]
     public sealed class SourceLinkHasSingleProvider : Task
     {

@@ -126,6 +126,19 @@ Build individual projects with `dotnet msbuild {path/to/project.csproj} -v:q`.
 
 After building the whole repo, to use the just-built MSBuild to build things use the bootstrap environment (described in [`skills/use-bootstrap-msbuild](.github/skills/use-bootstrap-msbuild/SKILL.md)).
 
+### Hardened Action-Graph Prototype
+
+Restore is currently an unrestricted preparation stage, not hardened graph construction.
+Run ordinary Restore with `-p:MSBuildRestoreGraphInputs=true` to capture discovery, framework-reference,
+SourceLink, and cache imports and initialize Roslyn's analyzer semaphore,
+then use a fresh `--hardened-graph` Build evaluation with the same configuration and intermediate paths.
+Preparation uses the Restore flag, not `MSBuildHardenedGraph`; snapshot replay and graph restrictions remain hardened-only.
+Do not add discovery fallbacks to hardened Build or assume Restore itself must emit an action graph.
+Hardened reference searches must use explicit files, pinned/restored packs, or fully qualified search roots,
+not assembly-folder configuration, registry, GAC, or prior-output fallbacks. Cached installation getters
+are not a substitute for explicit tool/reference inputs.
+See [the prototype contract](documentation/specs/proposed/hardened-static-graph.md).
+
 ### Build Troubleshooting
 
 * If build fails with "Could not resolve SDK", run the bootstrap environment script

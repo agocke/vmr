@@ -1062,5 +1062,13 @@ You may need to build the project on another operating system or architecture, o
     <value>NETSDK1246: The crossgen2 pack is not available for the target framework.</value>
     <comment>{StrBegins="NETSDK1246: "}</comment>
   </data>
-  <!-- The latest message added is Crossgen2UnsupportedTargetFramework. Please update this value with each PR to catch parallel PRs both adding a new message -->
+  <data name="FrameworkReferenceFetchManifestUnsupportedInput" xml:space="preserve">
+    <value>NETSDK1247: Framework-reference fetch manifest generation does not support the MSBuild input '{0}' with value '{1}'. The current profile supports one target framework with one implicit Microsoft.NETCore.App FrameworkReference and no PackageReference, ProjectReference, Reference, RuntimeIdentifier, or RuntimeIdentifiers inputs. Remove the unsupported input or disable hardened graph validation.</value>
+    <comment>{StrBegins="NETSDK1247: "}{Locked="Microsoft.NETCore.App"}{Locked="FrameworkReference"}{Locked="PackageReference"}{Locked="ProjectReference"}{Locked="Reference"}{Locked="RuntimeIdentifier"}{Locked="RuntimeIdentifiers"} {0} is an MSBuild item or property name and should not be translated. {1} is its value and should not be translated.</comment>
+  </data>
+  <data name="FrameworkReferenceFetchManifestUnsupportedProfile" xml:space="preserve">
+    <value>NETSDK1248: Framework-reference fetch manifest generation stopped because the project contains unsupported dependency inputs. Resolve the preceding NETSDK1247 errors or disable hardened graph validation.</value>
+    <comment>{StrBegins="NETSDK1248: "}{Locked="NETSDK1247"}</comment>
+  </data>
+  <!-- The latest message added is FrameworkReferenceFetchManifestUnsupportedProfile. Please update this value with each PR to catch parallel PRs both adding a new message -->
 </root>

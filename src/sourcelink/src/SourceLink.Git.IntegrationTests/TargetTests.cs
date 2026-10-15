@@ -22,6 +22,67 @@ namespace Microsoft.SourceLink.IntegrationTests
         }
 
         [ConditionalFact(typeof(DotNetSdkAvailable))]
+        public void RestoreGraphInputsCapturesAndRefreshesSourceControlWithoutImportingIt()
+        {
+            string revision;
+            using (var repository = GitUtilities.CreateGitRepository(
+                ProjectDir.Path, [ProjectFileName], "http://github.com/test-org/test-repo"))
+            {
+                revision = repository.Head.Tip.Sha;
+            }
+
+            void capture(string customProps = "") => VerifyValues(
+                customProps: customProps,
+                customTargets: "",
+                targets: ["Restore"],
+                expressions: ["$(_SourceLinkFetchManifestImported)"],
+                expectedResults: [""],
+                additionalCommandLineArgs: "/p:MSBuildRestoreGraphInputs=true");
+
+            capture();
+            string manifestPath = Path.Combine(ProjectObjDir.Path, "sourcelink", ProjectFileName + ".g.targets");
+            string contents = File.ReadAllText(manifestPath);
+            Assert.Contains(revision, contents);
+
+            File.SetLastWriteTimeUtc(manifestPath, DateTime.UtcNow.AddDays(-1));
+            DateTime timestamp = File.GetLastWriteTimeUtc(manifestPath);
+            capture();
+            Assert.Equal(timestamp, File.GetLastWriteTimeUtc(manifestPath));
+
+            File.WriteAllText(manifestPath, "not an MSBuild project");
+            capture("<PropertyGroup><EnableSourceControlFetchManifest>true</EnableSourceControlFetchManifest></PropertyGroup>");
+            Assert.Equal(contents, File.ReadAllText(manifestPath));
+
+            File.Delete(Path.Combine(ProjectDir.Path, ".git", "HEAD"));
+            VerifyValues(
+                customProps: "<PropertyGroup><EnableSourceControlFetchManifest>true</EnableSourceControlFetchManifest></PropertyGroup>",
+                customTargets: "",
+                targets: ["InitializeSourceControlInformation"],
+                expressions: ["$(_SourceLinkFetchManifestImported)", "$(SourceRevisionId)"],
+                expectedResults: ["true", revision],
+                additionalCommandLineArgs: "/p:MSBuildHardenedGraph=true /p:MSBuildRestoreGraphInputs=true");
+        }
+
+        [ConditionalTheory(typeof(DotNetSdkAvailable))]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        public void RestoreDoesNotCaptureSourceControlWithoutBothOptIns(bool captureGraphInputs, bool enableQueries)
+        {
+            using var repository = GitUtilities.CreateGitRepository(
+                ProjectDir.Path, [ProjectFileName], "http://github.com/test-org/test-repo");
+
+            VerifyValues(
+                customProps: "",
+                customTargets: "",
+                targets: ["Restore"],
+                expressions: ["$(_SourceLinkFetchManifestImported)"],
+                expectedResults: [""],
+                additionalCommandLineArgs: $"/p:MSBuildRestoreGraphInputs={captureGraphInputs} /p:EnableSourceControlManagerQueries={enableQueries}");
+
+            Assert.False(File.Exists(Path.Combine(ProjectObjDir.Path, "sourcelink", ProjectFileName + ".g.targets")));
+        }
+
+        [ConditionalFact(typeof(DotNetSdkAvailable))]
         public void GenerateSourceLinkFileTarget_EnableSourceLinkCondition()
         {
             GitUtilities.CreateGitRepository(ProjectDir.Path, new[] { ProjectFileName }, "http://github.com/test-org/test-repo");

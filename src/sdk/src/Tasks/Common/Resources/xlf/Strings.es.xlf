@@ -491,6 +491,16 @@
         <target state="translated">NETSDK1087: Se incluyeron varios elementos de FrameworkReference para "{0}" en el proyecto.</target>
         <note>{StrBegins="NETSDK1087: "}</note>
       </trans-unit>
+      <trans-unit id="FrameworkReferenceFetchManifestUnsupportedInput">
+        <source>NETSDK1247: Framework-reference fetch manifest generation does not support the MSBuild input '{0}' with value '{1}'. The current profile supports one target framework with one implicit Microsoft.NETCore.App FrameworkReference and no PackageReference, ProjectReference, Reference, RuntimeIdentifier, or RuntimeIdentifiers inputs. Remove the unsupported input or disable hardened graph validation.</source>
+        <target state="new">NETSDK1247: Framework-reference fetch manifest generation does not support the MSBuild input '{0}' with value '{1}'. The current profile supports one target framework with one implicit Microsoft.NETCore.App FrameworkReference and no PackageReference, ProjectReference, Reference, RuntimeIdentifier, or RuntimeIdentifiers inputs. Remove the unsupported input or disable hardened graph validation.</target>
+        <note>{StrBegins="NETSDK1247: "}{Locked="Microsoft.NETCore.App"}{Locked="FrameworkReference"}{Locked="PackageReference"}{Locked="ProjectReference"}{Locked="Reference"}{Locked="RuntimeIdentifier"}{Locked="RuntimeIdentifiers"} {0} is an MSBuild item or property name and should not be translated. {1} is its value and should not be translated.</note>
+      </trans-unit>
+      <trans-unit id="FrameworkReferenceFetchManifestUnsupportedProfile">
+        <source>NETSDK1248: Framework-reference fetch manifest generation stopped because the project contains unsupported dependency inputs. Resolve the preceding NETSDK1247 errors or disable hardened graph validation.</source>
+        <target state="new">NETSDK1248: Framework-reference fetch manifest generation stopped because the project contains unsupported dependency inputs. Resolve the preceding NETSDK1247 errors or disable hardened graph validation.</target>
+        <note>{StrBegins="NETSDK1248: "}{Locked="NETSDK1247"}</note>
+      </trans-unit>
       <trans-unit id="FrameworkReferenceOverrideWarning">
         <source>NETSDK1086: A FrameworkReference for '{0}' was included in the project. This is implicitly referenced by the .NET SDK and you do not typically need to reference it from your project. For more information, see {1}</source>
         <target state="translated">NETSDK1086: Se incluyó un valor de FrameworkReference para "{0}" en el proyecto. .NET SDK hace referencia implícita a este valor y, normalmente, no es necesario hacer referencia a él desde el proyecto. Para obtener más información, consulte {1}</target>

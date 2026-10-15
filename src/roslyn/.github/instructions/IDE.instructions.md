@@ -65,6 +65,11 @@ public MyService(IDependency dependency) { }
 
 ## Analyzers & Code Fixes (IDE0xxx)
 
+- `src/CodeStyle/Tools/Program.cs` generates package targets and declares their
+  globalconfig assets. Hardened graph construction selects from these assets
+  instead of probing the default package directory; ordinary builds and custom
+  config directories retain their existence checks and .NET 11 selection rules.
+
 - IDE code-style analyzers inherit from `AbstractBuiltInCodeStyleDiagnosticAnalyzer` — not raw `DiagnosticAnalyzer`
 - Always provide a `FixAllProvider` for code fixes (typically `WellKnownFixAllProviders.BatchFixer`)
 - Diagnostic ID constants live in `src/Analyzers/Core/Analyzers/IDEDiagnosticIds.cs`

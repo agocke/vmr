@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.IO;
 
 using Microsoft.Build.Framework;
@@ -8,6 +9,7 @@ using Microsoft.Build.Shared;
 using Microsoft.Build.Tasks;
 using Microsoft.Build.UnitTests;
 using Microsoft.Build.Utilities;
+using Shouldly;
 using Xunit;
 
 
@@ -18,6 +20,19 @@ namespace Microsoft.Build.UnitTests
 {
     public sealed class FindUnderPath_Tests
     {
+        [Fact]
+        public void OnlyDeterministicVariantIsMarkedDeclaredIO()
+        {
+            Attribute.IsDefined(
+                typeof(FindUnderPathWithDeterministicSemantics),
+                typeof(MSBuildDeclaredIOTaskAttribute),
+                inherit: false).ShouldBeTrue();
+            Attribute.IsDefined(
+                typeof(FindUnderPath),
+                typeof(MSBuildDeclaredIOTaskAttribute),
+                inherit: false).ShouldBeFalse();
+        }
+
         [Fact]
         public void BasicFilter()
         {
@@ -162,6 +177,51 @@ namespace Microsoft.Build.UnitTests
             Assert.Equal(testFile.Name, t.InPath[0].ItemSpec);
             Assert.Equal(NativeMethodsShared.IsWindows ? @"C:\SomeoneElsesProject\File2.txt" : "/SomeoneElsesProject/File2.txt",
                 t.OutOfPath[0].ItemSpec);
+        }
+
+        [Fact]
+        public void DeterministicSemanticsUseHostPathComparison()
+        {
+            FindUnderPathWithDeterministicSemantics task = new()
+            {
+                BuildEngine = new MockEngine(),
+                Path = new TaskItem("Root"),
+                Files = [new TaskItem("root/file.txt")],
+                TaskEnvironment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(ObjectModelHelpers.TempProjectDir),
+            };
+
+            task.Execute().ShouldBeTrue();
+
+            if (NativeMethodsShared.IsWindows)
+            {
+                task.InPath.ShouldHaveSingleItem();
+                task.OutOfPath.ShouldBeEmpty();
+            }
+            else
+            {
+                task.InPath.ShouldBeEmpty();
+                task.OutOfPath.ShouldHaveSingleItem();
+            }
+        }
+
+        [Fact]
+        public void DeterministicSemanticsDoNotMutateInputItems()
+        {
+            TaskItem input = new("file.txt");
+            FindUnderPathWithDeterministicSemantics task = new()
+            {
+                BuildEngine = new MockEngine(),
+                Path = new TaskItem("."),
+                Files = [input],
+                UpdateToAbsolutePaths = true,
+                TaskEnvironment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(ObjectModelHelpers.TempProjectDir),
+            };
+
+            task.Execute().ShouldBeTrue();
+
+            task.InPath.ShouldHaveSingleItem().ShouldNotBeSameAs(input);
+            task.InPath[0].ItemSpec.ShouldBe(Path.Combine(ObjectModelHelpers.TempProjectDir, "file.txt"));
+            input.ItemSpec.ShouldBe("file.txt");
         }
     }
 }

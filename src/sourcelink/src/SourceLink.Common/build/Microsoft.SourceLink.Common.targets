@@ -57,14 +57,24 @@
           Condition="'$(EnableSourceLink)' == 'true' and '$(DebugType)' != 'none'"
           Outputs="$(_SourceLinkFilePath)">
 
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <_SourceLinkRootWithUrl Include="@(SourceRoot)" Condition="'%(SourceRoot.SourceLinkUrl)' != ''" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(_SourceLinkRootWithUrl)' != ''">
+      <SourceLink>$(_SourceLinkFilePath)</SourceLink>
+    </PropertyGroup>
+
     <!--- Suppress warning if targets are imported from an SDK without a package reference. -->
     <Microsoft.SourceLink.Common.GenerateSourceLinkFile
       SourceRoots="@(SourceRoot)"
       NoWarnOnMissingSourceControlInformation="$(PkgMicrosoft_SourceLink_Common.Equals(''))"
-      OutputFile="$(_SourceLinkFilePath)">
+      OutputFile="$(_SourceLinkFilePath)"
+      DeclaredInputs="$(_SourceLinkFilePath)"
+      DeclaredOutputs="$(_SourceLinkFilePath)">
 
       <!-- Set SourceLink property passed to compilers -->
-      <Output TaskParameter="SourceLink" PropertyName="SourceLink" />
+      <Output TaskParameter="SourceLink" PropertyName="SourceLink" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
     </Microsoft.SourceLink.Common.GenerateSourceLinkFile>
 
     <!--

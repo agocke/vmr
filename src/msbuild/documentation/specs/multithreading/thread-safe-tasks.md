@@ -147,6 +147,15 @@ public class TaskEnvironment
 
 The `TaskEnvironment` class that MSBuild provides is not thread-safe. Task authors who spawn multiple threads within their task implementation must provide their own synchronization when accessing the task environment from multiple threads. However, each task receives its own isolated environment object, so synchronization with other concurrent tasks is not required.
 
+## Action-graph construction context
+
+Construction-time tasks use explicit DeclaredIO with empty input and output
+lists, not a separate Pure annotation or environment. Tasks that require the
+invoking project directory receive the existing `TaskEnvironment` through
+`IMultiThreadableTask`. Their DeclaredIO audit still prohibits ambient or
+filesystem effects; access to the environment is not permission to perform I/O.
+See [the action-graph contract](../proposed/hardened-static-graph.md).
+
 ### Path Handling
 
 To prevent common thread-safety issues related to path handling, we introduce path type that is implicitly convertible to string:

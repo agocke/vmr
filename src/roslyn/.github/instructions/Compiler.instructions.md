@@ -82,6 +82,9 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
 - `Csc.cs` - C# compiler task
 - `Vbc.cs` - VB compiler task  
 - `ManagedCompiler.cs` - Base compiler task functionality
+- `Microsoft.Managed.Core.targets` prepares the analyzer-skip marker during
+  ordinary Restore when `MSBuildRestoreGraphInputs=true`. Hardened graph
+  construction consumes that marker without initializing it.
 
 ## Performance Considerations
 

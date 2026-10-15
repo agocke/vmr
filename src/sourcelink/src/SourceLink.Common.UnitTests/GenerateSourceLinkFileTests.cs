@@ -15,6 +15,14 @@ namespace Microsoft.SourceLink.Common.UnitTests
         private static string AdjustSeparatorsInJson(string json)
             => Path.DirectorySeparatorChar == '/' ? json.Replace(@"\\", "/") : json;
 
+        [Fact]
+        public void IsDeclaredIOTask()
+        {
+            Assert.Contains(
+                typeof(GenerateSourceLinkFile).GetCustomAttributes(inherit: false),
+                attribute => attribute.GetType().FullName == "Microsoft.Build.Framework.MSBuildDeclaredIOTaskAttribute");
+        }
+
         [Theory]
         [CombinatorialData]
         public void Empty(bool noWarning)

@@ -26,6 +26,39 @@ namespace Microsoft.NET.Build.Tests
         }
 
         [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void It_skips_the_preview_message_only_for_hardened_graph_construction(bool hardenedGraph)
+        {
+            var project = new TestProject
+            {
+                Name = "HardenedPreviewMessage",
+                TargetFrameworks = ToolsetInfo.CurrentTargetFramework,
+            };
+            var testAsset = TestAssetsManager.CreateTestProject(project, identifier: hardenedGraph.ToString());
+
+            new RestoreCommand(testAsset)
+                .Execute("/p:MSBuildRestoreGraphInputs=true")
+                .Should().Pass();
+
+            var result = new MSBuildCommand(testAsset, "_CheckForNETCoreSdkIsPreview")
+                .ExecuteWithoutRestore(
+                    "/p:_NETCoreSdkIsPreview=true",
+                    "/p:MSBuildRestoreGraphInputs=true",
+                    $"/p:MSBuildHardenedGraph={hardenedGraph}");
+
+            result.Should().Pass();
+            if (hardenedGraph)
+            {
+                result.StdOut.Should().NotContain(Strings.UsingPreviewSdk);
+            }
+            else
+            {
+                result.StdOut.Should().Contain(Strings.UsingPreviewSdk);
+            }
+        }
+
+        [TestMethod]
         public void It_does_not_display_preview_message_with_explicit_opt_out()
         {
             TestAsset testAsset = TestAssetsManager

@@ -20,6 +20,7 @@ using Microsoft.Build.Experimental.BuildCheck;
 using Microsoft.Build.Experimental.BuildCheck.Infrastructure;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Framework.Telemetry;
+using Microsoft.Build.Graph.Hardened;
 using Microsoft.Build.Internal;
 using Microsoft.Build.Shared;
 using Microsoft.Build.Shared.Debugging;
@@ -1145,6 +1146,10 @@ namespace Microsoft.Build.BackEnd
 
             // We consider this the entrypoint for the project build for purposes of BuildCheck processing
             bool isRestoring = _requestEntry.RequestConfiguration.GlobalProperties[MSBuildConstants.MSBuildIsRestoring] is not null;
+            bool isRestoreSubmission =
+                isRestoring &&
+                _requestEntry.Request.BuildRequestDataFlags.HasFlag(
+                    BuildRequestDataFlags.IgnoreMissingEmptyAndInvalidImports);
 
             var buildCheckManager = isRestoring
                 ? null
@@ -1236,6 +1241,89 @@ namespace Microsoft.Build.BackEnd
                 ProjectErrorUtilities.VerifyThrowInvalidProject(allTargets.Length > 0,
                     _requestEntry.RequestConfiguration.Project.ProjectFileLocation, "NoTargetSpecified");
 
+                ProjectInstance actionProject = _requestEntry.RequestConfiguration.Project;
+                bool emitActions = !string.IsNullOrEmpty(actionProject.GetPropertyValue("MSBuildEmitActionGraph"));
+                ProjectErrorUtilities.VerifyThrowInvalidProject(
+                    !emitActions || _componentHost.BuildParameters.HardenedGraphValidation,
+                    actionProject.ProjectFileLocation, "HardenedGraphUnsupportedConstruct",
+                    "MSBuildEmitActionGraph without --hardened-graph", "action graph construction");
+                ProjectErrorUtilities.VerifyThrowInvalidProject(
+                    !_componentHost.BuildParameters.HardenedGraphValidation || (emitActions && !isRestoreSubmission),
+                    actionProject.ProjectFileLocation, "HardenedGraphUnsupportedConstruct",
+                    isRestoreSubmission ? "restore during action graph construction" : "--hardened-graph without MSBuildEmitActionGraph",
+                    "action graph construction");
+                if (emitActions)
+                {
+                    _requestEntry.ActionGraph = new HardenedActionGraph(actionProject, _requestEntry.TaskEnvironment);
+                }
+
+                if (_componentHost.BuildParameters.HardenedGraphValidation)
+                {
+                    ProjectInstance project = _requestEntry.RequestConfiguration.Project;
+                    Lookup baseLookup = _requestEntry.RequestConfiguration.BaseLookup;
+                    baseLookup.SetBuiltInProperty(
+                        ProjectPropertyInstance.Create(
+                            ReservedPropertyNames.hardenedGraph,
+                            "true",
+                            mayBeReserved: true));
+
+                    HardenedItemOperationPlan itemOperationPlan = new(
+                        GetHardenedWorkspaceRoot(project));
+                    ITaskBuilder constructionTaskBuilder =
+                        (ITaskBuilder)_componentHost.GetComponent(BuildComponentType.TaskBuilder);
+                    IReadOnlyList<InvalidProjectFileException> diagnostics;
+                    TaskEnvironment originalEnvironment = _requestEntry.TaskEnvironment;
+                    string originalThreadDirectory = FileUtilities.CurrentThreadWorkingDirectory;
+                    TaskEnvironment constructionEnvironment = _requestEntry.ActionGraph.CreateConstructionEnvironment();
+                    _requestEntry.TaskEnvironment = constructionEnvironment;
+                    try
+                    {
+                        HardenedTargetValidator validator = new(
+                            (task, taskIdentityParameters) =>
+                                HardenedTaskClassificationResolver.Classify(
+                                    project,
+                                    _projectLoggingContext,
+                                    task,
+                                    taskIdentityParameters),
+                            (target, task, lookup) =>
+                                ExecuteHardenedConstructionTask(constructionTaskBuilder, target, task, lookup));
+                        diagnostics = validator.Validate(
+                            project,
+                            baseLookup,
+                            allTargets.Select(target => target.name),
+                            itemOperationPlan);
+                    }
+                    finally
+                    {
+                        _requestEntry.TaskEnvironment = originalEnvironment;
+                        constructionEnvironment.Dispose();
+                        FileUtilities.CurrentThreadWorkingDirectory = originalThreadDirectory;
+                        ((IBuildComponent)constructionTaskBuilder).ShutdownComponent();
+                    }
+
+                    if (diagnostics.Count > 0)
+                    {
+                        foreach (InvalidProjectFileException diagnostic in diagnostics)
+                        {
+                            _projectLoggingContext.LogInvalidProjectFileError(diagnostic);
+                        }
+
+                        throw diagnostics[0];
+                    }
+
+                    _requestEntry.ActionGraph.Publish();
+                    BuildResult graphResult = new(_requestEntry.Request);
+                    foreach (var target in allTargets)
+                    {
+                        graphResult.AddResultsForTarget(target.name, new TargetResult(
+                            Array.Empty<ProjectItemInstance.TaskItem>(),
+                            new WorkUnitResult(WorkUnitResultCode.Success, WorkUnitActionCode.Continue, null)));
+                    }
+
+                    graphResult.EvaluationId = project.EvaluationId;
+                    return graphResult;
+                }
+
                 // Set the current directory to that required by the project.
                 SetProjectDirectory();
 
@@ -1281,6 +1369,63 @@ namespace Microsoft.Build.BackEnd
                         new CheckLoggingContext(_nodeLoggingContext.LoggingService, _projectLoggingContext.BuildEventContext),
                         _requestEntry.RequestConfiguration.ProjectFullPath);
                 }
+            }
+
+            void ExecuteHardenedConstructionTask(
+                ITaskBuilder taskBuilder,
+                ProjectTargetInstance target,
+                ProjectTaskInstance task,
+                Lookup lookup)
+            {
+                var targetLoggingContext = new TargetLoggingContext(
+                    _projectLoggingContext,
+                    _requestEntry.RequestConfiguration.ProjectFullPath,
+                    target,
+                    parentTargetName: null,
+                    TargetBuiltReason.None);
+                bool success = false;
+
+                try
+                {
+                    WorkUnitResult result = taskBuilder.ExecuteTask(
+                        targetLoggingContext,
+                        _requestEntry,
+                        (ITargetBuilderCallback)_targetBuilder,
+                        task,
+                        TaskExecutionMode.ExecuteTaskAndGatherOutputs,
+                        lookup,
+                        lookup,
+                        _cancellationTokenSource.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+
+                    success = result.ResultCode is WorkUnitResultCode.Success or WorkUnitResultCode.Skipped;
+                    if (!success)
+                    {
+                        throw result.Exception is null
+                            ? new BuildAbortedException()
+                            : new BuildAbortedException(result.Exception.Message, result.Exception);
+                    }
+                }
+                finally
+                {
+                    targetLoggingContext.LogTargetBatchFinished(
+                        _requestEntry.RequestConfiguration.ProjectFullPath,
+                        success,
+                        targetOutputs: null);
+                }
+            }
+
+            static string GetHardenedWorkspaceRoot(ProjectInstance project)
+            {
+                ProjectPropertyInstance workspaceRoot = project.GetProperty("WorkspaceRoot");
+                if (workspaceRoot is null ||
+                    !bool.TryParse(workspaceRoot.EvaluatedValue, out bool enabled) ||
+                    !enabled ||
+                    string.IsNullOrEmpty(workspaceRoot.Location.File))
+                {
+                    return null;
+                }
+
+                return Path.GetDirectoryName(Path.GetFullPath(workspaceRoot.Location.File));
             }
 
             BuildResult CopyTargetResultsFromProxyTargetsToRealTargets(BuildResult resultFromTargetBuilder)

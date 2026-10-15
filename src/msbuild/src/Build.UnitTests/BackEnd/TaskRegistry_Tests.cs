@@ -34,6 +34,13 @@ namespace Microsoft.Build.UnitTests.BackEnd
         }
     }
 
+    [MSBuildDeclaredIOTask]
+    [MSBuildDeclaredIORequiresUnset("LegacyDirectory")]
+    public class DeclaredIOTestTask : Task
+    {
+        public override bool Execute() => true;
+    }
+
     /// <summary>
     /// Test the task registry
     /// </summary>
@@ -92,6 +99,99 @@ namespace Microsoft.Build.UnitTests.BackEnd
         }
 
         #region UsingTaskTests
+        [Fact]
+        public void MetadataResolutionFindsDeclaredIOAttributesWithoutExecutionLoading()
+        {
+            ProjectRootElement project = ProjectRootElement.Create();
+            ProjectUsingTaskElement element = project.AddUsingTask(
+                nameof(DeclaredIOTestTask),
+                _testTaskLocation,
+                null);
+            TaskRegistry registry = CreateTaskRegistryAndRegisterTasks([element]);
+
+            bool resolved = registry.TryGetRegisteredTaskTypeForMetadata(
+                nameof(DeclaredIOTestTask),
+                TaskHostParameters.Empty,
+                exactMatchRequired: true,
+                _targetLoggingContext,
+                out LoadedType loadedType);
+
+            resolved.ShouldBeTrue();
+            loadedType.ShouldNotBeNull();
+            loadedType.LoadedViaMetadataLoadContext.ShouldBeTrue();
+            loadedType.HasMSBuildDeclaredIOTaskAttribute.ShouldBeTrue();
+            loadedType.HasValidMSBuildDeclaredIOAttributes.ShouldBeTrue();
+            loadedType.DeclaredIORequiredUnsetParameters.ShouldBe(["LegacyDirectory"]);
+        }
+
+        [Fact]
+        public void MetadataResolutionDoesNotTrustUnannotatedTask()
+        {
+            ProjectRootElement project = ProjectRootElement.Create();
+            ProjectUsingTaskElement element = project.AddUsingTask(
+                nameof(TestTask),
+                _testTaskLocation,
+                null);
+            TaskRegistry registry = CreateTaskRegistryAndRegisterTasks([element]);
+
+            bool resolved = registry.TryGetRegisteredTaskTypeForMetadata(
+                nameof(TestTask),
+                TaskHostParameters.Empty,
+                exactMatchRequired: true,
+                _targetLoggingContext,
+                out LoadedType loadedType);
+
+            resolved.ShouldBeTrue();
+            loadedType.ShouldNotBeNull();
+            loadedType.HasMSBuildDeclaredIOTaskAttribute.ShouldBeFalse();
+        }
+
+        [Fact]
+        public void MetadataResolutionFindsDeclaredIOAttributeInBuiltInAssemblyByName()
+        {
+            Type taskType = typeof(Microsoft.Build.Tasks.AssignTargetPathWithProjectDirectory);
+            ProjectRootElement project = ProjectRootElement.Create();
+            ProjectUsingTaskElement element = project.AddUsingTask(
+                taskType.FullName,
+                null,
+                taskType.Assembly.FullName);
+            TaskRegistry registry = CreateTaskRegistryAndRegisterTasks([element]);
+
+            bool resolved = registry.TryGetRegisteredTaskTypeForMetadata(
+                taskType.Name,
+                TaskHostParameters.Empty,
+                exactMatchRequired: false,
+                _targetLoggingContext,
+                out LoadedType loadedType);
+
+            resolved.ShouldBeTrue();
+            loadedType.ShouldNotBeNull();
+            loadedType.LoadedViaMetadataLoadContext.ShouldBeTrue();
+            loadedType.HasMSBuildDeclaredIOTaskAttribute.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void MetadataResolutionTreatsUninspectableOverrideAsUnaudited()
+        {
+            ProjectRootElement project = ProjectRootElement.Create();
+            ProjectUsingTaskElement element = project.AddUsingTask(
+                "AssignTargetPathWithProjectDirectory",
+                _testTaskLocation,
+                null);
+            element.Override = "true";
+            TaskRegistry registry = CreateTaskRegistryAndRegisterTasks([element]);
+
+            bool resolved = registry.TryGetRegisteredTaskTypeForMetadata(
+                "AssignTargetPathWithProjectDirectory",
+                TaskHostParameters.Empty,
+                exactMatchRequired: true,
+                _targetLoggingContext,
+                out LoadedType loadedType);
+
+            resolved.ShouldBeTrue();
+            loadedType.ShouldBeNull();
+        }
+
         /// <summary>
         /// Try and register a simple task
         /// Expect:

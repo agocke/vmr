@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
@@ -14,8 +15,19 @@ namespace Microsoft.Build.Tasks
     /// Task to assign a reasonable "Link" metadata to the provided items.
     /// </summary>
     [MSBuildMultiThreadableTask]
-    public class AssignLinkMetadata : TaskExtension
+    [MSBuildDeclaredIOTask]
+    public class AssignLinkMetadata : TaskExtension, IMultiThreadableTask
     {
+        /// <summary>
+        /// Gets or sets the declared file inputs, which are empty for this zero-I/O task.
+        /// </summary>
+        public ITaskItem[] DeclaredInputs { get; set; } = [];
+
+        /// <summary>
+        /// Gets or sets the declared file outputs, which are empty for this zero-I/O task.
+        /// </summary>
+        public ITaskItem[] DeclaredOutputs { get; set; } = [];
+
         /// <summary>
         /// The set of items to assign metadata to
         /// </summary>
@@ -26,6 +38,11 @@ namespace Microsoft.Build.Tasks
         /// </summary>
         [Output]
         public ITaskItem[] OutputItems { get; set; }
+
+        /// <summary>
+        /// Gets or sets the task execution environment for thread-safe path resolution.
+        /// </summary>
+        public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
 
         /// <summary>
         /// Sets "Link" metadata on any item where the project file in which they
@@ -45,8 +62,8 @@ namespace Microsoft.Build.Tasks
                     try
                     {
                         string definingProject = item.GetMetadata(ItemSpecModifiers.DefiningProjectFullPath);
-                        string definingProjectDirectory = item.GetMetadata(ItemSpecModifiers.DefiningProjectDirectory);
-                        string fullPath = item.GetMetadata(ItemSpecModifiers.FullPath);
+                        string definingProjectDirectory = GetDirectory(definingProject);
+                        string fullPath = GetFullPath(item.ItemSpec);
 
                         if (
                                 String.IsNullOrEmpty(item.GetMetadata("Link"))
@@ -70,6 +87,38 @@ namespace Microsoft.Build.Tasks
 
             OutputItems = outputItems.ToArray();
             return !Log.HasLoggedErrors;
+        }
+
+        private string GetDirectory(string path)
+        {
+            int separator = path.LastIndexOf('/');
+            if (NativeMethodsShared.IsWindows)
+            {
+                separator = Math.Max(separator, path.LastIndexOf('\\'));
+            }
+
+            return separator < 0
+                ? String.Empty
+                : path.Substring(0, separator + 1);
+        }
+
+        private string GetFullPath(string path)
+        {
+            try
+            {
+                if (NativeMethodsShared.IsWindows)
+                {
+                    path = path.Replace('/', '\\');
+                }
+
+#pragma warning disable MSBuildTask0002 // TaskEnvironment resolves the path; GetFullPath only canonicalizes it.
+                return Path.GetFullPath(TaskEnvironment.GetAbsolutePath(path));
+#pragma warning restore MSBuildTask0002
+            }
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
+            {
+                throw new InvalidOperationException(e.Message, e);
+            }
         }
     }
 }

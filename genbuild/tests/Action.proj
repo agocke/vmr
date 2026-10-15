@@ -1,0 +1,9 @@
+<Project>
+  <Target Name="Build">
+    <WriteLinesToFile File="$(MSBuildProjectDirectory)/action.txt"
+                      Lines="executed outside MSBuild"
+                      Overwrite="true"
+                      DeclaredInputs=""
+                      DeclaredOutputs="$(MSBuildProjectDirectory)/action.txt" />
+  </Target>
+</Project>

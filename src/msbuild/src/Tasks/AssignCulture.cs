@@ -158,7 +158,7 @@ namespace Microsoft.Build.Tasks
                     }
                     else
                     {
-                        Culture.ItemCultureInfo info = Culture.GetItemCultureInfo(
+                        Culture.ItemCultureInfo info = GetItemCultureInfo(
                             AssignedFiles[i].ItemSpec,
                             dependentUpon,
                             // If 'WithCulture' is explicitly set to false, treat as 'culture-neutral' and keep the original name of the resource.
@@ -223,6 +223,40 @@ namespace Microsoft.Build.Tasks
             return retValue;
         }
 
+        private protected virtual Culture.ItemCultureInfo GetItemCultureInfo(
+            string name,
+            string dependentUponFilename,
+            bool treatAsCultureNeutral)
+        {
+            return Culture.GetItemCultureInfo(name, dependentUponFilename, treatAsCultureNeutral);
+        }
+
         #endregion
+    }
+
+    /// <summary>
+    /// Assigns culture metadata using a fixed culture-name set and host-independent path semantics.
+    /// </summary>
+    [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
+    public sealed class AssignCultureWithDeterministicSemantics : AssignCulture
+    {
+        /// <summary>
+        /// Gets or sets the declared file inputs, which are empty for this zero-I/O task.
+        /// </summary>
+        public ITaskItem[] DeclaredInputs { get; set; } = [];
+
+        /// <summary>
+        /// Gets or sets the declared file outputs, which are empty for this zero-I/O task.
+        /// </summary>
+        public ITaskItem[] DeclaredOutputs { get; set; } = [];
+
+        private protected override Culture.ItemCultureInfo GetItemCultureInfo(
+            string name,
+            string dependentUponFilename,
+            bool treatAsCultureNeutral)
+        {
+            return Culture.GetItemCultureInfoDeterministic(name, dependentUponFilename, treatAsCultureNeutral);
+        }
     }
 }

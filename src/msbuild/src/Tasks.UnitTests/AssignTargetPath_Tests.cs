@@ -1,7 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Tasks;
 using Microsoft.Build.Utilities;
@@ -14,6 +16,19 @@ namespace Microsoft.Build.UnitTests
 {
     public sealed class AssignTargetPath_Tests
     {
+        [Fact]
+        public void OnlyProjectDirectoryVariantIsMarkedDeclaredIO()
+        {
+            Attribute.IsDefined(
+                typeof(AssignTargetPathWithProjectDirectory),
+                typeof(MSBuildDeclaredIOTaskAttribute),
+                inherit: false).ShouldBeTrue();
+            Attribute.IsDefined(
+                typeof(AssignTargetPath),
+                typeof(MSBuildDeclaredIOTaskAttribute),
+                inherit: false).ShouldBeFalse();
+        }
+
         [Fact]
         public void Regress314791()
         {
@@ -110,6 +125,23 @@ namespace Microsoft.Build.UnitTests
             t.Execute().ShouldBeTrue();
             t.AssignedFiles.Length.ShouldBe(1);
             t.AssignedFiles[0].GetMetadata("TargetPath").ShouldBe(targetPath);
+        }
+
+        [Fact]
+        public void ExplicitProjectDirectoryControlsRelativePathResolution()
+        {
+            string explicitProjectDirectory = NativeMethodsShared.IsWindows ? @"c:\project" : "/project";
+            AssignTargetPathWithProjectDirectory task = new()
+            {
+                TaskEnvironment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(explicitProjectDirectory),
+                BuildEngine = new MockEngine(),
+                Files = [new TaskItem(Path.Combine("subdirectory", "file.txt"))],
+                RootFolder = explicitProjectDirectory,
+            };
+
+            task.Execute().ShouldBeTrue();
+            task.AssignedFiles.Length.ShouldBe(1);
+            task.AssignedFiles[0].GetMetadata("TargetPath").ShouldBe(Path.Combine("subdirectory", "file.txt"));
         }
     }
 }

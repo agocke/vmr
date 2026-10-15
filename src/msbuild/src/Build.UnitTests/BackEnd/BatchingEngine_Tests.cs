@@ -12,6 +12,7 @@ using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared.FileSystem;
+using Shouldly;
 using Xunit;
 using InvalidProjectFileException = Microsoft.Build.Exceptions.InvalidProjectFileException;
 using ProjectItemInstanceFactory = Microsoft.Build.Execution.ProjectItemInstance.TaskItem.ProjectItemInstanceFactory;
@@ -22,6 +23,196 @@ namespace Microsoft.Build.UnitTests.BackEnd
 {
     public class BatchingEngine_Tests
     {
+        [Fact]
+        public void QualifiedMetadataAddsOnlyItsItemType()
+        {
+            var metadata = new Dictionary<string, MetadataReference>
+            {
+                ["File.Culture"] = new MetadataReference("File", "Culture"),
+            };
+            var itemTypes = new HashSet<string>(MSBuildNameIgnoreCaseComparer.Default);
+
+            BatchingEngine.AddItemTypesToBeBatched(metadata, ["Other"], itemTypes);
+
+            Assert.Single(itemTypes);
+            Assert.Contains("File", itemTypes);
+        }
+
+        [Fact]
+        public void UnqualifiedMetadataAddsAllConsumedItemTypes()
+        {
+            var metadata = new Dictionary<string, MetadataReference>
+            {
+                ["Culture"] = new MetadataReference(null, "Culture"),
+                ["Resource.Culture"] = new MetadataReference("Resource", "Culture"),
+            };
+            var itemTypes = new HashSet<string>(MSBuildNameIgnoreCaseComparer.Default);
+
+            BatchingEngine.AddItemTypesToBeBatched(metadata, ["File", "resource"], itemTypes);
+
+            Assert.Equal(2, itemTypes.Count);
+            Assert.Contains("File", itemTypes);
+            Assert.Contains("Resource", itemTypes);
+        }
+
+        [Fact]
+        public void OrderedItemTypeAssociationPreservesReferenceOrder()
+        {
+            var metadata = new Dictionary<string, MetadataReference>
+            {
+                ["Second.Key"] = new MetadataReference("Second", "Key"),
+                ["Common"] = new MetadataReference(null, "Common"),
+                ["First.Key"] = new MetadataReference("First", "Key"),
+            };
+            List<string> itemTypes = [];
+            var seenItemTypes = new HashSet<string>(MSBuildNameIgnoreCaseComparer.Default);
+
+            BatchingEngine.AddItemTypesToBeBatched(
+                metadata.Values,
+                ["Third", "first"],
+                itemTypes,
+                seenItemTypes);
+
+            itemTypes.ShouldBe(["Second", "First", "Third"]);
+        }
+
+        [Fact]
+        public void AnalyzedPathMatchesDirectPathForQualifiedAndUnqualifiedMetadata()
+        {
+            ProjectInstance project = ProjectHelpers.CreateEmptyProjectInstance();
+            var itemsByType = new ItemDictionary<ProjectItemInstance>();
+
+            var first = new ProjectItemInstance(project, "First", "first-1", project.FullPath);
+            first.SetMetadata("Key", "x");
+            first.SetMetadata("Common", "c1");
+            var second = new ProjectItemInstance(project, "First", "first-2", project.FullPath);
+            second.SetMetadata("Key", "y");
+            second.SetMetadata("Common", "c2");
+            var other = new ProjectItemInstance(project, "Second", "second-1", project.FullPath);
+            other.SetMetadata("Key", "z");
+            other.SetMetadata("Common", "c3");
+            itemsByType.ImportItems([first, second, other]);
+
+            var properties = new PropertyDictionary<ProjectPropertyInstance>();
+            Lookup lookup = CreateLookup(itemsByType, properties);
+            List<string> parameters =
+            [
+                "@(First);@(Second)",
+                "%(First.Key);%(Second.Key);%(Common)",
+            ];
+            var loggingContext = new TestLoggingContext(null!, new BuildEventContext(1, 2, 3, 4));
+
+            List<ItemBucket> directBuckets = BatchingEngine.PrepareBatchingBuckets(
+                parameters,
+                lookup,
+                MockElementLocation.Instance,
+                loggingContext);
+
+            ItemsAndMetadataPair references =
+                ExpressionShredder.GetReferencedItemNamesAndMetadata(parameters);
+            BatchingEngine.BatchingInfo batchingInfo = BatchingEngine.AnalyzeBatching(
+                references.Metadata,
+                references.Items,
+                lookup,
+                MockElementLocation.Instance);
+            List<ItemBucket> analyzedBuckets = BatchingEngine.PrepareBatchingBuckets(
+                batchingInfo,
+                lookup,
+                MockElementLocation.Instance,
+                loggingContext);
+
+            GetBucketSignatures(analyzedBuckets).ShouldBe(GetBucketSignatures(directBuckets));
+            GetBucketSignatures(analyzedBuckets).ShouldBe(
+            [
+                "first-1||x||c1",
+                "first-2||y||c2",
+                "|second-1||z|c3",
+            ]);
+        }
+
+        [Fact]
+        public void AnalyzedPathMatchesDirectPathForImplicitItemAssociation()
+        {
+            ProjectInstance project = ProjectHelpers.CreateEmptyProjectInstance();
+            var itemsByType = new ItemDictionary<ProjectItemInstance>();
+            var item = new ProjectItemInstance(project, "File", "file", project.FullPath);
+            item.SetMetadata("Culture", "en-US");
+            itemsByType.ImportItems([item]);
+
+            Lookup lookup = CreateLookup(
+                itemsByType,
+                new PropertyDictionary<ProjectPropertyInstance>());
+            List<string> parameters = ["%(Culture)"];
+            var loggingContext = new TestLoggingContext(null!, new BuildEventContext(1, 2, 3, 4));
+
+            List<ItemBucket> directBuckets = BatchingEngine.PrepareBatchingBuckets(
+                parameters,
+                lookup,
+                "File",
+                MockElementLocation.Instance,
+                loggingContext);
+
+            ItemsAndMetadataPair references =
+                ExpressionShredder.GetReferencedItemNamesAndMetadata(parameters);
+            BatchingEngine.BatchingInfo batchingInfo = BatchingEngine.AnalyzeBatching(
+                references.Metadata,
+                ["File"],
+                lookup,
+                MockElementLocation.Instance);
+            List<ItemBucket> analyzedBuckets = BatchingEngine.PrepareBatchingBuckets(
+                batchingInfo,
+                lookup,
+                MockElementLocation.Instance,
+                loggingContext);
+
+            GetBucketSignatures(analyzedBuckets, "@(File)|%(Culture)")
+                .ShouldBe(GetBucketSignatures(directBuckets, "@(File)|%(Culture)"));
+            GetBucketSignatures(analyzedBuckets, "@(File)|%(Culture)")
+                .ShouldBe(["file|en-US"]);
+        }
+
+        [Fact]
+        public void AnalyzedPathMatchesDirectPathForDefaultBucket()
+        {
+            ProjectInstance project = ProjectHelpers.CreateEmptyProjectInstance();
+            var itemsByType = new ItemDictionary<ProjectItemInstance>();
+            itemsByType.ImportItems(
+            [
+                new ProjectItemInstance(project, "File", "first", project.FullPath),
+                new ProjectItemInstance(project, "File", "second", project.FullPath),
+            ]);
+
+            Lookup lookup = CreateLookup(
+                itemsByType,
+                new PropertyDictionary<ProjectPropertyInstance>());
+            List<string> parameters = ["@(File)"];
+            var loggingContext = new TestLoggingContext(null!, new BuildEventContext(1, 2, 3, 4));
+
+            List<ItemBucket> directBuckets = BatchingEngine.PrepareBatchingBuckets(
+                parameters,
+                lookup,
+                MockElementLocation.Instance,
+                loggingContext);
+
+            ItemsAndMetadataPair references =
+                ExpressionShredder.GetReferencedItemNamesAndMetadata(parameters);
+            BatchingEngine.BatchingInfo batchingInfo = BatchingEngine.AnalyzeBatching(
+                references.Metadata,
+                references.Items,
+                lookup,
+                MockElementLocation.Instance);
+            List<ItemBucket> analyzedBuckets = BatchingEngine.PrepareBatchingBuckets(
+                batchingInfo,
+                lookup,
+                MockElementLocation.Instance,
+                loggingContext);
+
+            GetBucketSignatures(analyzedBuckets, "@(File)")
+                .ShouldBe(GetBucketSignatures(directBuckets, "@(File)"));
+            GetBucketSignatures(analyzedBuckets, "@(File)")
+                .ShouldBe(["first;second"]);
+        }
+
         [Fact]
         public void GetBuckets()
         {
@@ -530,6 +721,22 @@ namespace Microsoft.Build.UnitTests.BackEnd
         private static Lookup CreateLookup(ItemDictionary<ProjectItemInstance> itemsByType, PropertyDictionary<ProjectPropertyInstance> properties)
         {
             return new Lookup(itemsByType, properties);
+        }
+
+        private static string[] GetBucketSignatures(
+            List<ItemBucket> buckets,
+            string expression = "@(First)|@(Second)|%(First.Key)|%(Second.Key)|%(Common)")
+        {
+            var signatures = new string[buckets.Count];
+            for (int i = 0; i < buckets.Count; i++)
+            {
+                signatures[i] = buckets[i].Expander.ExpandIntoStringAndUnescape(
+                    expression,
+                    ExpanderOptions.ExpandAll,
+                    MockElementLocation.Instance);
+            }
+
+            return signatures;
         }
     }
 }
