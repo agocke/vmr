@@ -101,6 +101,29 @@ properties and passed to both generator and compiler. Construction knows the
 path; execution supplies the contents. Only zero-I/O invocations may use
 `<Output>` mappings.
 
+### Output parent directories
+
+The standalone host validates the complete invocation, then ensures the parent
+directories of its declared output files exist before executing the task.
+Parent directories are execution scaffolding, not owned directory-tree
+artifacts. No directory action, timestamp dependency, or success stamp is
+emitted. File/directory collisions fail without deleting existing paths.
+
+Common's five `MakeDir` call sites retain their ordinary behavior outside
+hardened mode. During construction they instead use the audited zero-I/O
+`RemoveDuplicates` task to accumulate `_MSBuildRequiredOutputDirectory` items.
+The emitter captures these requirements as tasks return, including from
+`CallTarget` scopes, and checks the complete action closure before publication:
+each directory must be an ancestor of a declared file output. Repeated and
+nested requirements are allowed; preexisting directories do not bypass the
+check. Uncovered requests, including arbitrary `CreateDirectory` entries, fail
+rather than disappearing or being created during construction.
+
+This is a structural-directory profile, not support for general `MakeDir`
+actions, `DirectoriesCreated` mappings, empty-directory products, or tree
+artifacts. Directory-creation errors in hardened execution are fail-fast;
+ordinary `PrepareForBuild` retains `ContinueOnError=true`.
+
 ### Captured construction platform
 
 The command-line launcher captures the host OS once as the global property

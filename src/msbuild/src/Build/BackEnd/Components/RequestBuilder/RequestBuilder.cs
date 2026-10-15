@@ -1404,6 +1404,10 @@ namespace Microsoft.Build.BackEnd
                             ? new BuildAbortedException()
                             : new BuildAbortedException(result.Exception.Message, result.Exception);
                     }
+
+                    _requestEntry.ActionGraph.RequireOutputDirectories(
+                        lookup.GetItems(HardenedActionGraph.RequiredOutputDirectoryItem),
+                        task.Location);
                 }
                 finally
                 {

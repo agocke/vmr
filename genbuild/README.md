@@ -85,6 +85,9 @@ later Clean. Nonempty post-build events using `Always` or `OnOutputUpdated`
 are rejected; use `OnBuildSuccess` or no event. Ordinary MSBuild retains its
 failure handlers. Unsupported graph construction fails explicitly; there is
 no fallback to ordinary Build.
+The action host prepares declared output-file parents. Common directory
+preparation is accepted only when every requested directory contains a
+declared file output; unrelated empty-directory effects remain unsupported.
 The compiler smoke check invokes the compiler directly, not through a `Csc`
 graph action. Workload resolution is disabled in this prototype.
 

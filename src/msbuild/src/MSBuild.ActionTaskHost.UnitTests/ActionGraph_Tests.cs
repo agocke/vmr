@@ -80,6 +80,117 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     }
 
     [UnixOnlyTheory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void CommonDirectoryPreparationUsesOutputParents(bool callTarget, bool withDirectories)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteDirectoryPreparationProject(directory, callTarget, withDirectories);
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph).ShouldBeTrue();
+
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(2);
+        Directory.Exists(Path.Combine(directory, "obj")).ShouldBeFalse();
+        Directory.Exists(Path.Combine(directory, "bin")).ShouldBeFalse();
+        Ninja(graph, out bool success);
+
+        success.ShouldBeTrue();
+        string result = Path.Combine(directory, "bin", "app", "second.txt");
+        File.ReadAllText(result).ShouldBe("literal%3B;value|metadata%25|consumed");
+        DateTime modified = File.GetLastWriteTimeUtc(result);
+        string unchanged = Ninja(graph, out success);
+
+        success.ShouldBeTrue();
+        unchanged.ShouldContain("no work to do");
+        File.GetLastWriteTimeUtc(result).ShouldBe(modified);
+
+        Directory.Delete(Path.Combine(directory, "obj"), recursive: true);
+        Ninja(graph, out success);
+
+        success.ShouldBeTrue();
+        File.ReadAllText(result).ShouldBe("literal%3B;value|metadata%25|consumed");
+        File.Exists(Path.Combine(directory, "obj", "nested", "first.txt")).ShouldBeTrue();
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("unrelated", false, false)]
+    [InlineData("unrelated", true, false)]
+    [InlineData("unrelated", false, true)]
+    [InlineData("obj-sibling", false, false)]
+    [InlineData("obj/nested/empty", false, false)]
+    [InlineData("bin/app/second.txt", false, false)]
+    public void RejectsUncoveredDirectoryEffects(string requested, bool preexisting, bool callTarget)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteDirectoryPreparationProject(directory, callTarget);
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.AddFirst(new XElement("ItemGroup",
+            new XElement("CreateDirectory", new XAttribute("Include", requested))));
+        File.WriteAllText(project, contents.ToString());
+        if (preexisting)
+        {
+            Directory.CreateDirectory(Path.Combine(directory, requested));
+        }
+
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log).ShouldBeFalse();
+
+        log.ShouldContain("directory requirement");
+        log.ShouldContain("without a declared file output beneath it");
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        Directory.Exists(Path.Combine(directory, "obj")).ShouldBeFalse();
+        Directory.Exists(Path.Combine(directory, "bin")).ShouldBeFalse();
+        Directory.Exists(Path.Combine(directory, requested)).ShouldBe(preexisting);
+    }
+
+    [UnixOnlyFact]
+    public void DirectoryRequirementsDoNotExpandWildcards()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteDirectoryPreparationProject(directory);
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.Element("PropertyGroup")!.Element("OutDir")!.Value = "wildcard*";
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log).ShouldBeFalse();
+
+        log.ShouldContain("nonexact declared path");
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        Directory.Exists(Path.Combine(directory, "obj")).ShouldBeFalse();
+    }
+
+    [UnixOnlyFact]
+    public void OrdinaryDirectoryPreparationStillCreatesArbitraryDirectories()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteDirectoryPreparationProject(directory);
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.Elements("Target").Single(target => target.Attribute("Name")!.Value == "Build").RemoveNodes();
+        contents.Root.AddFirst(new XElement("ItemGroup",
+            new XElement("CreateDirectory", new XAttribute("Include", "empty-extra-directory"))));
+        File.WriteAllText(project, contents.ToString());
+
+        RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" -nr:false -v:minimal", out bool succeeded, outputHelper: _output);
+
+        succeeded.ShouldBeTrue();
+        Directory.Exists(Path.Combine(directory, "bin")).ShouldBeTrue();
+        Directory.Exists(Path.Combine(directory, "obj", "nested")).ShouldBeTrue();
+        Directory.Exists(Path.Combine(directory, "empty-extra-directory")).ShouldBeTrue();
+    }
+
+    [UnixOnlyTheory]
     [InlineData(false)]
     [InlineData(true)]
     public void OrdinaryReferenceDefaultsRetainTheirExistingSearchSources(bool sdkProfile)
@@ -1210,6 +1321,52 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
                 .ShouldHaveSingleItem()),
             new XElement(common.Elements("Target")
                 .Where(target => target.Attribute("Name")?.Value == "_ValidateHardenedAssemblySearchPaths").ShouldHaveSingleItem()));
+        File.WriteAllText(project, contents.ToString());
+        return project;
+    }
+
+    private static string WriteDirectoryPreparationProject(string directory, bool callTarget = false, bool withDirectories = true)
+    {
+        string sdk = Path.Combine(Path.GetDirectoryName(RunnerUtilities.BootstrapDotnetHostPath)!,
+            "sdk", RunnerUtilities.BootstrapSdkVersion);
+        XElement common = XDocument.Load(Path.Combine(sdk, "Microsoft.Common.CurrentVersion.targets")).Root!;
+        string project = WriteProject(directory);
+        XDocument contents = XDocument.Parse(File.ReadAllText(project)
+            .Replace("first.txt", "obj/nested/first.txt")
+            .Replace("second.txt", "bin/app/second.txt"));
+        XElement root = contents.Root!;
+        root.AddFirst(new XElement("PropertyGroup",
+            new XElement("OutDir", withDirectories ? "bin/" : ""),
+            new XElement("IntermediateOutputPath", withDirectories ? "obj/" : ""),
+            new XElement("InteropOutputPath", withDirectories ? "obj/" : "")));
+        if (withDirectories)
+        {
+            root.AddFirst(new XElement("ItemGroup",
+                new XElement("DocFileItem", new XAttribute("Include", "obj/nested/document.xml")),
+                new XElement("EmbeddedResource", new XAttribute("Include", "resource"),
+                    new XElement("Culture", "nested")),
+                new XElement("CreateDirectory", new XAttribute("Include", "obj/nested/"))));
+        }
+
+        XElement prepare = new("Target", new XAttribute("Name", "PrepareDirectories"));
+        foreach (XElement makeDir in common.Descendants("MakeDir"))
+        {
+            XElement requirement = makeDir.ElementsAfterSelf().First();
+            requirement.Element("Output")!.Attribute("ItemName")!.Value.ShouldBe("_MSBuildRequiredOutputDirectory");
+            prepare.Add(new XElement(makeDir), new XElement(requirement));
+        }
+
+        XElement build = root.Element("Target")!;
+        if (callTarget)
+        {
+            build.AddFirst(new XElement("CallTarget", new XAttribute("Targets", "PrepareDirectories")));
+        }
+        else
+        {
+            build.SetAttributeValue("DependsOnTargets", "PrepareDirectories");
+        }
+
+        root.Add(prepare);
         File.WriteAllText(project, contents.ToString());
         return project;
     }

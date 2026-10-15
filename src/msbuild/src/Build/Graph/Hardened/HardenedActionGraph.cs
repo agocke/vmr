@@ -14,12 +14,18 @@ using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
+#if NETFRAMEWORK
+using Path = Microsoft.IO.Path;
+#else
+using Path = System.IO.Path;
+#endif
 
 namespace Microsoft.Build.Graph.Hardened;
 
 internal sealed class HardenedActionGraph
 {
     internal const string HostOSProperty = "MSBuildGraphHostOS";
+    internal const string RequiredOutputDirectoryItem = "_MSBuildRequiredOutputDirectory";
 
     private static readonly HashSet<string> s_intrinsicFunctions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -75,6 +81,7 @@ internal sealed class HardenedActionGraph
     private readonly string _hostOS;
     private readonly Dictionary<string, string> _environment;
     private readonly List<ActionInvocation> _actions = [];
+    private readonly Dictionary<string, ElementLocation> _requiredOutputDirectories = new(FileUtilities.PathComparer);
     private readonly ElementLocation _location;
 
     internal HardenedActionGraph(ProjectInstance project, TaskEnvironment environment)
@@ -108,6 +115,18 @@ internal sealed class HardenedActionGraph
     internal TaskEnvironment CreateConstructionEnvironment()
         => TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(
             _directory, _environment);
+
+    internal void RequireOutputDirectories(IEnumerable<ProjectItemInstance> directories, ElementLocation location)
+    {
+        foreach (ProjectItemInstance directory in directories)
+        {
+            string path = Path.TrimEndingDirectorySeparator(CanonicalPath(directory.EvaluatedInclude, location));
+            if (!_requiredOutputDirectories.ContainsKey(path))
+            {
+                _requiredOutputDirectories.Add(path, location);
+            }
+        }
+    }
 
     // True means the invocation was recorded, not executed.
     internal bool Record(ITask task, Dictionary<string, object> parameters, ProjectTaskInstance node)
@@ -177,6 +196,26 @@ internal sealed class HardenedActionGraph
                 Require(!Conflicts(output, _destination) && !Conflicts(output, _destination + ".actions"),
                     $"task output '{output}' overlapping graph metadata");
                 producers.Add(output, i);
+            }
+        }
+
+        if (_requiredOutputDirectories.Count > 0)
+        {
+            HashSet<string> outputParents = new(FileUtilities.PathComparer);
+            foreach (string output in producers.Keys)
+            {
+                string? parent = Path.GetDirectoryName(output);
+                while (parent is not null && outputParents.Add(parent))
+                {
+                    parent = Path.GetDirectoryName(parent);
+                }
+            }
+
+            foreach (KeyValuePair<string, ElementLocation> requirement in _requiredOutputDirectories)
+            {
+                Require(outputParents.Contains(requirement.Key),
+                    $"directory requirement '{requirement.Key}' without a declared file output beneath it; standalone directory effects are unsupported",
+                    requirement.Value);
             }
         }
 
@@ -335,12 +374,16 @@ internal sealed class HardenedActionGraph
         string[] paths = new string[items.Length];
         for (int i = 0; i < items.Length; i++)
         {
-            string path = items[i].ItemSpec;
-            Require(!string.IsNullOrWhiteSpace(path) && path.IndexOfAny(['*', '?']) < 0, $"nonexact declared path '{path}'");
-            paths[i] = Path.GetFullPath(Path.Combine(_directory, path));
+            paths[i] = CanonicalPath(items[i].ItemSpec);
         }
 
         return paths;
+    }
+
+    private string CanonicalPath(string path, ElementLocation? location = null)
+    {
+        Require(!string.IsNullOrWhiteSpace(path) && path.IndexOfAny(['*', '?']) < 0, $"nonexact declared path '{path}'", location);
+        return Path.GetFullPath(Path.Combine(_directory, path));
     }
 
     private static List<string> SortedKeys<T>(IReadOnlyDictionary<string, T> dictionary)

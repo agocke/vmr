@@ -331,9 +331,20 @@ events. Nonempty post-build events using `Always` or `OnOutputUpdated` fail
 with MSB3670. The validator skips only provably disabled `OnError` handlers;
 potentially active handlers still prevent graph publication.
 
-The next full-`Build` probe reaches unsupported directory creation. Other
-diagnostic invocations still need explicit declarations as their target
-closures are admitted.
+The action host now prepares declared file-output parents after validating
+the invocation and before executing the task. Common's five directory
+preparation sites accumulate zero-I/O requirements instead of running
+`MakeDir` during construction. Each requested directory must be covered by a
+declared file output beneath it before the graph can be published. Unrelated
+empty-directory effects remain unsupported, even if the directory already
+exists. There are no directory actions or stamps; ordinary `MakeDir` behavior
+is unchanged.
+
+The full-`Build` probe still reaches unsupported project/reference handling.
+Other diagnostic invocations need explicit declarations as their target
+closures are admitted. The SDK's satellite-assembly target also retains an
+unadapted `MakeDir`; the structural-directory profile currently covers
+Common's preparation sites, not every SDK or custom directory operation.
 The probe also reports unsupported resource, editorconfig and assembly-info
 generation, source mapping, compilation, dependency/runtime configuration,
 copying, and cleanup operations. Some diagnostics follow unavailable earlier

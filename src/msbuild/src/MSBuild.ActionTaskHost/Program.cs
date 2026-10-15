@@ -86,6 +86,11 @@ internal static class Program
         {
             Dictionary<string, object> parameters = TaskParameterBinder.Bind(task, invocation.Parameters);
             IReadOnlyList<string> outputs = ValidateFootprint(taskType, parameters);
+            foreach (string output in outputs)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+            }
+
             bool succeeded = task.Execute();
             if (!succeeded || engine.HasLoggedErrors)
             {

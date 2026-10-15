@@ -42,6 +42,65 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         File.ReadAllLines(destination).ShouldBe(["first;line", "literal%3Bvalue", "last\\line"]);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PreparesDeclaredOutputParentsBeforeExecutingTask(bool absolute)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string destination = Path.Combine("nested $ parent", "deeper", "probe.json");
+        if (absolute)
+        {
+            destination = Path.Combine(directory, destination);
+        }
+
+        Dictionary<string, object?> parameters = ProbeParameters();
+        parameters["File"] = destination;
+        parameters["DeclaredOutputs"] = new[] { destination };
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), parameters);
+
+        Directory.Exists(Path.Combine(directory, "nested $ parent")).ShouldBeFalse();
+        Run(manifest, out _).ShouldBeTrue();
+
+        using JsonDocument result = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, destination)));
+        result.RootElement.GetProperty("engineLoaded").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    public void InvalidFootprintDoesNotCreateOutputParents()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        Dictionary<string, object?> parameters = ProbeParameters();
+        parameters["File"] = "must-not-create/probe.json";
+        parameters["DeclaredInputs"] = new[] { "missing-input.txt" };
+        parameters["DeclaredOutputs"] = new[] { "must-not-create/probe.json" };
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), parameters);
+
+        Run(manifest, out _).ShouldBeFalse();
+
+        Directory.Exists(Path.Combine(directory, "must-not-create")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void OutputParentFileCollisionDoesNotRemoveTheFile()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string collision = Path.Combine(directory, "blocked");
+        File.WriteAllText(collision, "keep-existing-file");
+        Dictionary<string, object?> parameters = ProbeParameters();
+        parameters["File"] = "blocked/probe.json";
+        parameters["DeclaredOutputs"] = new[] { "blocked/probe.json" };
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), parameters);
+
+        Run(manifest, out string log).ShouldBeFalse();
+
+        log.ShouldContain("blocked");
+        File.ReadAllText(collision).ShouldBe("keep-existing-file");
+    }
+
     [Fact]
     public void PreservesTypedValuesItemsMetadataAndExplicitEnvironmentWithoutEngine()
     {
