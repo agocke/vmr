@@ -31,7 +31,8 @@ ordinary builds unchanged outside the opt-in hardened graph-generation path.
 
 Cross-component prototype work lives together under the VMR's `src/msbuild`,
 `src/sdk`, `src/sourcelink`, and `src/roslyn` directories. NuGet integration
-belongs in `src/nuget-client`; no NuGet prototype changes are included yet.
+lives in `src/nuget-client`: the standalone app stages the local NuGet targets
+while retaining the pinned NuGet managed dependency closure.
 The integration baseline is VMR commit
 `baa2aa16da04556ac274562798d2fbd7cfe7bc9a`.
 
@@ -106,10 +107,18 @@ check does not depend on graph support for Roslyn's `Csc` task.
 Set `GenBuildTestHost` to a runtime-only installation to verify there is no SDK
 dependency at runtime.
 
-The app layout does not make all SDK targets graph-compatible. Full SDK Build
-still needs the NuGet explicit-input project-style classification path and
-subsequent task adaptations, including `Csc`; unsupported construction fails rather than
-falling back to ordinary execution.
+The app layout does not make all SDK targets graph-compatible. NuGet's
+`_GetRestoreProjectStyle` target now classifies the supported `PackageReference`
+profile from explicit project inputs without executing its discovery task.
+Other styles or inputs requiring `packages.config` discovery fail during
+construction; ordinary Restore retains its existing behavior. SDK duplicate-item
+validation is an audited zero-I/O task. The smoke fixture imports the shipped
+NuGet and SDK validation targets, covers explicit and item-implied styles in the
+presence of both packages.config layouts, and rejects unsupported styles and
+duplicate items without publishing a graph or executing actions.
+
+Full SDK Build still needs further task adaptations, including `Csc`;
+unsupported construction fails rather than falling back to ordinary execution.
 
 ## 1. Prove an engine-free task host
 
@@ -304,9 +313,22 @@ preview-SDK banner during hardened graph construction because neither
 produces build artifacts; ordinary Restore and Build retain their behavior.
 The coordinated SDK's ordinary Restore prepares all six imports/marker
 inputs, and fresh hardened Build gets past snapshot replay.
-RAR and the stock Roslyn task also still need audited
+It also gets past NuGet classification and SDK duplicate-item validation.
+Explicit fail-fast `ContinueOnError` values (including `false` and
+`ErrorAndStop`) are accepted; continue-on-error modes and `OnError` handlers
+remain unsupported.
+
+The next full-`Build` probe reaches unsupported preparation operations, including
+Common's diagnostic tasks, directory creation, and an `OnError` handler.
+The probe also reports unsupported resource, editorconfig and assembly-info
+generation, source mapping, compilation, dependency/runtime configuration,
+copying, and cleanup operations. Some diagnostics follow unavailable earlier
+outputs; fix the first unsupported operations and re-probe rather than treating
+all diagnostics as independently reachable blockers.
+RAR and the stock Roslyn task still need audited
 action-graph adaptation. Full SDK `Build` remains unsupported; ambient
-discovery has not been allowed as a fallback.
+discovery has not been allowed as a fallback. Establish the bounded compile
+closure below before broadening to the full `Build` lifecycle.
 
 Use existing SDK overlays for a single-framework C# hello-world profile:
 

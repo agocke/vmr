@@ -12,9 +12,20 @@ namespace Microsoft.Build.Tasks
     /// Task that simply emits an error. Engine will add project file path and line/column
     /// information.
     /// </summary>
+    [MSBuildDeclaredIOTask]
     [MSBuildMultiThreadableTask]
     public sealed class Error : TaskExtension
     {
+        /// <summary>
+        /// Gets or sets the declared file inputs, which are empty for this diagnostic task.
+        /// </summary>
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        /// <summary>
+        /// Gets or sets the declared file outputs, which are empty for this diagnostic task.
+        /// </summary>
+        public ITaskItem[] DeclaredOutputs { get; set; }
+
         /// <summary>
         /// Error message
         /// </summary>

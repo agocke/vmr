@@ -202,6 +202,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       DefaultItemsEnabled="$(EnableDefaultItems)"
       DefaultItemsOfThisTypeEnabled="$(EnableDefaultCompileItems)"
       PropertyNameToDisableDefaultItems="EnableDefaultCompileItems"
+      DeclaredInputs=""
+      DeclaredOutputs=""
       MoreInformationLink="$(DefaultItemsMoreInformationLink)"
       ContinueOnError="$(ContinueOnError)">
       <Output TaskParameter="DeduplicatedItems" ItemName="DeduplicatedCompileItems" />
@@ -213,6 +215,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       DefaultItemsEnabled="$(EnableDefaultItems)"
       DefaultItemsOfThisTypeEnabled="$(EnableDefaultEmbeddedResourceItems)"
       PropertyNameToDisableDefaultItems="EnableDefaultEmbeddedResourceItems"
+      DeclaredInputs=""
+      DeclaredOutputs=""
       MoreInformationLink="$(DefaultItemsMoreInformationLink)"
       ContinueOnError="$(ContinueOnError)">
       <Output TaskParameter="DeduplicatedItems" ItemName="DeduplicatedEmbeddedResourceItems" />
@@ -225,6 +229,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       DefaultItemsEnabled="$(EnableDefaultItems)"
       DefaultItemsOfThisTypeEnabled="$(EnableDefaultContentItems)"
       PropertyNameToDisableDefaultItems="EnableDefaultContentItems"
+      DeclaredInputs=""
+      DeclaredOutputs=""
       MoreInformationLink="$(DefaultItemsMoreInformationLink)"
       ContinueOnError="$(ContinueOnError)">
       <Output TaskParameter="DeduplicatedItems" ItemName="DeduplicatedContentItems" />

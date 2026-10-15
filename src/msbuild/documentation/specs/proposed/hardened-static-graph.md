@@ -79,6 +79,12 @@ metadata through ordinary `<Output>` mappings. Their results are available
 to subsequent construction. Fixed host context includes the configured
 project directory and path semantics, not an ambient current directory.
 
+Explicit fail-fast `ContinueOnError` values, such as `false` and `ErrorAndStop`,
+are accepted after static expansion. Values that continue after failure,
+invalid values, and unavailable control expressions are rejected. An explicitly
+empty value is not equivalent to omitting the attribute. `OnError` handlers and
+task-host overrides remain unsupported.
+
 File-I/O actions cannot return MSBuild values in the prototype. A generator's
 output path, for example, must be established through static items or
 properties and passed to both generator and compiler. Construction knows the

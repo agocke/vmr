@@ -1,0 +1,32 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <RestoreProjectStyle>$(InputRestoreProjectStyle)</RestoreProjectStyle>
+    <ExpectedStyle Condition="'$(ExpectedStyle)' == ''">PackageReference</ExpectedStyle>
+    <ExpectedCompatible Condition="'$(ExpectedCompatible)' == ''">true</ExpectedCompatible>
+    <ResultFile>$(MSBuildProjectDirectory)/style-$(TestCase).txt</ResultFile>
+    <MicrosoftNETBuildTasksAssembly>$(MSBuildSDKsPath)/Microsoft.NET.Sdk/tools/net11.0/Microsoft.NET.Build.Tasks.dll</MicrosoftNETBuildTasksAssembly>
+  </PropertyGroup>
+  <Import Project="$(MSBuildToolsPath)/NuGet.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.DefaultItems.Shared.targets" />
+  <ItemGroup>
+    <PackageReference Include="ExplicitReference" Condition="'$(IncludePackageReference)' == 'true'" />
+    <Compile Include="not-on-disk.cs" />
+    <Compile Include="NOT-ON-DISK.cs" Condition="'$(IncludeDuplicate)' == 'true'" />
+  </ItemGroup>
+  <PropertyGroup>
+    <EnableDefaultItems>true</EnableDefaultItems>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <ContinueOnError>false</ContinueOnError>
+  </PropertyGroup>
+  <Target Name="CollectPackageReferences" />
+  <Target Name="ApplyImplicitVersions" />
+  <Target Name="CheckForImplicitPackageReferenceOverrides" />
+  <Target Name="Build" DependsOnTargets="_GetRestoreProjectStyle;CheckForDuplicateItems">
+    <Error Condition="'$(RestoreProjectStyle)' != '$(ExpectedStyle)' or '$(PackageReferenceCompatibleProjectStyle)' != '$(ExpectedCompatible)'"
+           Text="Unexpected project style: $(RestoreProjectStyle)|$(PackageReferenceCompatibleProjectStyle)"
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(ResultFile)" Lines="$(RestoreProjectStyle)|$(PackageReferenceCompatibleProjectStyle)"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+  </Target>
+  <Target Name="Restore" DependsOnTargets="Build" />
+</Project>

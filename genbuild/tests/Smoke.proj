@@ -14,7 +14,7 @@
     <WriteLinesToFile File="$(_TestDirectory)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_TestDirectory)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_TestDirectory)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
-    <Copy SourceFiles="$(MSBuildThisFileDirectory)Action.proj;$(MSBuildThisFileDirectory)HelloWorld.csproj;$(MSBuildThisFileDirectory)HelloWorld.cs" DestinationFolder="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Action.proj;$(MSBuildThisFileDirectory)ProjectStyle.proj;$(MSBuildThisFileDirectory)HelloWorld.csproj;$(MSBuildThisFileDirectory)HelloWorld.cs" DestinationFolder="$(_TestDirectory)" />
     <Exec Command="$(_App) --help" />
     <Exec Command="$(_App) invalid" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_InvalidExitCode" />
@@ -32,6 +32,7 @@
       <Output TaskParameter="Lines" ItemName="_ActionContents" />
     </ReadLinesFromFile>
     <Error Condition="'@(_ActionContents)' != 'executed outside MSBuild'" Text="The independent action host did not produce the expected contents." />
+    <CallTarget Targets="TestProjectStyles" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -45,6 +46,32 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item validation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestProjectStyles">
+    <WriteLinesToFile File="$(_TestDirectory)packages.config" Lines="&lt;packages /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)packages.ProjectStyle.config" Lines="&lt;packages /&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_ProjectStyleCase Include="explicit" Style="PackageReference" HasReference="false" />
+      <_ProjectStyleCase Include="mixed-case" Style="pAcKaGeReFeReNcE" HasReference="false" />
+      <_ProjectStyleCase Include="items" Style="" HasReference="true" />
+      <_ProjectStyleRejectedCase Include="discovery" Style="" HasReference="false" Duplicate="false" />
+      <_ProjectStyleRejectedCase Include="override" Style="PackagesConfig" HasReference="true" Duplicate="false" />
+      <_ProjectStyleRejectedCase Include="unknown" Style="invalid" HasReference="true" Duplicate="false" />
+      <_ProjectStyleRejectedCase Include="duplicate" Style="PackageReference" HasReference="false" Duplicate="true" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)ProjectStyle.proj&quot; -p:TestCase=%(_ProjectStyleCase.Identity) -p:InputRestoreProjectStyle=%(_ProjectStyleCase.Style) -p:IncludePackageReference=%(_ProjectStyleCase.HasReference) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)style-%(_ProjectStyleCase.Identity).ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)style-%(_ProjectStyleCase.Identity).txt')" Text="Classification and validation must not execute file actions during construction." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f &quot;style-%(_ProjectStyleCase.Identity).ninja&quot;" />
+    <Error Condition="!Exists('$(_TestDirectory)style-%(_ProjectStyleCase.Identity).txt')" Text="Classification did not produce an executable graph." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)ProjectStyle.proj&quot; -p:TestCase=%(_ProjectStyleRejectedCase.Identity) -p:InputRestoreProjectStyle=%(_ProjectStyleRejectedCase.Style) -p:IncludePackageReference=%(_ProjectStyleRejectedCase.HasReference) -p:IncludeDuplicate=%(_ProjectStyleRejectedCase.Duplicate) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)style-%(_ProjectStyleRejectedCase.Identity).ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_ProjectStyleRejectedExitCode" />
+    </Exec>
+    <Error Condition="@(_ProjectStyleRejectedExitCode->AnyHaveMetadataValue('Identity', '0'))" Text="Unsupported classification and duplicate items must fail." />
+    <Error Condition="Exists('$(_TestDirectory)style-%(_ProjectStyleRejectedCase.Identity).ninja') or Exists('$(_TestDirectory)style-%(_ProjectStyleRejectedCase.Identity).ninja.actions') or Exists('$(_TestDirectory)style-%(_ProjectStyleRejectedCase.Identity).txt')"
+           Text="Rejected construction must neither publish a graph nor execute actions." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)ProjectStyle.proj&quot; -p:TestCase=ordinary -p:ExpectedStyle=PackagesConfig -p:ExpectedCompatible=false" />
+    <Error Condition="!Exists('$(_TestDirectory)style-ordinary.txt')" Text="Ordinary project-style classification must retain packages.config discovery." />
   </Target>
 </Project>

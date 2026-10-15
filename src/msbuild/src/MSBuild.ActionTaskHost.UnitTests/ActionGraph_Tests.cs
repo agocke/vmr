@@ -672,6 +672,49 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     }
 
     [UnixOnlyTheory]
+    [InlineData("false")]
+    [InlineData("ErrorAndStop")]
+    [InlineData("off")]
+    public void AllowsExplicitFailFastContinueOnError(string continueOnError)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        File.WriteAllText(project, File.ReadAllText(project).Replace(
+            "Text=\"@(Values)\"", "Text=\"@(Values)\" ContinueOnError=\"$(ActionContinueOnError)\""));
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, $"-p:ActionContinueOnError={continueOnError}").ShouldBeTrue();
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        Ninja(graph, out bool success);
+
+        success.ShouldBeTrue();
+        File.ReadAllText(Path.Combine(directory, "second.txt")).ShouldBe("literal%3B;value|metadata%25|consumed");
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("", "MSB4021")]
+    [InlineData("WarnAndContinue", "MSB4286")]
+    [InlineData("ErrorAndContinue", "MSB4286")]
+    [InlineData("invalid", "MSB4286")]
+    public void RejectsNonFailFastOrInvalidContinueOnError(string continueOnError, string diagnosticCode)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        File.WriteAllText(project, File.ReadAllText(project).Replace(
+            "Text=\"@(Values)\"", $"Text=\"@(Values)\" ContinueOnError=\"{continueOnError}\""));
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log).ShouldBeFalse();
+
+        log.ShouldContain(diagnosticCode);
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyTheory]
     [InlineData("Unknown")]
     [InlineData("OutputMapping")]
     [InlineData("MissingDeclaration")]
@@ -800,13 +843,17 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         File.ReadAllText(Path.Combine(directory, "first.txt")).ShouldBe("folder/file.txt|folder/file.txt|1");
     }
 
-    [UnixOnlyFact]
-    public void FailedActionBlocksItsConsumer()
+    [UnixOnlyTheory]
+    [InlineData("")]
+    [InlineData("false")]
+    [InlineData("ErrorAndStop")]
+    public void FailedActionBlocksItsConsumer(string continueOnError)
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
         string directory = env.CreateFolder().Path;
         string project = WriteProject(directory);
-        File.WriteAllText(project, File.ReadAllText(project).Replace("Text=\"@(Values)\"", "Text=\"@(Values)\" Fail=\"true\""));
+        string control = continueOnError.Length == 0 ? "" : $" ContinueOnError=\"{continueOnError}\"";
+        File.WriteAllText(project, File.ReadAllText(project).Replace("Text=\"@(Values)\"", $"Text=\"@(Values)\" Fail=\"true\"{control}"));
         string graph = Path.Combine(directory, "build.ninja");
 
         Generate(project, graph).ShouldBeTrue();

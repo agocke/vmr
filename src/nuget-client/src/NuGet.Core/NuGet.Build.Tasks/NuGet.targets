@@ -681,6 +681,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     </PropertyGroup>
 
     <GetRestoreProjectStyleTask
+      Condition="'$(MSBuildHardenedGraph)' != 'true'"
       HasPackageReferenceItems="$(_HasPackageReferenceItems)"
       MSBuildProjectDirectory="$(MSBuildProjectDirectory)"
       MSBuildProjectName="$(MSBuildProjectName)"
@@ -688,6 +689,19 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="ProjectStyle" PropertyName="RestoreProjectStyle" />
       <Output TaskParameter="IsPackageReferenceCompatibleProjectStyle" PropertyName="PackageReferenceCompatibleProjectStyle" />
     </GetRestoreProjectStyleTask>
+
+    <Error
+      Condition="'$(MSBuildHardenedGraph)' == 'true' and
+                 '$(RestoreProjectStyle)' != 'PackageReference' and
+                 ('$(RestoreProjectStyle)' != '' or '$(_HasPackageReferenceItems)' != 'true')"
+      DeclaredInputs=""
+      DeclaredOutputs=""
+      Text="Hardened graph construction requires an explicit PackageReference restore style or PackageReference items. Other project styles and packages.config discovery are not supported." />
+
+    <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+      <PackageReferenceCompatibleProjectStyle>true</PackageReferenceCompatibleProjectStyle>
+    </PropertyGroup>
 
     <PropertyGroup>
       <_HasPackageReferenceItems />

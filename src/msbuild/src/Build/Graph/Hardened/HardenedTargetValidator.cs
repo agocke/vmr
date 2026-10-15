@@ -853,7 +853,7 @@ internal sealed class HardenedTargetValidator
         }
 
         if (!string.IsNullOrEmpty(task.MSBuildRuntime) || !string.IsNullOrEmpty(task.MSBuildArchitecture) ||
-            !string.IsNullOrEmpty(task.ContinueOnError))
+            !canStopOnFailure)
         {
             ReportUnsupported(task.Location, "task hosting or ContinueOnError overrides", "action graph construction");
         }
@@ -1085,7 +1085,7 @@ internal sealed class HardenedTargetValidator
                 reportUnmodeled: false,
                 out string expandedValue))
         {
-            return true;
+            return false;
         }
 
         if (string.Equals(
@@ -1114,7 +1114,7 @@ internal sealed class HardenedTargetValidator
         }
         catch (ArgumentException)
         {
-            return true;
+            return false;
         }
     }
 

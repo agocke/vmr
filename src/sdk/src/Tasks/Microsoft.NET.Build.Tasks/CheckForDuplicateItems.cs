@@ -8,6 +8,7 @@ using Microsoft.Build.Framework;
 
 namespace Microsoft.NET.Build.Tasks
 {
+    [MSBuildDeclaredIOTask]
     [MSBuildMultiThreadableTask]
     public class CheckForDuplicateItems : TaskBase
     {
@@ -31,6 +32,10 @@ namespace Microsoft.NET.Build.Tasks
 
         [Output]
         public ITaskItem[] DeduplicatedItems { get; set; }
+
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        public ITaskItem[] DeclaredOutputs { get; set; }
 
         protected override void ExecuteCore()
         {
