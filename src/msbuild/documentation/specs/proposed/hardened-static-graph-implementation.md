@@ -315,8 +315,8 @@ The coordinated SDK's ordinary Restore prepares all six imports/marker
 inputs, and fresh hardened Build gets past snapshot replay.
 It also gets past NuGet classification and SDK duplicate-item validation.
 Explicit fail-fast `ContinueOnError` values (including `false` and
-`ErrorAndStop`) are accepted; continue-on-error modes and `OnError` handlers
-remain unsupported.
+`ErrorAndStop`) are accepted; continue-on-error modes and active `OnError`
+handlers remain unsupported.
 
 `Message` is now an audited zero-I/O task, with explicit empty declarations at
 Common's call sites. Ordinary and critical messages are logged during graph
@@ -324,9 +324,16 @@ construction, not emitted as Ninja actions; diagnostic file paths are location
 metadata, not file inputs. Invalid importance and missing declarations fail
 without publishing a graph or executing file actions.
 
-The next full-`Build` probe reaches unsupported preparation operations, including
-directory creation and an `OnError` handler. Other diagnostic invocations still
-need explicit declarations as their target closures are admitted.
+Common's `CoreBuild` now selects an explicit fail-fast graph profile. Its
+ordinary failure handlers remain unchanged, but hardened mode neither records
+partial writes in the clean-file ledger nor runs failure-time post-build
+events. Nonempty post-build events using `Always` or `OnOutputUpdated` fail
+with MSB3670. The validator skips only provably disabled `OnError` handlers;
+potentially active handlers still prevent graph publication.
+
+The next full-`Build` probe reaches unsupported directory creation. Other
+diagnostic invocations still need explicit declarations as their target
+closures are admitted.
 The probe also reports unsupported resource, editorconfig and assembly-info
 generation, source mapping, compilation, dependency/runtime configuration,
 copying, and cleanup operations. Some diagnostics follow unavailable earlier

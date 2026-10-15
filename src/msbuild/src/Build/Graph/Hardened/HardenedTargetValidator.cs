@@ -258,11 +258,6 @@ internal sealed class HardenedTargetValidator
 
         if (targetExecutes)
         {
-            if (target.OnErrorChildren.Count != 0)
-            {
-                ReportUnsupported(target.Location, "OnError", "action graph construction");
-            }
-
             ExpressionValidationResult dependenciesResult = ValidateExpression(
                 target,
                 target.DependsOnTargets,
@@ -394,7 +389,7 @@ internal sealed class HardenedTargetValidator
                     });
             }
 
-            if (failureStates.Count > 0)
+            if (target.OnErrorChildren.Count != 0)
             {
                 ValidatorState successfulState = CaptureState();
                 var successfulTargetResults = new Dictionary<string, ValueState>(
@@ -408,11 +403,15 @@ internal sealed class HardenedTargetValidator
                         completedFailureStates.Add(CompleteLegacyCallTargetScope(failureState));
                     }
 
-                    RestoreState(
-                        JoinStates(
-                            completedFailureStates,
-                            $"failure paths of target '{target.Name}'",
-                            unionFileWrites: true));
+                    if (completedFailureStates.Count > 0)
+                    {
+                        RestoreState(
+                            JoinStates(
+                                completedFailureStates,
+                                $"failure paths of target '{target.Name}'",
+                                unionFileWrites: true));
+                    }
+
                     ValidateOnErrorTargets(
                         project,
                         target,
@@ -1683,6 +1682,8 @@ internal sealed class HardenedTargetValidator
             {
                 continue;
             }
+
+            ReportUnsupported(onError.Location, "OnError", "action graph construction");
 
             ExpressionValidationResult targetsResult = ValidateExpression(
                 onError,

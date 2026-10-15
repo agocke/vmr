@@ -78,9 +78,13 @@ The app uses this VMR's NuGet targets with the pinned NuGet managed dependencies
 Full SDK Build graph support is unfinished: preparation, resource, compiler, copy,
 and cleanup operations still need adaptations, including RAR and Roslyn's `Csc`.
 SDK duplicate-item validation now runs as a zero-I/O construction task, and
-explicit fail-fast `ContinueOnError` values are supported; continuing after
-errors and `OnError` handlers remain unsupported. Unsupported graph
-construction fails explicitly; there is no fallback to ordinary Build.
+explicit fail-fast `ContinueOnError` values are supported. Continuing after
+errors and active `OnError` handlers remain unsupported. In hardened mode,
+Common's `CoreBuild` does not run failure handlers or record partial writes for
+later Clean. Nonempty post-build events using `Always` or `OnOutputUpdated`
+are rejected; use `OnBuildSuccess` or no event. Ordinary MSBuild retains its
+failure handlers. Unsupported graph construction fails explicitly; there is
+no fallback to ordinary Build.
 The compiler smoke check invokes the compiler directly, not through a `Csc`
 graph action. Workload resolution is disabled in this prototype.
 

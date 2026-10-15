@@ -792,6 +792,92 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     }
 
     [UnixOnlyTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CommonCoreBuildUsesFailFastGraphWithoutFailureActions(bool fail)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteCoreBuildProject(directory);
+        File.WriteAllText(project, File.ReadAllText(project).Replace("Text=\"@(Values)\"", $"Text=\"@(Values)\" Fail=\"{fail}\""));
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph).ShouldBeTrue();
+
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(2);
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        Ninja(graph, out bool success);
+
+        success.ShouldBe(!fail);
+        if (fail)
+        {
+            File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
+        }
+        else
+        {
+            File.ReadAllText(Path.Combine(directory, "second.txt")).ShouldBe("literal%3B;value|metadata%25|consumed");
+        }
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("Always", false, true)]
+    [InlineData("OnOutputUpdated", false, true)]
+    [InlineData("OnBuildSuccess", true, true)]
+    [InlineData("Always", true, false)]
+    [InlineData("OnOutputUpdated", true, false)]
+    public void CommonCoreBuildRejectsFailureDependentPostBuildEvents(string runPostBuildEvent, bool hasEvent, bool accepted)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteCoreBuildProject(directory, runPostBuildEvent, hasEvent ? "echo post-build" : "");
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log).ShouldBe(accepted);
+
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        if (!accepted)
+        {
+            log.ShouldContain("MSB3670");
+            File.Exists(graph).ShouldBeFalse();
+            Directory.Exists(graph + ".actions").ShouldBeFalse();
+        }
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("", false)]
+    [InlineData("Always", true)]
+    [InlineData("OnOutputUpdated", true)]
+    public void OrdinaryCoreBuildRetainsFailureHandlers(string runPostBuildEvent, bool runsPostBuild)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteCoreBuildProject(directory, runPostBuildEvent, "ordinary-event");
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.Elements("Target").Single(target => target.Attribute("Name")!.Value == "TestCompile")
+            .ReplaceNodes(new XElement("Error", new XAttribute("Text", "expected-core-build-failure")));
+        foreach (string targetName in new[] { "_CleanRecordFileWrites", "_TimeStampAfterCompile", "PostBuildEvent" })
+        {
+            contents.Root.Add(new XElement("Target", new XAttribute("Name", targetName),
+                new XElement("WriteLinesToFile",
+                    new XAttribute("File", targetName + ".txt"),
+                    new XAttribute("Lines", targetName),
+                    new XAttribute("Overwrite", "true"))));
+        }
+
+        File.WriteAllText(project, contents.ToString());
+
+        string log = RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" -nr:false -v:minimal", out bool succeeded, outputHelper: _output);
+
+        succeeded.ShouldBeFalse();
+        log.ShouldContain("expected-core-build-failure");
+        log.ShouldNotContain("MSB3670");
+        File.ReadAllText(Path.Combine(directory, "_CleanRecordFileWrites.txt")).ShouldContain("_CleanRecordFileWrites");
+        File.Exists(Path.Combine(directory, "_TimeStampAfterCompile.txt")).ShouldBe(runsPostBuild);
+        File.Exists(Path.Combine(directory, "PostBuildEvent.txt")).ShouldBe(runsPostBuild);
+    }
+
+    [UnixOnlyTheory]
     [InlineData("false")]
     [InlineData("ErrorAndStop")]
     [InlineData("off")]
@@ -1124,6 +1210,31 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
                 .ShouldHaveSingleItem()),
             new XElement(common.Elements("Target")
                 .Where(target => target.Attribute("Name")?.Value == "_ValidateHardenedAssemblySearchPaths").ShouldHaveSingleItem()));
+        File.WriteAllText(project, contents.ToString());
+        return project;
+    }
+
+    private static string WriteCoreBuildProject(string directory, string runPostBuildEvent = "", string postBuildEvent = "")
+    {
+        string sdk = Path.Combine(Path.GetDirectoryName(RunnerUtilities.BootstrapDotnetHostPath)!,
+            "sdk", RunnerUtilities.BootstrapSdkVersion);
+        XElement common = XDocument.Load(Path.Combine(sdk, "Microsoft.Common.CurrentVersion.targets")).Root!;
+        string project = WriteProject(directory);
+        XDocument contents = XDocument.Load(project);
+        XElement root = contents.Root!;
+        root.SetAttributeValue("DefaultTargets", "Build");
+        root.Element("Target")!.SetAttributeValue("Name", "TestCompile");
+        root.AddFirst(new XElement("PropertyGroup",
+            new XElement("CoreBuildDependsOn", "TestCompile"),
+            new XElement("RunPostBuildEvent", runPostBuildEvent),
+            new XElement("PostBuildEvent", postBuildEvent)));
+        foreach (string targetName in new[] { "CoreBuild", "_ValidateHardenedBuildFailureHandling" })
+        {
+            root.Add(new XElement(common.Elements("Target")
+                .Where(target => target.Attribute("Name")?.Value == targetName).ShouldHaveSingleItem()));
+        }
+
+        root.Add(new XElement("Target", new XAttribute("Name", "Build"), new XAttribute("DependsOnTargets", "CoreBuild")));
         File.WriteAllText(project, contents.ToString());
         return project;
     }

@@ -82,8 +82,18 @@ project directory and path semantics, not an ambient current directory.
 Explicit fail-fast `ContinueOnError` values, such as `false` and `ErrorAndStop`,
 are accepted after static expansion. Values that continue after failure,
 invalid values, and unavailable control expressions are rejected. An explicitly
-empty value is not equivalent to omitting the attribute. `OnError` handlers and
-task-host overrides remain unsupported.
+empty value is not equivalent to omitting the attribute. Active `OnError`
+handlers and task-host overrides remain unsupported. An `OnError` handler may
+be skipped only when its condition is provably false across the target's
+possible failure states.
+
+Common's `CoreBuild` uses an explicit fail-fast profile in hardened mode:
+failure does not run post-build events or update the clean-file ledger with
+partial writes. Successful-build bookkeeping remains unchanged, and ordinary
+MSBuild retains its failure handlers. A nonempty `PostBuildEvent` with
+`RunPostBuildEvent=Always` or `OnOutputUpdated` fails with MSB3670 rather than
+silently losing failure-time behavior. Use `OnBuildSuccess` or no event.
+This profile does not implement general failure-path execution.
 
 File-I/O actions cannot return MSBuild values in the prototype. A generator's
 output path, for example, must be established through static items or

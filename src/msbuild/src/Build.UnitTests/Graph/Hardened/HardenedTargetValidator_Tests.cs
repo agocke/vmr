@@ -340,6 +340,83 @@ public sealed class HardenedTargetValidator_Tests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void RejectsActiveOnErrorEvenWithoutTasks()
+    {
+        InvalidProjectFileException exception = ValidateFailure(
+            """
+            <Project>
+              <Target Name="Build">
+                <OnError ExecuteTargets="Failure" />
+              </Target>
+              <Target Name="Failure" />
+            </Project>
+            """,
+            new Dictionary<string, HardenedTaskClassification>());
+
+        exception.ErrorCode.ShouldBe("MSB4286");
+        exception.Message.ShouldContain("OnError");
+    }
+
+    [Theory]
+    [InlineData("false", false)]
+    [InlineData("false", true)]
+    [InlineData("'$(MSBuildHardenedGraph)' != 'true'", false)]
+    [InlineData("'$(MSBuildHardenedGraph)' != 'true'", true)]
+    public void SkipsProvablyDisabledOnError(string condition, bool withDependency)
+    {
+        ValidateSuccess(
+            $$"""
+            <Project>
+              <Target Name="Build" DependsOnTargets="{{(withDependency ? "Prepare" : "")}}">
+                <OnError ExecuteTargets="Missing" Condition="{{condition}}" />
+              </Target>
+              <Target Name="Prepare" />
+            </Project>
+            """,
+            new Dictionary<string, HardenedTaskClassification>());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RejectsOnErrorEnabledAtAPossibleFailure(bool resetOnSuccess)
+    {
+        using TestEnvironment environment = TestEnvironment.Create(_output);
+        ProjectInstance project = CreateProjectInstance(
+            environment,
+            $$"""
+            <Project>
+              <PropertyGroup>
+                <HandleFailure>false</HandleFailure>
+              </PropertyGroup>
+              <Target Name="Build">
+                <PropertyGroup>
+                  <HandleFailure>true</HandleFailure>
+                </PropertyGroup>
+                <Generate DeclaredInputs="" DeclaredOutputs="output.txt" />
+                <PropertyGroup Condition="{{resetOnSuccess}}">
+                  <HandleFailure>false</HandleFailure>
+                </PropertyGroup>
+                <OnError ExecuteTargets="Failure" Condition="'$(HandleFailure)' == 'true'" />
+              </Target>
+              <Target Name="Failure" />
+            </Project>
+            """);
+        HardenedTargetValidator validator = new(
+            new Dictionary<string, HardenedTaskDescriptor>
+            {
+                ["Generate"] = new(
+                    HardenedTaskClassification.DeclaredIO,
+                    inputPathParameters: ["DeclaredInputs"],
+                    outputPathParameters: ["DeclaredOutputs"]),
+            });
+
+        IReadOnlyList<InvalidProjectFileException> diagnostics = validator.Validate(project, "Build");
+
+        diagnostics.ShouldContain(diagnostic => diagnostic.ErrorCode == "MSB4286" && diagnostic.Message.Contains("OnError"));
+    }
+
+    [Fact]
     public void CollectsTargetDependencyExpansionFailure()
     {
         using TestEnvironment environment = TestEnvironment.Create(_output);

@@ -976,11 +976,24 @@ Copyright (C) Microsoft Corporation. All rights reserved.
   </PropertyGroup>
 
   <Target
+      Name="_ValidateHardenedBuildFailureHandling"
+      BeforeTargets="CoreBuild"
+      Condition="'$(MSBuildHardenedGraph)' == 'true'">
+    <MSBuildInternalMessage
+        Condition="'$(PostBuildEvent)' != '' and ('$(RunPostBuildEvent)' == 'Always' or '$(RunPostBuildEvent)' == 'OnOutputUpdated')"
+        ResourceName="CommonSdk.HardenedPostBuildEvent"
+        FormatArguments="$(RunPostBuildEvent)"
+        Severity="Error"
+        DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+
+  <Target
       Name="CoreBuild"
       DependsOnTargets="$(CoreBuildDependsOn)">
 
-    <OnError ExecuteTargets="_TimeStampAfterCompile;PostBuildEvent" Condition="'$(RunPostBuildEvent)'=='Always' or '$(RunPostBuildEvent)'=='OnOutputUpdated'"/>
-    <OnError ExecuteTargets="_CleanRecordFileWrites"/>
+    <!-- Hardened graphs stop dependents on failure without running failure-only work. -->
+    <OnError ExecuteTargets="_TimeStampAfterCompile;PostBuildEvent" Condition="'$(MSBuildHardenedGraph)' != 'true' and ('$(RunPostBuildEvent)'=='Always' or '$(RunPostBuildEvent)'=='OnOutputUpdated')"/>
+    <OnError ExecuteTargets="_CleanRecordFileWrites" Condition="'$(MSBuildHardenedGraph)' != 'true'"/>
 
   </Target>
 
