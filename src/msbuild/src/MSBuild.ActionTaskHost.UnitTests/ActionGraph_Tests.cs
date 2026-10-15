@@ -672,6 +672,126 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     }
 
     [UnixOnlyTheory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void MessageLogsWithoutCreatingAnAction(bool critical, bool hardened)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        XDocument contents = XDocument.Load(project);
+        XElement message = new("Message",
+            new XAttribute("Text", "graph-message:$(MSBuildProjectName)"),
+            new XAttribute("Importance", "High"),
+            new XAttribute("IsCritical", critical),
+            new XAttribute("Code", "GRAPH001"),
+            new XAttribute("File", "not-on-disk.txt"),
+            new XAttribute("DeclaredInputs", ""),
+            new XAttribute("DeclaredOutputs", ""));
+        if (!hardened)
+        {
+            message.Attribute("DeclaredInputs")!.Remove();
+            message.Attribute("DeclaredOutputs")!.Remove();
+            contents.Root!.Element("Target")!.RemoveNodes();
+        }
+
+        contents.Root!.Element("Target")!.AddFirst(message);
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        if (!hardened)
+        {
+            string ordinaryLog = RunnerUtilities.ExecBootstrapedMSBuild(
+                $"\"{project}\" -nr:false -v:minimal",
+                out bool succeeded, outputHelper: _output);
+
+            succeeded.ShouldBeTrue();
+            ordinaryLog.ShouldContain("graph-message:build");
+            File.Exists(graph).ShouldBeFalse();
+            File.Exists(Path.Combine(directory, "not-on-disk.txt")).ShouldBeFalse();
+            return;
+        }
+
+        Generate(project, graph, out string log).ShouldBeTrue();
+
+        log.ShouldContain("graph-message:build");
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(2);
+        File.Exists(Path.Combine(directory, "not-on-disk.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        string actionLog = Ninja(graph, out bool success);
+
+        success.ShouldBeTrue();
+        actionLog.ShouldNotContain("graph-message:");
+        File.ReadAllText(Path.Combine(directory, "second.txt")).ShouldBe("literal%3B;value|metadata%25|consumed");
+    }
+
+    [UnixOnlyFact]
+    public void CommonConfigurationMessagesAllowGraphConstruction()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        string sdk = Path.Combine(Path.GetDirectoryName(RunnerUtilities.BootstrapDotnetHostPath)!,
+            "sdk", RunnerUtilities.BootstrapSdkVersion);
+        XElement common = XDocument.Load(Path.Combine(sdk, "Microsoft.Common.CurrentVersion.targets")).Root!;
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.Element("Target")!.SetAttributeValue("DependsOnTargets", "_CheckForInvalidConfigurationAndPlatform");
+        contents.Root.AddFirst(new XElement("PropertyGroup",
+            new XElement("Configuration", "GraphConfiguration"),
+            new XElement("Platform", "GraphPlatform")));
+        contents.Root.Add(new XElement(common.Elements("Target")
+            .Where(target => target.Attribute("Name")?.Value == "_CheckForInvalidConfigurationAndPlatform").ShouldHaveSingleItem()));
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log, "-v:diagnostic").ShouldBeTrue();
+
+        log.ShouldContain("Configuration=GraphConfiguration");
+        log.ShouldContain("Platform=GraphPlatform");
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(2);
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("DeclaredInputs")]
+    [InlineData("DeclaredOutputs")]
+    [InlineData("Importance")]
+    public void InvalidMessageDoesNotPublishOrExecuteActions(string invalid)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        XElement message = new("Message",
+            new XAttribute("Text", "construction-message"),
+            new XAttribute("Importance", "High"),
+            new XAttribute("DeclaredInputs", ""),
+            new XAttribute("DeclaredOutputs", ""));
+        if (invalid == "Importance")
+        {
+            message.SetAttributeValue("Importance", "invalid-message-importance");
+        }
+        else
+        {
+            message.Attribute(invalid)!.Remove();
+        }
+
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.Element("Target")!.Add(message);
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log).ShouldBeFalse();
+
+        log.ShouldContain(invalid == "Importance" ? "invalid-message-importance" : $"missing '{invalid}'");
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyTheory]
     [InlineData("false")]
     [InlineData("ErrorAndStop")]
     [InlineData("off")]

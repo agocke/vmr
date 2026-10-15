@@ -858,8 +858,8 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
     <MSBuildInternalMessage Condition="'$(_InvalidConfigurationMessageSeverity)' != ''" ResourceName="$(_InvalidConfigurationMessageResourceName)" Severity="$(_InvalidConfigurationMessageSeverity)" FormatArguments="$(MSBuildProjectFile);$(_OriginalConfiguration);$(_OriginalPlatform)"/>
 
-    <Message Condition="'$(DesignTimeBuild)' != 'true'" Text="Configuration=$(Configuration)" Importance="Low" />
-    <Message Condition="'$(DesignTimeBuild)' != 'true'" Text="Platform=$(Platform)" Importance="Low" />
+    <Message Condition="'$(DesignTimeBuild)' != 'true'" Text="Configuration=$(Configuration)" Importance="Low" DeclaredInputs="" DeclaredOutputs="" />
+    <Message Condition="'$(DesignTimeBuild)' != 'true'" Text="Platform=$(Platform)" Importance="Low" DeclaredInputs="" DeclaredOutputs="" />
 
     <!-- Although we try to ensure a trailing slash, it's possible to circumvent this if the property is set on the command line -->
     <MSBuildInternalMessage Condition="'$(OutDir)' != '' and !HasTrailingSlash('$(OutDir)')" ResourceName="CommonSdk.PropertyWithTrailingSlash"  Severity="Error" FormatArguments="OutDir"/>
@@ -5017,7 +5017,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
     </CopyRefAssembly>
 
-    <Message Importance="High" Text="$(MSBuildProjectName) -&gt; @(MainAssembly->'%(FullPath)')" Condition="'$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)'!='true'" />
+    <Message Importance="High" Text="$(MSBuildProjectName) -&gt; @(MainAssembly->'%(FullPath)')" Condition="'$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)'!='true'" DeclaredInputs="" DeclaredOutputs="" />
 
     <!-- Legacy builds advance the marker only when Copy reports an actual write. -->
     <Touch Files="@(CopyUpToDateMarker)"
@@ -5171,7 +5171,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       <Output TaskParameter="DestinationFiles" ItemName="FinalWinmdExpArtifacts" />
     </Copy>
 
-    <Message Importance="High" Text="$(MSBuildProjectName) -&gt; $([System.IO.Path]::GetFullPath('$(_WindowsMetadataOutputPath)'))" Condition="'$(SkipCopyWinMDArtifact)' != 'true' and '$(_WindowsMetadataOutputPath)' != ''" />
+    <Message Importance="High" Text="$(MSBuildProjectName) -&gt; $([System.IO.Path]::GetFullPath('$(_WindowsMetadataOutputPath)'))" Condition="'$(SkipCopyWinMDArtifact)' != 'true' and '$(_WindowsMetadataOutputPath)' != ''" DeclaredInputs="" DeclaredOutputs="" />
 
   </Target>
 
@@ -5705,7 +5705,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
     </Copy>
 
-    <Message Importance="Normal" Condition="'$(_DeploymentCopyApplicationManifest)'=='true'" Text="$(MSBuildProjectName) -&gt; @(_DeploymentMainApplicationManifest->'%(FullPath)')" />
+    <Message Importance="Normal" Condition="'$(_DeploymentCopyApplicationManifest)'=='true'" Text="$(MSBuildProjectName) -&gt; @(_DeploymentMainApplicationManifest->'%(FullPath)')" DeclaredInputs="" DeclaredOutputs="" />
 
     <Copy
         SourceFiles="@(DeployManifest)"
@@ -5723,7 +5723,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
     </Copy>
 
-    <Message Importance="Normal" Condition="'$(GenerateClickOnceManifests)'=='true'" Text="$(MSBuildProjectName) -&gt; @(_DeploymentMainDeployManifest->'%(FullPath)')" />
+    <Message Importance="Normal" Condition="'$(GenerateClickOnceManifests)'=='true'" Text="$(MSBuildProjectName) -&gt; @(_DeploymentMainDeployManifest->'%(FullPath)')" DeclaredInputs="" DeclaredOutputs="" />
 
   </Target>
 

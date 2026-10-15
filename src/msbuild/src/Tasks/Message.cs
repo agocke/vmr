@@ -11,9 +11,20 @@ namespace Microsoft.Build.Tasks
     /// <summary>
     /// Task that simply emits a message. Importance defaults to high if not specified.
     /// </summary>
+    [MSBuildDeclaredIOTask]
     [MSBuildMultiThreadableTask]
     public sealed class Message : TaskExtension
     {
+        /// <summary>
+        /// Gets or sets the declared file inputs, which are empty for this diagnostic task.
+        /// </summary>
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        /// <summary>
+        /// Gets or sets the declared file outputs, which are empty for this diagnostic task.
+        /// </summary>
+        public ITaskItem[] DeclaredOutputs { get; set; }
+
         /// <summary>
         /// Text to log.
         /// </summary>
