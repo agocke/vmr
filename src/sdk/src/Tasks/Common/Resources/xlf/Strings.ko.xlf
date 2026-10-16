@@ -1053,6 +1053,11 @@ The following are names of parameters or literal values and should not be transl
         <target state="translated">I/O 오류로 인해 패키지 자산 캐시를 사용할 수 없습니다. 동일한 프로젝트가 두 번 이상 동시에 빌드되면 이 오류가 발생합니다. 성능이 저하될 수 있지만 빌드 결과는 영향을 받지 않습니다.</target>
         <note />
       </trans-unit>
+      <trans-unit id="UndeclaredDepsFileInput">
+        <source>NETSDK1250: Dependency generation requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</source>
+        <target state="new">NETSDK1250: Dependency generation requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</target>
+        <note>{StrBegins="NETSDK1250: "}{Locked="{0}"}</note>
+      </trans-unit>
       <trans-unit id="UnexpectedFileType">
         <source>NETSDK1012: Unexpected file type for '{0}'. Type is both '{1}' and '{2}'.</source>
         <target state="translated">NETSDK1012: '{0}'에 대해 예기치 않은 파일 형식입니다. 형식이 '{1}'인 동시에 '{2}'입니다.</target>
@@ -1082,6 +1087,11 @@ The following are names of parameters or literal values and should not be transl
         <source>NETSDK1081: The targeting pack for {0} was not found. You may be able to resolve this by running a NuGet restore on the project.</source>
         <target state="translated">NETSDK1081: {0}용 타기팅 팩을 찾을 수 없습니다. 프로젝트에서 NuGet 복원을 실행하여 이 문제를 해결할 수 있습니다.</target>
         <note>{StrBegins="NETSDK1081: "}</note>
+      </trans-unit>
+      <trans-unit id="UnsupportedDepsFileParameter">
+        <source>NETSDK1249: Declared-I/O dependency generation does not support '{0}' with value '{1}'. Supply explicit resolved inputs and relative manifest paths.</source>
+        <target state="new">NETSDK1249: Declared-I/O dependency generation does not support '{0}' with value '{1}'. Supply explicit resolved inputs and relative manifest paths.</target>
+        <note>{StrBegins="NETSDK1249: "}{Locked="{0}"}{Locked="{1}"}</note>
       </trans-unit>
       <trans-unit id="UnsupportedFramework">
         <source>NETSDK1019: {0} is an unsupported framework.</source>

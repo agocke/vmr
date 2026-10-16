@@ -37,7 +37,7 @@ namespace Microsoft.NET.Build.Tasks
             object existingLockFileTaskObject = _buildEngine?.GetRegisteredTaskObject(lockFileKey, RegisteredTaskObjectLifetime.Build);
             if (existingLockFileTaskObject == null)
             {
-                result = LoadLockFile(path);
+                result = ReadLockFile(path, _log);
 
                 _buildEngine?.RegisterTaskObject(lockFileKey, result, RegisteredTaskObjectLifetime.Build, true);
             }
@@ -54,7 +54,7 @@ namespace Microsoft.NET.Build.Tasks
             return $"{nameof(LockFileCache)}:{lockFilePath}";
         }
 
-        private LockFile LoadLockFile(string path)
+        internal static LockFile ReadLockFile(string path, Logger log)
         {
             // https://github.com/NuGet/Home/issues/6732
             //
@@ -78,7 +78,7 @@ namespace Microsoft.NET.Build.Tasks
             {
                 lockFile = LockFileUtilities.GetLockFile(
                     path,
-                    new ThrowOnLockFileLoadError(_log));
+                    new ThrowOnLockFileLoadError(log));
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {

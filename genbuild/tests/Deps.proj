@@ -1,0 +1,43 @@
+<Project DefaultTargets="Build">
+  <Import Project="Csc.proj" />
+  <PropertyGroup>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+    <Version>1.2.3</Version>
+    <AssemblyName>DepsApp</AssemblyName>
+    <TargetExt>.dll</TargetExt>
+    <IncludeMainProjectInDepsFile>true</IncludeMainProjectInDepsFile>
+    <IncludeFileVersionsInDependencyFile>true</IncludeFileVersionsInDependencyFile>
+    <TrimDepsJsonLibrariesWithoutAssets>true</TrimDepsJsonLibrariesWithoutAssets>
+    <ProjectAssetsFile>$(MSBuildProjectDirectory)/obj/project.assets.json</ProjectAssetsFile>
+    <ProjectDepsFilePath>$(MSBuildProjectDirectory)/out/DepsApp.deps.json</ProjectDepsFilePath>
+    <RuntimeIdentifierGraphPath>$(MSBuildSDKsPath)/../PortableRuntimeIdentifierGraph.json</RuntimeIdentifierGraphPath>
+    <MicrosoftNETBuildTasksAssembly>$(MSBuildSDKsPath)/Microsoft.NET.Sdk/tools/net11.0/Microsoft.NET.Build.Tasks.dll</MicrosoftNETBuildTasksAssembly>
+    <_AssetsText>{"version":3,"targets":{"net11.0":{"Logical.Project/2.0.0":{"type":"project"}}},"libraries":{"Logical.Project/2.0.0":{"type":"project","path":"Hello.csproj","msbuildProject":"Hello.csproj"}},"projectFileDependencyGroups":{"net11.0":["Logical.Project &gt;= 2.0.0"]},"packageFolders":{},"project":{"version":"1.2.3","restore":{"projectUniqueName":"$(MSBuildProjectFullPath)","projectName":"DepsApp","projectPath":"$(MSBuildProjectFullPath)","projectStyle":"PackageReference"},"frameworks":{"net11.0":{"targetAlias":"net11.0"}}}}</_AssetsText>
+  </PropertyGroup>
+  <UsingTask TaskName="GenerateDepsFile" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="WriteDepsFile" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <Import Project="Deps.targets" />
+  <ItemGroup>
+    <Compile Include="Version.cs" />
+    <RuntimeFramework Include="Microsoft.NETCore.App" Version="11.0.0" />
+    <ReferencePath Include="$(MSBuildProjectDirectory)/obj/Hello.dll"
+                   ReferenceSourceTarget="ProjectReference"
+                   MSBuildSourceProjectFile="$(MSBuildProjectDirectory)/Hello.csproj" />
+    <UserRuntimeAssembly Include="@(ReferencePath)" />
+  </ItemGroup>
+  <Target Name="_DefaultMicrosoftNETPlatformLibrary" />
+  <Target Name="_HandlePackageFileConflicts" />
+  <Target Name="_ComputeReferenceAssemblies" />
+  <Target Name="_ComputeUserRuntimeAssemblies" />
+  <Target Name="ResolveRuntimePackAssets" />
+  <Target Name="_ComputePackageReferencePublish" />
+  <Target Name="PrepareDepsInputs" BeforeTargets="Restore">
+    <MakeDir Directories="obj;out" />
+    <WriteLinesToFile File="$(ProjectAssetsFile)" Lines="$(_AssetsText)" Overwrite="true" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="_SetPathMapFromSourceRoots;Produce;CoreCompile;GenerateBuildDependencyFile" />
+  <Target Name="VerifyDepsWrites" AfterTargets="GenerateBuildDependencyFile">
+    <Error Condition="@(FileWrites->WithMetadataValue('Identity', '$(ProjectDepsFilePath)')->Count()) != 1"
+           Text="Deps output bookkeeping must be static." />
+  </Target>
+</Project>

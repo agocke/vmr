@@ -25,6 +25,7 @@ Copyright (c) .NET Foundation. All rights reserved.
   <Import Project="Microsoft.NET.Sdk.FrameworkReferenceResolution.targets" />
 
   <UsingTask TaskName="GenerateDepsFile" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="WriteDepsFile" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="GenerateRuntimeConfigurationFiles" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="GetAssemblyVersion" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="GenerateSatelliteAssemblies" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
@@ -312,7 +313,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       <_ValidRuntimeIdentifierPlatformsForAssets Include="@(_KnownRuntimeIdentifierPlatformsForTargetFramework)" Exclude="@(_ExcludedKnownRuntimeIdentifierPlatforms)"/>
     </ItemGroup>
 
-    <GenerateDepsFile ProjectPath="$(MSBuildProjectFullPath)"
+    <GenerateDepsFile Condition="'$(MSBuildHardenedGraph)' != 'true'"
+                      ProjectPath="$(MSBuildProjectFullPath)"
                       AssetsFilePath="$(ProjectAssetsFile)"
                       DepsFilePath="$(ProjectDepsFilePath)"
                       TargetFramework="$(TargetFramework)"
@@ -340,6 +342,49 @@ Copyright (c) .NET Foundation. All rights reserved.
                       RuntimeGraphPath="$(RuntimeIdentifierGraphPath)"
                       IncludeProjectsNotInAssetsFile="$(IncludeProjectsNotInAssetsFileInDepsFile)"
                       ValidRuntimeIdentifierPlatformsForAssets="@(_ValidRuntimeIdentifierPlatformsForAssets)"/>
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <_DepsFileInput Remove="@(_DepsFileInput)" />
+      <_DepsVersionInput Remove="@(_DepsVersionInput)" />
+      <_DepsFileInput Include="$(ProjectAssetsFile)" />
+      <_DepsFileInput Include="$(RuntimeIdentifierGraphPath)" Condition="'$(SelfContained)' == 'true'" />
+      <_DepsVersionInput Include="@(UserRuntimeAssembly);@(NativeCopyLocalItems);@(RuntimeCopyLocalItems)" />
+      <_DepsVersionInput Include="@(RuntimeTargetsCopyLocalItems->WithMetadataValue('AssetType', 'runtime'));@(RuntimeTargetsCopyLocalItems->WithMetadataValue('AssetType', 'native'))" />
+      <_DepsVersionInput Include="@(RuntimePackAsset)"
+                         Condition="('%(RuntimePackAsset.AssetType)' == 'runtime' or '%(RuntimePackAsset.AssetType)' == 'native') and ('$(SelfContained)' == 'true' or '%(RuntimePackAsset.RuntimePackAlwaysCopyLocal)' == 'true')" />
+      <_DepsFileInput Include="@(_DepsVersionInput)" Condition="'$(IncludeFileVersionsInDependencyFile)' == 'true'" />
+    </ItemGroup>
+    <WriteDepsFile Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                   DeclaredInputs="@(_DepsFileInput)"
+                   DeclaredOutputs="$(ProjectDepsFilePath)"
+                   ProjectPath="$(MSBuildProjectFullPath)"
+                   AssetsFilePath="$(ProjectAssetsFile)"
+                   DepsFilePath="$(ProjectDepsFilePath)"
+                   TargetFramework="$(TargetFramework)"
+                   AssemblyName="$(AssemblyName)"
+                   AssemblyExtension="$(TargetExt)"
+                   AssemblyVersion="$(Version)"
+                   AssemblySatelliteAssemblies="@(IntermediateSatelliteAssembliesWithTargetPath)"
+                   ReferencePaths="@(ReferencePath)"
+                   ReferenceDependencyPaths="@(ReferenceDependencyPaths)"
+                   ReferenceSatellitePaths="@(ReferenceSatellitePaths)"
+                   ReferenceAssemblies="@(_ReferenceAssemblies)"
+                   ReferenceAssembliesPath="$(TargetFrameworkRootPath)"
+                   RuntimePackAssets="@(RuntimePackAsset)"
+                   IncludeMainProject="$(IncludeMainProjectInDepsFile)"
+                   TrimDepsJsonLibrariesWithoutAssets="$(TrimDepsJsonLibrariesWithoutAssets)"
+                   RuntimeIdentifier="$(RuntimeIdentifier)"
+                   PlatformLibraryName="$(MicrosoftNETPlatformLibrary)"
+                   RuntimeFrameworks="@(RuntimeFramework)"
+                   CompilerOptions="@(DependencyFileCompilerOptions)"
+                   CompileReferences="@(ResolvedCompileFileDefinitions)"
+                   ResolvedNuGetFiles="@(NativeCopyLocalItems);@(ResourceCopyLocalItems);@(RuntimeCopyLocalItems)"
+                   UserRuntimeAssemblies="@(UserRuntimeAssembly)"
+                   ResolvedRuntimeTargetsFiles="@(RuntimeTargetsCopyLocalItems)"
+                   IsSelfContained="$(SelfContained)"
+                   IncludeRuntimeFileVersions="$(IncludeFileVersionsInDependencyFile)"
+                   RuntimeGraphPath="$(RuntimeIdentifierGraphPath)"
+                   IncludeProjectsNotInAssetsFile="$(IncludeProjectsNotInAssetsFileInDepsFile)"
+                   ValidRuntimeIdentifierPlatformsForAssets="@(_ValidRuntimeIdentifierPlatformsForAssets)" />
     <ItemGroup>
       <!-- Do this in an ItemGroup instead of as an output parameter of the GenerateDepsFile task so that it still gets added to the item set
            during incremental builds when the task is skipped -->

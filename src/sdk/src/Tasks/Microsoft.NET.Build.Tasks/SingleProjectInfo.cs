@@ -25,6 +25,8 @@ namespace Microsoft.NET.Build.Tasks
         public string Name { get; }
         public string Version { get; }
         public string OutputName { get; }
+        public string RuntimeAssemblyPath { get; private set; }
+        public string RuntimeAssemblyDestinationSubPath { get; private set; }
 
         private List<ReferenceInfo> _dependencyReferences;
         public IEnumerable<ReferenceInfo> DependencyReferences
@@ -88,13 +90,18 @@ namespace Microsoft.NET.Build.Tasks
                 }
 
                 string outputName = Path.GetFileName(projectReferencePath.ItemSpec);
+                string destinationSubDirectory = projectReferencePath.GetMetadata(MetadataKeys.DestinationSubDirectory);
                 string name = Path.GetFileNameWithoutExtension(outputName);
                 string version = null; // it isn't possible to know the version from the MSBuild info.
                                        // The version will be retrieved from the project assets file.
 
                 projectReferences.Add(
                     sourceProjectFile,
-                    new SingleProjectInfo(sourceProjectFile, name, version, outputName, dependencyReferences: null, resourceAssemblies: null));
+                    new SingleProjectInfo(sourceProjectFile, name, version, outputName, dependencyReferences: null, resourceAssemblies: null)
+                    {
+                        RuntimeAssemblyPath = projectReferencePath.ItemSpec,
+                        RuntimeAssemblyDestinationSubPath = string.IsNullOrEmpty(destinationSubDirectory) ? null : Path.Combine(destinationSubDirectory, outputName)
+                    });
             }
 
             IEnumerable<ITaskItem> projectReferenceSatellitePaths = referenceSatellitePaths.Where(r => ReferenceInfo.IsProjectReference(r));

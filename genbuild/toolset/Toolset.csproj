@@ -22,6 +22,8 @@
     </ItemGroup>
     <Error Condition="'@(_Compiler)' == '' or '@(_NuGetTarget)' == ''" Text="The pinned compiler or NuGet restore targets are missing from their packages." />
     <Copy SourceFiles="@(_Dependency)" DestinationFiles="@(_Dependency->'$(GenBuildToolsetDirectory)%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <!-- Independent SDK task actions do not run inside the driver's additional-deps context. -->
+    <Copy SourceFiles="@(_Dependency)" DestinationFiles="@(_Dependency->'$(GenBuildToolsetDirectory)Sdks/Microsoft.NET.Sdk/tools/$(TargetFramework)/%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_Compiler)" DestinationFiles="@(_Compiler->'$(GenBuildToolsetDirectory)Roslyn/bincore/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_NuGetTarget)" DestinationFiles="@(_NuGetTarget->'$(GenBuildToolsetDirectory)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(TargetPath);$(ProjectDepsFilePath)" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />

@@ -41,6 +41,7 @@
     <CallTarget Targets="TestIncrementalCaches" />
     <CallTarget Targets="TestSourceLink" />
     <CallTarget Targets="TestCsc" />
+    <CallTarget Targets="TestDeps" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -54,7 +55,76 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, packaged compiler execution, and dependency-manifest publication. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestDeps">
+    <MakeDir Directories="$(_TestDirectory)deps" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_TestDirectory)deps" />
+    <WriteLinesToFile File="$(_TestDirectory)deps/Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)deps/Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)deps/Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)deps/HelloWorld.csproj&quot;" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets"
+             Namespaces="&lt;Namespace Prefix='msb' Uri='http://schemas.microsoft.com/developer/msbuild/2003' /&gt;"
+             Query="/msb:Project/msb:Target[@Name='GenerateBuildDependencyFile']">
+      <Output TaskParameter="Result" ItemName="_DepsTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_DepsTarget->Count())' != '1'" Text="The packaged SDK must contain GenerateBuildDependencyFile." />
+    <PropertyGroup>
+      <_DepsTargetXml>@(_DepsTarget)</_DepsTargetXml>
+      <_DepsTargetXml>$(_DepsTargetXml.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_DepsTargetXml>
+    </PropertyGroup>
+    <ItemGroup>
+      <_DepsCase Include="short;another longer checkout;stale;ordinary;missing" />
+      <_DepsExecution Include="short;another longer checkout;stale" />
+      <_DepsRoot Include="@(_DepsCase->'$(_TestDirectory)deps/%(Identity)/project/')" />
+    </ItemGroup>
+    <MakeDir Directories="@(_DepsRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Deps.proj;$(MSBuildThisFileDirectory)Csc.proj" DestinationFolder="%(_DepsRoot.Identity)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_DepsRoot.Identity)Program.cs" />
+    <Copy SourceFiles="$(_TestDirectory)deps/obj/frameworkreferences/HelloWorld.csproj.g.props" DestinationFiles="%(_DepsRoot.Identity)FrameworkInputs.props" />
+    <WriteLinesToFile File="%(_DepsRoot.Identity)Deps.targets" Lines="&lt;Project&gt;;$(_DepsTargetXml);&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="%(_DepsRoot.Identity)Version.cs"
+                      Lines="[assembly: System.Reflection.AssemblyVersion(&quot;3.4.5.6&quot;)];[assembly: System.Reflection.AssemblyFileVersion(&quot;7.8.9.10&quot;)]" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)deps/%(_DepsCase.Identity)/project/Deps.proj&quot;" />
+    <WriteLinesToFile File="$(_TestDirectory)deps/stale/project/out/DepsApp.deps.json" Lines="stale JSON must not survive" Overwrite="true" />
+    <GetFileHash Files="$(_TestDirectory)deps/stale/project/out/DepsApp.deps.json">
+      <Output TaskParameter="Hash" PropertyName="_DepsStaleBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)deps/%(_DepsCase.Identity)/project/Deps.proj&quot;" Condition="'%(_DepsCase.Identity)' != 'ordinary'" />
+    <Error Condition="Exists('$(_TestDirectory)deps/%(_DepsExecution.Identity)/project/obj/Hello.dll')" Text="Deps graph construction must not execute its compiler producer." />
+    <Error Condition="Exists('$(_TestDirectory)deps/short/project/out/DepsApp.deps.json') or Exists('$(_TestDirectory)deps/another longer checkout/project/out/DepsApp.deps.json')"
+           Text="Deps graph construction must not write JSON." />
+    <GetFileHash Files="$(_TestDirectory)deps/stale/project/out/DepsApp.deps.json">
+      <Output TaskParameter="Hash" PropertyName="_DepsStaleAfter" />
+    </GetFileHash>
+    <Error Condition="'$(_DepsStaleBefore)' != '$(_DepsStaleAfter)'" Text="Deps graph construction must not inspect or change old output contents." />
+    <Exec WorkingDirectory="$(_TestDirectory)deps/%(_DepsExecution.Identity)/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)deps/ordinary/project/Deps.proj&quot; -t:Build" />
+    <ItemGroup>
+      <_DepsResult Include="@(_DepsExecution);ordinary" />
+    </ItemGroup>
+    <GetFileHash Files="@(_DepsResult->'$(_TestDirectory)deps/%(Identity)/project/out/DepsApp.deps.json')">
+      <Output TaskParameter="Items" ItemName="_DepsHash" />
+    </GetFileHash>
+    <Error Condition="'@(_DepsHash->'%(FileHash)'->Distinct()->Count())' != '1'" Text="Relocated deps actions must match ordinary JSON bytes, including referenced binary versions." />
+    <PropertyGroup>
+      <_DepsJson>$([System.IO.File]::ReadAllText('$(_TestDirectory)deps/short/project/out/DepsApp.deps.json'))</_DepsJson>
+    </PropertyGroup>
+    <Error Condition="!$(_DepsJson.Contains('&quot;assemblyVersion&quot;: &quot;3.4.5.6&quot;')) or !$(_DepsJson.Contains('&quot;fileVersion&quot;: &quot;7.8.9.10&quot;')) or !$(_DepsJson.Contains('&quot;Logical.Project/2.0.0&quot;'))"
+           Text="Deps actions must read generated dependency versions and retain project dependencies." />
+    <Error Condition="$(_DepsJson.Contains('$(_TestDirectory)'))" Text="Deps JSON must not contain physical checkout paths." />
+    <ItemGroup>
+      <_DepsInvocationCandidate Include="$(_TestDirectory)deps/missing/project/obj/genbuild/build.ninja.actions/*.json" />
+      <_DepsMissingInvocation Include="@(_DepsInvocationCandidate)" Condition="$([System.IO.File]::ReadAllText('%(_DepsInvocationCandidate.Identity)').Contains('Microsoft.NET.Build.Tasks.WriteDepsFile'))" />
+    </ItemGroup>
+    <Error Condition="'@(_DepsMissingInvocation->Count())' != '1'" Text="GenerateBuildDependencyFile must emit a single independent deps writer." />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot; --invocation &quot;@(_DepsMissingInvocation)&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_DepsMissingExitCode" />
+    </Exec>
+    <Error Condition="'$(_DepsMissingExitCode)' == '0' or Exists('$(_TestDirectory)deps/missing/project/out/DepsApp.deps.json')"
+           Text="Deps execution must fail on missing declared binaries rather than emit empty versions." />
   </Target>
   <Target Name="TestCsc">
     <MakeDir Directories="$(_TestDirectory)csc" />

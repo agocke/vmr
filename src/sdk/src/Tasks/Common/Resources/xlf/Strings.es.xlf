@@ -1053,6 +1053,11 @@ The following are names of parameters or literal values and should not be transl
         <target state="translated">No se puede usar la memoria caché de recursos del paquete debido a un error de E/S. Esto puede ocurrir cuando un mismo proyecto se compila más de una vez en paralelo. Puede que se reduzca el rendimiento, pero no afectará al resultado de la compilación.</target>
         <note />
       </trans-unit>
+      <trans-unit id="UndeclaredDepsFileInput">
+        <source>NETSDK1250: Dependency generation requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</source>
+        <target state="new">NETSDK1250: Dependency generation requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</target>
+        <note>{StrBegins="NETSDK1250: "}{Locked="{0}"}</note>
+      </trans-unit>
       <trans-unit id="UnexpectedFileType">
         <source>NETSDK1012: Unexpected file type for '{0}'. Type is both '{1}' and '{2}'.</source>
         <target state="translated">NETSDK1012: Tipo de archivo no esperado para "{0}". El tipo es tanto "{1}" como "{2}".</target>
@@ -1082,6 +1087,11 @@ The following are names of parameters or literal values and should not be transl
         <source>NETSDK1081: The targeting pack for {0} was not found. You may be able to resolve this by running a NuGet restore on the project.</source>
         <target state="translated">NETSDK1081: No se encuentró el paquete de destino de {0}. Para esolver este problema, puede ejecutar una restauración de NuGet en el proyecto.</target>
         <note>{StrBegins="NETSDK1081: "}</note>
+      </trans-unit>
+      <trans-unit id="UnsupportedDepsFileParameter">
+        <source>NETSDK1249: Declared-I/O dependency generation does not support '{0}' with value '{1}'. Supply explicit resolved inputs and relative manifest paths.</source>
+        <target state="new">NETSDK1249: Declared-I/O dependency generation does not support '{0}' with value '{1}'. Supply explicit resolved inputs and relative manifest paths.</target>
+        <note>{StrBegins="NETSDK1249: "}{Locked="{0}"}{Locked="{1}"}</note>
       </trans-unit>
       <trans-unit id="UnsupportedFramework">
         <source>NETSDK1019: {0} is an unsupported framework.</source>

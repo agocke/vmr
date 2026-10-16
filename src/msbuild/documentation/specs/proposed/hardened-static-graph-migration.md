@@ -187,6 +187,51 @@ remain explicit errors. Ordinary Csc is unchanged. Verify relocation with
 byte-identical PE/PDBs and mapped PDB documents, CodeView paths and CallerFilePath,
 not merely a `/deterministic+` argument assertion.
 
+## Reduce file tasks to their semantic transformation
+
+Do not reproduce a legacy task's discovery, caches and fallback probes in its
+declared-I/O replacement. Reuse the transformation and serialization logic,
+but supply discovery results and context explicitly. For example,
+[WriteDepsFile](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteDepsFile.cs)
+shares GenerateDepsFile's dependency-model construction and JSON writer without
+its build-engine object caches, timestamp version caches, installation-root
+lookup or project-output existence/fallback search.
+
+The deps writer reads declared assets JSON, the RID graph for self-contained
+builds, and emitted runtime binaries when file versions are requested. Main
+assembly identity, satellite paths, references and destinations are metadata.
+Use explicit project-reference output paths even when project and assembly
+names differ. Generated runtime binaries remain action inputs after their
+producers; capturing their contents or versions in Restore would be incorrect.
+Do not declare metadata-only assembly paths as reads when versions are disabled.
+Keep `FileWrites` static rather than requesting execution-time task outputs.
+
+Logical paths serialized into the manifest must be relative, including compiler
+key paths. A physical input path is not automatically a valid product path.
+An explicit reference-assembly root replaces environment/installation discovery.
+Write the one declared JSON output without inspecting its previous contents;
+there is no separate overwrite mode or task-local up-to-date decision.
+
+[RuntimeFileVersions](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/RuntimeFileVersions.cs)
+defines the hardened content policy independently of the host OS. Managed
+assembly/file versions come from assembly metadata and
+`AssemblyFileVersionAttribute`; missing file versions are `0.0.0.0`, with
+two/three-part versions normalized to four parts. Native PE file versions come
+from embedded `VS_FIXEDFILEINFO`; all version resources must agree. Other native
+formats or PE files without version resources use `0.0.0.0` and have no assembly
+version. Missing files, malformed version information, unsupported managed
+version strings and conflicting native resources fail instead of invoking an
+OS/installation fallback. These are intentional opt-in semantics, not a change
+to ordinary GenerateDepsFile's OS-specific version policy.
+
+Finally, independently execute the action without the SDK driver's dependency
+context. A task that builds in-process can still be missing its pinned helper
+assemblies in the action package. Stage the explicit dependency closure beside
+the task rather than adding ambient parent-directory or SDK-installation probing.
+The [shipped-target fixture](../../../../../genbuild/tests/Deps.proj) checks
+producer ordering, relocation, stale output replacement and ordinary JSON
+compatibility.
+
 ## Leave caching to the execution system
 
 Tasks define transformations, not caching strategies. In hardened mode, do

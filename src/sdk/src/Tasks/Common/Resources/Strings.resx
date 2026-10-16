@@ -1070,5 +1070,13 @@ You may need to build the project on another operating system or architecture, o
     <value>NETSDK1248: Framework-reference fetch manifest generation stopped because the project contains unsupported dependency inputs. Resolve the preceding NETSDK1247 errors or disable hardened graph validation.</value>
     <comment>{StrBegins="NETSDK1248: "}{Locked="NETSDK1247"}</comment>
   </data>
-  <!-- The latest message added is FrameworkReferenceFetchManifestUnsupportedProfile. Please update this value with each PR to catch parallel PRs both adding a new message -->
+  <data name="UnsupportedDepsFileParameter" xml:space="preserve">
+    <value>NETSDK1249: Declared-I/O dependency generation does not support '{0}' with value '{1}'. Supply explicit resolved inputs and relative manifest paths.</value>
+    <comment>{StrBegins="NETSDK1249: "}{Locked="{0}"}{Locked="{1}"}</comment>
+  </data>
+  <data name="UndeclaredDepsFileInput" xml:space="preserve">
+    <value>NETSDK1250: Dependency generation requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</value>
+    <comment>{StrBegins="NETSDK1250: "}{Locked="{0}"}</comment>
+  </data>
+  <!-- The latest message added is UndeclaredDepsFileInput. Please update this value with each PR to catch parallel PRs both adding a new message -->
 </root>

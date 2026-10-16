@@ -436,23 +436,43 @@ scratch without compiler servers or task-local output caches. Native PDBs,
 arbitrary response files, data-dependent generated-files directories, rulesets,
 SARIF, app-config and machine signing modes remain outside this initial profile.
 
+Hardened SDK Build now selects `WriteDepsFile`, reusing the dependency model and
+JSON writer without ordinary GenerateDepsFile's object/timestamp caches,
+ambient reference-root discovery or project-output fallback probes. Assets
+and conditional self-contained RID JSON are declared reads; runtime binary
+versions remain execution-time reads after their producers. Main identity,
+satellite paths and resolved destinations are metadata, with relative logical
+paths required in JSON. Explicit project-reference outputs work even when the
+project and assembly names differ. The output is written without reading its
+previous contents, and `FileWrites` stays statically available.
+
+The portable version policy reads managed metadata on every OS and fixed
+embedded version resources for native PE files, rejecting conflicting resources.
+Missing version information and other native formats use `0.0.0.0`; missing
+files and unsupported/malformed versions fail explicitly. No OS-specific
+FileVersionInfo, installation resources or timestamp cache participates.
+Ordinary GenerateDepsFile, Publish and designer target selection are unchanged.
+The standalone package stages the pinned SDK-driver dependencies beside the
+task assembly for independent loading without ambient probing. Packaged smoke
+checks a compiler-produced dependency, relocation, byte-compatible ordinary
+JSON, stale replacement, static bookkeeping and missing-input failure.
+
 With directory import paths supplied explicitly to both Restore and Build,
 the fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
 executable-reference validation, WinMD validation, editorconfig generation,
 framework attribute generation, assembly version derivation, source-root mapping,
 SourceLink generation and compiler preparation. There are no remaining hash,
-deferred-hash, source-root mapping, SourceLink or compiler task-rejection
+deferred-hash, source-root mapping, SourceLink, compiler or deps task-rejection
 diagnostics in this probe.
-The first unsupported task is now `GenerateDepsFile`, followed by runtime
-configuration, copy, cleanup,
-dependency/runtime configuration and deferred-value diagnostics.
+The first unsupported task is now `GenerateRuntimeConfigurationFiles`, followed
+by `Copy`, `CopyRefAssembly`, `Delete` and dependent deferred-value diagnostics.
 Failed construction publishes neither a graph nor action invocations and
 writes no framework attribute, assembly-info, editorconfig or SourceLink file.
 Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers
 Common's preparation sites, not every SDK or custom directory operation.
-The probe still reports unsupported dependency/runtime configuration, copying,
+The probe still reports unsupported runtime configuration, copying,
 and cleanup operations.
 Some diagnostics follow unavailable earlier outputs; fix the first unsupported
 operations and re-probe rather than treating

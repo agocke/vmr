@@ -138,12 +138,31 @@ namespace Microsoft.NET.Build.Tasks
 
         private void WriteDepsFile(AbsolutePath projectPath, AbsolutePath depsFilePath)
         {
+            LockFile lockFile = AssetsFilePath != null
+                ? new LockFileCache(this).GetLockFile(
+                    string.IsNullOrEmpty(AssetsFilePath) ? AssetsFilePath : TaskEnvironment.GetAbsolutePath(AssetsFilePath))
+                : null;
+            RuntimeGraph runtimeGraph = lockFile != null && IsSelfContained
+                ? new RuntimeGraphCache(this).GetRuntimeGraph(
+                    string.IsNullOrEmpty(RuntimeGraphPath) ? RuntimeGraphPath : TaskEnvironment.GetAbsolutePath(RuntimeGraphPath))
+                : null;
+            string referenceAssembliesPath = new FrameworkReferenceResolver(TaskEnvironment.GetEnvironmentVariable).GetDefaultReferenceAssembliesPath();
+            WriteDependencyContext(
+                BuildDependencyContext(projectPath, lockFile, runtimeGraph, referenceAssembliesPath),
+                depsFilePath);
+        }
+
+        protected DependencyContext BuildDependencyContext(
+            AbsolutePath projectPath,
+            LockFile lockFile,
+            RuntimeGraph runtimeGraph,
+            string referenceAssembliesPath,
+            Func<string, string, string, RuntimeFile> runtimeFileResolver = null)
+        {
             ProjectContext projectContext = null;
             LockFileLookup lockFileLookup = null;
-            if (AssetsFilePath != null)
+            if (lockFile != null)
             {
-                LockFile lockFile = new LockFileCache(this).GetLockFile(
-                    string.IsNullOrEmpty(AssetsFilePath) ? AssetsFilePath : TaskEnvironment.GetAbsolutePath(AssetsFilePath));
                 projectContext = lockFile.CreateProjectContext(
                     TargetFramework,
                     EffectiveRuntimeIdentifier,
@@ -209,26 +228,6 @@ namespace Microsoft.NET.Build.Tasks
             DependencyContextBuilder builder;
             if (projectContext != null)
             {
-                // Generate the RID-fallback for self-contained builds.
-                //
-                // In order to support loading components with RID-specific assets,
-                // the AssemblyDependencyResolver requires a RID fallback graph.
-                // The component itself should not carry the RID fallback graph with it, because
-                // it would need to carry graph of all the RIDs and needs updates for newer RIDs.
-                // For framework dependent apps, the RID fallback graph comes from the core framework Microsoft.NETCore.App,
-                // so there is no need to write it into the app.
-                // If self-contained apps, the (applicable subset of) RID fallback graph needs to be written to the deps.json manifest.
-                //
-                // If a RID-graph is provided to the DependencyContextBuilder, it generates a RID-fallback
-                // graph with respect to the target RuntimeIdentifier.
-
-                RuntimeGraph runtimeGraph = null;
-                if (IsSelfContained)
-                {
-                    runtimeGraph = new RuntimeGraphCache(this).GetRuntimeGraph(
-                        string.IsNullOrEmpty(RuntimeGraphPath) ? RuntimeGraphPath : TaskEnvironment.GetAbsolutePath(RuntimeGraphPath));
-                }
-
                 builder = new DependencyContextBuilder(mainProject, IncludeRuntimeFileVersions, runtimeGraph, projectContext, lockFileLookup);
             }
             else
@@ -252,7 +251,8 @@ namespace Microsoft.NET.Build.Tasks
                 .WithReferenceProjectInfos(referenceProjects)
                 .WithRuntimePackAssets(runtimePackAssets)
                 .WithCompilationOptions(compilationOptions)
-                .WithReferenceAssembliesPath(new FrameworkReferenceResolver(TaskEnvironment.GetEnvironmentVariable).GetDefaultReferenceAssembliesPath())
+                .WithReferenceAssembliesPath(referenceAssembliesPath)
+                .WithRuntimeFileResolver(runtimeFileResolver)
                 .WithPackagesThatWereFiltered(GetFilteredPackages());
 
             if (CompileReferences.Length > 0)
@@ -270,8 +270,11 @@ namespace Microsoft.NET.Build.Tasks
                 string destinationSubPath = string.IsNullOrEmpty(destinationSubDir) ? null : Path.Combine(destinationSubDir, Path.GetFileName(i.ItemSpec));
                 return (TaskEnvironment.GetAbsolutePath(i.ItemSpec), destinationSubPath);
             }).ToArray();
-            DependencyContext dependencyContext = builder.Build(userRuntimeAssemblies);
+            return builder.Build(userRuntimeAssemblies);
+        }
 
+        protected void WriteDependencyContext(DependencyContext dependencyContext, AbsolutePath depsFilePath)
+        {
             var writer = new DependencyContextWriter();
             using (var fileStream = File.Create(depsFilePath))
             {

@@ -66,7 +66,8 @@ independent Ninja execution, explicit NuGet project-style classification, SDK
 duplicate-item, executable-reference and filename-only WinMD validation, exact
 editorconfig and framework attribute generation, assembly version derivation,
 cache-free assembly generation, source-root mapping, exact SourceLink publication
-with all four packaged providers, SDK Restore, and standalone C# compilation.
+with all four packaged providers, SDK Restore, standalone C# compilation and
+dependency-manifest publication.
 Compiler actions run analyzers and the Regex generator, consume generated
 sources, and produce byte-identical assemblies, reference assemblies and
 portable PDBs across relocated checkouts.
@@ -124,8 +125,23 @@ environment, default response files, installation searches or output caches.
 Portable and embedded PDBs, reference assemblies, resources and explicit
 documentation inputs are supported. User response files, generated-files
 directories, native PDBs, rulesets, SARIF output, app-config and machine-key-container
-modes remain explicitly unsupported. With explicit directory imports, the fresh
-full SDK graph probe now first rejects `GenerateDepsFile`.
+modes remain explicitly unsupported.
+Hardened SDK Build uses `WriteDepsFile` to write the dependency manifest from
+explicit resolved metadata, assets JSON and declared runtime binaries. Generated
+binary versions are read after their producers execute, not captured during
+Restore. The writer shares the ordinary dependency model/serializer, without
+build-engine or timestamp caches, filesystem fallbacks, ambient reference roots
+or comparisons with old output. Logical manifest paths must be relative.
+Version reads use a portable content policy: managed assembly metadata, native
+PE fixed-version resources (which must agree across languages), and `0.0.0.0`
+for other native formats or absent version information. Malformed or conflicting
+version information fails explicitly. This deliberately avoids OS-specific
+`FileVersionInfo` and installation-side resource lookup; ordinary
+`GenerateDepsFile`, Publish and designer builds keep their existing behavior.
+The pinned SDK-driver dependency closure is also staged beside the SDK tasks so
+independent actions require no driver process or ambient assembly searches.
+With explicit directory imports, the fresh full SDK graph probe now first
+rejects `GenerateRuntimeConfigurationFiles`, followed by copy and cleanup work.
 Common's hardened `CoreBuild` does not run failure handlers or record partial
 writes for later Clean. Nonempty post-build events using `Always` or `OnOutputUpdated`
 are rejected; use `OnBuildSuccess` or no event. Ordinary MSBuild retains its

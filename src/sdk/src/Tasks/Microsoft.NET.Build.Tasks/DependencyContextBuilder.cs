@@ -18,6 +18,7 @@ namespace Microsoft.NET.Build.Tasks
     {
         private readonly SingleProjectInfo _mainProjectInfo;
         private readonly bool _includeRuntimeFileVersions;
+        private Func<string, string, string, RuntimeFile> _runtimeFileResolver;
         private IEnumerable<ReferenceInfo> _referenceAssemblies;
         private IEnumerable<ReferenceInfo> _directReferences;
         private IEnumerable<ReferenceInfo> _dependencyReferences;
@@ -254,6 +255,12 @@ namespace Microsoft.NET.Build.Tasks
                 _referenceAssembliesPath = referenceAssembliesPath + Path.DirectorySeparatorChar;
             }
 
+            return this;
+        }
+
+        public DependencyContextBuilder WithRuntimeFileResolver(Func<string, string, string, RuntimeFile> resolver)
+        {
+            _runtimeFileResolver = resolver;
             return this;
         }
 
@@ -648,15 +655,24 @@ namespace Microsoft.NET.Build.Tasks
 
             if (library.Type == "project" && !(referenceProjectInfo is UnreferencedProjectInfo))
             {
-                var fileName = Path.GetFileNameWithoutExtension(library.Path);
-                (AbsolutePath Path, string DestinationSubPath) assembly = userRuntimeAssemblies is not null
-                    ? userRuntimeAssemblies.FirstOrDefault(p => Path.GetFileNameWithoutExtension(p.Path).Equals(fileName))
-                    : default;
-                string mainProjectDirectory = Path.GetDirectoryName(_mainProjectInfo.ProjectPath);
-                string libraryPath = !string.IsNullOrWhiteSpace(library.Path) ? Path.Combine(mainProjectDirectory, library.Path) : null;
-                var runtimeFile = !string.IsNullOrWhiteSpace(assembly.Path) && File.Exists(assembly.Path) ? CreateRuntimeFile(referenceProjectInfo.OutputName, assembly.Path, assembly.DestinationSubPath) :
-                                  libraryPath != null && File.Exists(libraryPath) ? CreateRuntimeFile(referenceProjectInfo.OutputName, libraryPath) :
-                                  new RuntimeFile(referenceProjectInfo.OutputName, string.Empty, string.Empty);
+                RuntimeFile runtimeFile;
+                if (_runtimeFileResolver != null)
+                {
+                    runtimeFile = CreateRuntimeFile(referenceProjectInfo.OutputName,
+                        referenceProjectInfo.RuntimeAssemblyPath, referenceProjectInfo.RuntimeAssemblyDestinationSubPath);
+                }
+                else
+                {
+                    var fileName = Path.GetFileNameWithoutExtension(library.Path);
+                    (AbsolutePath Path, string DestinationSubPath) assembly = userRuntimeAssemblies is not null
+                        ? userRuntimeAssemblies.FirstOrDefault(p => Path.GetFileNameWithoutExtension(p.Path).Equals(fileName))
+                        : default;
+                    string mainProjectDirectory = Path.GetDirectoryName(_mainProjectInfo.ProjectPath);
+                    string libraryPath = !string.IsNullOrWhiteSpace(library.Path) ? Path.Combine(mainProjectDirectory, library.Path) : null;
+                    runtimeFile = !string.IsNullOrWhiteSpace(assembly.Path) && File.Exists(assembly.Path) ? CreateRuntimeFile(referenceProjectInfo.OutputName, assembly.Path, assembly.DestinationSubPath) :
+                                      libraryPath != null && File.Exists(libraryPath) ? CreateRuntimeFile(referenceProjectInfo.OutputName, libraryPath) :
+                                      new RuntimeFile(referenceProjectInfo.OutputName, string.Empty, string.Empty);
+                }
                 runtimeAssemblyGroups.Add(new RuntimeAssetGroup(string.Empty, [runtimeFile]));
 
                 resourceAssemblies.AddRange(referenceProjectInfo.ResourceAssemblies
@@ -826,6 +842,11 @@ namespace Microsoft.NET.Build.Tasks
 
         private RuntimeFile CreateRuntimeFile(string path, string fullPath, string localPath = null)
         {
+            if (_runtimeFileResolver != null)
+            {
+                return _runtimeFileResolver(path, fullPath, localPath);
+            }
+
             if (_includeRuntimeFileVersions)
             {
                 string fileVersion = FileUtilities.GetFileVersion(fullPath).ToString();

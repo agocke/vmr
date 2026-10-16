@@ -4,6 +4,11 @@
 #nullable disable
 
 using System.Runtime.CompilerServices;
+using System.Collections;
+using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
 using FluentAssertions;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
@@ -18,6 +23,385 @@ namespace Microsoft.NET.Build.Tasks.UnitTests
     {
         private readonly List<string> _tempDirs = new();
         private readonly string _originalCwd = Directory.GetCurrentDirectory();
+
+        [TestMethod]
+        public void DeclaredWriterUsesExplicitContextAndMetadataWithoutOpeningAssemblies()
+        {
+            string directory = CreateTestProjectDirectory();
+            CreateAssetsFile(directory, "assets.json");
+            var task = CreateDeclaredTask(directory);
+            task.TaskEnvironment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(directory,
+                new Dictionary<string, string> { ["DOTNET_REFERENCE_ASSEMBLIES_PATH"] = Path.Combine(directory, "decoy") });
+            task.CompilerOptions = new TaskItem("CompilerOptions");
+            task.ReferenceAssembliesPath = Path.Combine(directory, "framework");
+            task.ReferenceAssemblies = [new TaskItem(Path.Combine(directory, "framework", "v4.8", "Framework.dll"))];
+            task.AssemblySatelliteAssemblies =
+            [
+                new MockTaskItem("missing.resources.dll", new Dictionary<string, string>
+                {
+                    ["Culture"] = "de",
+                    ["TargetPath"] = "de/TestApp.resources.dll"
+                })
+            ];
+            File.WriteAllText(Path.Combine(directory, "result.deps.json"), "obsolete content that must not survive");
+
+            task.Execute().Should().BeTrue();
+
+            var json = JObject.Parse(File.ReadAllText(Path.Combine(directory, "result.deps.json")));
+            var target = (JObject)json["targets"][".NETCoreApp,Version=v8.0"];
+            target["Framework/0.0.0.0"]["compile"]["v4.8/Framework.dll"].Should().NotBeNull();
+            target["TestApp/1.0.0.0"]["resources"]["de/TestApp.resources.dll"]["locale"].Value<string>().Should().Be("de");
+            Directory.Exists(Path.Combine(directory, "framework")).Should().BeFalse();
+            ((BasicBuildEngine)task.BuildEngine).Errors.Should().BeEmpty();
+        }
+
+        [TestMethod]
+        public void DeclaredWriterReadsChangedBinaryContentsWithUnchangedTimestamp()
+        {
+            string directory = CreateTestProjectDirectory();
+            CreateAssetsFile(directory, "assets.json");
+            string assemblyPath = Path.Combine(directory, "Dependency.dll");
+            EmitAssembly(assemblyPath, new Version(1, 2, 3, 4), "5.6.7.8");
+            DateTime timestamp = File.GetLastWriteTimeUtc(assemblyPath);
+            var task = CreateDeclaredTask(directory);
+            task.IncludeRuntimeFileVersions = true;
+            task.ReferencePaths = task.UserRuntimeAssemblies = [new TaskItem(assemblyPath)];
+            task.DeclaredInputs = [new TaskItem("assets.json"), new TaskItem(assemblyPath)];
+
+            task.Execute().Should().BeTrue();
+            RuntimeVersions().Should().Be(("1.2.3.4", "5.6.7.8"));
+
+            EmitAssembly(assemblyPath, new Version(9, 10, 11, 12), "13.14.15.16");
+            File.SetLastWriteTimeUtc(assemblyPath, timestamp);
+            task.Execute().Should().BeTrue();
+            RuntimeVersions().Should().Be(("9.10.11.12", "13.14.15.16"));
+
+            (string, string) RuntimeVersions()
+            {
+                var json = JObject.Parse(File.ReadAllText(Path.Combine(directory, "result.deps.json")));
+                var file = json["targets"][".NETCoreApp,Version=v8.0"]["Dependency/0.0.0.0"]["runtime"]["Dependency.dll"];
+                return (file["assemblyVersion"].Value<string>(), file["fileVersion"].Value<string>());
+            }
+        }
+
+        [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void DeclaredProjectReferencesUseExplicitOutputsInsteadOfProjectNamesOrExistenceFallback(bool versions)
+        {
+            string directory = CreateTestProjectDirectory();
+            string assets = CreateAssetsFile(directory, "assets.json");
+            var json = JObject.Parse(File.ReadAllText(assets));
+            json["targets"]["net8.0"]["Logical.Project/2.0.0"] = new JObject { ["type"] = "project" };
+            json["libraries"]["Logical.Project/2.0.0"] = new JObject
+            {
+                ["type"] = "project",
+                ["path"] = "Logical.Project.csproj",
+                ["msbuildProject"] = "Logical.Project.csproj"
+            };
+            ((JArray)json["projectFileDependencyGroups"]["net8.0"]).Add("Logical.Project >= 2.0.0");
+            File.WriteAllText(assets, json.ToString());
+            string assemblyPath = Path.Combine(directory, "Different.Assembly.dll");
+            if (versions)
+            {
+                EmitAssembly(assemblyPath, new Version(3, 4, 5, 6), "7.8.9.10");
+            }
+
+            var task = CreateDeclaredTask(directory);
+            task.IncludeRuntimeFileVersions = versions;
+            task.ReferencePaths = task.UserRuntimeAssemblies =
+            [
+                new MockTaskItem(assemblyPath, new Dictionary<string, string>
+                {
+                    ["ReferenceSourceTarget"] = "ProjectReference",
+                    ["MSBuildSourceProjectFile"] = Path.Combine(directory, "Logical.Project.csproj"),
+                    ["DestinationSubDirectory"] = "plugins/"
+                })
+            ];
+            task.DeclaredInputs = versions
+                ? [new TaskItem("assets.json"), new TaskItem(assemblyPath)]
+                : [new TaskItem("assets.json")];
+
+            task.Execute().Should().BeTrue();
+
+            var result = JObject.Parse(File.ReadAllText(Path.Combine(directory, "result.deps.json")));
+            var file = result["targets"][".NETCoreApp,Version=v8.0"]["Logical.Project/2.0.0"]["runtime"]["Different.Assembly.dll"];
+            file["localPath"].Value<string>().Should().Be("plugins/Different.Assembly.dll");
+            if (versions)
+            {
+                file["assemblyVersion"].Value<string>().Should().Be("3.4.5.6");
+                file["fileVersion"].Value<string>().Should().Be("7.8.9.10");
+                File.Delete(assemblyPath);
+                Action execute = () => task.Execute();
+                execute.Should().Throw<FileNotFoundException>();
+            }
+            else
+            {
+                ((JObject)file).Properties().Select(property => property.Name).Should().Equal("localPath");
+            }
+        }
+
+        [TestMethod]
+        [DataRow("undeclared")]
+        [DataRow("undeclared-binary")]
+        [DataRow("output")]
+        [DataRow("absolute-key")]
+        [DataRow("absolute-resource")]
+        [DataRow("malformed-assets")]
+        public void DeclaredWriterFailsWithoutPublishingForInvalidInputs(string invalidInput)
+        {
+            string directory = CreateTestProjectDirectory();
+            CreateAssetsFile(directory, "assets.json");
+            var task = CreateDeclaredTask(directory);
+            if (invalidInput == "undeclared")
+            {
+                task.DeclaredInputs = [];
+            }
+            else if (invalidInput == "undeclared-binary")
+            {
+                task.IncludeRuntimeFileVersions = true;
+                task.ReferencePaths = task.UserRuntimeAssemblies = [new TaskItem("missing.dll")];
+            }
+            else if (invalidInput == "output")
+            {
+                task.DeclaredOutputs = [new TaskItem("different.deps.json")];
+            }
+            else if (invalidInput == "absolute-key")
+            {
+                task.CompilerOptions = new MockTaskItem("CompilerOptions", new Dictionary<string, string>
+                {
+                    ["AssemblyOriginatorKeyFile"] = Path.Combine(directory, "key.snk")
+                });
+            }
+            else if (invalidInput == "absolute-resource")
+            {
+                task.AssemblySatelliteAssemblies =
+                [
+                    new MockTaskItem("unused.resources.dll", new Dictionary<string, string>
+                    {
+                        ["Culture"] = "de",
+                        ["TargetPath"] = Path.Combine(directory, "physical.resources.dll")
+                    })
+                ];
+            }
+            else
+            {
+                File.WriteAllText(Path.Combine(directory, "assets.json"), "not JSON");
+            }
+
+            task.Execute().Should().BeFalse();
+
+            ((BasicBuildEngine)task.BuildEngine).Errors.Should().ContainSingle();
+            File.Exists(Path.Combine(directory, "result.deps.json")).Should().BeFalse();
+        }
+
+        private WriteDepsFile CreateDeclaredTask(string directory) => new()
+        {
+            BuildEngine = new BasicBuildEngine(),
+            TaskEnvironment = TaskEnvironmentHelper.CreateForTest(directory),
+            ProjectPath = "TestApp.csproj",
+            AssetsFilePath = "assets.json",
+            DepsFilePath = "result.deps.json",
+            DeclaredInputs = [new TaskItem("assets.json")],
+            DeclaredOutputs = [new TaskItem("result.deps.json")],
+            TargetFramework = "net8.0",
+            RuntimeFrameworks = [new TaskItem("Microsoft.NETCore.App")],
+            AssemblyName = "TestApp",
+            AssemblyExtension = ".dll",
+            AssemblyVersion = "1.0.0.0",
+            IncludeMainProject = true,
+            CompileReferences = [],
+            ResolvedNuGetFiles = [],
+            ResolvedRuntimeTargetsFiles = []
+        };
+
+        [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void SelfContainedWriterRequiresItsDeclaredRuntimeGraph(bool declared)
+        {
+            string directory = CreateTestProjectDirectory();
+            CreateAssetsFile(directory, "assets.json");
+            var task = CreateDeclaredTask(directory);
+            task.IsSelfContained = true;
+            task.RuntimeGraphPath = "runtime.json";
+            if (declared)
+            {
+                task.DeclaredInputs = [new TaskItem("assets.json"), new TaskItem("runtime.json")];
+            }
+
+            task.Execute().Should().Be(declared);
+
+            File.Exists(Path.Combine(directory, "result.deps.json")).Should().Be(declared);
+            ((BasicBuildEngine)task.BuildEngine).Errors.Should().HaveCount(declared ? 0 : 1);
+        }
+
+        [TestMethod]
+        [DataRow(null, "0.0.0.0", false)]
+        [DataRow("1.2", "1.2.0.0", false)]
+        [DataRow("1.2.3.4", "1.2.3.4", true)]
+        public void ManagedVersionsComeFromMetadataRatherThanNativeResources(string attribute, string expected, bool localAttribute)
+        {
+            string path = Path.Combine(CreateTestProjectDirectory(), "managed.dll");
+            EmitAssembly(path, new Version(5, 6, 7, 8), attribute, localAttribute: localAttribute,
+                resources: new VersionResources(FixedVersion(9, 10, 11, 12)));
+
+            RuntimeFileVersions.Read(path).Should().Be(("5.6.7.8", expected));
+        }
+
+        [TestMethod]
+        [DataRow("valid")]
+        [DataRow("conflicting")]
+        [DataRow("malformed")]
+        public void NativePeVersionsArePortableAndRejectAmbiguousResources(string resourceKind)
+        {
+            string path = Path.Combine(CreateTestProjectDirectory(), "native.dll");
+            byte[] resource = resourceKind == "malformed" ? new byte[92] : FixedVersion(1, 2, 3, 4);
+            byte[] second = resourceKind == "conflicting" ? FixedVersion(5, 6, 7, 8) : resource;
+            EmitAssembly(path, new Version(9, 10, 11, 12), null, native: true, resources: new VersionResources(resource, second));
+
+            if (resourceKind == "valid")
+            {
+                RuntimeFileVersions.Read(path).Should().Be((null, "1.2.3.4"));
+            }
+            else if (resourceKind == "conflicting")
+            {
+                Assert.ThrowsExactly<BuildErrorException>(() => RuntimeFileVersions.Read(path));
+            }
+            else
+            {
+                Assert.ThrowsExactly<BadImageFormatException>(() => RuntimeFileVersions.Read(path));
+            }
+        }
+
+        [TestMethod]
+        [DataRow("invalid")]
+        [DataRow("1.2.70000.4")]
+        public void UnsupportedManagedFileVersionsFailInsteadOfUsingAmbientFallbacks(string version)
+        {
+            string path = Path.Combine(CreateTestProjectDirectory(), "invalid.dll");
+            EmitAssembly(path, new Version(1, 2, 3, 4), version);
+
+            Assert.ThrowsExactly<BuildErrorException>(() => RuntimeFileVersions.Read(path));
+        }
+
+        private static byte[] FixedVersion(ushort major, ushort minor, ushort build, ushort revision)
+        {
+            var value = new BlobBuilder();
+            value.WriteUInt16(92);
+            value.WriteUInt16(52);
+            value.WriteUInt16(0);
+            value.WriteUTF16("VS_VERSION_INFO\0");
+            value.Align(4);
+            value.WriteUInt32(0xFEEF04BD);
+            value.WriteUInt32(0x00010000);
+            value.WriteUInt32(((uint)major << 16) | minor);
+            value.WriteUInt32(((uint)build << 16) | revision);
+            value.WriteBytes(0, 36);
+            return value.ToArray();
+        }
+
+        private sealed class VersionResources(params byte[][] resources) : ResourceSectionBuilder
+        {
+            protected override void Serialize(BlobBuilder builder, SectionLocation location)
+            {
+                Directory(1);
+                builder.WriteUInt32(16);
+                builder.WriteUInt32(0x80000018);
+                Directory(1);
+                builder.WriteUInt32(1);
+                builder.WriteUInt32(0x80000030);
+                Directory((ushort)resources.Length);
+                int entryOffset = 64 + resources.Length * 8;
+                for (int i = 0; i < resources.Length; i++)
+                {
+                    builder.WriteUInt32((uint)i);
+                    builder.WriteUInt32((uint)(entryOffset + i * 16));
+                }
+
+                int contentOffset = entryOffset + resources.Length * 16;
+                foreach (byte[] resource in resources)
+                {
+                    builder.WriteUInt32((uint)(location.RelativeVirtualAddress + contentOffset));
+                    builder.WriteUInt32((uint)resource.Length);
+                    builder.WriteUInt64(0);
+                    contentOffset += resource.Length;
+                }
+
+                foreach (byte[] resource in resources)
+                {
+                    builder.WriteBytes(resource);
+                }
+
+                void Directory(ushort entries)
+                {
+                    builder.WriteBytes(0, 14);
+                    builder.WriteUInt16(entries);
+                }
+            }
+        }
+
+        private static void EmitAssembly(string path, Version version, string fileVersion, bool localAttribute = false, bool native = false, ResourceSectionBuilder resources = null)
+        {
+            var metadata = new MetadataBuilder();
+            metadata.AddModule(0, metadata.GetOrAddString("Dependency.dll"), metadata.GetOrAddGuid(new Guid("5f3c8cac-5ba0-4096-82c1-21d9e765c5b3")), default, default);
+            var assembly = metadata.AddAssembly(metadata.GetOrAddString("Dependency"), version, default, default, 0, AssemblyHashAlgorithm.None);
+            metadata.AddTypeDefinition(TypeAttributes.NotPublic, default, metadata.GetOrAddString("<Module>"), default,
+                MetadataTokens.FieldDefinitionHandle(1), MetadataTokens.MethodDefinitionHandle(1));
+            if (fileVersion is not null)
+            {
+                var signature = new BlobBuilder();
+                new BlobEncoder(signature).MethodSignature(isInstanceMethod: true).Parameters(1, result => result.Void(), parameters => parameters.AddParameter().Type().String());
+                EntityHandle constructor;
+                if (localAttribute)
+                {
+                    metadata.AddTypeDefinition(TypeAttributes.Public, metadata.GetOrAddString("System.Reflection"), metadata.GetOrAddString("AssemblyFileVersionAttribute"),
+                        default, MetadataTokens.FieldDefinitionHandle(1), MetadataTokens.MethodDefinitionHandle(1));
+                    constructor = metadata.AddMethodDefinition(MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                        MethodImplAttributes.Runtime, metadata.GetOrAddString(".ctor"), metadata.GetOrAddBlob(signature), 0, MetadataTokens.ParameterHandle(1));
+                }
+                else
+                {
+                    var runtime = metadata.AddAssemblyReference(metadata.GetOrAddString("System.Runtime"), new Version(8, 0, 0, 0), default, default, 0, default);
+                    var attribute = metadata.AddTypeReference(runtime, metadata.GetOrAddString("System.Reflection"), metadata.GetOrAddString("AssemblyFileVersionAttribute"));
+                    constructor = metadata.AddMemberReference(attribute, metadata.GetOrAddString(".ctor"), metadata.GetOrAddBlob(signature));
+                }
+
+                var value = new BlobBuilder();
+                value.WriteUInt16(1);
+                value.WriteSerializedString(fileVersion);
+                value.WriteUInt16(0);
+                metadata.AddCustomAttribute(assembly, constructor, metadata.GetOrAddBlob(value));
+            }
+
+            var pe = new ManagedPEBuilder(new PEHeaderBuilder(imageCharacteristics: Characteristics.ExecutableImage | Characteristics.Dll),
+                new MetadataRootBuilder(metadata), new BlobBuilder(), nativeResources: resources, flags: CorFlags.ILOnly);
+            var image = new BlobBuilder();
+            pe.Serialize(image);
+            byte[] bytes = image.ToArray();
+            if (native)
+            {
+                using var reader = new PEReader(new MemoryStream(bytes));
+                int directoriesOffset = reader.PEHeaders.PEHeader.Magic == PEMagic.PE32Plus ? 112 : 96;
+                Array.Clear(bytes, reader.PEHeaders.PEHeaderStartOffset + directoriesOffset + 14 * 8, 8);
+            }
+
+            File.WriteAllBytes(path, bytes);
+        }
+
+        private sealed class BasicBuildEngine : IBuildEngine
+        {
+            public List<BuildErrorEventArgs> Errors { get; } = [];
+            public bool ContinueOnError => false;
+            public int LineNumberOfTaskNode => 0;
+            public int ColumnNumberOfTaskNode => 0;
+            public string ProjectFileOfTaskNode => "";
+            public void LogErrorEvent(BuildErrorEventArgs e) => Errors.Add(e);
+            public void LogWarningEvent(BuildWarningEventArgs e) { }
+            public void LogMessageEvent(BuildMessageEventArgs e) { }
+            public void LogCustomEvent(CustomBuildEventArgs e) { }
+            public bool BuildProjectFile(string projectFileName, string[] targetNames, IDictionary globalProperties, IDictionary targetOutputs) => throw new NotSupportedException();
+        }
 
         [TestMethod]
         public void ProjectAndDepsFilePathsAreResolvedThroughTaskEnvironment()
