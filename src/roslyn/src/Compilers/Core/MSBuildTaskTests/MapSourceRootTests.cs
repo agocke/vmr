@@ -89,6 +89,28 @@ namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
             Assert.True(result);
         }
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void RelativeRootUsesProjectContext(bool deterministic)
+        {
+            var projectDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            var expectedRoot = Path.Combine(projectDirectory, "missing") + Path.DirectorySeparatorChar;
+            var task = new MapSourceRoots
+            {
+                BuildEngine = new MockEngine(),
+                TaskEnvironment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(projectDirectory),
+                SourceRoots = new[] { new TaskItem("missing/") },
+                Deterministic = deterministic,
+            };
+
+            Assert.True(task.Execute());
+            var root = Assert.Single(task.MappedSourceRoots!);
+            Assert.Equal(expectedRoot, root.ItemSpec);
+            Assert.Equal(deterministic ? "/_/" : expectedRoot, root.GetMetadata("MappedPath"));
+            Assert.False(Directory.Exists(projectDirectory));
+        }
+
         [Fact]
         public void InvalidChars()
         {

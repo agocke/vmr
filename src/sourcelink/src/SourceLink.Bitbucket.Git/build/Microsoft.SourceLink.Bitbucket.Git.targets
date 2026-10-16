@@ -33,7 +33,8 @@
 
       ContentUrl is optional. If not specified it defaults to "https://{domain}" or "http://{domain}", based on the scheme of SourceRoot.RepositoryUrl.
     -->
-    <Microsoft.SourceLink.Bitbucket.Git.GetSourceLinkUrl RepositoryUrl="$(PrivateRepositoryUrl)" SourceRoot="@(SourceRoot)" Hosts="@(SourceLinkBitbucketGitHost)" IsSingleProvider="$(SourceLinkHasSingleProvider)">
+    <Microsoft.SourceLink.Bitbucket.Git.GetSourceLinkUrl RepositoryUrl="$(PrivateRepositoryUrl)" SourceRoot="@(SourceRoot)" Hosts="@(SourceLinkBitbucketGitHost)" IsSingleProvider="$(SourceLinkHasSingleProvider)"
+                                                      DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="SourceLinkUrl" PropertyName="_SourceLinkUrlToUpdate"/>
     </Microsoft.SourceLink.Bitbucket.Git.GetSourceLinkUrl>
 

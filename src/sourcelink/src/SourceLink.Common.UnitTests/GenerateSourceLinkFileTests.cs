@@ -41,7 +41,7 @@ namespace Microsoft.SourceLink.Common.UnitTests
 
             Assert.True(task.Execute());
 
-            var expectedOutput = 
+            var expectedOutput =
                 (noWarning ? "" : "WARNING : " + string.Format(Resources.SourceControlInformationIsNotAvailableGeneratedSourceLinkEmpty) + Environment.NewLine) +
                 string.Format(Resources.SourceLinkEmptyNoExistingFile, sourceLinkFilePath);
 
@@ -73,7 +73,7 @@ namespace Microsoft.SourceLink.Common.UnitTests
 
             Assert.True(task.Execute());
 
-            var expectedOutput = 
+            var expectedOutput =
                 (noWarning ? "" : "WARNING : " + string.Format(Resources.SourceControlInformationIsNotAvailableGeneratedSourceLinkEmpty) + Environment.NewLine) +
                 string.Format(Resources.SourceLinkEmptyNoExistingFile, sourceLinkFilePath);
 
@@ -127,6 +127,97 @@ namespace Microsoft.SourceLink.Common.UnitTests
             AssertEx.AreEqual(@"{""documents"":{""/_\""_/*"":""https://raw.githubusercontent.com/repo/*""}}", content);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void FormatAndWriteSourceLink(bool existingOutput)
+        {
+            using var temp = new TempRoot();
+            var outputFile = Path.Combine(temp.CreateDirectory().Path, "source-link.json");
+            if (existingOutput)
+            {
+                File.WriteAllText(outputFile, "stale");
+            }
+
+            var formatter = new FormatSourceLink
+            {
+                BuildEngine = new MockEngine(),
+                SourceRoots = new[]
+                {
+                    new MockItem("/missing/", KVP("MappedPath", "/_\"_/"), KVP("SourceLinkUrl", "https://example.invalid/\u03bb/*")),
+                },
+            };
+
+            Assert.True(formatter.Execute());
+            const string expected = "{\"documents\":{\"/_\\\"_/*\":\"https://example.invalid/\u03bb/*\"}}";
+            Assert.Equal(expected, formatter.SourceLinkContent);
+            Assert.Equal(existingOutput, File.Exists(outputFile));
+            if (existingOutput)
+            {
+                Assert.Equal("stale", File.ReadAllText(outputFile));
+            }
+
+            var writer = new WriteSourceLink
+            {
+                BuildEngine = new MockEngine(),
+                OutputFile = outputFile,
+                SourceLinkContent = formatter.SourceLinkContent,
+            };
+
+            Assert.True(writer.Execute());
+            Assert.Equal(new UTF8Encoding(false).GetBytes(expected), File.ReadAllBytes(outputFile));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void FormatEmptySourceLink(bool noWarning)
+        {
+            var engine = new MockEngine();
+            var formatter = new FormatSourceLink
+            {
+                BuildEngine = engine,
+                NoWarnOnMissingSourceControlInformation = noWarning,
+            };
+
+            Assert.True(formatter.Execute());
+            Assert.Equal("", formatter.SourceLinkContent);
+            Assert.Equal(!noWarning, engine.Log.Contains("WARNING"));
+        }
+
+        [Fact]
+        public void FormatSourceLinkRejectsInvalidUrl()
+        {
+            var engine = new MockEngine();
+            var formatter = new FormatSourceLink
+            {
+                BuildEngine = engine,
+                NoWarnOnMissingSourceControlInformation = true,
+                SourceRoots = new[] { new MockItem("/missing/", KVP("SourceLinkUrl", "https://example.invalid/**")) },
+            };
+
+            Assert.False(formatter.Execute());
+            Assert.Equal("", formatter.SourceLinkContent);
+            Assert.Contains(string.Format(Resources.MustContainSingleWildcard, "SourceRoot.SourceLinkUrl", "https://example.invalid/**"), engine.Log);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("relative.json")]
+        public void WriteSourceLinkRejectsRelativeOutput(string path)
+        {
+            var engine = new MockEngine();
+            var writer = new WriteSourceLink
+            {
+                BuildEngine = engine,
+                OutputFile = path,
+                SourceLinkContent = "{}",
+            };
+
+            Assert.False(writer.Execute());
+            Assert.Contains("ERROR", engine.Log);
+        }
+
         [Fact]
         public void WithoutMappedPaths()
         {
@@ -161,7 +252,7 @@ namespace Microsoft.SourceLink.Common.UnitTests
             var task = new GenerateSourceLinkFile()
             {
                 BuildEngine = engine,
-                SourceRoots = new[] 
+                SourceRoots = new[]
                 {
                     new MockItem(@"C:\src\", KVP("MappedPath", "/_/"), KVP("SourceLinkUrl", "https://raw.githubusercontent.com/repo1/*"), KVP("SourceControl", "git")),
                     new MockItem(@"C:\x\a\", KVP("MappedPath", "/_/1/"), KVP("SourceLinkUrl", "https://raw.githubusercontent.com/repo2/*"), KVP("SourceControl", "git")),
@@ -174,8 +265,8 @@ namespace Microsoft.SourceLink.Common.UnitTests
 
             AssertEx.AreEqual(
                 @"{""documents"":{" +
-                @"""/_/*"":""https://raw.githubusercontent.com/repo1/*""," + 
-                @"""/_/1/*"":""https://raw.githubusercontent.com/repo2/*""," + 
+                @"""/_/*"":""https://raw.githubusercontent.com/repo1/*""," +
+                @"""/_/1/*"":""https://raw.githubusercontent.com/repo2/*""," +
                 @"""/_/2/*"":""https://raw.githubusercontent.com/repo3/*""}}", content);
         }
 

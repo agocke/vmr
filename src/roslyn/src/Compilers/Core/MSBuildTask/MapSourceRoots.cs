@@ -24,10 +24,14 @@ namespace Microsoft.CodeAnalysis.BuildTasks
     /// or a calculated deterministic source path (starting with prefix '/_/', '/_1/', etc.), otherwise.
     /// </remarks>
     [MSBuildPureTask]
+    [MSBuildDeclaredIOTask]
     [MSBuildMultiThreadableTask]
     public sealed class MapSourceRoots : Task, IMultiThreadableTask
     {
         public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
 
         public MapSourceRoots()
         {

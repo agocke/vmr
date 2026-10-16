@@ -73,7 +73,17 @@ first; parsing it does not grant permission to discover it during Build.
 The legacy `[MSBuildPureTask]` annotation alone is not sufficient: the task
 also needs the audited declared-I/O contract and explicit empty call-site lists.
 
-Real example: [assembly version derivation](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/GetAssemblyVersion.cs).
+The same distinction applies to source mapping. `MapSourceRoots` normalizes
+supplied paths against captured project context and derives deterministic
+`MappedPath` metadata without checking whether the directories exist.
+SourceLink URL tasks turn supplied repository URLs, revisions, and host/version
+metadata into content URLs; they do not contact the server or query Git.
+Keep repository discovery and URL translation preparation in Restore, not in
+these construction-time transformations.
+
+Real examples: [assembly version derivation](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/GetAssemblyVersion.cs),
+[source-root mapping](../../../../roslyn/src/Compilers/Core/MSBuildTask/MapSourceRoots.cs),
+and [SourceLink URL derivation](../../../../sourcelink/src/Common/GitProvider/GetSourceLinkUrlGitTask.cs).
 
 ## Establish artifact paths before executing producers
 
@@ -225,7 +235,18 @@ declared file as UTF-8 without a BOM, without reading its previous contents.
 Ordinary builds retain `GenerateMSBuildEditorConfig` and its comparison
 behavior; both paths share the serializer.
 
-Real example: Roslyn's [editorconfig target](../../../../roslyn/src/Compilers/Core/MSBuildTask/Microsoft.Managed.Core.targets).
+SourceLink uses the same split: `FormatSourceLink` shares the existing JSON
+serializer, and `WriteSourceLink` publishes its exact text without comparing a
+previous file. The compiler's `SourceLink` path and `FileWrites` are selected
+from the formatter result during construction, not returned by the file action.
+An empty mapping result clears the compiler property and emits no output action.
+Do not probe/delete stale JSON to decide the compiler's inputs: in hardened mode
+that stale file remains unreferenced. Ordinary generation retains its existing
+empty-file deletion policy. Make such cleanup differences explicit rather than
+quietly retaining a read/compare/delete task behind a declared-output annotation.
+
+Real examples: Roslyn's [editorconfig target](../../../../roslyn/src/Compilers/Core/MSBuildTask/Microsoft.Managed.Core.targets)
+and [SourceLink target](../../../../sourcelink/src/SourceLink.Common/build/Microsoft.SourceLink.Common.targets).
 
 ## Capture discovery during preparation, then replay it
 

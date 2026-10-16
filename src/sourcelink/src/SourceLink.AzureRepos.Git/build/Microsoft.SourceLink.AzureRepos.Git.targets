@@ -25,7 +25,8 @@
 
       ContentUrl is optional. If not specified it defaults to "https://{domain}" or "http://{domain}", based on the scheme of SourceRoot.RepositoryUrl.
     -->
-    <Microsoft.SourceLink.AzureRepos.Git.GetSourceLinkUrl RepositoryUrl="$(PrivateRepositoryUrl)" SourceRoot="@(SourceRoot)" Hosts="@(SourceLinkAzureReposGitHost)" IsSingleProvider="$(SourceLinkHasSingleProvider)">
+    <Microsoft.SourceLink.AzureRepos.Git.GetSourceLinkUrl RepositoryUrl="$(PrivateRepositoryUrl)" SourceRoot="@(SourceRoot)" Hosts="@(SourceLinkAzureReposGitHost)" IsSingleProvider="$(SourceLinkHasSingleProvider)"
+                                                       DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="SourceLinkUrl" PropertyName="_SourceLinkUrlToUpdate"/>
     </Microsoft.SourceLink.AzureRepos.Git.GetSourceLinkUrl>
 

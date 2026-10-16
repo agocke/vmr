@@ -42,6 +42,9 @@ namespace Microsoft.SourceLink.Common
         }
 
         internal string? GenerateSourceLinkContent()
+            => GenerateSourceLinkContent(SourceRoots, Log);
+
+        internal static string? GenerateSourceLinkContent(ITaskItem[] sourceRoots, TaskLoggingHelper log)
         {
             static string jsonEscape(string str)
                 => str.Replace(@"\", @"\\").Replace("\"", "\\\"");
@@ -51,7 +54,7 @@ namespace Microsoft.SourceLink.Common
 
             var success = true;
             var isEmpty = true;
-            foreach (var root in SourceRoots)
+            foreach (var root in sourceRoots)
             {
                 var mappedPath = root.GetMetadata(Names.SourceRoot.MappedPath);
                 var isMapped = !string.IsNullOrEmpty(mappedPath);
@@ -59,14 +62,14 @@ namespace Microsoft.SourceLink.Common
 
                 if (!localPath.EndsWithSeparator())
                 {
-                    Log.LogError(Resources.MustEndWithDirectorySeparator, isMapped ? Names.SourceRoot.MappedPathFullName : Names.SourceRoot.Name, localPath);
+                    log.LogError(Resources.MustEndWithDirectorySeparator, isMapped ? Names.SourceRoot.MappedPathFullName : Names.SourceRoot.Name, localPath);
                     success = false;
                     continue;
                 }
 
                 if (localPath.Contains('*'))
                 {
-                    Log.LogError(Resources.MustNotContainWildcard, isMapped ? Names.SourceRoot.MappedPathFullName : Names.SourceRoot.Name, localPath);
+                    log.LogError(Resources.MustNotContainWildcard, isMapped ? Names.SourceRoot.MappedPathFullName : Names.SourceRoot.Name, localPath);
                     success = false;
                     continue;
                 }
@@ -81,7 +84,7 @@ namespace Microsoft.SourceLink.Common
 
                 if (url.Count(c => c == '*') != 1)
                 {
-                    Log.LogError(Resources.MustContainSingleWildcard, Names.SourceRoot.SourceLinkUrlFullName, url);
+                    log.LogError(Resources.MustContainSingleWildcard, Names.SourceRoot.SourceLinkUrlFullName, url);
                     success = false;
                     continue;
                 }

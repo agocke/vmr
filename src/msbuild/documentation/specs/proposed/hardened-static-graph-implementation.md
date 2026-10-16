@@ -405,20 +405,35 @@ including obstructing cache directories, retained resource/reference/platform
 preparation and caller inputs, independent assembly-info publication with
 ordinary-identical bytes, and ordinary cache creation.
 
+Roslyn's `MapSourceRoots` and the packaged GitHub, GitLab, Azure Repos, and
+Bitbucket SourceLink URL tasks now run as audited zero-I/O construction tasks.
+They derive mapped paths and URLs from prepared metadata and captured project
+context, without requiring source directories or querying source control.
+Hardened SourceLink generation shares the ordinary JSON serializer through
+`FormatSourceLink` and publishes its exact text through overwrite-only
+`WriteSourceLink`. Compiler and cleanup paths are static. Empty mappings clear
+the compiler property and emit no file action, leaving stale JSON unreferenced.
+Ordinary builds retain their comparison and deletion behavior.
+Packaged smoke checks all four providers, explicit URL preservation, relative
+and nested roots, duplicate merging, deterministic/non-deterministic paths,
+legacy host versions, exact ordinary-compatible bytes, empty/stale outputs,
+invalid metadata rejection without partial graphs, and fatal publication errors.
+
 With directory import paths supplied explicitly to both Restore and Build,
 the fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
 executable-reference validation, WinMD validation, editorconfig generation,
-framework attribute generation, and assembly version derivation.
-There are no remaining hash or deferred-hash diagnostics in this probe.
-The first unsupported task is now Roslyn's `MapSourceRoots`, followed by its
-deferred source-root values and SourceLink URL tasks.
+framework attribute generation, assembly version derivation, source-root mapping,
+and SourceLink generation. There are no remaining hash, deferred-hash,
+source-root mapping or SourceLink task-rejection diagnostics in this probe.
+The first unsupported task is now Roslyn's `Csc`, followed by copy, cleanup,
+dependency/runtime configuration and deferred-value diagnostics.
 Failed construction publishes neither a graph nor action invocations and
-writes no framework attribute file.
+writes no framework attribute, assembly-info, editorconfig or SourceLink file.
 Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers
 Common's preparation sites, not every SDK or custom directory operation.
-The probe also reports unsupported source mapping, compilation,
+The probe also reports unsupported compilation,
 dependency/runtime configuration, copying, and cleanup operations.
 Some diagnostics follow unavailable earlier outputs; fix the first unsupported
 operations and re-probe rather than treating

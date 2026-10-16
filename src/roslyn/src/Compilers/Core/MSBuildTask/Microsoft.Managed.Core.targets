@@ -277,7 +277,8 @@
       <_MappedSourceRoot Remove="@(_MappedSourceRoot)" />
     </ItemGroup>
 
-    <Microsoft.CodeAnalysis.BuildTasks.MapSourceRoots SourceRoots="@(SourceRoot)" Deterministic="$(DeterministicSourcePaths)">
+    <Microsoft.CodeAnalysis.BuildTasks.MapSourceRoots SourceRoots="@(SourceRoot)" Deterministic="$(DeterministicSourcePaths)"
+                                                    DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="MappedSourceRoots" ItemName="_MappedSourceRoot" />
     </Microsoft.CodeAnalysis.BuildTasks.MapSourceRoots>
 

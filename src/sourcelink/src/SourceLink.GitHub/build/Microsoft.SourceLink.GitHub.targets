@@ -33,7 +33,8 @@
 
       ContentUrl is optional. If not specified it defaults to "https://{domain}/raw".
     -->
-    <Microsoft.SourceLink.GitHub.GetSourceLinkUrl RepositoryUrl="$(PrivateRepositoryUrl)" SourceRoot="@(SourceRoot)" Hosts="@(SourceLinkGitHubHost)" IsSingleProvider="$(SourceLinkHasSingleProvider)">
+    <Microsoft.SourceLink.GitHub.GetSourceLinkUrl RepositoryUrl="$(PrivateRepositoryUrl)" SourceRoot="@(SourceRoot)" Hosts="@(SourceLinkGitHubHost)" IsSingleProvider="$(SourceLinkHasSingleProvider)"
+                                               DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="SourceLinkUrl" PropertyName="_SourceLinkUrlToUpdate"/>
     </Microsoft.SourceLink.GitHub.GetSourceLinkUrl>
 

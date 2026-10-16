@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the License.txt file in the project root for more information.
 
@@ -14,6 +14,9 @@ namespace Microsoft.Build.Tasks.SourceControl
 {
     public abstract class GetSourceLinkUrlGitTask : Task
     {
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
+
         private const string SourceControlName = "git";
         protected const string NotApplicableValue = "N/A";
         private const string ContentUrlMetadataName = "ContentUrl";

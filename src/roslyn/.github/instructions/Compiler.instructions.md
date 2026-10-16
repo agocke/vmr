@@ -82,6 +82,10 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
 - `Csc.cs` - C# compiler task
 - `Vbc.cs` - VB compiler task  
 - `ManagedCompiler.cs` - Base compiler task functionality
+- `MapSourceRoots` is an audited zero-I/O construction task with explicit empty
+  `DeclaredInputs` and `DeclaredOutputs` at its shipped call site. It computes
+  mapped paths from supplied root metadata and `TaskEnvironment` project context;
+  source-control discovery must already have prepared those inputs.
 - `Microsoft.Managed.Core.targets` prepares the analyzer-skip marker during
   ordinary Restore when `MSBuildRestoreGraphInputs=true`. Hardened graph
   construction consumes that marker without initializing it.

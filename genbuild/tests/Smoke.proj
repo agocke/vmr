@@ -39,6 +39,7 @@
     <CallTarget Targets="TestFrameworkAttribute" />
     <CallTarget Targets="TestAssemblyVersion" />
     <CallTarget Targets="TestIncrementalCaches" />
+    <CallTarget Targets="TestSourceLink" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -52,7 +53,84 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestSourceLink">
+    <MakeDir Directories="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)SourceLink.proj" DestinationFolder="$(_TestDirectory)" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Roslyn/Microsoft.Managed.Core.targets"
+             Namespaces="&lt;Namespace Prefix='msb' Uri='http://schemas.microsoft.com/developer/msbuild/2003' /&gt;"
+             Query="/msb:Project/msb:Target[@Name='InitializeSourceRootMappedPaths' or @Name='_InitializeSourceRootMappedPathsFromSourceControl' or @Name='_SetPathMapFromSourceRoots']">
+      <Output TaskParameter="Result" ItemName="_SourceRootTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_SourceRootTarget->Count())' != '3'" Text="The packaged Roslyn targets must contain source-root mapping and PathMap preparation." />
+    <PropertyGroup>
+      <_SourceRootXml>@(_SourceRootTarget, '')</_SourceRootXml>
+      <_SourceRootXml>$(_SourceRootXml.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_SourceRootXml>
+      <_StaleSourceLink>$(_TestDirectory)source-link/stale/SourceLink.sourcelink.json</_StaleSourceLink>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_TestDirectory)SourceRoots.targets"
+                      Lines="&lt;Project xmlns='http://schemas.microsoft.com/developer/msbuild/2003'&gt;;$(_SourceRootXml);&lt;/Project&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_SourceLinkCase Include="graph" Baseline="ordinary" />
+      <_SourceLinkCase Include="stale" Baseline="ordinary-stale" />
+      <_SourceLinkCase Include="paths" Arguments="-p:DeterministicSourcePaths=false" Baseline="ordinary-paths" />
+      <_SourceLinkCase Include="legacy-hosts" Arguments="-p:LegacyHosts=true" Baseline="ordinary-legacy-hosts" />
+      <_EmptySourceLinkCase Include="empty;no-url" />
+      <_RejectedSourceLinkCase Include="root-separator;nested-root;revision;host;wildcard;gitlab-version;bitbucket-version" />
+    </ItemGroup>
+    <MakeDir Directories="$(_TestDirectory)source-link/stale;$(_TestDirectory)source-link/empty;$(_TestDirectory)source-link/no-url" />
+    <WriteLinesToFile File="$(_StaleSourceLink)" Lines="stale" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)source-link/%(_EmptySourceLinkCase.Identity)/SourceLink.sourcelink.json" Lines="unreferenced" Overwrite="true" />
+    <GetFileHash Files="$(_StaleSourceLink)">
+      <Output TaskParameter="Hash" PropertyName="_StaleSourceLinkBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)SourceLink.proj&quot; -p:TestCase=%(_SourceLinkCase.Identity) %(_SourceLinkCase.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)source-link-%(_SourceLinkCase.Identity).ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)source-link/graph') or Exists('$(_TestDirectory)source-link/paths') or Exists('$(_TestDirectory)missing-source')"
+           Text="Source mapping and formatting must not create outputs or require source directories during construction." />
+    <GetFileHash Files="$(_StaleSourceLink)">
+      <Output TaskParameter="Hash" PropertyName="_StaleSourceLinkAfter" />
+    </GetFileHash>
+    <Error Condition="'$(_StaleSourceLinkBefore)' != '$(_StaleSourceLinkAfter)'" Text="Construction must not rewrite stale SourceLink JSON." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f source-link-%(_SourceLinkCase.Identity).ninja" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)SourceLink.proj&quot; -p:TestCase=%(_SourceLinkCase.Baseline) %(_SourceLinkCase.Arguments)" />
+    <GetFileHash Files="$(_TestDirectory)source-link/%(_SourceLinkCase.Identity)/SourceLink.sourcelink.json">
+      <Output TaskParameter="Items" ItemName="_ExecutedSourceLinkHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_TestDirectory)source-link/%(_SourceLinkCase.Baseline)/SourceLink.sourcelink.json">
+      <Output TaskParameter="Items" ItemName="_OrdinarySourceLinkHash" />
+    </GetFileHash>
+    <Error Condition="'@(_ExecutedSourceLinkHash->'%(FileHash)')' != '@(_OrdinarySourceLinkHash->'%(FileHash)')'"
+           Text="Independent SourceLink execution must preserve ordinary JSON bytes, escaping, ordering and encoding." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)SourceLink.proj&quot; -p:TestCase=%(_EmptySourceLinkCase.Identity) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)source-link-%(_EmptySourceLinkCase.Identity).ninja&quot;" />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f source-link-%(_EmptySourceLinkCase.Identity).ninja" />
+    <ReadLinesFromFile File="$(_TestDirectory)source-link/%(_EmptySourceLinkCase.Identity)/SourceLink.sourcelink.json">
+      <Output TaskParameter="Lines" ItemName="_EmptySourceLinkContents" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_EmptySourceLinkContents)' != 'unreferenced;unreferenced'"
+           Text="Empty hardened mappings must leave stale JSON unreferenced and unchanged." />
+    <ItemGroup>
+      <_EmptySourceLinkAction Include="$(_TestDirectory)source-link-empty.ninja.actions/*.json;$(_TestDirectory)source-link-no-url.ninja.actions/*.json" />
+    </ItemGroup>
+    <Error Condition="'@(_EmptySourceLinkAction)' != ''" Text="Empty SourceLink mappings must not emit file actions." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)SourceLink.proj&quot; -p:TestCase=%(_RejectedSourceLinkCase.Identity) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)source-link-%(_RejectedSourceLinkCase.Identity).ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_RejectedSourceLinkExitCode" />
+    </Exec>
+    <Error Condition="@(_RejectedSourceLinkExitCode->AnyHaveMetadataValue('Identity', '0'))" Text="Invalid source-root or provider metadata must fail construction." />
+    <Error Condition="Exists('$(_TestDirectory)source-link-%(_RejectedSourceLinkCase.Identity).ninja') or Exists('$(_TestDirectory)source-link-%(_RejectedSourceLinkCase.Identity).ninja.actions') or Exists('$(_TestDirectory)source-link/%(_RejectedSourceLinkCase.Identity)')"
+           Text="Rejected source mapping must publish neither a partial graph nor SourceLink JSON." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)SourceLink.proj&quot; -p:TestCase=action-failure -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)source-link-action-failure.ninja&quot;" />
+    <ItemGroup>
+      <_SourceLinkFailureInvocation Include="$(_TestDirectory)source-link-action-failure.ninja.actions/*.json" />
+    </ItemGroup>
+    <Error Condition="'@(_SourceLinkFailureInvocation->Count())' != '1'" Text="SourceLink generation must emit only its file writer action." />
+    <MakeDir Directories="$(_TestDirectory)source-link/action-failure/SourceLink.sourcelink.json" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot; --invocation &quot;@(_SourceLinkFailureInvocation)&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_SourceLinkFailureExitCode" />
+    </Exec>
+    <Error Condition="'$(_SourceLinkFailureExitCode)' == '0'" Text="SourceLink publication failures must stop independent execution." />
   </Target>
   <Target Name="TestIncrementalCaches">
     <MakeDir Directories="$(_TestDirectory)" />

@@ -1,0 +1,75 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/source-link/$(TestCase)/</IntermediateOutputPath>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <DebugType>portable</DebugType>
+    <SourceRootMappedPathsFeatureSupported>true</SourceRootMappedPathsFeatureSupported>
+    <DeterministicSourcePaths Condition="'$(DeterministicSourcePaths)' == ''">true</DeterministicSourcePaths>
+    <DeterministicSourcePaths Condition="'$(TestCase)' == 'empty'">false</DeterministicSourcePaths>
+    <SourceLinkHasSingleProvider>false</SourceLinkHasSingleProvider>
+    <_Revision>0123456789012345678901234567890123456789</_Revision>
+    <_GitLabRaw>-/raw</_GitLabRaw>
+    <_BitbucketRaw>raw/*?at=$(_Revision)</_BitbucketRaw>
+    <_GitLabRaw Condition="'$(LegacyHosts)' == 'true'">raw</_GitLabRaw>
+    <_BitbucketRaw Condition="'$(LegacyHosts)' == 'true'">browse/*?at=$(_Revision)&amp;raw</_BitbucketRaw>
+    <SourceLink Condition="'$(MSBuildHardenedGraph)' == 'true'">stale-compiler-argument.json</SourceLink>
+  </PropertyGroup>
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.props" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.MapSourceRoots" AssemblyFile="$(MSBuildSDKsPath)/../Roslyn/Microsoft.Build.Tasks.CodeAnalysis.dll" />
+  <Import Project="SourceRoots.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.targets" />
+  <ItemGroup>
+    <SourceLinkGitHubHost Include="github.com" ContentUrl="https://raw.githubusercontent.com" />
+    <SourceLinkGitLabHost Include="gitlab.com" Version="12.0" />
+    <SourceLinkAzureReposGitHost Include="dev.azure.com" />
+    <SourceLinkBitbucketGitHost Include="bitbucket.org" EnterpriseEdition="false" />
+    <SourceLinkBitbucketGitHost Include="bitbucket.example" Version="4.7" />
+    <SourceLinkGitLabHost Update="@(SourceLinkGitLabHost)" Version="11.0" Condition="'$(LegacyHosts)' == 'true'" />
+    <SourceLinkBitbucketGitHost Update="bitbucket.example" Version="4.6" Condition="'$(LegacyHosts)' == 'true'" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TestCase)' != 'empty' and '$(TestCase)' != 'no-url'">
+    <SourceRoot Include="missing-source/github/" SourceControl="git" RepositoryUrl="https://github.com/org/repo.git" ExpectedMappedPath="/_/" ExpectedUrl="https://raw.githubusercontent.com/org/repo/$(_Revision)/*" />
+    <SourceRoot Include="missing-source/gitlab/" SourceControl="git" RepositoryUrl="https://gitlab.com/org/repo.git" ExpectedMappedPath="/_1/" ExpectedUrl="https://gitlab.com/org/repo/$(_GitLabRaw)/$(_Revision)/*" />
+    <SourceRoot Include="missing-source/azure/" SourceControl="git" RepositoryUrl="https://dev.azure.com/org/project/_git/repo" ExpectedMappedPath="/_2/" ExpectedUrl="https://dev.azure.com/org/project/_apis/git/repositories/repo/items?api-version=1.0&amp;versionType=commit&amp;version=$(_Revision)&amp;path=/*" />
+    <SourceRoot Include="missing-source/bitbucket/" SourceControl="git" RepositoryUrl="https://bitbucket.org/org/repo.git" ExpectedMappedPath="/_3/" ExpectedUrl="https://api.bitbucket.org/2.0/repositories/org/repo/src/$(_Revision)/*" />
+    <SourceRoot Include="missing-source/enterprise/" SourceControl="git" RepositoryUrl="https://bitbucket.example/scm/team/repo.git" ExpectedMappedPath="/_4/" ExpectedUrl="https://bitbucket.example/projects/team/repos/repo/$(_BitbucketRaw)" />
+    <SourceRoot Include="missing-source/github/module/" SourceControl="git" RepositoryUrl="https://github.com/org/module.git" ContainingRoot="missing-source/github/" NestedRoot="module" ExpectedMappedPath="/_/module/" ExpectedUrl="https://raw.githubusercontent.com/org/module/$(_Revision)/*" />
+    <SourceRoot Include="missing-source/preserved/" SourceControl="git" SourceLinkUrl="https://custom.invalid/raw/*?q=&quot;quoted&quot;&amp;slash=\value" ExpectedMappedPath="/_5/" ExpectedUrl="https://custom.invalid/raw/*?q=&quot;quoted&quot;&amp;slash=\value" />
+    <SourceRoot Update="@(SourceRoot)" RevisionId="$(_Revision)" />
+    <SourceRoot Include="missing-source/github/" Marker="merged" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TestCase)' == 'no-url'">
+    <SourceRoot Include="missing-source/no-url/" ExpectedMappedPath="/_/" />
+  </ItemGroup>
+  <ItemGroup>
+    <SourceRoot Include="missing-source/no-separator" Condition="'$(TestCase)' == 'root-separator'" />
+    <SourceRoot Update="missing-source/github/module/" ContainingRoot="missing-source/unknown/" Condition="'$(TestCase)' == 'nested-root'" />
+    <SourceRoot Update="missing-source/github/" RevisionId="invalid" Condition="'$(TestCase)' == 'revision'" />
+    <SourceLinkGitHubHost Update="@(SourceLinkGitHubHost)" ContentUrl="invalid" Condition="'$(TestCase)' == 'host'" />
+    <SourceRoot Update="missing-source/preserved/" SourceLinkUrl="https://custom.invalid/**" Condition="'$(TestCase)' == 'wildcard'" />
+    <SourceLinkGitLabHost Update="@(SourceLinkGitLabHost)" Version="invalid" Condition="'$(TestCase)' == 'gitlab-version'" />
+    <SourceLinkBitbucketGitHost Update="bitbucket.example" Version="invalid" Condition="'$(TestCase)' == 'bitbucket-version'" />
+  </ItemGroup>
+  <Target Name="Build" DependsOnTargets="_SetPathMapFromSourceRoots;_GenerateSourceLinkFile">
+    <Error Condition="'%(SourceRoot.SourceLinkUrl)' != '%(SourceRoot.ExpectedUrl)'" Text="SourceLink URL for %(SourceRoot.Identity): expected %(SourceRoot.ExpectedUrl), actual %(SourceRoot.SourceLinkUrl)." DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(DeterministicSourcePaths)' == 'true' and '%(SourceRoot.MappedPath)' != '%(SourceRoot.ExpectedMappedPath)'" Text="Deterministic source-root mapping must retain ordering and nested paths." DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(DeterministicSourcePaths)' != 'true' and '%(SourceRoot.MappedPath)' != '%(SourceRoot.Identity)'" Text="Non-deterministic roots must resolve against project context." DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(TestCase)' != 'empty' and '$(TestCase)' != 'no-url' and '@(SourceRoot->Count())' != '7'"
+           Text="Source mapping must merge duplicate identities." DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(TestCase)' != 'empty' and '$(TestCase)' != 'no-url' and '%(SourceRoot.ExpectedMappedPath)' == '/_/' and '%(SourceRoot.Marker)' != 'merged'"
+           Text="Source mapping must merge duplicate metadata." DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(DeterministicSourcePaths)' == 'true' and '$(PathMap)' == ''" Text="Mapped source roots must supply the compiler PathMap." DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(TestCase)' != 'empty' and '$(TestCase)' != 'no-url' and ('$(SourceLink)' != '$(_SourceLinkFilePath)' or '@(FileWrites)' != '$(_SourceLinkFilePath)')"
+           Text="SourceLink publication must statically preserve compiler and clean bookkeeping." DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="('$(TestCase)' == 'empty' or '$(TestCase)' == 'no-url') and ('$(SourceLink)' != '' or '@(FileWrites)' != '')"
+           Text="Empty mappings must not pass a stale SourceLink file to the compiler." DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+  <Target Name="Restore">
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <CallTarget Targets="Build" />
+  </Target>
+</Project>

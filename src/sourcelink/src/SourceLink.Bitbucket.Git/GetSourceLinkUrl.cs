@@ -16,6 +16,7 @@ namespace Microsoft.SourceLink.Bitbucket.Git
     /// output property is set to the content URL corresponding to the domain, otherwise it is set to string "N/A".
     /// </summary>
     [MSBuildPureTask]
+    [MSBuildDeclaredIOTask]
     [MSBuildMultiThreadableTask]
     public sealed class GetSourceLinkUrl : GetSourceLinkUrlGitTask
     {
@@ -55,14 +56,14 @@ namespace Microsoft.SourceLink.Bitbucket.Git
             string commitSha,
             Version version)
         {
-            var relativeUrl = (version >= s_versionWithNewUrlFormat) ? 
+            var relativeUrl = (version >= s_versionWithNewUrlFormat) ?
                 $"projects/{projectName}/repos/{repositoryName}/raw/*?at={commitSha}" :
                 $"projects/{projectName}/repos/{repositoryName}/browse/*?at={commitSha}&raw";
 
             return UriUtilities.Combine(contentUri.ToString(), UriUtilities.Combine(relativeBaseUrl, relativeUrl));
         }
 
-        internal static bool TryParseEnterpriseUrl(string relativeUrl, [NotNullWhen(true)]out string? relativeBaseUrl, [NotNullWhen(true)]out string? projectName, [NotNullWhen(true)]out string? repositoryName)
+        internal static bool TryParseEnterpriseUrl(string relativeUrl, [NotNullWhen(true)] out string? relativeBaseUrl, [NotNullWhen(true)] out string? projectName, [NotNullWhen(true)] out string? repositoryName)
         {
             // HTTP: {baseUrl}/scm/{projectName}/{repositoryName}
             // SSH: {baseUrl}/{projectName}/{repositoryName}
@@ -101,7 +102,7 @@ namespace Microsoft.SourceLink.Bitbucket.Git
                 Log.LogError(CommonResources.ItemOfItemGroupMustSpecifyMetadata, hostItem!.ItemSpec,
                     HostsItemGroupName, VersionMetadataName);
             }
-            
+
             return s_versionWithNewUrlFormat;
         }
 

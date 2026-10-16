@@ -65,7 +65,8 @@ The checks cover CLI failures, paths with spaces, graph-only construction,
 independent Ninja execution, explicit NuGet project-style classification, SDK
 duplicate-item, executable-reference and filename-only WinMD validation, exact
 editorconfig and framework attribute generation, assembly version derivation,
-cache-free assembly generation, SDK Restore, and direct use of the packaged
+cache-free assembly generation, source-root mapping, exact SourceLink publication
+with all four packaged providers, SDK Restore, and direct use of the packaged
 compiler to compile and run Hello World.
 Select a runtime-only host to check that the app does not require an installed
 SDK.
@@ -99,6 +100,15 @@ Hardened builds omit the assembly-info, compile-input, and runtime-config
 timestamp caches, retaining their semantic prerequisites and caller-supplied
 inputs. Ordinary builds keep those caches; execution-system reuse is separate
 from target composition.
+`MapSourceRoots` and the packaged GitHub, GitLab, Azure Repos, and Bitbucket URL
+tasks derive mappings during construction from prepared metadata and project
+context. They do not discover repositories or require source directories.
+SourceLink generation composes zero-I/O `FormatSourceLink` with overwrite-only
+`WriteSourceLink`, sharing the ordinary JSON serializer without comparing old
+output. Empty hardened mappings clear the compiler's SourceLink argument and
+emit no file action; stale JSON remains unreferenced rather than being deleted.
+Ordinary builds retain their comparison and deletion behavior. With explicit
+directory imports, the fresh full SDK graph probe now first rejects `Csc`.
 Common's hardened `CoreBuild` does not run failure handlers or record partial
 writes for later Clean. Nonempty post-build events using `Always` or `OnOutputUpdated`
 are rejected; use `OnBuildSuccess` or no event. Ordinary MSBuild retains its
