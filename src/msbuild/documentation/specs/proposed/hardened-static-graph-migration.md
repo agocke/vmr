@@ -92,6 +92,25 @@ Real example: the [standalone action fixture](../../../../../genbuild/tests/Acti
 captures a `WriteLinesToFile` invocation without creating its output.
 This pattern does not imply that the full SDK compiler closure is supported.
 
+## Leave caching to the execution system
+
+Tasks define transformations, not caching strategies. In hardened mode, do
+not read a previous output merely to decide whether to skip writing it.
+Previous outputs are not semantic inputs to a transformation that can produce
+its result from explicit parameters and declared inputs alone.
+
+Keep action-cache lookup, up-to-date scheduling, and unchanged-output
+publication in a separate, general execution system. Its reuse decisions must
+account for declared inputs, parameters, toolchain, and execution context.
+Ninja supplies up-to-date scheduling today; that is not a general action cache.
+
+An overwrite-only action writes whenever the executor schedules it.
+Preserving timestamps for identical contents can be a shared publication
+optimization, not a per-task comparison against old outputs. Until such a
+policy exists, a rerun may cause extra downstream work; do not underdeclare
+reads or add manual caches to avoid it. Ordinary MSBuild's existing caching
+and write-if-different behavior can remain on its separate target path.
+
 ## Split mixed responsibilities into stable tasks
 
 A task that sometimes reads files is not unconditionally zero-I/O.
@@ -130,6 +149,40 @@ This preserves which inputs are accepted, not identical failure diagnostics.
 
 Real examples: [SDK target selection](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.Sdk.targets)
 and the [filename-only validator](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ValidateNoWinMDReferences.cs).
+
+## Separate formatting from file publication
+
+When a task computes text and then compares it with a previous output, extract
+the transformation rather than declaring the old output as an input.
+Roslyn's hardened editorconfig target uses this composition:
+
+```xml
+<FormatAnalyzerConfig
+  PropertyItems="@(_GeneratedEditorConfigProperty)"
+  MetadataItems="@(_GeneratedEditorConfigMetadata)"
+  DeclaredInputs="" DeclaredOutputs="">
+  <Output TaskParameter="ConfigFileContents"
+          PropertyName="_GeneratedEditorConfigContents" />
+</FormatAnalyzerConfig>
+<WriteAnalyzerConfig
+  ConfigFileContents="$(_GeneratedEditorConfigContents)"
+  FileName="$(GeneratedMSBuildEditorConfigFile)"
+  DeclaredInputs="" DeclaredOutputs="$(GeneratedMSBuildEditorConfigFile)" />
+```
+
+The formatter uses supplied values and project-relative path computation,
+not source-file contents. It rejects `ModifiedTime`, `CreatedTime`, and
+`AccessedTime`: requesting those metadata values would query the filesystem.
+If such information is needed, prepare it explicitly and supply it as custom
+metadata. A path in metadata is not automatically a file-content input.
+
+Keep the result as exact text, not a semicolon-separated item list or an
+implicitly newline-terminated write. The independent writer overwrites the
+declared file as UTF-8 without a BOM, without reading its previous contents.
+Ordinary builds retain `GenerateMSBuildEditorConfig` and its comparison
+behavior; both paths share the serializer.
+
+Real example: Roslyn's [editorconfig target](../../../../roslyn/src/Compilers/Core/MSBuildTask/Microsoft.Managed.Core.targets).
 
 ## Capture discovery during preparation, then replay it
 

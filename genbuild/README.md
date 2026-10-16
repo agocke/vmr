@@ -63,8 +63,9 @@ dotnet msbuild genbuild/tests/Smoke.proj -p:GenBuildTestHost=/absolute/path/to/d
 
 The checks cover CLI failures, paths with spaces, graph-only construction,
 independent Ninja execution, explicit NuGet project-style classification, SDK
-duplicate-item, executable-reference and filename-only WinMD validation, SDK
-Restore, and direct use of the packaged compiler to compile and run Hello World.
+duplicate-item, executable-reference and filename-only WinMD validation, exact
+editorconfig generation, SDK Restore, and direct use of the packaged compiler
+to compile and run Hello World.
 Select a runtime-only host to check that the app does not require an installed
 SDK.
 
@@ -83,6 +84,10 @@ construction tasks. Hardened SDK builds select a separate filename-only
 `ValidateNoWinMDReferences` task, reporting `NETSDK1130` without inspecting
 assemblies. Ordinary builds retain `CheckForUnsupportedWinMDReferences` and
 its refined diagnostics.
+Hardened editorconfig generation uses a zero-I/O `FormatAnalyzerConfig` task
+and an overwrite-only `WriteAnalyzerConfig` action. It preserves the ordinary
+serializer's bytes without reading a previous output; filesystem timestamp
+metadata is rejected. Ordinary builds keep their existing comparison behavior.
 Explicit fail-fast `ContinueOnError` values are supported. Continuing after
 errors and active `OnError` handlers remain unsupported. In hardened mode,
 Common's `CoreBuild` does not run failure handlers or record partial writes for

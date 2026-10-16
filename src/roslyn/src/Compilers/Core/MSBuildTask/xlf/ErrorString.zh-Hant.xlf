@@ -32,6 +32,11 @@
         <target state="translated">MSB3052: 編譯器的參數無效，將忽略 '{0}{1}'。</target>
         <note>{StrBegin="MSB3052: "}</note>
       </trans-unit>
+      <trans-unit id="FormatAnalyzerConfig.FileMetadataNotSupported">
+        <source>Metadata '{0}' on '{1}' requires a filesystem query and cannot be used when formatting an analyzer configuration without file I/O. Supply a prepared value as custom metadata instead.</source>
+        <target state="new">Metadata '{0}' on '{1}' requires a filesystem query and cannot be used when formatting an analyzer configuration without file I/O. Supply a prepared value as custom metadata instead.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="General_CannotConvertStringToBool">
         <source>The string "{0}" cannot be converted to a boolean (true/false) value.</source>
         <target state="translated">無法將字串 "{0}" 轉換成布林值 (true/false)。</target>

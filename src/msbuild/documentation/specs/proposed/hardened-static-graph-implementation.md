@@ -372,15 +372,26 @@ refine diagnostics to `NETSDK1149`. Packaged smoke imports the shipped target
 to check empty and managed-only lists, lookalike names, multiple WinMD errors,
 and unchanged ordinary-mode assembly inspection.
 
+Roslyn's hardened editorconfig target now separates zero-I/O formatting from
+overwrite-only file publication. `FormatAnalyzerConfig` shares the ordinary
+serializer, resolves paths against the captured project directory, and rejects
+filesystem timestamp metadata. `WriteAnalyzerConfig` writes exact UTF-8 text
+without a BOM or a prior-output comparison. Ordinary builds retain the original
+`GenerateMSBuildEditorConfig` task. Packaged smoke checks construction without
+source files, exact bytes including semicolons and embedded newlines, stale
+output replacement, retained compiler-input bookkeeping, and explicit metadata
+rejection without partial graph publication.
+
 The fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
-executable-reference validation, and WinMD validation without downstream
-deferred project-annotation errors. Its first unsupported task is
-`GenerateMSBuildEditorConfig` in Roslyn's `Microsoft.Managed.Core.targets`.
+executable-reference validation, WinMD validation, and editorconfig generation
+without downstream deferred project-annotation errors. The next diagnostics
+are resource-task hosting policy and the assembly-info helpers
+`GetAssemblyVersion` and `Hash`.
 Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers
 Common's preparation sites, not every SDK or custom directory operation.
-The probe also reports unsupported resource, editorconfig and assembly-info
+The probe also reports unsupported resource and assembly-info
 generation, source mapping, compilation, dependency/runtime configuration,
 copying, and cleanup operations. Some diagnostics follow unavailable earlier
 outputs; fix the first unsupported operations and re-probe rather than treating

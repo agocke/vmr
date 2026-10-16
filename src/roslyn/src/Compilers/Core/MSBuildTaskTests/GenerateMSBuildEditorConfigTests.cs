@@ -414,5 +414,122 @@ build_property.Property2 = def456
                 File.Delete(currentDirectoryTarget);
             }
         }
+
+        [Fact]
+        public void FormatterPreservesExactTextWithoutSourceFiles()
+        {
+            using var temp = new TempRoot();
+            string directory = temp.CreateDirectory().Path;
+            var environment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(directory);
+            var task = new FormatAnalyzerConfig
+            {
+                TaskEnvironment = environment,
+                PropertyItems = new[]
+                {
+                    new TaskItem("Example", new Dictionary<string, string> { { "Value", "first;second\n'quoted' \u03bb" } }),
+                },
+                MetadataItems = new[]
+                {
+                    new TaskItem("missing/../[source];#!.cs", new Dictionary<string, string>
+                    {
+                        { "ItemType", "Compile" }, { "MetadataName", "Example" }, { "Example", "a;b\r\nnext" },
+                    }),
+                },
+            };
+
+            Assert.True(task.Execute());
+            string path = Path.Combine(directory, "[source];#!.cs").Replace('\\', '/');
+            string escapedPath = path.Replace("[", @"\[").Replace("]", @"\]").Replace(";", @"\;").Replace("#", @"\#").Replace("!", @"\!");
+            string newline = Environment.NewLine;
+            Assert.Equal(
+                $"is_global = true{newline}build_property.Example = first;second\n'quoted' \u03bb{newline}{newline}" +
+                $"[{escapedPath}]{newline}build_metadata.Compile.Example = a;b\r\nnext{newline}",
+                task.ConfigFileContents);
+            Assert.Empty(Directory.EnumerateFileSystemEntries(directory));
+        }
+
+        [Theory]
+        [InlineData("FullPath")]
+        [InlineData("fullpath")]
+        [InlineData("RootDir")]
+        [InlineData("Directory")]
+        public void FormatterResolvesPathMetadataAgainstProjectDirectory(string metadataName)
+        {
+            using var temp = new TempRoot();
+            string directory = temp.CreateDirectory().Path;
+            var environment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(directory);
+            string fullPath = Path.Combine(directory, "missing", "source.cs");
+            var task = new FormatAnalyzerConfig
+            {
+                TaskEnvironment = environment,
+                MetadataItems = new[]
+                {
+                    new TaskItem("missing/source.cs", new Dictionary<string, string>
+                    {
+                        { "ItemType", "Compile" }, { "MetadataName", metadataName },
+                    }),
+                },
+            };
+
+            Assert.True(task.Execute());
+            Assert.Contains($"[{fullPath.Replace('\\', '/')}]", task.ConfigFileContents);
+            Assert.Contains($"build_metadata.Compile.{metadataName} = {new TaskItem(fullPath).GetMetadata(metadataName)}{Environment.NewLine}", task.ConfigFileContents);
+            Assert.Empty(Directory.EnumerateFileSystemEntries(directory));
+        }
+
+        [Theory]
+        [InlineData("ModifiedTime")]
+        [InlineData("CreatedTime")]
+        [InlineData("AccessedTime")]
+        [InlineData("mOdIfIeDtImE")]
+        public void FormatterRejectsFilesystemMetadata(string metadataName)
+        {
+            var engine = new MockEngine();
+            var task = new FormatAnalyzerConfig
+            {
+                BuildEngine = engine,
+                MetadataItems = new[]
+                {
+                    new TaskItem("not-on-disk.cs", new Dictionary<string, string>
+                    {
+                        { "ItemType", "Compile" }, { "MetadataName", metadataName },
+                    }),
+                },
+            };
+
+            Assert.False(task.Execute());
+            Assert.Contains($"Metadata '{metadataName}' on 'not-on-disk.cs' requires a filesystem query", engine.Log);
+            Assert.Equal(string.Empty, task.ConfigFileContents);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void WriterPublishesExactUtf8AndDoesNotSkipIdenticalOutput(bool existingOutput)
+        {
+            using var temp = new TempRoot();
+            string directory = temp.CreateDirectory().Path;
+            var environment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(directory);
+            string output = Path.Combine(directory, "generated.editorconfig");
+            string contents = "is_global = true\r\nbuild_property.Example = a;b\n'quoted' \u03bb";
+            byte[] expected = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(contents);
+            var oldTimestamp = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            if (existingOutput)
+            {
+                File.WriteAllBytes(output, expected);
+                File.SetLastWriteTimeUtc(output, oldTimestamp);
+            }
+
+            var task = new WriteAnalyzerConfig
+            {
+                TaskEnvironment = environment,
+                FileName = new TaskItem("generated.editorconfig"),
+                ConfigFileContents = contents,
+            };
+
+            Assert.True(task.Execute());
+            Assert.Equal(expected, File.ReadAllBytes(output));
+            Assert.True(File.GetLastWriteTimeUtc(output) > oldTimestamp);
+        }
     }
 }

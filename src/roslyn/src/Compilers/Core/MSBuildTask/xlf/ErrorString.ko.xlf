@@ -32,6 +32,11 @@
         <target state="translated">MSB3052: 컴파일러에 대한 매개 변수가 잘못되었습니다. '{0}{1}'이(가) 무시됩니다.</target>
         <note>{StrBegin="MSB3052: "}</note>
       </trans-unit>
+      <trans-unit id="FormatAnalyzerConfig.FileMetadataNotSupported">
+        <source>Metadata '{0}' on '{1}' requires a filesystem query and cannot be used when formatting an analyzer configuration without file I/O. Supply a prepared value as custom metadata instead.</source>
+        <target state="new">Metadata '{0}' on '{1}' requires a filesystem query and cannot be used when formatting an analyzer configuration without file I/O. Supply a prepared value as custom metadata instead.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="General_CannotConvertStringToBool">
         <source>The string "{0}" cannot be converted to a boolean (true/false) value.</source>
         <target state="translated">"{0}" 문자열을 부울 값(true/false)으로 변환할 수 없습니다.</target>

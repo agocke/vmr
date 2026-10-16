@@ -1,0 +1,31 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <GeneratedMSBuildEditorConfigFile>$(MSBuildProjectDirectory)/editorconfig/$(TestCase)/generated.editorconfig</GeneratedMSBuildEditorConfigFile>
+    <ExampleProperty>first;second&#xA;'quoted' &#x03bb;100%25</ExampleProperty>
+    <_BuildTasksDirectory>$(MSBuildSDKsPath)/../Roslyn/</_BuildTasksDirectory>
+    <_BuildTasksAssemblyName>Microsoft.Build.Tasks.CodeAnalysis</_BuildTasksAssemblyName>
+  </PropertyGroup>
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.GenerateMSBuildEditorConfig" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.FormatAnalyzerConfig" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.WriteAnalyzerConfig" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <Import Project="EditorConfig.targets" />
+  <ItemGroup>
+    <CompilerVisibleProperty Include="ExampleProperty;EmptyProperty" />
+    <Compile Include="missing/../[source]%3B#!.cs">
+      <ExampleMetadata>a;b&#xD;&#xA;next100%25</ExampleMetadata>
+    </Compile>
+    <CompilerVisibleItemMetadata Include="Compile" MetadataName="ExampleMetadata" />
+    <CompilerVisibleItemMetadata Include="Compile" MetadataName="FullPath" />
+    <CompilerVisibleItemMetadata Include="Compile" MetadataName="Directory" />
+    <CompilerVisibleItemMetadata Include="Compile" MetadataName="MissingMetadata" />
+    <CompilerVisibleItemMetadata Include="Compile" MetadataName="$(RequestedMetadata)" Condition="'$(RequestedMetadata)' != ''" />
+  </ItemGroup>
+  <Target Name="Build" DependsOnTargets="GenerateMSBuildEditorConfigFileShouldRun;GenerateMSBuildEditorConfigFileCore">
+    <Error Condition="'@(EditorConfigFiles)' != '$(GeneratedMSBuildEditorConfigFile)' or '@(FileWrites)' != '$(GeneratedMSBuildEditorConfigFile)'"
+           Text="Editorconfig generation must retain its compiler input and clean bookkeeping." />
+  </Target>
+  <Target Name="Restore">
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(GeneratedMSBuildEditorConfigFile)'))" />
+    <CallTarget Targets="Build" />
+  </Target>
+</Project>

@@ -85,6 +85,12 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
 - `Microsoft.Managed.Core.targets` prepares the analyzer-skip marker during
   ordinary Restore when `MSBuildRestoreGraphInputs=true`. Hardened graph
   construction consumes that marker without initializing it.
+- Hardened editorconfig generation composes the zero-I/O `FormatAnalyzerConfig`
+  task with the overwrite-only declared-output `WriteAnalyzerConfig` action.
+  Ordinary builds retain `GenerateMSBuildEditorConfig`; both paths share the
+  serializer. The formatter resolves paths from project context and rejects
+  filesystem timestamp metadata. Keep caching and write-if-different
+  publication policies out of the hardened tasks.
 
 ## Performance Considerations
 

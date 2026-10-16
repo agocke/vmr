@@ -35,6 +35,7 @@
     <CallTarget Targets="TestProjectStyles" />
     <CallTarget Targets="TestExecutableReferences" />
     <CallTarget Targets="TestWinMDReferences" />
+    <CallTarget Targets="TestEditorConfig" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -48,7 +49,7 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig generation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
   </Target>
   <Target Name="TestProjectStyles">
     <WriteLinesToFile File="$(_TestDirectory)packages.config" Lines="&lt;packages /&gt;" Overwrite="true" />
@@ -124,6 +125,57 @@
     </Exec>
     <Error Condition="'$(_OrdinaryExecutableReferenceExitCode)' == '0' or Exists('$(_TestDirectory)executable-ordinary-mismatch.txt') or !$([System.IO.File]::ReadAllText('$(_TestDirectory)executable-ordinary-mismatch.log').Contains('NETSDK1150'))"
            Text="Ordinary executable-reference validation must retain incompatible-reference errors." />
+  </Target>
+  <Target Name="TestEditorConfig">
+    <MakeDir Directories="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)EditorConfig.proj" DestinationFolder="$(_TestDirectory)" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Roslyn/Microsoft.Managed.Core.targets"
+             Namespaces="&lt;Namespace Prefix='msb' Uri='http://schemas.microsoft.com/developer/msbuild/2003' /&gt;"
+             Query="/msb:Project/msb:Target[@Name='GenerateMSBuildEditorConfigFileShouldRun' or @Name='GenerateMSBuildEditorConfigFileCore']">
+      <Output TaskParameter="Result" ItemName="_EditorConfigTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_EditorConfigTarget->Count())' != '2'" Text="The packaged Roslyn targets must contain both editorconfig targets." />
+    <PropertyGroup>
+      <_EditorConfigXml>@(_EditorConfigTarget, '')</_EditorConfigXml>
+      <_EditorConfigXml>$(_EditorConfigXml.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_EditorConfigXml>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_TestDirectory)EditorConfig.targets"
+                      Lines="&lt;Project xmlns='http://schemas.microsoft.com/developer/msbuild/2003'&gt;;$(_EditorConfigXml);&lt;/Project&gt;" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)EditorConfig.proj&quot; -p:TestCase=graph -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)editorconfig.ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)editorconfig/graph/generated.editorconfig')"
+           Text="Editorconfig construction must not write the configuration." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f editorconfig.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)EditorConfig.proj&quot; -p:TestCase=ordinary" />
+    <GetFileHash Files="$(_TestDirectory)editorconfig/ordinary/generated.editorconfig">
+      <Output TaskParameter="Hash" PropertyName="_OrdinaryEditorConfigHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_TestDirectory)editorconfig/graph/generated.editorconfig">
+      <Output TaskParameter="Hash" PropertyName="_GraphEditorConfigHash" />
+    </GetFileHash>
+    <Error Condition="'$(_OrdinaryEditorConfigHash)' == '' or '$(_OrdinaryEditorConfigHash)' != '$(_GraphEditorConfigHash)'"
+           Text="Independent editorconfig execution must preserve the ordinary task's exact bytes." />
+    <WriteLinesToFile File="$(_TestDirectory)editorconfig/graph/generated.editorconfig" Lines="stale output" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)EditorConfig.proj&quot; -p:TestCase=graph -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)editorconfig-overwrite.ninja&quot;" />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_TestDirectory)editorconfig/graph/generated.editorconfig').Contains('stale output'))"
+           Text="Construction must not overwrite an existing editorconfig." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f editorconfig-overwrite.ninja" />
+    <GetFileHash Files="$(_TestDirectory)editorconfig/graph/generated.editorconfig">
+      <Output TaskParameter="Hash" PropertyName="_OverwrittenEditorConfigHash" />
+    </GetFileHash>
+    <Error Condition="'$(_OrdinaryEditorConfigHash)' != '$(_OverwrittenEditorConfigHash)'"
+           Text="Editorconfig actions must overwrite stale output without appending or changing encoding." />
+    <ItemGroup>
+      <_EditorConfigRejectedMetadata Include="ModifiedTime;CreatedTime;AccessedTime;mOdIfIeDtImE" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)EditorConfig.proj&quot; -p:TestCase=%(_EditorConfigRejectedMetadata.Identity) -p:RequestedMetadata=%(_EditorConfigRejectedMetadata.Identity) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)editorconfig-%(_EditorConfigRejectedMetadata.Identity).ninja&quot; -noconsolelogger -flp:&quot;LogFile=$(_TestDirectory)editorconfig-%(_EditorConfigRejectedMetadata.Identity).log;ErrorsOnly&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_EditorConfigRejectedExitCode" />
+    </Exec>
+    <Error Condition="@(_EditorConfigRejectedExitCode->AnyHaveMetadataValue('Identity', '0'))" Text="Filesystem-derived editorconfig metadata must fail construction." />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_TestDirectory)editorconfig-%(_EditorConfigRejectedMetadata.Identity).log').Contains('requires a filesystem query'))"
+           Text="Editorconfig metadata rejection must report its zero-I/O constraint." />
+    <Error Condition="Exists('$(_TestDirectory)editorconfig-%(_EditorConfigRejectedMetadata.Identity).ninja') or Exists('$(_TestDirectory)editorconfig-%(_EditorConfigRejectedMetadata.Identity).ninja.actions') or Exists('$(_TestDirectory)editorconfig/%(_EditorConfigRejectedMetadata.Identity)/generated.editorconfig')"
+           Text="Rejected editorconfig formatting must not publish a partial graph or execute file actions." />
   </Target>
   <Target Name="TestWinMDReferences">
     <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets"

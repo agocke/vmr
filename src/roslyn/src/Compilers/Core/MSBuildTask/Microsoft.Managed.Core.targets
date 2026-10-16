@@ -176,6 +176,8 @@
       <CompilerVisibleItemMetadata Include="ItemType" MetadataName="MetadataToRetrieve" />
     -->
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.GenerateMSBuildEditorConfig" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.FormatAnalyzerConfig" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.WriteAnalyzerConfig" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
 
   <Target Name="GenerateMSBuildEditorConfigFile"
           BeforeTargets="BeforeCompile;CoreCompile"
@@ -213,10 +215,27 @@
 
     <!-- Transform the collected properties and items into an editor config file -->
     <GenerateMSBuildEditorConfig
+      Condition="'$(MSBuildHardenedGraph)' != 'true'"
       PropertyItems="@(_GeneratedEditorConfigProperty)"
       MetadataItems="@(_GeneratedEditorConfigMetadata)"
       FileName="$(GeneratedMSBuildEditorConfigFile)">
     </GenerateMSBuildEditorConfig>
+
+    <FormatAnalyzerConfig
+      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+      PropertyItems="@(_GeneratedEditorConfigProperty)"
+      MetadataItems="@(_GeneratedEditorConfigMetadata)"
+      DeclaredInputs=""
+      DeclaredOutputs="">
+      <Output TaskParameter="ConfigFileContents" PropertyName="_GeneratedEditorConfigContents" />
+    </FormatAnalyzerConfig>
+
+    <WriteAnalyzerConfig
+      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+      ConfigFileContents="$(_GeneratedEditorConfigContents)"
+      FileName="$(GeneratedMSBuildEditorConfigFile)"
+      DeclaredInputs=""
+      DeclaredOutputs="$(GeneratedMSBuildEditorConfigFile)" />
 
   </Target>
 

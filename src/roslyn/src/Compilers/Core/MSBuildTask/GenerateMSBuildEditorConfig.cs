@@ -69,13 +69,24 @@ namespace Microsoft.CodeAnalysis.BuildTasks
 
         public override bool Execute()
         {
+            ConfigFileContents = Format(PropertyItems, MetadataItems,
+                item => item.GetMetadata("FullPath"), (item, name) => item.GetMetadata(name));
+            return string.IsNullOrEmpty(FileName.ItemSpec) ? true : WriteMSBuildEditorConfig();
+        }
+
+        internal static string Format(
+            ITaskItem[] propertyItems,
+            ITaskItem[] metadataItems,
+            Func<ITaskItem, string> getFullPath,
+            Func<ITaskItem, string, string> getMetadata)
+        {
             StringBuilder builder = new StringBuilder();
 
             // we always generate global configs
             builder.AppendLine("is_global = true");
 
             // collect the properties into a global section
-            foreach (var prop in PropertyItems)
+            foreach (var prop in propertyItems)
             {
                 builder.Append("build_property.")
                        .Append(prop.ItemSpec)
@@ -84,7 +95,7 @@ namespace Microsoft.CodeAnalysis.BuildTasks
             }
 
             // group the metadata items by their full path
-            var groupedItems = MetadataItems.GroupBy(i => NormalizeWithForwardSlash(i.GetMetadata("FullPath")));
+            var groupedItems = metadataItems.GroupBy(i => NormalizeWithForwardSlash(getFullPath(i)));
 
             foreach (var group in groupedItems)
             {
@@ -105,13 +116,12 @@ namespace Microsoft.CodeAnalysis.BuildTasks
                                .Append('.')
                                .Append(metadataName)
                                .Append(" = ")
-                               .AppendLine(item.GetMetadata(metadataName));
+                               .AppendLine(getMetadata(item, metadataName));
                     }
                 }
             }
 
-            ConfigFileContents = builder.ToString();
-            return string.IsNullOrEmpty(FileName.ItemSpec) ? true : WriteMSBuildEditorConfig();
+            return builder.ToString();
         }
 
         internal bool WriteMSBuildEditorConfig()

@@ -217,6 +217,9 @@
   <data name="MapSourceRoots.NoTopLevelSourceRoot">
     <value>{0} items must include at least one top-level (not nested) item when {1} is true</value>
   </data>
+  <data name="FormatAnalyzerConfig.FileMetadataNotSupported" xml:space="preserve">
+    <value>Metadata '{0}' on '{1}' requires a filesystem query and cannot be used when formatting an analyzer configuration without file I/O. Supply a prepared value as custom metadata instead.</value>
+  </data>
   <data name="General_UnableToReadFile" xml:space="preserve">
     <value>File "{0}" could not be read: {1}</value>
   </data>

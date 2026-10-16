@@ -33,6 +33,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)CopyRefAssembly.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Csc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Csi.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FormatAnalyzerConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GenerateMSBuildEditorConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IAnalyzerConfigFilesHostObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ICompilerOptionsHostObject.cs" />
@@ -42,6 +43,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ManagedCompiler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ManagedToolTask.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MapSourceRoots.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MSBuildDeclaredIOTaskAttribute.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MSBuildPureTaskAttribute.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MvidReader.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PropertyDictionary.cs" />
@@ -53,6 +55,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Utilities.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ValidateBootstrap.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Vbc.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)WriteAnalyzerConfig.cs" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)ErrorString.resx" GenerateSource="true" />
     <Content Include="$(MSBuildThisFileDirectory)Microsoft.*.targets">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
