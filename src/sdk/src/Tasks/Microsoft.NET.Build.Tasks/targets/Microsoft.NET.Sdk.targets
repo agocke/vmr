@@ -350,7 +350,8 @@ Copyright (c) .NET Foundation. All rights reserved.
   <!-- To achieve incremental build with property change. When any property changes, WriteOnlyWhenDifferent will be triggered to write cache file.
   And the cache file's timestamp will be later, and it then triggers the incremental build.-->
   <Target Name="_GenerateRuntimeConfigurationFilesInputCache" DependsOnTargets="_DefaultMicrosoftNETPlatformLibrary">
-    <ItemGroup>
+    <!-- Preserve platform preparation in hardened mode without adding timestamp-cache inputs. -->
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <GenerateRuntimeConfigurationFilesInputs Include="$(_GenerateRuntimeConfigurationPropertyInputsCache)" />
 
       <_GenerateRuntimeConfigurationPropertyInputsCacheToHash Include="@(AdditionalProbingPath->'%(Identity)')"/>
@@ -366,7 +367,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       <_GenerateRuntimeConfigurationPropertyInputsCacheToHash Include="$(_WriteIncludedFrameworks)"/>
     </ItemGroup>
 
-    <Hash ItemsToHash="@(_GenerateRuntimeConfigurationPropertyInputsCacheToHash)">
+    <Hash Condition="'$(MSBuildHardenedGraph)' != 'true'"
+          ItemsToHash="@(_GenerateRuntimeConfigurationPropertyInputsCacheToHash)">
       <Output TaskParameter="HashResult" PropertyName="_GenerateRuntimeConfigurationPropertyInputsCacheHash" />
     </Hash>
 
@@ -377,16 +379,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       Overwrite="True"
       WriteOnlyWhenDifferent="True" />
 
-    <WriteLinesToFile
-      Condition="'$(MSBuildHardenedGraph)' == 'true'"
-      Lines="$(_GenerateRuntimeConfigurationPropertyInputsCacheHash)"
-      File="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
-      DeclaredInputs="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
-      DeclaredOutputs="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
-      Overwrite="True"
-      WriteOnlyWhenDifferent="True" />
-
-    <ItemGroup>
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <FileWrites Include="$(_GenerateRuntimeConfigurationPropertyInputsCache)" />
     </ItemGroup>
   </Target>

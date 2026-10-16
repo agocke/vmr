@@ -137,6 +137,23 @@ policy exists, a rerun may cause extra downstream work; do not underdeclare
 reads or add manual caches to avoid it. Ordinary MSBuild's existing caching
 and write-if-different behavior can remain on its separate target path.
 
+Remove hash-and-stamp bookkeeping when it only represents property or item
+changes for MSBuild's timestamp scheduler. Capture the real values in action
+parameters and declared inputs instead; do not emit a cache action or register
+its stamp as an extra compiler/runtime input or a cleanup output.
+This does not apply to hashes that are actual product data.
+
+Keep semantic prerequisites when a cache-wrapper target also prepares inputs.
+For example, `CreateGeneratedAssemblyInfoInputsCacheFile` still depends on
+`GetAssemblyAttributes` in hardened mode, but its hash, cache write, and
+`FileWrites` registration are ordinary-only. Guarding the entire target would
+also skip the attribute preparation. The compile-input and runtime-config
+cache wrappers likewise retain resource/reference and platform preparation.
+
+Real examples: [assembly-info cache](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.GenerateAssemblyInfo.targets),
+[compile-input cache](../../../src/Tasks/Microsoft.Common.CurrentVersion.targets),
+and [runtime-config cache](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.Sdk.targets).
+
 ## Split mixed responsibilities into stable tasks
 
 A task that sometimes reads files is not unconditionally zero-I/O.

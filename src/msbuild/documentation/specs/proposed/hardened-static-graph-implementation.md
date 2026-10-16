@@ -395,12 +395,23 @@ prerelease/build metadata, four-part versions, override precedence, static
 attribute conditions and metadata, version-dependent output paths, independent
 publication, ordinary compatibility, and rejection without graph publication.
 
+The assembly-info, compile-input, and runtime-config wrappers now omit their
+`Hash` computations, timestamp-cache writes, cache-only input registrations,
+and cleanup bookkeeping during hardened construction. Their semantic
+prerequisites still run; ordinary builds retain their existing caches.
+`Hash` itself is not admitted merely to preserve this incremental bookkeeping.
+Packaged smoke verifies cache-free construction from clean and stale outputs,
+including obstructing cache directories, retained resource/reference/platform
+preparation and caller inputs, independent assembly-info publication with
+ordinary-identical bytes, and ordinary cache creation.
+
 With directory import paths supplied explicitly to both Restore and Build,
 the fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
 executable-reference validation, WinMD validation, editorconfig generation,
 framework attribute generation, and assembly version derivation.
-The first unsupported task is now `Hash` in assembly-info generation;
-unavailable hash outputs also cause downstream deferred-value diagnostics.
+There are no remaining hash or deferred-hash diagnostics in this probe.
+The first unsupported task is now Roslyn's `MapSourceRoots`, followed by its
+deferred source-root values and SourceLink URL tasks.
 Failed construction publishes neither a graph nor action invocations and
 writes no framework attribute file.
 Other diagnostic invocations need explicit declarations as their target

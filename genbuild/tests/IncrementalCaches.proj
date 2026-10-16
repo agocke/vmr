@@ -1,0 +1,62 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/incremental-caches/$(TestCase)/</IntermediateOutputPath>
+    <DefaultLanguageSourceExtension>.cs</DefaultLanguageSourceExtension>
+    <Language>C#</Language>
+    <Version>1.2.3-beta.4</Version>
+    <Company>genbuild</Company>
+    <BuildingProject>true</BuildingProject>
+    <_AssemblyCacheFile>$(IntermediateOutputPath)$(MSBuildProjectName).AssemblyInfoInputs.cache</_AssemblyCacheFile>
+    <_CompileCacheFile>$(IntermediateOutputPath)$(MSBuildProjectFile).CoreCompileInputs.cache</_CompileCacheFile>
+    <_GenerateRuntimeConfigurationPropertyInputsCache>$(IntermediateOutputPath)runtimeconfig.inputs.cache</_GenerateRuntimeConfigurationPropertyInputsCache>
+  </PropertyGroup>
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Common.targets" />
+  <UsingTask TaskName="GetAssemblyVersion" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateAssemblyInfo.targets" />
+  <Import Project="IncrementalCaches.Common.targets" />
+  <Import Project="IncrementalCaches.Sdk.targets" />
+  <ItemGroup>
+    <Compile Include="missing.cs" />
+    <ReferencePath Include="missing-reference.dll" />
+    <EmbeddedResource Include="missing.resources" Type="Non-Resx" WithCulture="false" />
+    <CustomAdditionalCompileInputs Include="caller-input.txt" />
+    <GenerateRuntimeConfigurationFilesInputs Include="assets.json;user.runtimeconfig.json" />
+    <RuntimeHostConfigurationOption Include="Example" Value="true" />
+  </ItemGroup>
+  <Target Name="InitializeSourceControlInformation" />
+  <Target Name="ResolveAssemblyReferences">
+    <PropertyGroup>
+      <_ReferencesPrepared>true</_ReferencesPrepared>
+    </PropertyGroup>
+  </Target>
+  <Target Name="_DefaultMicrosoftNETPlatformLibrary">
+    <PropertyGroup>
+      <_RuntimePlatformPrepared>true</_RuntimePlatformPrepared>
+    </PropertyGroup>
+  </Target>
+  <Target Name="Build" DependsOnTargets="CoreGenerateAssemblyInfo;_GenerateCompileDependencyCache;_GenerateRuntimeConfigurationFilesInputCache">
+    <PropertyGroup>
+      <_ExpectedCompileInputs>caller-input.txt</_ExpectedCompileInputs>
+      <_ExpectedRuntimeInputs>assets.json;user.runtimeconfig.json</_ExpectedRuntimeInputs>
+      <_ExpectedFileWrites>$(GeneratedAssemblyInfoFile)</_ExpectedFileWrites>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
+      <_ExpectedCompileInputs>$(_ExpectedCompileInputs);$(_CompileCacheFile)</_ExpectedCompileInputs>
+      <_ExpectedRuntimeInputs>$(_ExpectedRuntimeInputs);$(_GenerateRuntimeConfigurationPropertyInputsCache)</_ExpectedRuntimeInputs>
+      <_ExpectedFileWrites>$(_AssemblyCacheFile);$(_ExpectedFileWrites);$(_CompileCacheFile);$(_GenerateRuntimeConfigurationPropertyInputsCache)</_ExpectedFileWrites>
+    </PropertyGroup>
+    <Error Condition="'$(_ReferencesPrepared)' != 'true' or '$(_RuntimePlatformPrepared)' != 'true'"
+           Text="Cache wrappers must retain reference and runtime platform preparation." />
+    <Error Condition="'@(_CoreCompileResourceInputs)' != 'missing.resources' or '$(AssemblyVersion)' != '1.2.3.0' or '@(AssemblyAttribute)' == ''"
+           Text="Cache wrappers must still prepare resource inputs and assembly attributes." />
+    <Error Condition="'@(Compile)' != 'missing.cs;$(GeneratedAssemblyInfoFile)' or '@(ReferencePath)' != 'missing-reference.dll'"
+           Text="Cache-free assembly generation must retain compiler inputs and references." />
+    <Error Condition="'@(CustomAdditionalCompileInputs)' != '$(_ExpectedCompileInputs)' or '@(GenerateRuntimeConfigurationFilesInputs)' != '$(_ExpectedRuntimeInputs)'"
+           Text="Cache handling must preserve caller-supplied compile and runtime inputs." />
+    <Error Condition="'@(FileWrites)' != '$(_ExpectedFileWrites)'"
+           Text="Only ordinary builds may record incremental cache files for cleanup." />
+    <Error Condition="'$(MSBuildHardenedGraph)' == 'true' and ('$(GeneratedAssemblyInfoInputsCacheFile)' != '' or '@(CoreCompileCache)' != '' or '$(_AssemblyAttributesHash)' != '' or '$(CoreCompileDependencyHash)' != '' or '@(_GenerateRuntimeConfigurationPropertyInputsCacheToHash)' != '' or '$(_GenerateRuntimeConfigurationPropertyInputsCacheHash)' != '')"
+           Text="Hardened construction must omit incremental hashes and cache-only inputs." />
+  </Target>
+  <Target Name="Restore" DependsOnTargets="Build" />
+</Project>

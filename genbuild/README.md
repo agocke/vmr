@@ -65,8 +65,8 @@ The checks cover CLI failures, paths with spaces, graph-only construction,
 independent Ninja execution, explicit NuGet project-style classification, SDK
 duplicate-item, executable-reference and filename-only WinMD validation, exact
 editorconfig and framework attribute generation, assembly version derivation,
-SDK Restore, and direct use of the packaged compiler to compile and run
-Hello World.
+cache-free assembly generation, SDK Restore, and direct use of the packaged
+compiler to compile and run Hello World.
 Select a runtime-only host to check that the app does not require an installed
 SDK.
 
@@ -95,6 +95,10 @@ Explicit fail-fast `ContinueOnError` values are supported. Continuing after
 errors and active `OnError` handlers remain unsupported. In hardened mode,
 framework attribute publication fails fast through its declared-output action;
 ordinary builds retain their write-race warning behavior.
+Hardened builds omit the assembly-info, compile-input, and runtime-config
+timestamp caches, retaining their semantic prerequisites and caller-supplied
+inputs. Ordinary builds keep those caches; execution-system reuse is separate
+from target composition.
 Common's hardened `CoreBuild` does not run failure handlers or record partial
 writes for later Clean. Nonempty post-build events using `Always` or `OnOutputUpdated`
 are rejected; use `OnBuildSuccess` or no event. Ordinary MSBuild retains its

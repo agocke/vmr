@@ -38,6 +38,7 @@
     <CallTarget Targets="TestEditorConfig" />
     <CallTarget Targets="TestFrameworkAttribute" />
     <CallTarget Targets="TestAssemblyVersion" />
+    <CallTarget Targets="TestIncrementalCaches" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -51,7 +52,62 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestIncrementalCaches">
+    <MakeDir Directories="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)IncrementalCaches.proj" DestinationFolder="$(_TestDirectory)" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
+             Query="/Project/Target[@Name='_GenerateCompileDependencyCache' or @Name='_GenerateCompileInputs']">
+      <Output TaskParameter="Result" ItemName="_CompileCacheTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_CompileCacheTarget->Count())' != '2'" Text="The packaged Common targets must contain compile input preparation and its cache wrapper." />
+    <WriteLinesToFile File="$(_TestDirectory)IncrementalCaches.Common.targets"
+                      Lines="&lt;Project&gt;;@(_CompileCacheTarget);&lt;/Project&gt;" Overwrite="true" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets"
+             Namespaces="&lt;Namespace Prefix='msb' Uri='http://schemas.microsoft.com/developer/msbuild/2003' /&gt;"
+             Query="/msb:Project/msb:Target[@Name='_GenerateRuntimeConfigurationFilesInputCache']">
+      <Output TaskParameter="Result" ItemName="_RuntimeCacheTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_RuntimeCacheTarget->Count())' != '1'" Text="The packaged SDK must contain the runtime configuration cache wrapper." />
+    <PropertyGroup>
+      <_RuntimeCacheXml>@(_RuntimeCacheTarget)</_RuntimeCacheXml>
+      <_RuntimeCacheXml>$(_RuntimeCacheXml.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_RuntimeCacheXml>
+      <_StaleAssemblyInfo>$(_TestDirectory)incremental-caches/stale/IncrementalCaches.AssemblyInfo.cs</_StaleAssemblyInfo>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_TestDirectory)IncrementalCaches.Sdk.targets"
+                      Lines="&lt;Project xmlns='http://schemas.microsoft.com/developer/msbuild/2003'&gt;;$(_RuntimeCacheXml);&lt;/Project&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_IncrementalCacheCase Include="clean;stale" />
+      <_IncrementalCachePath Include="IncrementalCaches.AssemblyInfoInputs.cache;IncrementalCaches.proj.CoreCompileInputs.cache;runtimeconfig.inputs.cache" />
+    </ItemGroup>
+    <MakeDir Directories="$(_TestDirectory)incremental-caches/stale/%(_IncrementalCachePath.Identity)" />
+    <WriteLinesToFile File="$(_StaleAssemblyInfo)" Lines="// stale generated source" Overwrite="true" />
+    <GetFileHash Files="$(_StaleAssemblyInfo)">
+      <Output TaskParameter="Hash" PropertyName="_StaleAssemblyInfoBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)IncrementalCaches.proj&quot; -p:TestCase=%(_IncrementalCacheCase.Identity) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)incremental-caches-%(_IncrementalCacheCase.Identity).ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)incremental-caches/clean')" Text="Cache-free graph construction must not write outputs or create cache directories." />
+    <Error Condition="$([System.IO.File]::ReadAllText('$(_TestDirectory)incremental-caches-%(_IncrementalCacheCase.Identity).ninja').Contains('AssemblyInfoInputs.cache'))
+                      or $([System.IO.File]::ReadAllText('$(_TestDirectory)incremental-caches-%(_IncrementalCacheCase.Identity).ninja').Contains('CoreCompileInputs.cache'))
+                      or $([System.IO.File]::ReadAllText('$(_TestDirectory)incremental-caches-%(_IncrementalCacheCase.Identity).ninja').Contains('runtimeconfig.inputs.cache'))"
+           Text="Incremental timestamp caches must not appear in the emitted graph." />
+    <GetFileHash Files="$(_StaleAssemblyInfo)">
+      <Output TaskParameter="Hash" PropertyName="_StaleAssemblyInfoAfter" />
+    </GetFileHash>
+    <Error Condition="'$(_StaleAssemblyInfoBefore)' != '$(_StaleAssemblyInfoAfter)'" Text="Construction must not rewrite existing assembly info." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f incremental-caches-%(_IncrementalCacheCase.Identity).ninja" />
+    <MakeDir Directories="$(_TestDirectory)incremental-caches/ordinary" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)IncrementalCaches.proj&quot; -p:TestCase=ordinary" />
+    <Error Condition="!Exists('$(_TestDirectory)incremental-caches/ordinary/%(_IncrementalCachePath.Identity)')"
+           Text="Ordinary builds must still create their incremental cache files." />
+    <Error Condition="Exists('$(_TestDirectory)incremental-caches/clean/%(_IncrementalCachePath.Identity)')"
+           Text="Independent execution must not create incremental caches." />
+    <GetFileHash Files="$(_TestDirectory)incremental-caches/clean/IncrementalCaches.AssemblyInfo.cs;$(_StaleAssemblyInfo);$(_TestDirectory)incremental-caches/ordinary/IncrementalCaches.AssemblyInfo.cs">
+      <Output TaskParameter="Items" ItemName="_CacheFreeAssemblyInfo" />
+    </GetFileHash>
+    <Error Condition="'@(_CacheFreeAssemblyInfo->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Cache-free execution must replace stale source and match ordinary assembly info bytes." />
   </Target>
   <Target Name="TestAssemblyVersion">
     <MakeDir Directories="$(_TestDirectory)" />

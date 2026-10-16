@@ -170,12 +170,14 @@ Copyright (c) .NET Foundation. All rights reserved.
   -->
   <Target Name="CreateGeneratedAssemblyInfoInputsCacheFile"
           DependsOnTargets="GetAssemblyAttributes">
-    <PropertyGroup>
+    <!-- Hardened construction still needs the attributes, not the timestamp cache. -->
+    <PropertyGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <GeneratedAssemblyInfoInputsCacheFile>$(IntermediateOutputPath)$(MSBuildProjectName).AssemblyInfoInputs.cache</GeneratedAssemblyInfoInputsCacheFile>
     </PropertyGroup>
 
     <!-- We only use up to _Parameter1 for most attributes, but other targets may add additional assembly attributes with multiple parameters. -->
-    <Hash ItemsToHash="@(AssemblyAttribute->'%(Identity)%(_Parameter1)%(_Parameter2)%(_Parameter3)%(_Parameter4)%(_Parameter5)%(_Parameter6)%(_Parameter7)%(_Parameter8)')">
+    <Hash Condition="'$(MSBuildHardenedGraph)' != 'true'"
+          ItemsToHash="@(AssemblyAttribute->'%(Identity)%(_Parameter1)%(_Parameter2)%(_Parameter3)%(_Parameter4)%(_Parameter5)%(_Parameter6)%(_Parameter7)%(_Parameter8)')">
       <Output TaskParameter="HashResult" PropertyName="_AssemblyAttributesHash" />
     </Hash>
 
@@ -186,16 +188,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       Overwrite="True"
       WriteOnlyWhenDifferent="True" />
 
-    <WriteLinesToFile
-      Condition="'$(MSBuildHardenedGraph)' == 'true'"
-      Lines="$(_AssemblyAttributesHash)"
-      File="$(GeneratedAssemblyInfoInputsCacheFile)"
-      DeclaredInputs="$(GeneratedAssemblyInfoInputsCacheFile)"
-      DeclaredOutputs="$(GeneratedAssemblyInfoInputsCacheFile)"
-      Overwrite="True"
-      WriteOnlyWhenDifferent="True" />
-
-    <ItemGroup>
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <FileWrites Include="$(GeneratedAssemblyInfoInputsCacheFile)" />
     </ItemGroup>
   </Target>
