@@ -49,6 +49,32 @@ Real examples: [Message](../../../src/Tasks/Message.cs),
 [executable-reference validation](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ValidateExecutableReferences.cs),
 and [WriteLinesToFile](../../../src/Tasks/FileIO/WriteLinesToFile.cs).
 
+## Distinguish discovery from value derivation
+
+A value can affect the graph without coming from Restore. Pure transformations
+of supplied values belong in construction; discovery that reads files, tools,
+source-control state, or the environment belongs in preparation and must supply
+explicit inputs to the fresh Build.
+
+For example, `GetAssemblyVersion` does not inspect an assembly. It parses the
+supplied NuGet version string into a four-part version:
+
+```xml
+<GetAssemblyVersion NuGetVersion="$(Version)"
+                    DeclaredInputs="" DeclaredOutputs="">
+  <Output TaskParameter="AssemblyVersion" PropertyName="AssemblyVersion" />
+</GetAssemblyVersion>
+```
+
+Its result is available to subsequent conditions, metadata, and artifact paths
+during construction. No Restore snapshot or file action is needed. If the
+original version came from Git or another external source, prepare that input
+first; parsing it does not grant permission to discover it during Build.
+The legacy `[MSBuildPureTask]` annotation alone is not sufficient: the task
+also needs the audited declared-I/O contract and explicit empty call-site lists.
+
+Real example: [assembly version derivation](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/GetAssemblyVersion.cs).
+
 ## Establish artifact paths before executing producers
 
 When a generator has a known output, do not read a generated file merely to

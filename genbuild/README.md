@@ -64,8 +64,9 @@ dotnet msbuild genbuild/tests/Smoke.proj -p:GenBuildTestHost=/absolute/path/to/d
 The checks cover CLI failures, paths with spaces, graph-only construction,
 independent Ninja execution, explicit NuGet project-style classification, SDK
 duplicate-item, executable-reference and filename-only WinMD validation, exact
-editorconfig and framework attribute generation, SDK Restore, and direct use of
-the packaged compiler to compile and run Hello World.
+editorconfig and framework attribute generation, assembly version derivation,
+SDK Restore, and direct use of the packaged compiler to compile and run
+Hello World.
 Select a runtime-only host to check that the app does not require an installed
 SDK.
 
@@ -80,7 +81,9 @@ The app uses this VMR's NuGet targets with the pinned NuGet managed dependencies
 Full SDK Build graph support is unfinished: preparation, resource, compiler, copy,
 and cleanup operations still need adaptations, including RAR and Roslyn's `Csc`.
 SDK duplicate-item and executable-reference validation run as zero-I/O
-construction tasks. Hardened SDK builds select a separate filename-only
+construction tasks. `GetAssemblyVersion` also runs during construction: it
+parses the supplied version string without inspecting an assembly or discovering
+a version. Hardened SDK builds select a separate filename-only
 `ValidateNoWinMDReferences` task, reporting `NETSDK1130` without inspecting
 assemblies. Ordinary builds retain `CheckForUnsupportedWinMDReferences` and
 its refined diagnostics.

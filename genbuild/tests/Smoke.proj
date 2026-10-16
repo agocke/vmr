@@ -37,6 +37,7 @@
     <CallTarget Targets="TestWinMDReferences" />
     <CallTarget Targets="TestEditorConfig" />
     <CallTarget Targets="TestFrameworkAttribute" />
+    <CallTarget Targets="TestAssemblyVersion" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -50,7 +51,47 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestAssemblyVersion">
+    <MakeDir Directories="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)AssemblyVersion.proj" DestinationFolder="$(_TestDirectory)" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.GenerateAssemblyInfo.targets"
+             Namespaces="&lt;Namespace Prefix='msb' Uri='http://schemas.microsoft.com/developer/msbuild/2003' /&gt;"
+             Query="/msb:Project/msb:Target[@Name='GetAssemblyVersion' or @Name='GetAssemblyAttributes']">
+      <Output TaskParameter="Result" ItemName="_AssemblyVersionTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_AssemblyVersionTarget->Count())' != '2'" Text="The packaged SDK must contain both assembly version targets." />
+    <PropertyGroup>
+      <_AssemblyVersionXml>@(_AssemblyVersionTarget, '')</_AssemblyVersionXml>
+      <_AssemblyVersionXml>$(_AssemblyVersionXml.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_AssemblyVersionXml>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_TestDirectory)AssemblyVersion.targets"
+                      Lines="&lt;Project xmlns='http://schemas.microsoft.com/developer/msbuild/2003'&gt;;$(_AssemblyVersionXml);&lt;/Project&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_AssemblyVersionCase Include="semver" Version="1.2.3-beta.4+build.5" AssemblyVersion="1.2.3.0" FileVersion="1.2.3.0" InformationalVersion="1.2.3-beta.4+build.5" />
+      <_AssemblyVersionCase Include="revision" Version="2.3.4.5" AssemblyVersion="2.3.4.5" FileVersion="2.3.4.5" InformationalVersion="2.3.4.5" />
+      <_AssemblyVersionCase Include="file-info-overrides" Version="1.2.3" AssemblyVersion="1.2.3.0" FileVersion="8.7.6.5" InformationalVersion="custom" Arguments="-p:InputFileVersion=8.7.6.5 -p:InputInformationalVersion=custom" />
+      <_AssemblyVersionCase Include="assembly-override" Version="not-a-version" AssemblyVersion="9.8.7.6" FileVersion="9.8.7.6" InformationalVersion="not-a-version" Arguments="-p:InputAssemblyVersion=9.8.7.6" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)AssemblyVersion.proj&quot; -p:TestCase=%(_AssemblyVersionCase.Identity) -p:InputVersion=%(_AssemblyVersionCase.Version) -p:ExpectedAssemblyVersion=%(_AssemblyVersionCase.AssemblyVersion) -p:ExpectedFileVersion=%(_AssemblyVersionCase.FileVersion) -p:ExpectedInformationalVersion=%(_AssemblyVersionCase.InformationalVersion) %(_AssemblyVersionCase.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)assembly-version-%(_AssemblyVersionCase.Identity).ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)assembly-version/%(_AssemblyVersionCase.Identity)/%(_AssemblyVersionCase.AssemblyVersion).txt')" Text="Assembly version derivation must not execute file actions during construction." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f assembly-version-%(_AssemblyVersionCase.Identity).ninja" />
+    <ReadLinesFromFile File="$(_TestDirectory)assembly-version/%(_AssemblyVersionCase.Identity)/%(_AssemblyVersionCase.AssemblyVersion).txt">
+      <Output TaskParameter="Lines" ItemName="_AssemblyVersionContents" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_AssemblyVersionContents)' != '@(_AssemblyVersionCase->'%(AssemblyVersion)|%(FileVersion)|%(InformationalVersion)')'"
+           Text="Assembly version actions must receive the derived version values." />
+    <MakeDir Directories="$(_TestDirectory)assembly-version/ordinary-%(_AssemblyVersionCase.Identity)" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)AssemblyVersion.proj&quot; -p:TestCase=ordinary-%(_AssemblyVersionCase.Identity) -p:InputVersion=%(_AssemblyVersionCase.Version) -p:ExpectedAssemblyVersion=%(_AssemblyVersionCase.AssemblyVersion) -p:ExpectedFileVersion=%(_AssemblyVersionCase.FileVersion) -p:ExpectedInformationalVersion=%(_AssemblyVersionCase.InformationalVersion) %(_AssemblyVersionCase.Arguments)" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)AssemblyVersion.proj&quot; -p:TestCase=invalid -p:InputVersion=not-a-version -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)assembly-version-invalid.ninja&quot; -noconsolelogger -flp:&quot;LogFile=$(_TestDirectory)assembly-version-invalid.log;ErrorsOnly&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_InvalidAssemblyVersionExitCode" />
+    </Exec>
+    <Error Condition="'$(_InvalidAssemblyVersionExitCode)' == '0' or !$([System.IO.File]::ReadAllText('$(_TestDirectory)assembly-version-invalid.log').Contains('NETSDK1018'))"
+           Text="Invalid assembly versions must retain their SDK diagnostic." />
+    <Error Condition="Exists('$(_TestDirectory)assembly-version-invalid.ninja') or Exists('$(_TestDirectory)assembly-version-invalid.ninja.actions') or Exists('$(_TestDirectory)assembly-version/invalid')"
+           Text="Invalid assembly versions must not publish a graph or execute file actions." />
   </Target>
   <Target Name="TestFrameworkAttribute">
     <MakeDir Directories="$(_TestDirectory)" />

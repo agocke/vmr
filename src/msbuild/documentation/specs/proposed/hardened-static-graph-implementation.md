@@ -387,21 +387,30 @@ publication in hardened mode, leaving ordinary write-race warnings unchanged.
 Packaged smoke checks graph-only construction, independent file publication,
 compiler-input bookkeeping, and the different failure policies.
 
+SDK `GetAssemblyVersion` now runs as an audited zero-I/O construction task.
+It derives a four-part assembly version from the supplied NuGet version string;
+it does not inspect an assembly or discover a version. Existing version
+overrides and invalid-input diagnostics are unchanged. Packaged smoke checks
+prerelease/build metadata, four-part versions, override precedence, static
+attribute conditions and metadata, version-dependent output paths, independent
+publication, ordinary compatibility, and rejection without graph publication.
+
 With directory import paths supplied explicitly to both Restore and Build,
 the fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
 executable-reference validation, WinMD validation, editorconfig generation,
-and framework attribute generation. The first unsupported task is the
-assembly-info helper `GetAssemblyVersion`, followed by `Hash`; unavailable
-outputs also cause downstream deferred-value diagnostics. Failed construction
-publishes neither a graph nor action invocations and writes no framework
-attribute file.
+framework attribute generation, and assembly version derivation.
+The first unsupported task is now `Hash` in assembly-info generation;
+unavailable hash outputs also cause downstream deferred-value diagnostics.
+Failed construction publishes neither a graph nor action invocations and
+writes no framework attribute file.
 Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers
 Common's preparation sites, not every SDK or custom directory operation.
-The probe also reports unsupported source mapping, compilation, dependency/runtime configuration,
-copying, and cleanup operations. Some diagnostics follow unavailable earlier
-outputs; fix the first unsupported operations and re-probe rather than treating
+The probe also reports unsupported source mapping, compilation,
+dependency/runtime configuration, copying, and cleanup operations.
+Some diagnostics follow unavailable earlier outputs; fix the first unsupported
+operations and re-probe rather than treating
 all diagnostics as independently reachable blockers.
 RAR and the stock Roslyn task still need audited
 action-graph adaptation. Full SDK `Build` remains unsupported; ambient

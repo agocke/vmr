@@ -252,7 +252,8 @@ Copyright (c) .NET Foundation. All rights reserved.
     ==================================================================
   -->
   <Target Name="GetAssemblyVersion">
-    <GetAssemblyVersion Condition="'$(AssemblyVersion)' == ''" NuGetVersion="$(Version)">
+    <GetAssemblyVersion Condition="'$(AssemblyVersion)' == ''" NuGetVersion="$(Version)"
+                        DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="AssemblyVersion" PropertyName="AssemblyVersion" />
     </GetAssemblyVersion>
 

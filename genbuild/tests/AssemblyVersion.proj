@@ -1,0 +1,33 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <Version>$(InputVersion)</Version>
+    <AssemblyVersion>$(InputAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(InputFileVersion)</FileVersion>
+    <InformationalVersion>$(InputInformationalVersion)</InformationalVersion>
+    <GenerateAssemblyVersionAttribute>true</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>true</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>true</GenerateAssemblyInformationalVersionAttribute>
+  </PropertyGroup>
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.Common.targets" />
+  <UsingTask TaskName="GetAssemblyVersion" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <Import Project="AssemblyVersion.targets" />
+  <Target Name="InitializeSourceControlInformation" />
+  <Target Name="AddSourceRevisionToInformationalVersion" />
+  <Target Name="Build" DependsOnTargets="GetAssemblyAttributes">
+    <ItemGroup>
+      <_AssemblyVersionAttribute Include="@(AssemblyAttribute)" Condition="'%(AssemblyAttribute.Identity)' == 'System.Reflection.AssemblyVersionAttribute'" />
+      <_FileVersionAttribute Include="@(AssemblyAttribute)" Condition="'%(AssemblyAttribute.Identity)' == 'System.Reflection.AssemblyFileVersionAttribute'" />
+      <_InformationalVersionAttribute Include="@(AssemblyAttribute)" Condition="'%(AssemblyAttribute.Identity)' == 'System.Reflection.AssemblyInformationalVersionAttribute'" />
+    </ItemGroup>
+    <Error Condition="'$(AssemblyVersion)' != '$(ExpectedAssemblyVersion)' or '@(_AssemblyVersionAttribute->'%(_Parameter1)')' != '$(ExpectedAssemblyVersion)'"
+           Text="Assembly version derivation must provide a static value to attribute conditions and metadata." />
+    <Error Condition="'$(FileVersion)' != '$(ExpectedFileVersion)' or '@(_FileVersionAttribute->'%(_Parameter1)')' != '$(ExpectedFileVersion)'"
+           Text="File version derivation must retain defaults and explicit overrides." />
+    <Error Condition="'$(InformationalVersion)' != '$(ExpectedInformationalVersion)' or '@(_InformationalVersionAttribute->'%(_Parameter1)')' != '$(ExpectedInformationalVersion)'"
+           Text="Informational version derivation must retain defaults and explicit overrides." />
+    <WriteLinesToFile File="$(MSBuildProjectDirectory)/assembly-version/$(TestCase)/$(AssemblyVersion).txt"
+                      Lines="$(AssemblyVersion)|$(FileVersion)|$(InformationalVersion)" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="$(MSBuildProjectDirectory)/assembly-version/$(TestCase)/$(AssemblyVersion).txt" />
+  </Target>
+  <Target Name="Restore" DependsOnTargets="Build" />
+</Project>

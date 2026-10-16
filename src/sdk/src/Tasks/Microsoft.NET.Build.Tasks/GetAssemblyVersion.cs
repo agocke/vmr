@@ -12,6 +12,7 @@ namespace Microsoft.NET.Build.Tasks
     /// <summary>
     /// Determines the assembly version to use for a given semantic version.
     /// </summary>
+    [MSBuildDeclaredIOTask]
     [MSBuildMultiThreadableTask]
     [MSBuildPureTask]
     public class GetAssemblyVersion : TaskBase
@@ -27,6 +28,10 @@ namespace Microsoft.NET.Build.Tasks
         /// </summary>
         [Output]
         public string AssemblyVersion { get; set; }
+
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
 
         protected override void ExecuteCore()
         {
