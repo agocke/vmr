@@ -845,8 +845,11 @@ internal sealed class HardenedTargetValidator
         taskControlState = ValueState.Combine(taskControlState, declaredIOState);
         bool zeroIO = _declaredIOFootprints.Count > footprintCount &&
             _declaredIOFootprints[footprintCount] is { InputPaths.Count: 0, OutputPaths.Count: 0 };
+        bool isStaticallyEmptyMSBuild = isMSBuild &&
+            classification == HardenedTaskClassification.Unaudited &&
+            HasStaticallyEmptyMSBuildProjects(task, taskControlState);
 
-        if (classification != HardenedTaskClassification.DeclaredIO && !isCallTarget)
+        if (classification != HardenedTaskClassification.DeclaredIO && !isCallTarget && !isStaticallyEmptyMSBuild)
         {
             ReportUnsupported(task.Location, $"task '{task.Name}' without explicit DeclaredIO", "action graph construction");
         }
@@ -858,7 +861,6 @@ internal sealed class HardenedTargetValidator
         }
 
         ValueState? intrinsicTaskOutputState = null;
-        bool isStaticallyEmptyMSBuild = false;
         if (isCallTarget)
         {
             intrinsicTaskOutputState = ValidateCallTarget(
@@ -868,22 +870,19 @@ internal sealed class HardenedTargetValidator
                 visitedTargets,
                 callTargetScope ?? throw new InvalidOperationException("CallTarget scope was not captured."));
         }
-        else if (isMSBuild)
+        else if (isStaticallyEmptyMSBuild)
         {
-            isStaticallyEmptyMSBuild = HasStaticallyEmptyMSBuildProjects(task, taskControlState);
-            if (isStaticallyEmptyMSBuild)
-            {
-                intrinsicTaskOutputState = ValueState.Static;
-            }
+            intrinsicTaskOutputState = ValueState.Static;
         }
 
         HardenedConstructionTaskExecutor? constructionTaskExecutor = _constructionTaskExecutor;
         bool zeroIOTaskExecuted = false;
         if (constructionTaskExecutor is not null && taskControlState.IsStatic &&
-            classification == HardenedTaskClassification.DeclaredIO && _diagnostics.Count == 0)
+            (classification == HardenedTaskClassification.DeclaredIO || isStaticallyEmptyMSBuild) &&
+            _diagnostics.Count == 0)
         {
             constructionTaskExecutor(target, task, ValidationLookup);
-            zeroIOTaskExecuted = zeroIO;
+            zeroIOTaskExecuted = zeroIO || isStaticallyEmptyMSBuild;
         }
 
         foreach (ProjectTaskInstanceChild output in task.Outputs)
@@ -1027,6 +1026,10 @@ internal sealed class HardenedTargetValidator
                             destination,
                             ValidationLookup.GetProperty(destination)?.EvaluatedValue ?? string.Empty);
                     }
+                    else if (isStaticallyEmptyMSBuild && outputState.IsStatic)
+                    {
+                        Context.SetConcreteProperty(destination, string.Empty, updateLookup: true);
+                    }
                     else
                     {
                         Context.SetProperty(
@@ -1045,7 +1048,11 @@ internal sealed class HardenedTargetValidator
         }
 
         callTargetScope?.CallerAssignedProperties.Add(ReservedPropertyNames.lastTaskResult);
-        if (zeroIOTaskExecuted || isStaticallyEmptyMSBuild)
+        if (isStaticallyEmptyMSBuild)
+        {
+            Context.SetConcreteProperty(ReservedPropertyNames.lastTaskResult, "true", updateLookup: true);
+        }
+        else if (zeroIOTaskExecuted)
         {
             Context.SetConcreteProperty(
                 ReservedPropertyNames.lastTaskResult,

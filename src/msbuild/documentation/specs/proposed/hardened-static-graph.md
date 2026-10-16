@@ -271,6 +271,13 @@ construction tasks a second time. No additional target interpreter is added.
 - Expand supported `MSBuild` and `CallTarget` intrinsics into construction
   state and dependency edges, not host commands that invoke MSBuild.
   Configured projects retain their global-property and inner-build identity.
+  An `MSBuild` invocation with statically known parameters and a provably
+  empty `Projects` list is a construction-time no-op. Normal parameter binding
+  and output gathering still apply: `TargetOutputs` is empty, item outputs
+  append nothing, property outputs become empty, and `MSBuildLastTaskResult`
+  becomes `true`. No action or nested build is emitted. Nonempty or unavailable
+  project lists remain unsupported. Only the bound engine intrinsic gets this
+  exemption; custom tasks named `MSBuild` still require DeclaredIO auditing.
 - Preserve required file and control dependencies, initially conservatively.
   Associate generated inputs with their producers, reject conflicting output
   ownership and cycles, and do not mistake stale generated files for sources.

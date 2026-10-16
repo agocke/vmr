@@ -784,11 +784,13 @@ namespace Microsoft.Build.BackEnd
             }
             else
             {
-                if (_buildRequestEntry.ActionGraph is { } graph)
+                bool isEmptyMSBuild = _buildRequestEntry.ActionGraph is not null &&
+                    taskExecutionHost.TaskInstance is MSBuild { Projects.Length: 0 };
+                if (_buildRequestEntry.ActionGraph is { } graph && !isEmptyMSBuild)
                 {
                     ProjectErrorUtilities.VerifyThrowInvalidProject(
                         taskExecutionHost.SupportsActionGraph,
-                        _taskNode.Location, "HardenedGraphUnsupportedConstruct", "custom task factories or specialized hosting", "action graph construction");
+                        _taskNode.Location, "HardenedGraphUnsupportedConstruct", "unaudited tasks, custom task factories or specialized hosting", "action graph construction");
                     if (graph.Record(taskExecutionHost.TaskInstance, taskExecutionHost.ActionParameters, _taskNode))
                     {
                         return new WorkUnitResult(WorkUnitResultCode.Success, WorkUnitActionCode.Continue, null);
@@ -801,7 +803,11 @@ namespace Microsoft.Build.BackEnd
                 // If this is the MSBuild task, we need to execute it's special internal method.
                 try
                 {
-                    if (taskExecutionHost.TaskInstance is MSBuild msbuildTask)
+                    if (isEmptyMSBuild)
+                    {
+                        taskResult = true;
+                    }
+                    else if (taskExecutionHost.TaskInstance is MSBuild msbuildTask)
                     {
                         // https://github.com/dotnet/msbuild/issues/11025
                         // The metaproject's inner <MSBuild> tasks are generator-authored plumbing,

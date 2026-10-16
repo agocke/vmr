@@ -239,6 +239,8 @@ namespace Microsoft.Build.BackEnd
 
         internal bool SupportsActionGraph => _registeredTaskFactory is null &&
             _taskFactoryWrapper.TaskFactory is AssemblyTaskFactory &&
+            _taskFactoryWrapper.TaskFactoryLoadedType.HasMSBuildDeclaredIOTaskAttribute &&
+            _taskFactoryWrapper.TaskFactoryLoadedType.HasValidMSBuildDeclaredIOAttributes &&
             !_taskFactoryWrapper.TaskFactoryLoadedType.HasSTAThreadAttribute &&
             !_taskFactoryWrapper.TaskFactoryLoadedType.HasLoadInSeparateAppDomainAttribute;
 

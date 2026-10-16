@@ -63,9 +63,9 @@ dotnet msbuild genbuild/tests/Smoke.proj -p:GenBuildTestHost=/absolute/path/to/d
 
 The checks cover CLI failures, paths with spaces, graph-only construction,
 independent Ninja execution, explicit NuGet project-style classification, SDK
-duplicate-item validation, SDK Restore, and direct use of the packaged compiler
-to compile and run Hello World. Select a runtime-only host to check that the app
-does not require an installed SDK.
+duplicate-item and executable-reference validation, SDK Restore, and direct use
+of the packaged compiler to compile and run Hello World. Select a runtime-only
+host to check that the app does not require an installed SDK.
 
 ## Current limitations
 
@@ -77,8 +77,9 @@ The app uses this VMR's NuGet targets with the pinned NuGet managed dependencies
 
 Full SDK Build graph support is unfinished: preparation, resource, compiler, copy,
 and cleanup operations still need adaptations, including RAR and Roslyn's `Csc`.
-SDK duplicate-item validation now runs as a zero-I/O construction task, and
-explicit fail-fast `ContinueOnError` values are supported. Continuing after
+SDK duplicate-item and executable-reference validation now run as zero-I/O
+construction tasks, and explicit fail-fast `ContinueOnError` values are
+supported. Continuing after
 errors and active `OnError` handlers remain unsupported. In hardened mode,
 Common's `CoreBuild` does not run failure handlers or record partial writes for
 later Clean. Nonempty post-build events using `Always` or `OnOutputUpdated`
@@ -88,6 +89,10 @@ no fallback to ordinary Build.
 The action host prepares declared output-file parents. Common directory
 preparation is accepted only when every requested directory contains a
 declared file output; unrelated empty-directory effects remain unsupported.
+Leaf-project `MSBuild` calls with provably empty project lists are accepted as
+construction-time no-ops with normal parameter and output validation.
+Nonempty or unavailable project lists still require unsupported cross-project
+expansion.
 The compiler smoke check invokes the compiler directly, not through a `Csc`
 graph action. Workload resolution is disabled in this prototype.
 

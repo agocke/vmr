@@ -9,6 +9,7 @@ using Microsoft.DotNet.Cli;
 
 namespace Microsoft.NET.Build.Tasks
 {
+    [MSBuildDeclaredIOTask]
     [MSBuildMultiThreadableTask]
     public class ValidateExecutableReferences : TaskBase
     {
@@ -19,6 +20,10 @@ namespace Microsoft.NET.Build.Tasks
         public ITaskItem[] ReferencedProjects { get; set; } = Array.Empty<ITaskItem>();
 
         public bool UseAttributeForTargetFrameworkInfoPropertyNames { get; set; }
+
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        public ITaskItem[] DeclaredOutputs { get; set; }
 
         protected override void ExecuteCore()
         {

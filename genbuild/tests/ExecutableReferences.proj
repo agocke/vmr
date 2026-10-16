@@ -1,0 +1,34 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <InputSelfContained Condition="'$(InputSelfContained)' == ''">false</InputSelfContained>
+    <InputIsExecutable Condition="'$(InputIsExecutable)' == ''">true</InputIsExecutable>
+    <ReferenceSelfContained Condition="'$(ReferenceSelfContained)' == ''">false</ReferenceSelfContained>
+    <ReferenceMajor Condition="'$(ReferenceMajor)' == ''">8</ReferenceMajor>
+    <ReferenceIsRidAgnostic Condition="'$(ReferenceIsRidAgnostic)' == ''">false</ReferenceIsRidAgnostic>
+    <ReferenceSelfContainedSpecified Condition="'$(ReferenceSelfContainedSpecified)' == ''">false</ReferenceSelfContainedSpecified>
+    <UseAttributes Condition="'$(UseAttributes)' == ''">true</UseAttributes>
+    <SelfContained>$(InputSelfContained)</SelfContained>
+    <RuntimeIdentifier>$(InputRuntimeIdentifier)</RuntimeIdentifier>
+    <_IsExecutable>$(InputIsExecutable)</_IsExecutable>
+    <_UseAttributeForTargetFrameworkInfoPropertyNames>$(UseAttributes)</_UseAttributeForTargetFrameworkInfoPropertyNames>
+    <ResultFile>$(MSBuildProjectDirectory)/executable-$(TestCase).txt</ResultFile>
+    <_ReferenceProperties>&lt;SelfContained&gt;$(ReferenceSelfContained)&lt;/SelfContained&gt;&lt;_IsExecutable&gt;true&lt;/_IsExecutable&gt;&lt;ShouldBeValidatedAsExecutableReference&gt;true&lt;/ShouldBeValidatedAsExecutableReference&gt;&lt;_SelfContainedWasSpecified&gt;$(ReferenceSelfContainedSpecified)&lt;/_SelfContainedWasSpecified&gt;&lt;IsRidAgnostic&gt;$(ReferenceIsRidAgnostic)&lt;/IsRidAgnostic&gt;</_ReferenceProperties>
+  </PropertyGroup>
+  <UsingTask TaskName="ValidateExecutableReferences" AssemblyFile="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/tools/net11.0/Microsoft.NET.Build.Tasks.dll" />
+  <Import Project="ExecutableReferences.targets" />
+  <ItemGroup Condition="'$(HasReference)' != 'false'">
+    <_MSBuildProjectReferenceExistent Include="not-on-disk.csproj">
+      <NearestTargetFramework>net$(ReferenceMajor).0</NearestTargetFramework>
+      <TargetFrameworks>net$(ReferenceMajor).0</TargetFrameworks>
+      <TargetFrameworkMonikers>.NETCoreApp,Version=v$(ReferenceMajor).0</TargetFrameworkMonikers>
+      <AdditionalPropertiesFromProject Condition="'$(UseAttributes)' == 'true'">&lt;AdditionalProjectProperties&gt;&lt;TargetFramework Name="net$(ReferenceMajor).0"&gt;$(_ReferenceProperties)&lt;/TargetFramework&gt;&lt;/AdditionalProjectProperties&gt;</AdditionalPropertiesFromProject>
+      <AdditionalPropertiesFromProject Condition="'$(UseAttributes)' != 'true'">&lt;AdditionalProjectProperties&gt;&lt;net$(ReferenceMajor).0&gt;$(_ReferenceProperties)&lt;/net$(ReferenceMajor).0&gt;&lt;/AdditionalProjectProperties&gt;</AdditionalPropertiesFromProject>
+    </_MSBuildProjectReferenceExistent>
+  </ItemGroup>
+  <Target Name="_CalculateIsVSTestTestProject" />
+  <Target Name="Build" DependsOnTargets="ValidateExecutableReferences">
+    <WriteLinesToFile File="$(ResultFile)" Lines="$(TestCase)" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+  </Target>
+  <Target Name="Restore" DependsOnTargets="Build" />
+</Project>

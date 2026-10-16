@@ -283,6 +283,97 @@ public sealed class HardenedTargetValidator_Tests(ITestOutputHelper output)
         exception.Message.ShouldContain("Build");
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ; @(Missing) ; ")]
+    [InlineData("$(Missing)")]
+    [InlineData("@(Missing->'%(Identity)')")]
+    public void EmptyMSBuildPreservesItemsAndClearsPropertyOutputs(string projects)
+    {
+        string projectXml = $$"""
+            <Project>
+              <PropertyGroup>
+                <ReturnedProperty>stale</ReturnedProperty>
+              </PropertyGroup>
+              <ItemGroup>
+                <ReturnedItems Include="existing">
+                  <Tag>preserved</Tag>
+                </ReturnedItems>
+              </ItemGroup>
+              <Target Name="Build">
+                <MSBuild Projects="{{projects}}" Targets="Missing">
+                  <Output TaskParameter="TargetOutputs" PropertyName="ReturnedProperty" />
+                  <Output TaskParameter="TargetOutputs" ItemName="ReturnedItems" />
+                </MSBuild>
+                <PropertyGroup>
+                  <Observed>$(ReturnedProperty)|@(ReturnedItems->'%(Tag)')|$(MSBuildLastTaskResult)</Observed>
+                </PropertyGroup>
+              </Target>
+            </Project>
+            """;
+        using TestEnvironment environment = TestEnvironment.Create(_output);
+
+        (ProjectInstance ordinaryProject, Lookup validationLookup) = BuildOrdinaryAndValidateHardened(
+            environment, projectXml, new Dictionary<string, HardenedTaskClassification>());
+
+        validationLookup.GetProperty("Observed")!.EvaluatedValue
+            .ShouldBe(ordinaryProject.GetPropertyValue("Observed"));
+        validationLookup.GetProperty("Observed")!.EvaluatedValue.ShouldBe("|preserved|true");
+        DescribeItemSpecs(validationLookup.GetItems("ReturnedItems")).ShouldBe(["existing"]);
+    }
+
+    [Fact]
+    public void EmptyMSBuildResetsPreviousTaskStatus()
+    {
+        using TestEnvironment environment = TestEnvironment.Create(_output);
+        ProjectInstance project = CreateProjectInstance(
+            environment,
+            """
+            <Project>
+              <Target Name="Build">
+                <MSBuild Projects="" />
+                <PropertyGroup>
+                  <Observed>$(MSBuildLastTaskResult)</Observed>
+                </PropertyGroup>
+              </Target>
+            </Project>
+            """);
+        Lookup lookup = new(project.ItemsToBuildWith, project.PropertiesToBuildWith);
+        lookup.SetBuiltInProperty(ProjectPropertyInstance.Create("MSBuildLastTaskResult", "false", mayBeReserved: true));
+        HardenedTargetValidator validator = new();
+
+        validator.Validate(project, lookup, ["Build"]).ShouldBeEmpty();
+
+        validator.GetValidationLookupForTesting().GetProperty("Observed")!.EvaluatedValue.ShouldBe("true");
+    }
+
+    [Theory]
+    [InlineData("child.proj")]
+    [InlineData("%3B")]
+    [InlineData("@(Unknown)")]
+    public void NonemptyOrDeferredMSBuildProjectsRemainUnsupported(string projects)
+    {
+        IReadOnlyList<InvalidProjectFileException> diagnostics = ValidateDiagnostics(
+            $$"""
+            <Project>
+              <Target Name="Build">
+                <Generate DeclaredInputs="" DeclaredOutputs="">
+                  <Output TaskParameter="Values" ItemName="Unknown" />
+                </Generate>
+                <MSBuild Projects="{{projects}}" Targets="Build" />
+              </Target>
+            </Project>
+            """,
+            new Dictionary<string, HardenedTaskClassification>
+            {
+                ["Generate"] = HardenedTaskClassification.DeclaredIO,
+            });
+
+        diagnostics.ShouldContain(diagnostic =>
+            diagnostic.ErrorCode == "MSB4286" &&
+            diagnostic.Message.Contains("task 'MSBuild' without explicit DeclaredIO"));
+    }
+
     [Fact]
     public void AfterTargetCycleDoesNotCreateCircularDependency()
     {

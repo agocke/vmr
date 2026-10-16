@@ -866,6 +866,144 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     }
 
     [UnixOnlyTheory]
+    [InlineData("")]
+    [InlineData(" ; @(Missing) ; ")]
+    [InlineData("$(Missing)")]
+    public void EmptyMSBuildReturnsStaticOutputsWithoutAnAction(string projects)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.AddFirst(new XElement("PropertyGroup", new XElement("ReturnedProperty", "stale")),
+            new XElement("ItemGroup", new XElement("ReturnedItems", new XAttribute("Include", "existing"))));
+        XElement target = contents.Root.Element("Target")!;
+        XElement secondAction = target.Elements("GraphTransformTask").Last();
+        secondAction.AddBeforeSelf(
+            new XElement("MSBuild", new XAttribute("Projects", projects), new XAttribute("Targets", "Missing"),
+                new XElement("Output", new XAttribute("TaskParameter", "TargetOutputs"),
+                    new XAttribute("PropertyName", "ReturnedProperty")),
+                new XElement("Output", new XAttribute("TaskParameter", "TargetOutputs"),
+                    new XAttribute("ItemName", "ReturnedItems"))),
+            new XElement("PropertyGroup",
+                new XElement("Observed", "$(ReturnedProperty)|@(ReturnedItems)|$(MSBuildLastTaskResult)")));
+        secondAction.SetAttributeValue("Condition", "'$(Observed)' == '|existing|true'");
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph).ShouldBeTrue();
+
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(2);
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        Ninja(graph, out bool succeeded);
+
+        succeeded.ShouldBeTrue();
+        File.ReadAllText(Path.Combine(directory, "second.txt")).ShouldBe("literal%3B;value|metadata%25|consumed");
+    }
+
+    [UnixOnlyTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CommonFrameworkNegotiationAcceptsEmptyProjectReferences(bool dynamicPlatform)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        string sdk = Path.Combine(Path.GetDirectoryName(RunnerUtilities.BootstrapDotnetHostPath)!,
+            "sdk", RunnerUtilities.BootstrapSdkVersion);
+        XElement common = XDocument.Load(Path.Combine(sdk, "Microsoft.Common.CurrentVersion.targets")).Root!;
+        XElement[] calls = [.. common.Descendants("MSBuild").Where(task =>
+            task.Attribute("Projects")?.Value == "@(_MSBuildProjectReferenceExistent)" &&
+            task.Attribute("Targets")?.Value == "GetTargetFrameworks")];
+        calls.Length.ShouldBe(2);
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.AddFirst(new XElement("PropertyGroup",
+            new XElement("BuildingProject", "true"),
+            new XElement("EnableDynamicPlatformResolution", dynamicPlatform)));
+        contents.Root.Element("Target")!.AddFirst(calls.Select(call => new XElement(call)));
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph).ShouldBeTrue();
+
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(2);
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        Ninja(graph, out bool succeeded);
+
+        succeeded.ShouldBeTrue();
+        File.ReadAllText(Path.Combine(directory, "second.txt")).ShouldBe("literal%3B;value|metadata%25|consumed");
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("Projects", "missing-child.proj", "MSB4286")]
+    [InlineData("Projects", "%3B", "MSB4286")]
+    [InlineData("BuildInParallel", "invalid-boolean", "invalid-boolean")]
+    [InlineData("UnknownParameter", "value", "UnknownParameter")]
+    [InlineData("TaskParameter", "UnknownOutput", "UnknownOutput")]
+    [InlineData("ContinueOnError", "true", "ContinueOnError")]
+    [InlineData("MSBuildRuntime", "CurrentRuntime", "task hosting")]
+    [InlineData("MissingProjects", "", "MSB4286")]
+    public void UnsupportedOrInvalidMSBuildDoesNotPublishActions(string parameter, string value, string expected)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        XElement call = new("MSBuild", new XAttribute("Projects", ""), new XAttribute("Targets", "Build"));
+        if (parameter == "TaskParameter")
+        {
+            call.Add(new XElement("Output", new XAttribute("TaskParameter", value),
+                new XAttribute("ItemName", "ReturnedItems")));
+        }
+        else if (parameter == "MissingProjects")
+        {
+            call.Attribute("Projects")!.Remove();
+        }
+        else
+        {
+            call.SetAttributeValue(parameter, value);
+        }
+
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.Element("Target")!.Add(call);
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log).ShouldBeFalse();
+
+        log.ShouldContain(expected);
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyFact]
+    public void EmptyProjectsDoNotAdmitAnUnauditedMSBuildOverride()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        XDocument contents = XDocument.Load(project);
+        contents.Root!.AddFirst(new XElement("UsingTask",
+            new XAttribute("TaskName", typeof(MSBuild).FullName!),
+            new XAttribute("AssemblyFile", typeof(MSBuild).Assembly.Location)));
+        contents.Root.Element("Target")!.Add(new XElement("MSBuild",
+            new XAttribute("Projects", ""),
+            new XAttribute("DeclaredInputs", ""),
+            new XAttribute("DeclaredOutputs", ""),
+            new XAttribute("File", Path.Combine(directory, "unaudited.txt"))));
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log).ShouldBeFalse();
+
+        log.ShouldContain("unaudited tasks");
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "unaudited.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyTheory]
     [InlineData("DeclaredInputs")]
     [InlineData("DeclaredOutputs")]
     [InlineData("Importance")]
@@ -1437,6 +1575,20 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
 
     private string Ninja(string graph, out bool success)
         => RunnerUtilities.RunProcessAndGetOutput("ninja", $"-f \"{graph}\" -j1", out success, outputHelper: _output);
+}
+
+public sealed class MSBuild : Utilities.Task
+{
+    public ITaskItem[] Projects { get; set; } = [];
+    public ITaskItem[] DeclaredInputs { get; set; } = [];
+    public ITaskItem[] DeclaredOutputs { get; set; } = [];
+    public string File { get; set; } = "";
+
+    public override bool Execute()
+    {
+        System.IO.File.WriteAllText(File, "unaudited task executed");
+        return true;
+    }
 }
 
 [MSBuildDeclaredIOTask]

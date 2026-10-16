@@ -180,6 +180,8 @@ paths with spaces/dollars/colons, and supported cross-project routing.
 The first single-project Unix slice is implemented. Cross-project `MSBuild`
 routing, forward producer resolution, Windows commands, full tool closures,
 and graph-input inventories remain work rather than supported fallbacks.
+Provably empty `MSBuild` project lists are supported as the leaf-project base
+case; they do not require cross-project routing or emit an action.
 
 ## 4. Execute a small build with Ninja
 
@@ -340,7 +342,30 @@ empty-directory effects remain unsupported, even if the directory already
 exists. There are no directory actions or stamps; ordinary `MakeDir` behavior
 is unchanged.
 
-The full-`Build` probe still reaches unsupported project/reference handling.
+`MSBuild` calls with statically known parameters and provably empty `Projects`
+lists now complete during construction without entering a nested build.
+Normal binding and output gathering validate their parameters and mappings,
+append no output items, clear mapped output properties, and set
+`MSBuildLastTaskResult` to `true`. Tests cover both Common
+`GetTargetFrameworks` platform-negotiation variants with no references,
+ordinary output semantics, and rejection of nonempty, unavailable, missing,
+and invalid inputs. The bound-task guard also rejects unaudited custom tasks
+named `MSBuild`, even with explicit empty declarations. Nonempty cross-project
+expansion remains unsupported.
+
+SDK `ValidateExecutableReferences` now runs as an audited zero-I/O construction
+task with explicit empty declarations at its SDK call site. It parses supplied
+reference metadata and reads the current request's global-property dictionary,
+without opening referenced project files. Executable compatibility checks and
+global `SelfContained`/`RuntimeIdentifier` propagation are unchanged. Packaged
+smoke checks cover both metadata XML forms, global versus local properties,
+specific `NETSDK1150`/`NETSDK1151` errors, and ordinary-build behavior.
+
+The fresh SDK full-`Build` probe now gets past `GetTargetFrameworks` and
+executable-reference validation without downstream deferred project-annotation
+errors. Its first unsupported task is `CheckForUnsupportedWinMDReferences`,
+which can read assemblies and needs a separate file-footprint audit rather
+than empty declarations.
 Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers

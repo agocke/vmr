@@ -14,7 +14,7 @@
     <WriteLinesToFile File="$(_TestDirectory)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_TestDirectory)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_TestDirectory)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
-    <Copy SourceFiles="$(MSBuildThisFileDirectory)Action.proj;$(MSBuildThisFileDirectory)ProjectStyle.proj;$(MSBuildThisFileDirectory)HelloWorld.csproj;$(MSBuildThisFileDirectory)HelloWorld.cs" DestinationFolder="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Action.proj;$(MSBuildThisFileDirectory)ProjectStyle.proj;$(MSBuildThisFileDirectory)ExecutableReferences.proj;$(MSBuildThisFileDirectory)HelloWorld.csproj;$(MSBuildThisFileDirectory)HelloWorld.cs" DestinationFolder="$(_TestDirectory)" />
     <Exec Command="$(_App) --help" />
     <Exec Command="$(_App) invalid" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_InvalidExitCode" />
@@ -33,6 +33,7 @@
     </ReadLinesFromFile>
     <Error Condition="'@(_ActionContents)' != 'executed outside MSBuild'" Text="The independent action host did not produce the expected contents." />
     <CallTarget Targets="TestProjectStyles" />
+    <CallTarget Targets="TestExecutableReferences" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -46,7 +47,7 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item validation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item and executable-reference validation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
   </Target>
   <Target Name="TestProjectStyles">
     <WriteLinesToFile File="$(_TestDirectory)packages.config" Lines="&lt;packages /&gt;" Overwrite="true" />
@@ -73,5 +74,54 @@
            Text="Rejected construction must neither publish a graph nor execute actions." />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)ProjectStyle.proj&quot; -p:TestCase=ordinary -p:ExpectedStyle=PackagesConfig -p:ExpectedCompatible=false" />
     <Error Condition="!Exists('$(_TestDirectory)style-ordinary.txt')" Text="Ordinary project-style classification must retain packages.config discovery." />
+  </Target>
+  <Target Name="TestExecutableReferences">
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets"
+             Namespaces="&lt;Namespace Prefix='msb' Uri='http://schemas.microsoft.com/developer/msbuild/2003' /&gt;"
+             Query="/msb:Project/msb:Target[@Name='ValidateExecutableReferences']">
+      <Output TaskParameter="Result" ItemName="_ExecutableValidationTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_ExecutableValidationTarget->Count())' != '1'" Text="The packaged SDK must contain one executable-reference validation target." />
+    <PropertyGroup>
+      <_ExecutableValidationXml>@(_ExecutableValidationTarget)</_ExecutableValidationXml>
+      <_ExecutableValidationXml>$(_ExecutableValidationXml.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_ExecutableValidationXml>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_TestDirectory)ExecutableReferences.targets"
+                      Lines="&lt;Project xmlns='http://schemas.microsoft.com/developer/msbuild/2003'&gt;;$(_ExecutableValidationXml);&lt;/Project&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_ExecutableReferenceCase Include="empty" Arguments="-p:HasReference=false -p:InputSelfContained=true" />
+      <_ExecutableReferenceCase Include="matching" Arguments="" />
+      <_ExecutableReferenceCase Include="legacy-metadata" Arguments="-p:UseAttributes=false" />
+      <_ExecutableReferenceCase Include="non-executable" Arguments="-p:InputIsExecutable=false -p:InputSelfContained=true" />
+      <_ExecutableReferenceCase Include="global-self-contained" Arguments="-p:SelfContained=true" />
+      <_ExecutableReferenceCase Include="local-rid" Arguments="-p:InputRuntimeIdentifier=test-rid -p:ReferenceMajor=7" />
+      <_ExecutableReferenceCase Include="global-rid-explicit" Arguments="-p:RuntimeIdentifier=test-rid -p:ReferenceMajor=7 -p:ReferenceSelfContainedSpecified=true" />
+      <_ExecutableReferenceCase Include="global-rid-modern" Arguments="-p:RuntimeIdentifier=test-rid" />
+      <_ExecutableReferenceRejectedCase Include="local-self-contained" Arguments="-p:InputSelfContained=true" Error="NETSDK1150" />
+      <_ExecutableReferenceRejectedCase Include="child-self-contained" Arguments="-p:ReferenceSelfContained=true" Error="NETSDK1151" />
+      <_ExecutableReferenceRejectedCase Include="global-rid-inferred" Arguments="-p:RuntimeIdentifier=test-rid -p:ReferenceMajor=7" Error="NETSDK1151" />
+      <_ExecutableReferenceRejectedCase Include="rid-agnostic" Arguments="-p:SelfContained=true -p:ReferenceIsRidAgnostic=true" Error="NETSDK1150" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)ExecutableReferences.proj&quot; -p:TestCase=%(_ExecutableReferenceCase.Identity) %(_ExecutableReferenceCase.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)executable-%(_ExecutableReferenceCase.Identity).ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)executable-%(_ExecutableReferenceCase.Identity).txt')" Text="Executable-reference validation must not execute file actions during construction." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f &quot;executable-%(_ExecutableReferenceCase.Identity).ninja&quot;" />
+    <Error Condition="!Exists('$(_TestDirectory)executable-%(_ExecutableReferenceCase.Identity).txt')" Text="Executable-reference validation did not produce an executable graph." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)ExecutableReferences.proj&quot; -p:TestCase=%(_ExecutableReferenceRejectedCase.Identity) %(_ExecutableReferenceRejectedCase.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)executable-%(_ExecutableReferenceRejectedCase.Identity).ninja&quot; -noconsolelogger -flp:&quot;LogFile=$(_TestDirectory)executable-%(_ExecutableReferenceRejectedCase.Identity).log;ErrorsOnly&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_ExecutableReferenceRejectedExitCode" />
+    </Exec>
+    <Error Condition="@(_ExecutableReferenceRejectedExitCode->AnyHaveMetadataValue('Identity', '0'))" Text="Incompatible executable references must fail." />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_TestDirectory)executable-%(_ExecutableReferenceRejectedCase.Identity).log').Contains('%(_ExecutableReferenceRejectedCase.Error)'))"
+           Text="Executable-reference validation did not report the expected SDK diagnostic." />
+    <Error Condition="Exists('$(_TestDirectory)executable-%(_ExecutableReferenceRejectedCase.Identity).ninja') or Exists('$(_TestDirectory)executable-%(_ExecutableReferenceRejectedCase.Identity).ninja.actions') or Exists('$(_TestDirectory)executable-%(_ExecutableReferenceRejectedCase.Identity).txt')"
+           Text="Rejected executable-reference validation must neither publish a graph nor execute actions." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)ExecutableReferences.proj&quot; -p:TestCase=ordinary-global -p:SelfContained=true" />
+    <Error Condition="!Exists('$(_TestDirectory)executable-ordinary-global.txt')" Text="Ordinary executable-reference validation must retain global-property propagation." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)ExecutableReferences.proj&quot; -p:TestCase=ordinary-mismatch -p:InputSelfContained=true -noconsolelogger -flp:&quot;LogFile=$(_TestDirectory)executable-ordinary-mismatch.log;ErrorsOnly&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_OrdinaryExecutableReferenceExitCode" />
+    </Exec>
+    <Error Condition="'$(_OrdinaryExecutableReferenceExitCode)' == '0' or Exists('$(_TestDirectory)executable-ordinary-mismatch.txt') or !$([System.IO.File]::ReadAllText('$(_TestDirectory)executable-ordinary-mismatch.log').Contains('NETSDK1150'))"
+           Text="Ordinary executable-reference validation must retain incompatible-reference errors." />
   </Target>
 </Project>
