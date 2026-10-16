@@ -63,9 +63,10 @@ dotnet msbuild genbuild/tests/Smoke.proj -p:GenBuildTestHost=/absolute/path/to/d
 
 The checks cover CLI failures, paths with spaces, graph-only construction,
 independent Ninja execution, explicit NuGet project-style classification, SDK
-duplicate-item and executable-reference validation, SDK Restore, and direct use
-of the packaged compiler to compile and run Hello World. Select a runtime-only
-host to check that the app does not require an installed SDK.
+duplicate-item, executable-reference and filename-only WinMD validation, SDK
+Restore, and direct use of the packaged compiler to compile and run Hello World.
+Select a runtime-only host to check that the app does not require an installed
+SDK.
 
 ## Current limitations
 
@@ -77,9 +78,12 @@ The app uses this VMR's NuGet targets with the pinned NuGet managed dependencies
 
 Full SDK Build graph support is unfinished: preparation, resource, compiler, copy,
 and cleanup operations still need adaptations, including RAR and Roslyn's `Csc`.
-SDK duplicate-item and executable-reference validation now run as zero-I/O
-construction tasks, and explicit fail-fast `ContinueOnError` values are
-supported. Continuing after
+SDK duplicate-item and executable-reference validation run as zero-I/O
+construction tasks. Hardened SDK builds select a separate filename-only
+`ValidateNoWinMDReferences` task, reporting `NETSDK1130` without inspecting
+assemblies. Ordinary builds retain `CheckForUnsupportedWinMDReferences` and
+its refined diagnostics.
+Explicit fail-fast `ContinueOnError` values are supported. Continuing after
 errors and active `OnError` handlers remain unsupported. In hardened mode,
 Common's `CoreBuild` does not run failure handlers or record partial writes for
 later Clean. Nonempty post-build events using `Always` or `OnOutputUpdated`
@@ -96,5 +100,7 @@ expansion.
 The compiler smoke check invokes the compiler directly, not through a `Csc`
 graph action. Workload resolution is disabled in this prototype.
 
+For adapting targets and tasks, see the
+[conversion cookbook](../src/msbuild/documentation/specs/proposed/hardened-static-graph-migration.md).
 See the [prototype roadmap](../src/msbuild/documentation/specs/proposed/hardened-static-graph-implementation.md)
 for the architecture and remaining work.

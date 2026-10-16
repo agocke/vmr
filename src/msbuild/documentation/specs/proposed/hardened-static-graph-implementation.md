@@ -3,6 +3,8 @@
 Implement the [action-graph contract](hardened-static-graph.md) in small,
 verifiable slices. MSBuild emits concrete work; Ninja schedules independent
 hosts. This roadmap describes planned work, not implemented behavior.
+Use the [conversion cookbook](hardened-static-graph-migration.md) for practical
+patterns when adapting existing targets and tasks.
 
 ## Current foundation
 
@@ -361,11 +363,19 @@ global `SelfContained`/`RuntimeIdentifier` propagation are unchanged. Packaged
 smoke checks cover both metadata XML forms, global versus local properties,
 specific `NETSDK1150`/`NETSDK1151` errors, and ordinary-build behavior.
 
-The fresh SDK full-`Build` probe now gets past `GetTargetFrameworks` and
-executable-reference validation without downstream deferred project-annotation
-errors. Its first unsupported task is `CheckForUnsupportedWinMDReferences`,
-which can read assemblies and needs a separate file-footprint audit rather
-than empty declarations.
+The SDK's WinMD target selects a separate audited zero-I/O
+`ValidateNoWinMDReferences` task during hardened construction. It checks
+case-insensitive `.winmd` filename extensions and reports `NETSDK1130` without
+opening any reference files. Ordinary builds retain
+`CheckForUnsupportedWinMDReferences`, including its assembly inspection to
+refine diagnostics to `NETSDK1149`. Packaged smoke imports the shipped target
+to check empty and managed-only lists, lookalike names, multiple WinMD errors,
+and unchanged ordinary-mode assembly inspection.
+
+The fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
+executable-reference validation, and WinMD validation without downstream
+deferred project-annotation errors. Its first unsupported task is
+`GenerateMSBuildEditorConfig` in Roslyn's `Microsoft.Managed.Core.targets`.
 Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers

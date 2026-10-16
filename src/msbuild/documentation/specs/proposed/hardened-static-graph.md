@@ -12,6 +12,8 @@ and never falls back to ordinary target execution. A first graph-only path
 emits single-project Ninja bundles for the supported subset. Existing
 builds remain unchanged outside the opt-in graph/Restore workflow. The
 [roadmap](hardened-static-graph-implementation.md) describes the implementation.
+For practical migration patterns, see the
+[conversion cookbook](hardened-static-graph-migration.md).
 
 ## Pipeline
 

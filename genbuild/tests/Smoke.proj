@@ -14,7 +14,7 @@
     <WriteLinesToFile File="$(_TestDirectory)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_TestDirectory)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_TestDirectory)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
-    <Copy SourceFiles="$(MSBuildThisFileDirectory)Action.proj;$(MSBuildThisFileDirectory)ProjectStyle.proj;$(MSBuildThisFileDirectory)ExecutableReferences.proj;$(MSBuildThisFileDirectory)HelloWorld.csproj;$(MSBuildThisFileDirectory)HelloWorld.cs" DestinationFolder="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Action.proj;$(MSBuildThisFileDirectory)ProjectStyle.proj;$(MSBuildThisFileDirectory)ExecutableReferences.proj;$(MSBuildThisFileDirectory)WinMDReferences.proj;$(MSBuildThisFileDirectory)HelloWorld.csproj;$(MSBuildThisFileDirectory)HelloWorld.cs" DestinationFolder="$(_TestDirectory)" />
     <Exec Command="$(_App) --help" />
     <Exec Command="$(_App) invalid" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_InvalidExitCode" />
@@ -34,6 +34,7 @@
     <Error Condition="'@(_ActionContents)' != 'executed outside MSBuild'" Text="The independent action host did not produce the expected contents." />
     <CallTarget Targets="TestProjectStyles" />
     <CallTarget Targets="TestExecutableReferences" />
+    <CallTarget Targets="TestWinMDReferences" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -47,7 +48,7 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item and executable-reference validation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
   </Target>
   <Target Name="TestProjectStyles">
     <WriteLinesToFile File="$(_TestDirectory)packages.config" Lines="&lt;packages /&gt;" Overwrite="true" />
@@ -123,5 +124,49 @@
     </Exec>
     <Error Condition="'$(_OrdinaryExecutableReferenceExitCode)' == '0' or Exists('$(_TestDirectory)executable-ordinary-mismatch.txt') or !$([System.IO.File]::ReadAllText('$(_TestDirectory)executable-ordinary-mismatch.log').Contains('NETSDK1150'))"
            Text="Ordinary executable-reference validation must retain incompatible-reference errors." />
+  </Target>
+  <Target Name="TestWinMDReferences">
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets"
+             Namespaces="&lt;Namespace Prefix='msb' Uri='http://schemas.microsoft.com/developer/msbuild/2003' /&gt;"
+             Query="/msb:Project/msb:Target[@Name='_BlockWinMDsOnUnsupportedTFMs']">
+      <Output TaskParameter="Result" ItemName="_WinMDValidationTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_WinMDValidationTarget->Count())' != '1'" Text="The packaged SDK must contain one WinMD validation target." />
+    <PropertyGroup>
+      <_WinMDValidationXml>@(_WinMDValidationTarget)</_WinMDValidationXml>
+      <_WinMDValidationXml>$(_WinMDValidationXml.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_WinMDValidationXml>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_TestDirectory)WinMDReferences.targets"
+                      Lines="&lt;Project xmlns='http://schemas.microsoft.com/developer/msbuild/2003'&gt;;$(_WinMDValidationXml);&lt;/Project&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_WinMDCase Include="empty" Arguments="-p:HasManagedReference=false" />
+      <_WinMDCase Include="managed" Arguments="" />
+      <_WinMDCase Include="lookalikes" Arguments="-p:HasLookalikeReferences=true" />
+      <_WinMDRejectedCase Include="mixed" WinMDExtension="winmd" />
+      <_WinMDRejectedCase Include="uppercase" WinMDExtension="WINMD" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)WinMDReferences.proj&quot; -p:TestCase=%(_WinMDCase.Identity) %(_WinMDCase.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)winmd-%(_WinMDCase.Identity).ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)winmd-%(_WinMDCase.Identity).txt')" Text="WinMD validation must not execute file actions during construction." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f &quot;winmd-%(_WinMDCase.Identity).ninja&quot;" />
+    <Error Condition="!Exists('$(_TestDirectory)winmd-%(_WinMDCase.Identity).txt')" Text="WinMD validation did not produce an executable graph." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)WinMDReferences.proj&quot; -p:TestCase=%(_WinMDRejectedCase.Identity) -p:HasWinMDReference=true -p:WinMDExtension=%(_WinMDRejectedCase.WinMDExtension) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)winmd-%(_WinMDRejectedCase.Identity).ninja&quot; -noconsolelogger -flp:&quot;LogFile=$(_TestDirectory)winmd-%(_WinMDRejectedCase.Identity).log;ErrorsOnly&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_WinMDRejectedExitCode" />
+    </Exec>
+    <Error Condition="@(_WinMDRejectedExitCode->AnyHaveMetadataValue('Identity', '0'))" Text="WinMD references must fail hardened construction." />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_TestDirectory)winmd-%(_WinMDRejectedCase.Identity).log').Contains('NETSDK1130'))
+                      or !$([System.IO.File]::ReadAllText('$(_TestDirectory)winmd-%(_WinMDRejectedCase.Identity).log').Contains('sample.%(_WinMDRejectedCase.WinMDExtension)'))
+                      or !$([System.IO.File]::ReadAllText('$(_TestDirectory)winmd-%(_WinMDRejectedCase.Identity).log').Contains('another.WinMd'))"
+           Text="Hardened WinMD validation must report every WinMD by name without reading missing managed references." />
+    <Error Condition="Exists('$(_TestDirectory)winmd-%(_WinMDRejectedCase.Identity).ninja') or Exists('$(_TestDirectory)winmd-%(_WinMDRejectedCase.Identity).ninja.actions') or Exists('$(_TestDirectory)winmd-%(_WinMDRejectedCase.Identity).txt')"
+           Text="Rejected WinMD validation must neither publish a graph nor execute actions." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)WinMDReferences.proj&quot; -p:TestCase=ordinary-managed" />
+    <Error Condition="!Exists('$(_TestDirectory)winmd-ordinary-managed.txt')" Text="Ordinary validation without WinMD references must not inspect managed assemblies." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)WinMDReferences.proj&quot; -p:TestCase=ordinary-mixed -p:HasWinMDReference=true -noconsolelogger -flp:&quot;LogFile=$(_TestDirectory)winmd-ordinary-mixed.log;ErrorsOnly&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_OrdinaryWinMDExitCode" />
+    </Exec>
+    <Error Condition="'$(_OrdinaryWinMDExitCode)' == '0' or Exists('$(_TestDirectory)winmd-ordinary-mixed.txt') or !$([System.IO.File]::ReadAllText('$(_TestDirectory)winmd-ordinary-mixed.log').Contains('System.IO.FileNotFoundException'))"
+           Text="Ordinary builds must retain the existing PE-inspecting WinMD checker." />
   </Target>
 </Project>

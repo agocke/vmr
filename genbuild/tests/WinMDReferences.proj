@@ -1,0 +1,25 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v5.0</TargetFrameworkVersion>
+    <TargetFrameworkMoniker>.NETCoreApp,Version=v5.0</TargetFrameworkMoniker>
+    <HasManagedReference Condition="'$(HasManagedReference)' == ''">true</HasManagedReference>
+    <WinMDExtension Condition="'$(WinMDExtension)' == ''">winmd</WinMDExtension>
+    <ResultFile>$(MSBuildProjectDirectory)/winmd-$(TestCase).txt</ResultFile>
+    <MicrosoftNETBuildTasksAssembly>$(MSBuildSDKsPath)/Microsoft.NET.Sdk/tools/net11.0/Microsoft.NET.Build.Tasks.dll</MicrosoftNETBuildTasksAssembly>
+  </PropertyGroup>
+  <UsingTask TaskName="CheckForUnsupportedWinMDReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="ValidateNoWinMDReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <Import Project="WinMDReferences.targets" />
+  <ItemGroup>
+    <ReferencePath Include="not-on-disk.dll" Condition="'$(HasManagedReference)' == 'true'" />
+    <ReferencePath Include="sample.$(WinMDExtension);another.WinMd" Condition="'$(HasWinMDReference)' == 'true'" />
+    <ReferencePath Include="not-on-disk.winmd.dll;directory.winmd/not-on-disk.dll" Condition="'$(HasLookalikeReferences)' == 'true'" />
+  </ItemGroup>
+  <Target Name="ResolveReferences" />
+  <Target Name="Build" DependsOnTargets="_BlockWinMDsOnUnsupportedTFMs">
+    <WriteLinesToFile File="$(ResultFile)" Lines="$(TestCase)" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+  </Target>
+  <Target Name="Restore" DependsOnTargets="Build" />
+</Project>
