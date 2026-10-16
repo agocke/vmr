@@ -66,8 +66,10 @@ independent Ninja execution, explicit NuGet project-style classification, SDK
 duplicate-item, executable-reference and filename-only WinMD validation, exact
 editorconfig and framework attribute generation, assembly version derivation,
 cache-free assembly generation, source-root mapping, exact SourceLink publication
-with all four packaged providers, SDK Restore, and direct use of the packaged
-compiler to compile and run Hello World.
+with all four packaged providers, SDK Restore, and standalone C# compilation.
+Compiler actions run analyzers and the Regex generator, consume generated
+sources, and produce byte-identical assemblies, reference assemblies and
+portable PDBs across relocated checkouts.
 Select a runtime-only host to check that the app does not require an installed
 SDK.
 
@@ -79,8 +81,8 @@ explicitly selected or implied by `PackageReference` items. It never searches fo
 Ordinary Restore retains NuGet's existing classification and discovery.
 The app uses this VMR's NuGet targets with the pinned NuGet managed dependencies.
 
-Full SDK Build graph support is unfinished: preparation, resource, compiler, copy,
-and cleanup operations still need adaptations, including RAR and Roslyn's `Csc`.
+Full SDK Build graph support is unfinished: dependency/runtime configuration,
+copy and cleanup operations still need adaptations, as do broader RAR profiles.
 SDK duplicate-item and executable-reference validation run as zero-I/O
 construction tasks. `GetAssemblyVersion` also runs during construction: it
 parses the supplied version string without inspecting an assembly or discovering
@@ -107,8 +109,23 @@ SourceLink generation composes zero-I/O `FormatSourceLink` with overwrite-only
 `WriteSourceLink`, sharing the ordinary JSON serializer without comparing old
 output. Empty hardened mappings clear the compiler's SourceLink argument and
 emit no file action; stale JSON remains unreferenced rather than being deleted.
-Ordinary builds retain their comparison and deletion behavior. With explicit
-directory imports, the fresh full SDK graph probe now first rejects `Csc`.
+Ordinary builds retain their comparison and deletion behavior.
+Hardened C# compilation composes zero-I/O `FormatCsc` with `CompileCsc`, leaving
+ordinary `Csc` unchanged. Restore captures compiler/analyzer dependency files
+in `obj/cscinputs/`; Build requires that prepared manifest rather than discovering
+tool files. Determinism and deterministic source paths are mandatory. Automatic
+path maps preserve SourceLink repository mappings and cover the project,
+generated-source and output paths, including the PE's CodeView PDB path.
+Analyzer/generator assemblies and dependencies, configuration and additional
+files are declared inputs. Their nominal compiler-input-only contract is trusted;
+enforcement is deferred, without per-plugin gates. The action runs an explicit
+compiler on the external runtime, without compiler servers, inherited compiler
+environment, default response files, installation searches or output caches.
+Portable and embedded PDBs, reference assemblies, resources and explicit
+documentation inputs are supported. User response files, generated-files
+directories, native PDBs, rulesets, SARIF output, app-config and machine-key-container
+modes remain explicitly unsupported. With explicit directory imports, the fresh
+full SDK graph probe now first rejects `GenerateDepsFile`.
 Common's hardened `CoreBuild` does not run failure handlers or record partial
 writes for later Clean. Nonempty post-build events using `Always` or `OnOutputUpdated`
 are rejected; use `OnBuildSuccess` or no event. Ordinary MSBuild retains its
@@ -121,8 +138,7 @@ Leaf-project `MSBuild` calls with provably empty project lists are accepted as
 construction-time no-ops with normal parameter and output validation.
 Nonempty or unavailable project lists still require unsupported cross-project
 expansion.
-The compiler smoke check invokes the compiler directly, not through a `Csc`
-graph action. Workload resolution is disabled in this prototype.
+Workload resolution is disabled in this prototype.
 
 For adapting targets and tasks, see the
 [conversion cookbook](../src/msbuild/documentation/specs/proposed/hardened-static-graph-migration.md).

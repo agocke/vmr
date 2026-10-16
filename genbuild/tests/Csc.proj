@@ -1,0 +1,49 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
+    <_TargetFrameworkVersionWithoutV>11.0</_TargetFrameworkVersionWithoutV>
+    <TargetFramework>net11.0</TargetFramework>
+    <OutputType>exe</OutputType>
+    <Deterministic Condition="'$(Deterministic)' == ''">true</Deterministic>
+    <DeterministicSourcePaths Condition="'$(DeterministicSourcePaths)' == ''">true</DeterministicSourcePaths>
+    <NoCompilerStandardLib>true</NoCompilerStandardLib>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <DebugType Condition="'$(DebugType)' == ''">portable</DebugType>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/</MSBuildProjectExtensionsPath>
+    <DefineConstants Condition="'$(TestCase)' == 'compiler-error'">BROKEN</DefineConstants>
+    <CompilerResponseFile Condition="'$(TestCase)' == 'response'">override.rsp</CompilerResponseFile>
+    <CompilerGeneratedFilesOutputPath Condition="'$(TestCase)' == 'generated-directory'">generated/</CompilerGeneratedFilesOutputPath>
+    <EmitCompilerGeneratedFiles Condition="'$(TestCase)' == 'generated-directory'">true</EmitCompilerGeneratedFiles>
+    <SourceLink>obj/source-link.json</SourceLink>
+    <_CompilerDirectory>$(MSBuildSDKsPath)/../Roslyn/</_CompilerDirectory>
+    <_SourceLinkText>{"documents":{"/_/*":"https://example.invalid/repository/*"}}</_SourceLinkText>
+  </PropertyGroup>
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.Csc" AssemblyFile="$(_CompilerDirectory)Microsoft.Build.Tasks.CodeAnalysis.dll" />
+  <Import Project="$(_CompilerDirectory)Microsoft.CSharp.Core.targets" />
+  <Import Project="FrameworkInputs.props" />
+  <ItemGroup>
+    <SourceRoot Include="$(MSBuildProjectDirectory)/../" SourceControl="git" />
+    <Compile Include="Program.cs;obj/Generated.cs" />
+    <IntermediateAssembly Include="obj/Hello.dll" />
+    <IntermediateRefAssembly Include="obj/ref/Hello.dll" />
+    <ReferencePathWithRefAssemblies Include="@(_FrameworkReferenceManifestCompileReference)" />
+    <Analyzer Include="@(_FrameworkReferenceManifestFrameworkReference->'%(TargetingPackPath)/analyzers/dotnet/cs/System.Text.RegularExpressions.Generator.dll')" />
+    <Analyzer Include="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll;$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll" />
+  </ItemGroup>
+  <Target Name="_BeforeVBCSCoreCompile" />
+  <Target Name="PrepareForBuild" />
+  <Target Name="ResolvePackageAssets" />
+  <Target Name="ResolveTargetingPackAssets" />
+  <Target Name="Produce">
+    <WriteLinesToFile File="obj/Generated.cs"
+                      Lines="public static class Producer { public const string Text = &quot;generated before compilation&quot;%3B }"
+                      Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="obj/Generated.cs" />
+    <WriteLinesToFile File="$(SourceLink)" Lines="$(_SourceLinkText)"
+                      Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="$(SourceLink)" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="_SetPathMapFromSourceRoots;Produce;CoreCompile" />
+  <Target Name="Restore">
+    <MakeDir Directories="obj/ref" />
+  </Target>
+</Project>

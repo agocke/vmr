@@ -2,6 +2,29 @@
 <!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="Microsoft.Managed.Core.targets"/>
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.FormatCsc" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.CompileCsc" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.WriteCscInputs" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+
+  <PropertyGroup>
+    <_CscInputManifestPath>$(MSBuildProjectExtensionsPath)cscinputs/$(MSBuildProjectFile).g.props</_CscInputManifestPath>
+  </PropertyGroup>
+  <Import Project="$(_CscInputManifestPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+
+  <Target Name="_CaptureCscToolInputs"
+          AfterTargets="Restore"
+          DependsOnTargets="ResolvePackageAssets;ResolveTargetingPackAssets"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
+    <ItemGroup>
+      <_CscAnalyzerDirectory Include="@(Analyzer->'%(RootDir)%(Directory)')" KeepDuplicates="false" />
+    </ItemGroup>
+    <ItemGroup>
+      <_CscToolInput Include="$(_BuildTasksDirectory)bincore/**/*;@(AnalyzerDependency)" />
+      <_CscToolInput Include="%(_CscAnalyzerDirectory.Identity)**/*" />
+    </ItemGroup>
+    <MakeDir Directories="$(MSBuildProjectExtensionsPath)cscinputs" />
+    <WriteCscInputs Inputs="@(_CscToolInput)" OutputFile="$(_CscInputManifestPath)" />
+  </Target>
 
   <PropertyGroup>
     <!-- .NETCoreApp < 3.0, .NETStandard < 2.1, or any other target framework -->
@@ -94,7 +117,7 @@
     </PropertyGroup>
 
     <!-- Condition is to filter out the _CoreCompileResourceInputs so that it doesn't pass in culture resources to the compiler -->
-    <Csc Condition="'%(_CoreCompileResourceInputs.WithCulture)' != 'true'"
+    <Csc Condition="'$(MSBuildHardenedGraph)' != 'true' and '%(_CoreCompileResourceInputs.WithCulture)' != 'true'"
          AdditionalLibPaths="$(AdditionalLibPaths)"
          AddModules="@(AddModules)"
          AdditionalFiles="@(AdditionalFiles)"
@@ -181,6 +204,104 @@
          SourceLink="$(SourceLink)">
       <Output TaskParameter="CommandLineArgs" ItemName="CscCommandLineArgs" />
     </Csc>
+
+    <FormatCsc Condition="'$(MSBuildHardenedGraph)' == 'true' and '%(_CoreCompileResourceInputs.WithCulture)' != 'true'"
+         DeclaredInputs="" DeclaredOutputs=""
+         CompilerToolExe="$(CscToolExe)"
+         CompilerToolPath="$(CscToolPath)"
+         SourceRoots="@(SourceRoot)"
+         DeterministicSourcePaths="$(DeterministicSourcePaths)"
+         AdditionalCompilerInputs="@(AnalyzerDependency);@(EmbeddedDocumentation);@(CustomAdditionalCompileInputs)"
+         AdditionalLibPaths="$(AdditionalLibPaths)"
+         AddModules="@(AddModules)"
+         AdditionalFiles="@(AdditionalFiles)"
+         AllowUnsafeBlocks="$(AllowUnsafeBlocks)"
+         AnalyzerConfigFiles="@(EditorConfigFiles)"
+         Analyzers="@(Analyzer)"
+         ApplicationConfiguration="$(AppConfigForCompiler)"
+         BaseAddress="$(BaseAddress)"
+         CheckForOverflowUnderflow="$(CheckForOverflowUnderflow)"
+         ChecksumAlgorithm="$(ChecksumAlgorithm)"
+         CodeAnalysisRuleSet="$(ResolvedCodeAnalysisRuleSet)"
+         CodePage="$(CodePage)"
+         DebugType="$(DebugType)"
+         DefineConstants="$(DefineConstants)"
+         DelaySign="$(DelaySign)"
+         DisabledWarnings="$(NoWarn)"
+         DisableSdkPath="true"
+         DocumentationFile="@(DocFileItem)"
+         EmbedAllSources="$(EmbedAllSources)"
+         EmbeddedFiles="@(EmbeddedFiles)"
+         EmitDebugInformation="$(DebugSymbols)"
+         EnvironmentVariables="$(CscEnvironment)"
+         ErrorEndLocation="$(ErrorEndLocation)"
+         ErrorLog="$(ErrorLog)"
+         ErrorReport="$(ErrorReport)"
+         Features="$(Features)"
+         InterceptorsNamespaces="$(InterceptorsNamespaces)"
+         InterceptorsPreviewNamespaces="$(InterceptorsPreviewNamespaces)"
+         FileAlignment="$(FileAlignment)"
+         GeneratedFilesOutputPath="$(CompilerGeneratedFilesOutputPath)"
+         GenerateFullPaths="$(GenerateFullPaths)"
+         HighEntropyVA="$(HighEntropyVA)"
+         Instrument="$(Instrument)"
+         KeyContainer="$(KeyContainerName)"
+         KeyFile="$(KeyOriginatorFile)"
+         LangVersion="$(LangVersion)"
+         LinkResources="@(LinkResource)"
+         MainEntryPoint="$(StartupObject)"
+         ModuleAssemblyName="$(ModuleAssemblyName)"
+         NoConfig="true"
+         NoLogo="$(NoLogo)"
+         NoStandardLib="$(NoCompilerStandardLib)"
+         NoWin32Manifest="$(NoWin32Manifest)"
+         Nullable="$(Nullable)"
+         Optimize="$(Optimize)"
+         Deterministic="$(Deterministic)"
+         PublicSign="$(PublicSign)"
+         OutputAssembly="@(IntermediateAssembly)"
+         OutputRefAssembly="@(IntermediateRefAssembly)"
+         PdbFile="$(PdbFile)"
+         Platform="$(PlatformTarget)"
+         Prefer32Bit="$(Prefer32Bit)"
+         PreferredUILang="$(PreferredUILang)"
+         ProjectName="$(MSBuildProjectName)"
+         ProvideCommandLineArgs="$(ProvideCommandLineArgs)"
+         References="@(ReferencePathWithRefAssemblies)"
+         RefOnly="$(ProduceOnlyReferenceAssembly)"
+         ReportAnalyzer="$(ReportAnalyzer)"
+         ReportIVTs="$(ReportIVTs)"
+         Resources="@(_CoreCompileResourceInputs);@(CompiledLicenseFile)"
+         ResponseFiles="$(CompilerResponseFile)"
+         RuntimeMetadataVersion="$(RuntimeMetadataVersion)"
+         SkipAnalyzers="$(_SkipAnalyzers)"
+         SkipCompilerExecution="$(SkipCompilerExecution)"
+         Sources="@(Compile)"
+         SubsystemVersion="$(SubsystemVersion)"
+         TargetType="$(OutputType)"
+         TargetFramework="$(TargetFramework)"
+         TreatWarningsAsErrors="$(TreatWarningsAsErrors)"
+         Utf8Output="$(Utf8Output)"
+         WarningLevel="$(WarningLevel)"
+         WarningsAsErrors="$(WarningsAsErrors)"
+         WarningsNotAsErrors="$(WarningsNotAsErrors)"
+         Win32Icon="$(ApplicationIcon)"
+         Win32Manifest="$(Win32Manifest)"
+         Win32Resource="$(Win32Resource)"
+         SourceLink="$(SourceLink)">
+      <Output TaskParameter="CompilerArguments" PropertyName="_HardenedCscArguments" />
+      <Output TaskParameter="CompilerInputs" ItemName="_HardenedCscInput" />
+      <Output TaskParameter="CompilerOutputs" ItemName="_HardenedCscOutput" />
+      <Output TaskParameter="PathMappings" ItemName="_HardenedCscPathMapping" />
+    </FormatCsc>
+
+    <CompileCsc Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                DotNetHost="$(DOTNET_HOST_PATH)"
+                CompilerAssembly="$(_BuildTasksDirectory)bincore/csc.dll"
+                CompilerArguments="$(_HardenedCscArguments)"
+                PathMappings="@(_HardenedCscPathMapping)"
+                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CscPreparedToolInput);@(_HardenedCscInput)"
+                DeclaredOutputs="@(_HardenedCscOutput)" />
 
     <ItemGroup>
       <_CoreCompileResourceInputs Remove="@(_CoreCompileResourceInputs)" />

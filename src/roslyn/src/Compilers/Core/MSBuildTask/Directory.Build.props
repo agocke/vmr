@@ -30,10 +30,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)..\Portable\InternalUtilities\UnicodeCharacterUtilities.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CanonicalError.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CommandLineBuilderExtension.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CompileCsc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CopyRefAssembly.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Csc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Csi.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FormatAnalyzerConfig.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FormatCsc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GenerateMSBuildEditorConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IAnalyzerConfigFilesHostObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ICompilerOptionsHostObject.cs" />
@@ -56,6 +58,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ValidateBootstrap.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Vbc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)WriteAnalyzerConfig.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)WriteCscInputs.cs" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)ErrorString.resx" GenerateSource="true" />
     <Content Include="$(MSBuildThisFileDirectory)Microsoft.*.targets">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

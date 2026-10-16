@@ -82,6 +82,18 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
 - `Csc.cs` - C# compiler task
 - `Vbc.cs` - VB compiler task  
 - `ManagedCompiler.cs` - Base compiler task functionality
+- Hardened C# compilation uses zero-I/O `FormatCsc` and the independent
+  `CompileCsc` action, not Csc's server/IDE/tool-discovery execution. Both
+  deterministic compilation and deterministic source paths are mandatory.
+  Automatic mappings preserve SourceLink root aliases and cover project,
+  generated-source and output paths, including CodeView. Restore's
+  `_CaptureCscToolInputs` prepares the compiler/analyzer closure under
+  `$(MSBuildProjectExtensionsPath)cscinputs/`; Build imports exact inputs.
+  Declare analyzer/generator dependencies, configs and additional files and
+  trust their nominal compiler-input-only contract; enforcement is deferred
+  without per-plugin gates. `CompileCsc` controls the child environment and
+  uses ToolTask cancellation/private response-file scratch, never server state
+  or a task-local cache. Keep ordinary Csc behavior unchanged.
 - `MapSourceRoots` is an audited zero-I/O construction task with explicit empty
   `DeclaredInputs` and `DeclaredOutputs` at its shipped call site. It computes
   mapped paths from supplied root metadata and `TaskEnvironment` project context;

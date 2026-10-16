@@ -223,6 +223,15 @@
   <data name="General_UnableToReadFile" xml:space="preserve">
     <value>File "{0}" could not be read: {1}</value>
   </data>
+  <data name="FormatCsc.RequiredParameter" xml:space="preserve">
+    <value>Declared-I/O C# compilation requires '{0}=true'.</value>
+  </data>
+  <data name="FormatCsc.UnsupportedParameter" xml:space="preserve">
+    <value>Parameter '{0}' is not supported by declared-I/O C# compilation.</value>
+  </data>
+  <data name="CompileCsc.ExplicitToolInputs" xml:space="preserve">
+    <value>Declared-I/O C# compilation requires absolute, declared compiler and runtime host inputs without tool, shell, host-object or environment overrides.</value>
+  </data>
   <data name="ImplicitlySkipAnalyzersMessage" xml:space="preserve">
     <value>Skipping analyzers to speed up the build. You can execute 'Build' or 'Rebuild' command to run analyzers.</value>
   </data>

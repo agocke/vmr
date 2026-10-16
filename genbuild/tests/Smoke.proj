@@ -40,6 +40,7 @@
     <CallTarget Targets="TestAssemblyVersion" />
     <CallTarget Targets="TestIncrementalCaches" />
     <CallTarget Targets="TestSourceLink" />
+    <CallTarget Targets="TestCsc" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -54,6 +55,68 @@
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
     <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestCsc">
+    <MakeDir Directories="$(_TestDirectory)csc" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_TestDirectory)csc" />
+    <WriteLinesToFile File="$(_TestDirectory)csc/Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)csc/Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)csc/Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/HelloWorld.csproj&quot;" />
+    <ItemGroup>
+      <_CscCase Include="short;another much longer checkout;embedded;compiler-error;ordinary;determinism;paths;response;generated-directory" />
+      <_CscRoot Include="@(_CscCase->'$(_TestDirectory)csc/%(Identity)/project/')" />
+      <_CscRelocation Include="short;another much longer checkout" />
+      <_CscRejected Include="determinism" Arguments="-p:Deterministic=false" />
+      <_CscRejected Include="paths" Arguments="-p:DeterministicSourcePaths=false" />
+      <_CscRejected Include="response;generated-directory" />
+    </ItemGroup>
+    <MakeDir Directories="@(_CscRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.proj" DestinationFiles="%(_CscRoot.Identity)Csc.proj" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_CscRoot.Identity)Program.cs" />
+    <Copy SourceFiles="$(_TestDirectory)csc/obj/frameworkreferences/HelloWorld.csproj.g.props" DestinationFiles="%(_CscRoot.Identity)FrameworkInputs.props" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/%(_CscCase.Identity)/project/Csc.proj&quot;" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/Csc.proj&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Generated.cs') or Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Hello.dll')"
+           Text="Compiler preparation must not write generated sources or compilation outputs." />
+    <Exec WorkingDirectory="$(_TestDirectory)csc/%(_CscRelocation.Identity)/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <GetFileHash Files="@(_CscRelocation->'$(_TestDirectory)csc/%(Identity)/project/obj/Hello.dll')">
+      <Output TaskParameter="Items" ItemName="_CscPeHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_CscRelocation->'$(_TestDirectory)csc/%(Identity)/project/obj/Hello.pdb')">
+      <Output TaskParameter="Items" ItemName="_CscPdbHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_CscRelocation->'$(_TestDirectory)csc/%(Identity)/project/obj/ref/Hello.dll')">
+      <Output TaskParameter="Items" ItemName="_CscRefHash" />
+    </GetFileHash>
+    <Error Condition="'@(_CscPeHash->'%(FileHash)'->Distinct()->Count())' != '1' or '@(_CscPdbHash->'%(FileHash)'->Distinct()->Count())' != '1' or '@(_CscRefHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Relocated compiler actions, including analyzers and the Regex generator, must produce identical assemblies and portable PDBs." />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Hello.runtimeconfig.json" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_TestDirectory)csc/short/project/obj/Hello.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_CscProgramOutput" />
+    </Exec>
+    <Error Condition="'@(_CscProgramOutput)' != '/_/project/Program.cs;True;generated before compilation'"
+           Text="Compiler actions must map CallerFilePath, execute generators and consume generated producer inputs." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/embedded/project/Csc.proj&quot; -p:DebugType=embedded" />
+    <Exec WorkingDirectory="$(_TestDirectory)csc/embedded/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <Error Condition="Exists('$(_TestDirectory)csc/embedded/project/obj/Hello.pdb')" Text="Embedded debug information must not declare or emit a sidecar PDB." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/ordinary/project/Csc.proj&quot; -t:Build" />
+    <Error Condition="!Exists('$(_TestDirectory)csc/ordinary/project/obj/Hello.dll') or !Exists('$(_TestDirectory)csc/ordinary/project/obj/Hello.pdb')"
+           Text="Ordinary Csc must retain its existing execution path." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/%(_CscRejected.Identity)/project/Csc.proj&quot; -p:TestCase=%(_CscRejected.Identity) %(_CscRejected.Arguments)"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_CscRejectedExitCode" />
+    </Exec>
+    <Error Condition="@(_CscRejectedExitCode->AnyHaveMetadataValue('Identity', '0'))" Text="Unsupported compiler modes must fail construction." />
+    <Error Condition="Exists('$(_TestDirectory)csc/%(_CscRejected.Identity)/project/obj/genbuild/build.ninja') or Exists('$(_TestDirectory)csc/%(_CscRejected.Identity)/project/obj/genbuild/build.ninja.actions') or Exists('$(_TestDirectory)csc/%(_CscRejected.Identity)/project/obj/Generated.cs')"
+           Text="Rejected compiler preparation must publish neither a graph nor generated files." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/compiler-error/project/Csc.proj&quot; -p:TestCase=compiler-error" />
+    <Exec WorkingDirectory="$(_TestDirectory)csc/compiler-error/project" Command="ninja -f obj/genbuild/build.ninja"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_CscCompilerFailure" />
+    </Exec>
+    <Error Condition="'$(_CscCompilerFailure)' == '0' or Exists('$(_TestDirectory)csc/compiler-error/project/obj/Hello.dll')"
+           Text="Independent compiler failures must fail execution without a successful assembly output." />
   </Target>
   <Target Name="TestSourceLink">
     <MakeDir Directories="$(_TestDirectory)" />

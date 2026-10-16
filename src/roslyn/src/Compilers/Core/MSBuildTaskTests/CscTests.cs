@@ -5,7 +5,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
+using System.Xml.Linq;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
 using Microsoft.CodeAnalysis.BuildTasks.UnitTests.TestUtilities;
 using Microsoft.CodeAnalysis.CommandLine;
 using Microsoft.CodeAnalysis.Test.Utilities;
@@ -24,6 +30,183 @@ namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
         {
             TestOutputHelper = testOutputHelper;
         }
+
+#if !NETFRAMEWORK
+        private static FormatCsc CreateFormatter(string directory) => new FormatCsc
+        {
+            BuildEngine = new MockEngine(),
+            TaskEnvironment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(directory),
+            Deterministic = true,
+            DeterministicSourcePaths = true,
+            NoConfig = true,
+            NoStandardLib = true,
+            TargetType = "library",
+            DebugType = "portable",
+            OutputAssembly = new TaskItem("obj/app.dll"),
+            Sources = new[] { new TaskItem("Program.cs") },
+        };
+
+        [Fact]
+        public void DeclaredCompilerPreparationDoesNotReadFiles()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            var task = CreateFormatter(Path.Combine(directory, "project"));
+            task.SourceRoots = new[] { new TaskItem(directory + Path.DirectorySeparatorChar, new Dictionary<string, string> { ["SourceControl"] = "git" }) };
+            task.Analyzers = MSBuildUtil.CreateTaskItems("missing/generator.dll");
+            task.AdditionalFiles = MSBuildUtil.CreateTaskItems("missing/data.txt");
+            task.AnalyzerConfigFiles = MSBuildUtil.CreateTaskItems("missing/.editorconfig");
+            task.AdditionalCompilerInputs = MSBuildUtil.CreateTaskItems("missing/dependency.dll");
+            task.PathMap = "ignored=/physical-checkout/";
+
+            Assert.True(task.Execute(), ((MockEngine)task.BuildEngine).Log);
+            Assert.Equal("/_/", Assert.Single(task.PathMappings).GetMetadata("MappedPath"));
+            Assert.Contains("/deterministic+", task.CompilerArguments);
+            Assert.Contains("/nosdkpath", task.CompilerArguments);
+            Assert.DoesNotContain("physical-checkout", task.CompilerArguments);
+            Assert.Equal(new[] { "app.dll", "app.pdb" }, task.CompilerOutputs.Select(item => Path.GetFileName(item.ItemSpec)));
+            Assert.Contains(task.CompilerInputs, item => item.ItemSpec.EndsWith("generator.dll", StringComparison.Ordinal));
+            Assert.Contains(task.CompilerInputs, item => item.ItemSpec.EndsWith("dependency.dll", StringComparison.Ordinal));
+            Assert.Contains(task.CompilerInputs, item => item.ItemSpec.EndsWith(".editorconfig", StringComparison.Ordinal));
+            Assert.Contains(task.CompilerInputs, item => item.ItemSpec.EndsWith("data.txt", StringComparison.Ordinal));
+            Assert.False(Directory.Exists(directory));
+        }
+
+        [Fact]
+        public void DeclaredCompilerEmptyOptionsRemainAbsent()
+        {
+            var task = CreateFormatter(Path.GetTempPath());
+            task.DocumentationFile = "";
+            task.PdbFile = "";
+            task.Platform = "";
+            task.CodeAnalysisRuleSet = "";
+            task.Win32Manifest = "";
+            Assert.True(task.Execute(), ((MockEngine)task.BuildEngine).Log);
+            Assert.DoesNotContain("/doc:", task.CompilerArguments);
+            Assert.DoesNotContain("/pdb:", task.CompilerArguments);
+            Assert.DoesNotContain("/platform:", task.CompilerArguments);
+            Assert.DoesNotContain("/ruleset:", task.CompilerArguments);
+            Assert.DoesNotContain("/win32manifest:", task.CompilerArguments);
+        }
+
+        [Fact]
+        public void CompilerToolManifestEscapesProjectSyntax()
+        {
+            using var root = new TempRoot();
+            var directory = root.CreateDirectory();
+            var input = Path.Combine(directory.Path, "a & b;$(literal).dll");
+            var manifest = Path.Combine(directory.Path, "inputs.props");
+            var task = new WriteCscInputs
+            {
+                BuildEngine = new MockEngine(),
+                Inputs = new[] { new TaskItem(input.Replace("$", "%24").Replace(";", "%3B")) },
+                OutputFile = manifest,
+            };
+
+            Assert.True(task.Execute());
+            var document = XDocument.Load(manifest);
+            using var projects = new Microsoft.Build.Evaluation.ProjectCollection();
+            var project = new Microsoft.Build.Evaluation.Project(document.CreateReader(), null, null, projects);
+            Assert.Equal(input, Assert.Single(project.GetItems("_CscPreparedToolInput")).EvaluatedInclude);
+        }
+
+        [Theory]
+        [InlineData("portable", false, false, true)]
+        [InlineData("PORTABLE", false, false, true)]
+        [InlineData("portable", true, true, false)]
+        [InlineData("embedded", true, false, false)]
+        [InlineData("none", true, false, false)]
+        public void DeclaredCompilerPdbFootprint(string debugType, bool emitDebug, bool refOnly, bool hasPdb)
+        {
+            var task = CreateFormatter(Path.GetTempPath());
+            task.DebugType = debugType;
+            task.EmitDebugInformation = emitDebug;
+            task.RefOnly = refOnly;
+            Assert.True(task.Execute(), ((MockEngine)task.BuildEngine).Log);
+            Assert.Equal(hasPdb, task.CompilerOutputs.Any(item => item.ItemSpec.EndsWith(".pdb", StringComparison.Ordinal)));
+        }
+
+        [Theory]
+        [InlineData("deterministic")]
+        [InlineData("paths")]
+        [InlineData("response")]
+        [InlineData("generated-directory")]
+        [InlineData("features")]
+        public void DeclaredCompilerRejectsUnsafeModes(string mode)
+        {
+            var task = CreateFormatter(Path.GetTempPath());
+            switch (mode)
+            {
+                case "deterministic": task.Deterministic = false; break;
+                case "paths": task.DeterministicSourcePaths = false; break;
+                case "response": task.ResponseFiles = MSBuildUtil.CreateTaskItems("override.rsp"); break;
+                case "generated-directory": task.GeneratedFilesOutputPath = "generated"; break;
+                case "features": task.Features = "debug-determinism"; break;
+            }
+
+            Assert.False(task.Execute());
+            Assert.Empty(task.CompilerArguments);
+            Assert.Empty(task.CompilerOutputs);
+        }
+
+        [Fact]
+        public void DeclaredCompilerRelocation()
+        {
+            using var root = new TempRoot();
+            var first = root.CreateDirectory();
+            var second = root.CreateDirectory().CreateDirectory("a much longer checkout,with=delimiters");
+            var compiler = Path.Combine(AppContext.BaseDirectory, "bincore", "csc.dll");
+            var host = RuntimeHostInfo.GetDotNetHostPath(TaskEnvironment.Fallback.BuildEnvironment)!;
+            const string source = """
+                public class C
+                {
+                    public static string Get([System.Runtime.CompilerServices.CallerFilePath] string path = "") => path;
+                    public static string Value => Get();
+                }
+                """;
+
+            foreach (var directory in new[] { first, second })
+            {
+                directory.CreateFile("Program.cs").WriteAllText(source);
+                directory.CreateDirectory("obj");
+                var format = CreateFormatter(directory.Path);
+                format.References = new[] { new TaskItem(typeof(object).Assembly.Location) };
+                Assert.True(format.Execute(), ((MockEngine)format.BuildEngine).Log);
+                var unsafePath = directory.Path.Replace(",", ",,").Replace("=", "==") + Path.DirectorySeparatorChar;
+                var overrides = new CommandLineBuilder();
+                overrides.AppendSwitch("/deterministic-");
+                overrides.AppendSwitchIfNotNull("/pathmap:", unsafePath + "=" + unsafePath);
+                var compile = new CompileCsc
+                {
+                    BuildEngine = new MockEngine(),
+                    TaskEnvironment = format.TaskEnvironment,
+                    DotNetHost = host,
+                    CompilerAssembly = compiler,
+                    CompilerArguments = format.CompilerArguments + " " + overrides,
+                    PathMappings = format.PathMappings,
+                    DeclaredInputs = MSBuildUtil.CreateTaskItems(host, compiler).Concat(format.CompilerInputs).ToArray(),
+                    DeclaredOutputs = format.CompilerOutputs,
+                };
+                Assert.True(compile.Execute(), ((MockEngine)compile.BuildEngine).Log);
+
+                using var pe = new PEReader(File.OpenRead(Path.Combine(directory.Path, "obj", "app.dll")));
+                var codeView = pe.ReadCodeViewDebugDirectoryData(Assert.Single(pe.ReadDebugDirectory().Where(entry => entry.Type == DebugDirectoryEntryType.CodeView)));
+                Assert.Equal("/_/obj/app.pdb", codeView.Path.Replace('\\', '/'));
+                using var provider = MetadataReaderProvider.FromPortablePdbStream(File.OpenRead(Path.Combine(directory.Path, "obj", "app.pdb")));
+                var pdb = provider.GetMetadataReader();
+                Assert.All(pdb.Documents, document => Assert.Equal("/_/Program.cs", pdb.GetString(pdb.GetDocument(document).Name).Replace('\\', '/')));
+
+                var metadata = pe.GetMetadataReader();
+                var getter = metadata.MethodDefinitions.Select(handle => metadata.GetMethodDefinition(handle))
+                    .Single(method => metadata.GetString(method.Name) == "get_Value");
+                var il = pe.GetMethodBody(getter.RelativeVirtualAddress).GetILBytes()!;
+                var stringToken = BitConverter.ToInt32(il, Array.IndexOf(il, (byte)0x72) + 1);
+                Assert.Equal("/_/Program.cs", metadata.GetUserString(MetadataTokens.UserStringHandle(stringToken)).Replace('\\', '/'));
+            }
+
+            Assert.Equal(File.ReadAllBytes(Path.Combine(first.Path, "obj", "app.dll")), File.ReadAllBytes(Path.Combine(second.Path, "obj", "app.dll")));
+            Assert.Equal(File.ReadAllBytes(Path.Combine(first.Path, "obj", "app.pdb")), File.ReadAllBytes(Path.Combine(second.Path, "obj", "app.pdb")));
+        }
+#endif
 
         [Fact]
         public void SingleSource()

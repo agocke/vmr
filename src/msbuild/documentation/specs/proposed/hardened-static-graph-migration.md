@@ -126,7 +126,66 @@ The prototype cannot return properties/items from file-I/O actions; ordinary
 
 Real example: the [standalone action fixture](../../../../../genbuild/tests/Action.proj)
 captures a `WriteLinesToFile` invocation without creating its output.
-This pattern does not imply that the full SDK compiler closure is supported.
+The [compiler fixture](../../../../../genbuild/tests/Csc.proj) applies this
+pattern to generated sources consumed by an independent compiler action.
+
+## Make compiler determinism part of DeclaredIO
+
+File lists alone do not establish a declared-I/O compiler contract. Compilation
+must also be deterministic and independent of the physical checkout/CWD.
+Hardened C# compilation uses the zero-I/O
+[FormatCsc](../../../../roslyn/src/Compilers/Core/MSBuildTask/FormatCsc.cs)
+and the independent
+[CompileCsc](../../../../roslyn/src/Compilers/Core/MSBuildTask/CompileCsc.cs)
+action rather than annotating ordinary Csc's server, IDE-host and tool-discovery
+execution path.
+
+Restore captures the pinned compiler and analyzer dependency closure in
+`$(MSBuildProjectExtensionsPath)cscinputs/$(MSBuildProjectFile).g.props`.
+Build imports those explicit files; it does not enumerate external tool
+directories. Keep this manifest outside Common's automatic project-extension
+wildcards so it is imported only at its explicit preparation boundary.
+Late-added analyzers need their dependencies supplied through
+`@(AnalyzerDependency)`. Sources, references, analyzer configurations, additional
+files, embedded sources, resources, signing inputs and SourceLink are semantic
+inputs. XML documentation includes must be explicit `@(EmbeddedDocumentation)`
+or `@(CustomAdditionalCompileInputs)` inputs, including transitive dependencies.
+Do not substitute a target's timestamp lists for the compiler's actual footprint.
+
+Both `Deterministic` and `DeterministicSourcePaths` must be true. Unspecified
+source encoding defaults to UTF-8 rather than the machine's default code page.
+Automatic path maps retain SourceLink's repository-root aliases; add a project fallback
+only when no existing root covers it. A more-specific project map would win
+Roslyn's longest-prefix lookup and break SourceLink. Cover generated sources and
+output directories too: CodeView records the PDB path in the PE. User `PathMap`
+does not replace this mandatory policy. The execution task enforces deterministic
+compilation and the prepared mappings after the formatted options.
+
+Declare analyzer/generator assemblies and their dependencies and trust their
+nominal contract to use compiler-provided inputs without additional I/O.
+Enforcement is deferred as for other tasks; this is not a per-plugin audit or
+allowlist requirement. Do not disable generators merely to admit compilation.
+This deferral applies to general task/tool sandboxing, not just compiler plugins;
+separate action processes and declaration checks are not access enforcement.
+The [deferred sandbox requirements](hardened-static-graph.md#sandbox-enforcement-deferred)
+remain part of the design, without relaxing determinism or machine independence.
+Generated syntax trees remain compiler outputs in memory/embedded PDB data;
+data-dependent generated-files directories are a different, unsupported effect.
+
+The action uses an explicit compiler/runtime host and a controlled child
+environment, not server state, `LIB`, default response files or tool overrides.
+ToolTask provides cancellation, output diagnostics and private temporary response
+files for long argument lists. These are scratch files, not cached or declared
+product artifacts; preserving tool temp files is rejected. There is no
+task-local output caching.
+
+The initial profile supports managed assemblies, reference assemblies, portable
+or embedded debug information and statically named documentation/resource
+artifacts. User response files, native PDBs, generated-files directories, rulesets,
+SARIF output, app-config, machine key containers and non-public/non-delay signing
+remain explicit errors. Ordinary Csc is unchanged. Verify relocation with
+byte-identical PE/PDBs and mapped PDB documents, CodeView paths and CallerFilePath,
+not merely a `/deterministic+` argument assertion.
 
 ## Leave caching to the execution system
 

@@ -419,13 +419,32 @@ and nested roots, duplicate merging, deterministic/non-deterministic paths,
 legacy host versions, exact ordinary-compatible bytes, empty/stale outputs,
 invalid metadata rejection without partial graphs, and fatal publication errors.
 
+Hardened C# compilation now composes zero-I/O `FormatCsc` and independent
+`CompileCsc`, reusing Csc option formatting without its server/IDE/tool discovery.
+Restore captures the compiler and analyzer dependency closure as explicit
+`cscinputs` imports. Compilation requires determinism and automatic path mapping
+consistent with SourceLink, covering project, generated-source and output paths.
+Analyzers/generators and dependencies are declared inputs under their nominal
+compiler-input-only contract, with enforcement deferred and no per-plugin gate.
+Packaged smoke independently executes generated-source and Regex-generator
+compilation after MSBuild exits. Relocated checkouts produce identical PE,
+reference-assembly and portable-PDB bytes; regressions inspect PDB document,
+CodeView and CallerFilePath values. Embedded debug information, ordinary Csc,
+rejected construction modes and independent compiler failures are covered.
+The action retains ToolTask diagnostics, cancellation and temporary response-file
+scratch without compiler servers or task-local output caches. Native PDBs,
+arbitrary response files, data-dependent generated-files directories, rulesets,
+SARIF, app-config and machine signing modes remain outside this initial profile.
+
 With directory import paths supplied explicitly to both Restore and Build,
 the fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
 executable-reference validation, WinMD validation, editorconfig generation,
 framework attribute generation, assembly version derivation, source-root mapping,
-and SourceLink generation. There are no remaining hash, deferred-hash,
-source-root mapping or SourceLink task-rejection diagnostics in this probe.
-The first unsupported task is now Roslyn's `Csc`, followed by copy, cleanup,
+SourceLink generation and compiler preparation. There are no remaining hash,
+deferred-hash, source-root mapping, SourceLink or compiler task-rejection
+diagnostics in this probe.
+The first unsupported task is now `GenerateDepsFile`, followed by runtime
+configuration, copy, cleanup,
 dependency/runtime configuration and deferred-value diagnostics.
 Failed construction publishes neither a graph nor action invocations and
 writes no framework attribute, assembly-info, editorconfig or SourceLink file.
@@ -433,12 +452,12 @@ Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers
 Common's preparation sites, not every SDK or custom directory operation.
-The probe also reports unsupported compilation,
-dependency/runtime configuration, copying, and cleanup operations.
+The probe still reports unsupported dependency/runtime configuration, copying,
+and cleanup operations.
 Some diagnostics follow unavailable earlier outputs; fix the first unsupported
 operations and re-probe rather than treating
 all diagnostics as independently reachable blockers.
-RAR and the stock Roslyn task still need audited
+Broader RAR and compiler option profiles still need audited
 action-graph adaptation. Full SDK `Build` remains unsupported; ambient
 discovery has not been allowed as a fallback. Establish the bounded compile
 closure below before broadening to the full `Build` lifecycle.
@@ -470,6 +489,17 @@ closures. Treat native runtime/CMake integration as a separate later boundary,
 not a prerequisite for the first managed-library result.
 
 ## After the prototype
+
+General sandbox enforcement is deliberately deferred. Current admission trusts
+task contracts and analyzers'/generators' nominal compiler-input-only contract;
+it does not require a per-plugin audit/allowlist, and the action host is not a
+security sandbox. This delay does not weaken DeclaredIO's determinism and
+machine-independence requirements. Future enforcement must cover declared-only
+reads, output/private-scratch writes, transitive tool/plugin access, network and
+ambient context, and fail explicitly on violations. It must preserve the
+distinction between engine graph-input discovery and zero-I/O task execution.
+See [sandbox requirements](hardened-static-graph.md#sandbox-enforcement-deferred);
+confinement complements, rather than replaces, determinism and relocation checks.
 
 [Named products](hardened-named-products.md) can add catalog validation,
 producer-closure selection, and Ninja roots. Content caching and lazy artifact

@@ -386,6 +386,40 @@ produce nonzero exit codes and useful diagnostics. Checking required outputs
 is not an audit for undeclared I/O. Ninja blocks dependents after failure;
 already-running independent commands may finish.
 
+## Sandbox enforcement (deferred)
+
+Sandboxing is deliberately deferred, not a prerequisite for the current compiler
+or analyzer/generator profile. The prototype trusts audited task contracts and
+plugins' nominal compiler-input-only contract. Declaration validation, separate
+processes and required-output checks do not enforce actual access or make
+untrusted tasks safe to run. Deferring enforcement does not relax the contract:
+DeclaredIO still promises deterministic, machine-independent results, not merely
+a list of filenames.
+
+A future general enforcement layer must:
+
+- Limit task reads to declared inputs and explicit implementation/tool/host
+  context; keep inputs read-only. Undeclared filesystem observations, including
+  existence probes and directory enumeration, are not implicit discovery rights.
+  Writes are limited to declared outputs and private ephemeral scratch, with no
+  undeclared persistent artifacts. Path aliases and symlinks must not bypass the
+  boundary.
+- Apply the same boundary to child tools and loaded analyzers/generators, without
+  per-plugin exemptions or admission allowlists. Zero-I/O construction tasks
+  must remain zero-I/O; engine-managed project/import/glob discovery is a separate
+  capability, not permission inherited by tasks.
+- Deny undeclared network access and control working-directory, environment and
+  toolchain context. Clock, randomness and machine-specific state must not become
+  hidden semantic inputs. Report violations as failures identifying the task and
+  attempted access, rather than silently widening declarations or discovering
+  new graph dependencies during execution.
+
+Filesystem/network confinement alone cannot prove determinism or relocation
+independence. Deterministic compiler settings, automatic path mapping and
+relocation/output comparisons remain necessary alongside future sandboxing.
+Enforcement belongs in the general construction/execution infrastructure, not
+task-specific sandbox implementations.
+
 ## Prototype boundary and later work
 
 The implemented emitter initially supports Unix shell commands, one project

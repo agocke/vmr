@@ -2,6 +2,11 @@
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-transitional.xsd">
   <file datatype="xml" source-language="en" target-language="es" original="../ErrorString.resx">
     <body>
+      <trans-unit id="CompileCsc.ExplicitToolInputs">
+        <source>Declared-I/O C# compilation requires absolute, declared compiler and runtime host inputs without tool, shell, host-object or environment overrides.</source>
+        <target state="new">Declared-I/O C# compilation requires absolute, declared compiler and runtime host inputs without tool, shell, host-object or environment overrides.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Compiler_UnexpectedException">
         <source>MSB3883: Unexpected exception: </source>
         <target state="translated">MSB3883: Excepción inesperada: </target>
@@ -35,6 +40,16 @@
       <trans-unit id="FormatAnalyzerConfig.FileMetadataNotSupported">
         <source>Metadata '{0}' on '{1}' requires a filesystem query and cannot be used when formatting an analyzer configuration without file I/O. Supply a prepared value as custom metadata instead.</source>
         <target state="new">Metadata '{0}' on '{1}' requires a filesystem query and cannot be used when formatting an analyzer configuration without file I/O. Supply a prepared value as custom metadata instead.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FormatCsc.RequiredParameter">
+        <source>Declared-I/O C# compilation requires '{0}=true'.</source>
+        <target state="new">Declared-I/O C# compilation requires '{0}=true'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FormatCsc.UnsupportedParameter">
+        <source>Parameter '{0}' is not supported by declared-I/O C# compilation.</source>
+        <target state="new">Parameter '{0}' is not supported by declared-I/O C# compilation.</target>
         <note />
       </trans-unit>
       <trans-unit id="General_CannotConvertStringToBool">
