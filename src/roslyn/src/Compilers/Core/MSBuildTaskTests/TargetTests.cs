@@ -13,10 +13,10 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using Roslyn.Test.Utilities;
-using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
 using Xunit;
+using BuildProject = Microsoft.Build.Evaluation.Project;
 
 namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
 {
@@ -878,7 +878,7 @@ namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
                   <Target Name="Restore" />
                 </Project>
                 """));
-            var project = new Project(xmlReader);
+            var project = new BuildProject(xmlReader);
             project.Xml.AddUsingTask("WriteLinesToFile", "", typeof(Microsoft.Build.Tasks.WriteLinesToFile).Assembly.FullName);
             var instance = project.CreateProjectInstance();
             string marker = intermediatePath + instance.GetPropertyValue("MSBuildProjectFile") + ".BuildWithSkipAnalyzers";
@@ -918,7 +918,7 @@ namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
                   <Target Name="_GenerateProjectRestoreGraphPerFramework" />
                 </Project>
                 """));
-            var project = new Project(xmlReader);
+            var project = new BuildProject(xmlReader);
             project.Xml.AddUsingTask("WriteLinesToFile", "", typeof(Microsoft.Build.Tasks.WriteLinesToFile).Assembly.FullName);
             var instance = project.CreateProjectInstance();
             string marker = intermediatePath + instance.GetPropertyValue("MSBuildProjectFile") + ".BuildWithSkipAnalyzers";
@@ -995,7 +995,7 @@ namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
 
         private static ProjectInstance CreateProjectInstance(XmlReader reader)
         {
-            Project proj = new Project(reader);
+            BuildProject proj = new BuildProject(reader);
 
             // add a dummy prepare for build target
             proj.Xml.AddTarget("PrepareForBuild");
@@ -1027,7 +1027,7 @@ namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
             // create an instance and return it
             return proj.CreateProjectInstance();
 
-            static void addTask(Project proj, string taskName, Dictionary<string, string> parameters)
+            static void addTask(BuildProject proj, string taskName, Dictionary<string, string> parameters)
             {
                 var task = proj.Xml.AddUsingTask(taskName, string.Empty, Assembly.GetExecutingAssembly().FullName);
                 task.TaskFactory = nameof(DummyTaskFactory);

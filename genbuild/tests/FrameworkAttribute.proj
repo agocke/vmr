@@ -1,0 +1,20 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <AttributeOutputPath Condition="'$(AttributeOutputPath)' == ''">$(MSBuildProjectDirectory)/framework-attribute/$(TestCase)/generated.cs</AttributeOutputPath>
+    <TargetFrameworkMoniker>.NETCoreApp,Version=v10.0</TargetFrameworkMoniker>
+    <TargetFrameworkMonikerAssemblyAttributesPath>$(AttributeOutputPath)</TargetFrameworkMonikerAssemblyAttributesPath>
+    <TargetFrameworkMonikerAssemblyAttributeText>[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v10.0")]</TargetFrameworkMonikerAssemblyAttributeText>
+    <GenerateTargetFrameworkAttribute>true</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="missing.cs" />
+  </ItemGroup>
+  <Import Project="FrameworkAttribute.targets" />
+  <Target Name="PrepareForBuild" />
+  <Target Name="GetReferenceAssemblyPaths" />
+  <Target Name="Build" DependsOnTargets="GenerateTargetFrameworkMonikerAttribute">
+    <Error Condition="'@(Compile)' != 'missing.cs;$(TargetFrameworkMonikerAssemblyAttributesPath)'"
+           Text="Framework attribute generation must retain its compiler input." />
+  </Target>
+  <Target Name="Restore" DependsOnTargets="Build" />
+</Project>

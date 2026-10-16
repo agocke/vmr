@@ -36,6 +36,7 @@
     <CallTarget Targets="TestExecutableReferences" />
     <CallTarget Targets="TestWinMDReferences" />
     <CallTarget Targets="TestEditorConfig" />
+    <CallTarget Targets="TestFrameworkAttribute" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -49,7 +50,43 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig generation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, SDK restore, and packaged compiler execution. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestFrameworkAttribute">
+    <MakeDir Directories="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)FrameworkAttribute.proj" DestinationFolder="$(_TestDirectory)" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
+             Query="/Project/Target[@Name='GenerateTargetFrameworkMonikerAttribute']">
+      <Output TaskParameter="Result" ItemName="_FrameworkAttributeTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_FrameworkAttributeTarget->Count())' != '1'" Text="The packaged Common targets must contain one framework attribute target." />
+    <WriteLinesToFile File="$(_TestDirectory)FrameworkAttribute.targets"
+                      Lines="&lt;Project&gt;;@(_FrameworkAttributeTarget);&lt;/Project&gt;" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)FrameworkAttribute.proj&quot; -p:TestCase=graph -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)framework-attribute.ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)framework-attribute/graph/generated.cs')" Text="Framework attribute construction must not write its output." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f framework-attribute.ninja" />
+    <ReadLinesFromFile File="$(_TestDirectory)framework-attribute/graph/generated.cs">
+      <Output TaskParameter="Lines" ItemName="_FrameworkAttributeContents" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_FrameworkAttributeContents)' != '[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(&quot;.NETCoreApp,Version=v10.0&quot;)]'"
+           Text="The framework attribute action did not publish the expected content." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)FrameworkAttribute.proj&quot; -p:TestCase=ordinary" />
+    <Error Condition="!Exists('$(_TestDirectory)framework-attribute/ordinary/generated.cs')" Text="Ordinary framework attribute generation must still write its output." />
+    <MakeDir Directories="$(_TestDirectory)framework-attribute/ordinary-failure/generated.cs" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)FrameworkAttribute.proj&quot; -p:TestCase=ordinary-failure -flp:&quot;LogFile=$(_TestDirectory)framework-attribute-ordinary-failure.log;WarningsOnly&quot;" />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_TestDirectory)framework-attribute-ordinary-failure.log').Contains('MSB3491'))"
+           Text="Ordinary framework attribute write failures must remain warnings." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)FrameworkAttribute.proj&quot; -p:TestCase=action-failure -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)framework-attribute-failure.ninja&quot;" />
+    <ItemGroup>
+      <_FrameworkAttributeFailureInvocation Include="$(_TestDirectory)framework-attribute-failure.ninja.actions/*.json" />
+    </ItemGroup>
+    <Error Condition="'@(_FrameworkAttributeFailureInvocation->Count())' != '1'" Text="Framework attribute generation must emit one file action." />
+    <MakeDir Directories="$(_TestDirectory)framework-attribute/action-failure/generated.cs" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot; --invocation &quot;@(_FrameworkAttributeFailureInvocation)&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_FrameworkAttributeFailureExitCode" />
+    </Exec>
+    <Error Condition="'$(_FrameworkAttributeFailureExitCode)' == '0'" Text="Hardened framework attribute write failures must stop execution." />
   </Target>
   <Target Name="TestProjectStyles">
     <WriteLinesToFile File="$(_TestDirectory)packages.config" Lines="&lt;packages /&gt;" Overwrite="true" />

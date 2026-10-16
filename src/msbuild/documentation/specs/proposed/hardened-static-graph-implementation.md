@@ -382,17 +382,24 @@ source files, exact bytes including semicolons and embedded newlines, stale
 output replacement, retained compiler-input bookkeeping, and explicit metadata
 rejection without partial graph publication.
 
-The fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
-executable-reference validation, WinMD validation, and editorconfig generation
-without downstream deferred project-annotation errors. The next diagnostics
-are resource-task hosting policy and the assembly-info helpers
-`GetAssemblyVersion` and `Hash`.
+The framework attribute target now selects fail-fast declared-output
+publication in hardened mode, leaving ordinary write-race warnings unchanged.
+Packaged smoke checks graph-only construction, independent file publication,
+compiler-input bookkeeping, and the different failure policies.
+
+With directory import paths supplied explicitly to both Restore and Build,
+the fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
+executable-reference validation, WinMD validation, editorconfig generation,
+and framework attribute generation. The first unsupported task is the
+assembly-info helper `GetAssemblyVersion`, followed by `Hash`; unavailable
+outputs also cause downstream deferred-value diagnostics. Failed construction
+publishes neither a graph nor action invocations and writes no framework
+attribute file.
 Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers
 Common's preparation sites, not every SDK or custom directory operation.
-The probe also reports unsupported resource and assembly-info
-generation, source mapping, compilation, dependency/runtime configuration,
+The probe also reports unsupported source mapping, compilation, dependency/runtime configuration,
 copying, and cleanup operations. Some diagnostics follow unavailable earlier
 outputs; fix the first unsupported operations and re-probe rather than treating
 all diagnostics as independently reachable blockers.

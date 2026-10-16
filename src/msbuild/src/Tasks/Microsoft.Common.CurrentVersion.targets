@@ -3807,15 +3807,21 @@ Copyright (C) Microsoft Corporation. All rights reserved.
           Outputs="$(TargetFrameworkMonikerAssemblyAttributesPath)"
           Condition="'@(Compile)' != '' and '$(GenerateTargetFrameworkAttribute)' == 'true'">
 
+    <PropertyGroup>
+      <_TargetFrameworkAttributeContinueOnError>true</_TargetFrameworkAttributeContinueOnError>
+      <_TargetFrameworkAttributeContinueOnError Condition="'$(MSBuildHardenedGraph)' == 'true'">false</_TargetFrameworkAttributeContinueOnError>
+    </PropertyGroup>
+
     <!-- This is a file shared between projects so we have to take care to handle simultaneous writes (by ContinueOnError)
-             and a race between clean from one project and build from another (by not adding to FilesWritten so it doesn't clean) -->
+             and a race between clean from one project and build from another (by not adding to FilesWritten so it doesn't clean).
+             Hardened actions instead fail fast and rely on declared-output ownership. -->
     <WriteLinesToFile
         File="$(TargetFrameworkMonikerAssemblyAttributesPath)"
         Lines="$(TargetFrameworkMonikerAssemblyAttributeText)"
         DeclaredInputs=""
         DeclaredOutputs="$(TargetFrameworkMonikerAssemblyAttributesPath)"
         Overwrite="true"
-        ContinueOnError="true"
+        ContinueOnError="$(_TargetFrameworkAttributeContinueOnError)"
         Condition="'@(Compile)' != '' and '$(TargetFrameworkMonikerAssemblyAttributeText)' != ''"
         />
 
