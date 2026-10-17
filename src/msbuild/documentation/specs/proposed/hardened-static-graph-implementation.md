@@ -457,23 +457,42 @@ task assembly for independent loading without ambient probing. Packaged smoke
 checks a compiler-produced dependency, relocation, byte-compatible ordinary
 JSON, stale replacement, static bookkeeping and missing-input failure.
 
-With directory import paths supplied explicitly to both Restore and Build,
+Hardened runtime configuration now uses `WriteRuntimeConfig`, sharing the
+ordinary framework/template/host-option model and serializer. Assets and the
+selected template are declared reads, without the ordinary build-engine cache
+or optional-template execution probe. Main and optional dev paths are exact
+outputs with static `FileWrites`; Debug's Hot Reload dev file is retained.
+Both documents are prepared and validated before either is written, without
+reading previous outputs. This is not atomic multi-file publication on I/O
+failure. Output uses UTF-8 without BOM and fixed LF newlines.
+
+The engine evaluates optional default-template presence afresh; it is not a
+persisted Restore fact. Explicit template paths, including earlier target
+assignments and generated templates, are required inputs and retain producer
+ordering. The action has no missing-template fallback. Relative probing paths
+are normalized to forward slashes without trailing separators, including raw
+template overrides. Absolute/invalid probes fail instead of publishing
+machine-specific NuGet-cache paths. Ordinary Build, Publish and designer paths
+retain their prior behavior. Packaged tests cover main/dev and Release output,
+framework-dependent/self-contained configuration, existing/missing/generated
+templates, late selection, relocation, stale replacement and independent errors.
+
+With directory import paths and construction host OS supplied explicitly to both Restore and Build,
 the fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
 executable-reference validation, WinMD validation, editorconfig generation,
 framework attribute generation, assembly version derivation, source-root mapping,
 SourceLink generation and compiler preparation. There are no remaining hash,
-deferred-hash, source-root mapping, SourceLink, compiler or deps task-rejection
+deferred-hash, source-root mapping, SourceLink, compiler, deps or runtime-config task-rejection
 diagnostics in this probe.
-The first unsupported task is now `GenerateRuntimeConfigurationFiles`, followed
-by `Copy`, `CopyRefAssembly`, `Delete` and dependent deferred-value diagnostics.
+The first unsupported task is now `Copy`, followed by `CopyRefAssembly`, further
+`Copy`/`Delete` calls and dependent deferred-value diagnostics.
 Failed construction publishes neither a graph nor action invocations and
 writes no framework attribute, assembly-info, editorconfig or SourceLink file.
 Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers
 Common's preparation sites, not every SDK or custom directory operation.
-The probe still reports unsupported runtime configuration, copying,
-and cleanup operations.
+The probe still reports unsupported copying and cleanup operations.
 Some diagnostics follow unavailable earlier outputs; fix the first unsupported
 operations and re-probe rather than treating
 all diagnostics as independently reachable blockers.

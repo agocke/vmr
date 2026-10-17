@@ -1,0 +1,59 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition="'$(TestCase)' == 'release'">Release</Configuration>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v11.0</TargetFrameworkVersion>
+    <_TargetFrameworkVersionWithoutV>11.0</_TargetFrameworkVersionWithoutV>
+    <TargetFramework>net11.0</TargetFramework>
+    <TargetFrameworkMoniker>.NETCoreApp,Version=v11.0</TargetFrameworkMoniker>
+    <AssemblyName>RuntimeApp</AssemblyName>
+    <HasRuntimeOutput>true</HasRuntimeOutput>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <TargetDir>$(MSBuildProjectDirectory)/out/</TargetDir>
+    <ProjectAssetsFile>$(MSBuildProjectDirectory)/obj/project.assets.json</ProjectAssetsFile>
+    <UserRuntimeConfig Condition="'$(TestCase)' == 'generated'">$(MSBuildProjectDirectory)/obj/generated.template.json</UserRuntimeConfig>
+    <UserRuntimeConfig Condition="'$(TestCase)' == 'missing-template' or '$(TestCase)' == 'deleted-template'">$(MSBuildProjectDirectory)/missing.template.json</UserRuntimeConfig>
+    <SelfContained Condition="'$(TestCase)' == 'self-contained'">true</SelfContained>
+    <RuntimeIdentifier Condition="'$(SelfContained)' == 'true'">linux-x64</RuntimeIdentifier>
+    <GenerateProbingPathsToRuntimeConfigDevFile Condition="'$(TestCase)' == 'package-probe'">true</GenerateProbingPathsToRuntimeConfigDevFile>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <_TemplateText>{"configProperties":{"setting":"generated after construction","count":4,"enabled":false,"text":"a+b"}}</_TemplateText>
+    <MicrosoftNETBuildTasksAssembly>$(MSBuildSDKsPath)/Microsoft.NET.Sdk/tools/net11.0/Microsoft.NET.Build.Tasks.dll</MicrosoftNETBuildTasksAssembly>
+    <_AssetsText>{"version":3,"targets":{"net11.0":{},"net11.0/linux-x64":{}},"libraries":{},"projectFileDependencyGroups":{"net11.0":[]},"packageFolders":{"$(MSBuildProjectDirectory)/machine-specific-cache/":{}},"project":{"version":"1.0.0","restore":{"projectUniqueName":"$(MSBuildProjectFullPath)","projectName":"RuntimeApp","projectPath":"$(MSBuildProjectFullPath)","projectStyle":"PackageReference"},"frameworks":{"net11.0":{"targetAlias":"net11.0"}}}}</_AssetsText>
+  </PropertyGroup>
+  <UsingTask TaskName="GenerateRuntimeConfigurationFiles" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="WriteRuntimeConfig" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <Import Project="RuntimeConfig.targets" />
+  <ItemGroup>
+    <RuntimeFramework Include="Microsoft.NETCore.App" FrameworkName="Microsoft.NETCore.App" Version="11.0.0" />
+    <RuntimeFramework Include="Microsoft.AspNetCore.App" FrameworkName="Microsoft.AspNetCore.App" Version="11.0.0" />
+    <RuntimeHostConfigurationOption Include="count" Value="12" />
+    <RuntimeHostConfigurationOption Include="enabled" Value="true" />
+  </ItemGroup>
+  <Target Name="_DefaultMicrosoftNETPlatformLibrary" />
+  <Target Name="Produce" Condition="'$(TestCase)' == 'generated' or '$(TestCase)' == 'late-parameter'">
+    <PropertyGroup Condition="'$(TestCase)' == 'late-parameter'">
+      <UserRuntimeConfig>$(MSBuildProjectDirectory)/obj/generated.template.json</UserRuntimeConfig>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(UserRuntimeConfig)" Lines="$(_TemplateText)"
+                      Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="$(UserRuntimeConfig)" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="Produce;GenerateBuildRuntimeConfigurationFiles" />
+  <Target Name="VerifyRuntimeConfigWrites" AfterTargets="GenerateBuildRuntimeConfigurationFiles">
+    <Error Condition="@(FileWrites->WithMetadataValue('Identity', '$(ProjectRuntimeConfigFilePath)')->Count()) != 1"
+           Text="Main runtime-config bookkeeping must be static." />
+    <Error Condition="'$(GenerateRuntimeConfigDevFile)' == 'true' and @(FileWrites->WithMetadataValue('Identity', '$(ProjectRuntimeConfigDevFilePath)')->Count()) != 1"
+           Text="Dev runtime-config bookkeeping must be static." />
+    <PropertyGroup>
+      <_ExpectedRuntimeConfigWrites>1</_ExpectedRuntimeConfigWrites>
+      <_ExpectedRuntimeConfigWrites Condition="'$(GenerateRuntimeConfigDevFile)' == 'true'">2</_ExpectedRuntimeConfigWrites>
+    </PropertyGroup>
+    <Error Condition="'$(MSBuildHardenedGraph)' == 'true' and @(FileWrites->Count()) != $(_ExpectedRuntimeConfigWrites)"
+           Text="Runtime-config bookkeeping must not include inactive outputs or caches." />
+  </Target>
+  <Target Name="Restore">
+    <MakeDir Directories="obj;out" />
+    <WriteLinesToFile File="$(ProjectAssetsFile)" Lines="$(_AssetsText)" Overwrite="true" />
+  </Target>
+</Project>

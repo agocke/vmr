@@ -90,6 +90,22 @@ namespace Microsoft.NET.Build.Tasks
 
         protected override void ExecuteCore()
         {
+            if (!ValidateOptions())
+            {
+                return;
+            }
+
+            LockFile lockFile = AssetsFilePath == null
+                ? null
+                : new LockFileCache(this).GetLockFile(TaskEnvironment.GetAbsolutePath(AssetsFilePath));
+            foreach (var configuration in CreateConfigurations(lockFile))
+            {
+                WriteConfiguration(configuration.Path, configuration.Content, Environment.NewLine);
+            }
+        }
+
+        protected bool ValidateOptions()
+        {
             if (!WriteAdditionalProbingPathsToMainConfig)
             {
                 // If we want to generate the runtimeconfig.dev.json file
@@ -106,11 +122,16 @@ namespace Microsoft.NET.Build.Tasks
                 if (!RollForwardValues.Contains(RollForward, StringComparer.OrdinalIgnoreCase))
                 {
                     Log.LogError(Strings.InvalidRollForwardValue, RollForward, string.Join(", ", RollForwardValues));
-                    return;
+                    return false;
                 }
             }
 
-            if (AssetsFilePath == null)
+            return true;
+        }
+
+        protected IEnumerable<(string Path, JsonObject Content)> CreateConfigurations(LockFile lockFile)
+        {
+            if (lockFile == null)
             {
                 var isFrameworkDependent = LockFileExtensions.IsFrameworkDependent(
                     RuntimeFrameworks,
@@ -134,16 +155,13 @@ namespace Microsoft.NET.Build.Tasks
                         "Does not support non null PlatformLibraryName(TFM < 3) without asset file.");
                 }
 
-                WriteRuntimeConfig(
+                yield return (RuntimeConfigPath, CreateRuntimeConfig(
                     RuntimeFrameworks.Select(r => new ProjectContext.RuntimeFramework(r)).ToArray(),
                     null,
-                    isFrameworkDependent: true, new List<LockFileItem>());
+                    isFrameworkDependent: true, new List<LockFileItem>()));
             }
             else
             {
-                AbsolutePath assetsPath = TaskEnvironment.GetAbsolutePath(AssetsFilePath);
-                LockFile lockFile = new LockFileCache(this).GetLockFile(assetsPath);
-
                 ProjectContext projectContext = lockFile.CreateProjectContext(
                     TargetFramework,
                     RuntimeIdentifier,
@@ -151,19 +169,19 @@ namespace Microsoft.NET.Build.Tasks
                     RuntimeFrameworks,
                     IsSelfContained);
 
-                WriteRuntimeConfig(projectContext.RuntimeFrameworks,
+                yield return (RuntimeConfigPath, CreateRuntimeConfig(projectContext.RuntimeFrameworks,
                     projectContext.PlatformLibrary,
                     projectContext.IsFrameworkDependent,
-                    projectContext.LockFile.PackageFolders);
+                    projectContext.LockFile.PackageFolders));
 
                 if (GenerateRuntimeConfigDevFile && !string.IsNullOrEmpty(RuntimeConfigDevPath))
                 {
-                    WriteDevRuntimeConfig(projectContext.LockFile.PackageFolders);
+                    yield return (RuntimeConfigDevPath, CreateDevRuntimeConfig(projectContext.LockFile.PackageFolders));
                 }
             }
         }
 
-        private void WriteRuntimeConfig(
+        private JsonObject CreateRuntimeConfig(
             ProjectContext.RuntimeFramework[] runtimeFrameworks,
             LockFileTargetLibrary platformLibrary,
             bool isFrameworkDependent,
@@ -191,8 +209,7 @@ namespace Microsoft.NET.Build.Tasks
                 AddAdditionalProbingPaths(config.RuntimeOptions, packageFolders);
             }
 
-            WriteToJsonFile(TaskEnvironment.GetAbsolutePath(RuntimeConfigPath), config);
-            _filesWritten.Add(new TaskItem(RuntimeConfigPath));
+            return SerializeConfiguration(config);
         }
 
         private void AddFrameworks(RuntimeOptions runtimeOptions,
@@ -281,25 +298,39 @@ namespace Microsoft.NET.Build.Tasks
 
         private void AddUserRuntimeOptions(RuntimeOptions runtimeOptions)
         {
-            if (string.IsNullOrEmpty(UserRuntimeConfig))
+            JsonObject runtimeOptionsFromProject = ReadUserRuntimeOptions();
+            if (runtimeOptionsFromProject == null)
             {
                 return;
             }
-
-            AbsolutePath userConfigPath = TaskEnvironment.GetAbsolutePath(UserRuntimeConfig);
-            if (!File.Exists(userConfigPath))
-            {
-                return;
-            }
-
-            JsonObject runtimeOptionsFromProject = (JsonObject)JsonNode.Parse(
-                File.ReadAllText(userConfigPath),
-                documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
 
             foreach (KeyValuePair<string, JsonNode> runtimeOption in runtimeOptionsFromProject)
             {
                 runtimeOptions.RawOptions.Add(runtimeOption.Key, runtimeOption.Value);
             }
+        }
+
+        protected virtual JsonObject ReadUserRuntimeOptions()
+        {
+            if (string.IsNullOrEmpty(UserRuntimeConfig))
+            {
+                return null;
+            }
+
+            AbsolutePath userConfigPath = TaskEnvironment.GetAbsolutePath(UserRuntimeConfig);
+            if (!File.Exists(userConfigPath))
+            {
+                return null;
+            }
+
+            return ReadUserRuntimeOptionsFile(userConfigPath);
+        }
+
+        protected static JsonObject ReadUserRuntimeOptionsFile(string path)
+        {
+            return (JsonObject)JsonNode.Parse(
+                File.ReadAllText(path),
+                documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }) ?? throw new JsonException();
         }
 
         private void AddHostConfigurationOptions(RuntimeOptions runtimeOptions)
@@ -346,7 +377,7 @@ namespace Microsoft.NET.Build.Tasks
             return JsonValue.Create(valueString);
         }
 
-        private void WriteDevRuntimeConfig(IList<LockFileItem> packageFolders)
+        private JsonObject CreateDevRuntimeConfig(IList<LockFileItem> packageFolders)
         {
             RuntimeConfig devConfig = new()
             {
@@ -365,8 +396,7 @@ namespace Microsoft.NET.Build.Tasks
                 configProperties["System.StartupHookProvider.IsSupported"] = true;
             }
 
-            WriteToJsonFile(TaskEnvironment.GetAbsolutePath(RuntimeConfigDevPath), devConfig);
-            _filesWritten.Add(new TaskItem(RuntimeConfigDevPath));
+            return SerializeConfiguration(devConfig);
         }
 
         private void AddAdditionalProbingPaths(RuntimeOptions runtimeOptions, IList<LockFileItem> packageFolders)
@@ -406,30 +436,31 @@ namespace Microsoft.NET.Build.Tasks
             return path;
         }
 
-        private static void WriteToJsonFile(string fileName, RuntimeConfig value)
+        private static JsonObject SerializeConfiguration(RuntimeConfig value)
         {
-            // Build the document explicitly with the System.Text.Json node API instead of a
-            // reflection-based serializer, which is not trim/AOT safe (IL2026/IL3050). The writer
-            // is configured to reproduce the previous output exactly: 2-space indentation,
-            // environment newlines, and relaxed escaping (so characters such as '+' in paths are
-            // written verbatim rather than as \uXXXX escapes).
-            JsonObject json = new()
+            // Explicit nodes keep the existing property order without trim/AOT-unsafe reflection.
+            return new JsonObject
             {
                 ["runtimeOptions"] = SerializeRuntimeOptions(value.RuntimeOptions)
             };
+        }
 
+        protected void WriteConfiguration(string path, JsonObject content, string newLine)
+        {
             JsonWriterOptions options = new()
             {
                 Indented = true,
-                NewLine = Environment.NewLine,
+                NewLine = newLine,
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
 
-            using (FileStream stream = File.Create(fileName))
+            using (FileStream stream = File.Create(TaskEnvironment.GetAbsolutePath(path)))
             using (Utf8JsonWriter writer = new(stream, options))
             {
-                json.WriteTo(writer);
+                content.WriteTo(writer);
             }
+
+            _filesWritten.Add(new TaskItem(path));
         }
 
         private static JsonObject SerializeRuntimeOptions(RuntimeOptions runtimeOptions)

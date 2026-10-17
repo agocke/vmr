@@ -232,6 +232,38 @@ The [shipped-target fixture](../../../../../genbuild/tests/Deps.proj) checks
 producer ordering, relocation, stale output replacement and ordinary JSON
 compatibility.
 
+## Select optional inputs before file execution
+
+[WriteRuntimeConfig](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteRuntimeConfig.cs)
+reuses runtime framework selection, template merging, typed host options and
+serialization from the ordinary task. It reads declared assets/template JSON
+without the ordinary assets cache and writes exactly the requested main/dev
+files, including Debug's Hot Reload configuration. Keep `FileWrites` static
+and omit inactive dev paths; do not request execution-time MSBuild outputs.
+
+Select an optional default template in engine evaluation, not through a
+`File.Exists` fallback inside the action. This is fresh evaluation, not a
+Restore snapshot of presence. Explicit paths, including earlier target
+assignments, are required inputs even when their content will be generated
+later. Declare that identity and retain the producer edge instead of reading or
+snapshotting generated content during Restore/construction. Missing inputs fail;
+an explicitly requested template must not silently become "no template."
+
+Validate the complete main/dev configuration before writing either document.
+An invalid dev option must not overwrite the main file first. This does not
+promise atomic multi-file publication if a subsequent I/O operation fails.
+Use fixed LF UTF-8/no-BOM output rather than host-specific newlines.
+Probing paths are serialized metadata, not directories the task may inspect.
+Normalize portable relative paths, including raw template options, and reject
+absolute/empty/invalid probes instead of embedding machine-specific NuGet-cache
+roots. Do not silently disable requested probing behavior.
+
+The [shipped-target fixture](../../../../../genbuild/tests/RuntimeConfig.proj)
+checks optional and generated templates, target-time path selection, ordinary
+main/dev compatibility, self-contained included frameworks, Release's main-only
+output, relocation, overwrite behavior and independent failure. Ordinary
+GenerateRuntimeConfigurationFiles, Publish and designer behavior is unchanged.
+
 ## Leave caching to the execution system
 
 Tasks define transformations, not caching strategies. In hardened mode, do

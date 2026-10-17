@@ -1078,5 +1078,13 @@ You may need to build the project on another operating system or architecture, o
     <value>NETSDK1250: Dependency generation requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</value>
     <comment>{StrBegins="NETSDK1250: "}{Locked="{0}"}</comment>
   </data>
-  <!-- The latest message added is UndeclaredDepsFileInput. Please update this value with each PR to catch parallel PRs both adding a new message -->
+  <data name="UnsupportedRuntimeConfigParameter" xml:space="preserve">
+    <value>NETSDK1251: Declared-I/O runtime configuration does not support '{0}' with value '{1}'. Supply explicit inputs, outputs, and portable probing paths.</value>
+    <comment>{StrBegins="NETSDK1251: "}{Locked="{0}"}{Locked="{1}"}</comment>
+  </data>
+  <data name="UndeclaredRuntimeConfigInput" xml:space="preserve">
+    <value>NETSDK1252: Runtime configuration requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</value>
+    <comment>{StrBegins="NETSDK1252: "}{Locked="{0}"}</comment>
+  </data>
+  <!-- The latest message added is UndeclaredRuntimeConfigInput. Please update this value with each PR to catch parallel PRs both adding a new message -->
 </root>

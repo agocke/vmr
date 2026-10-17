@@ -42,6 +42,7 @@
     <CallTarget Targets="TestSourceLink" />
     <CallTarget Targets="TestCsc" />
     <CallTarget Targets="TestDeps" />
+    <CallTarget Targets="TestRuntimeConfig" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
@@ -55,7 +56,131 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, packaged compiler execution, and dependency-manifest publication. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, packaged compiler execution, dependency-manifest and runtime-config publication. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestRuntimeConfig">
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets"
+             Namespaces="&lt;Namespace Prefix='msb' Uri='http://schemas.microsoft.com/developer/msbuild/2003' /&gt;"
+             Query="/msb:Project/msb:PropertyGroup[msb:UserRuntimeConfig or msb:GenerateProbingPathsToRuntimeConfigDevFile or msb:ProjectRuntimeConfigFilePath] | /msb:Project/msb:ItemGroup[msb:GenerateRuntimeConfigurationFilesInputs] | /msb:Project/msb:Target[@Name='GenerateBuildRuntimeConfigurationFiles' or @Name='_GenerateRuntimeConfigurationFilesInputCache']">
+      <Output TaskParameter="Result" ItemName="_RuntimeConfigFragment" />
+    </XmlPeek>
+    <Error Condition="'@(_RuntimeConfigFragment->Count())' != '7'" Text="The packaged SDK must contain runtime-config defaults, input selection and publication." />
+    <PropertyGroup>
+      <_RuntimeConfigXml>@(_RuntimeConfigFragment, '')</_RuntimeConfigXml>
+      <_RuntimeConfigXml>$(_RuntimeConfigXml.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_RuntimeConfigXml>
+    </PropertyGroup>
+    <ItemGroup>
+      <_RuntimeConfigCase Include="short;another longer checkout;stale" Mode="generated" />
+      <_RuntimeConfigCase Include="existing-template" Mode="existing-template" />
+      <_RuntimeConfigCase Include="late-parameter" Mode="late-parameter" />
+      <_RuntimeConfigCase Include="self-contained" Mode="self-contained" />
+      <_RuntimeConfigCase Include="no-template" Mode="no-template" />
+      <_RuntimeConfigCase Include="late-default" Mode="late-default" />
+      <_RuntimeConfigCase Include="release" Mode="release" />
+      <_RuntimeConfigCase Include="missing-template" Mode="missing-template" />
+      <_RuntimeConfigNegative Include="deleted-template" Mode="deleted-template" />
+      <_RuntimeConfigNegative Include="package-probe" Mode="package-probe" />
+      <_RuntimeConfigNegative Include="absolute-template" Mode="absolute-template" />
+      <_RuntimeConfigNegative Include="malformed-template" Mode="malformed-template" />
+      <_RuntimeConfigNegative Include="write-failure" Mode="write-failure" />
+      <_RuntimeConfigCase Include="@(_RuntimeConfigNegative)" />
+      <_RuntimeConfigRoot Include="@(_RuntimeConfigCase->'$(_TestDirectory)runtime-config/%(Identity)/project/')" />
+      <_RuntimeConfigOrdinary Include="generated;self-contained;no-template;release" />
+      <_RuntimeConfigRoot Include="@(_RuntimeConfigOrdinary->'$(_TestDirectory)runtime-config/ordinary-%(Identity)/project/')" />
+    </ItemGroup>
+    <MakeDir Directories="@(_RuntimeConfigRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeConfig.proj" DestinationFiles="%(_RuntimeConfigRoot.Identity)RuntimeConfig.proj" />
+    <WriteLinesToFile File="%(_RuntimeConfigRoot.Identity)RuntimeConfig.targets" Lines="&lt;Project&gt;;$(_RuntimeConfigXml);&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)runtime-config/absolute-template/project/runtimeconfig.template.json"
+                      Lines="{&quot;additionalProbingPaths&quot;:[&quot;/machine-specific/packages&quot;]}" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)runtime-config/malformed-template/project/runtimeconfig.template.json" Lines="not JSON" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)runtime-config/deleted-template/project/missing.template.json" Lines="{}" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)runtime-config/existing-template/project/runtimeconfig.template.json"
+                      Lines="{&quot;configProperties&quot;:{&quot;setting&quot;:&quot;generated after construction&quot;,&quot;count&quot;:4,&quot;enabled&quot;:false,&quot;text&quot;:&quot;a+b&quot;}}" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)runtime-config/%(_RuntimeConfigCase.Identity)/project/RuntimeConfig.proj&quot; &quot;-p:TestCase=%(_RuntimeConfigCase.Mode)&quot;" />
+    <WriteLinesToFile File="$(_TestDirectory)runtime-config/late-default/project/runtimeconfig.template.json"
+                      Lines="{&quot;selectedDuringEvaluation&quot;:true}" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)runtime-config/stale/project/out/RuntimeApp.runtimeconfig.json" Lines="old main" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)runtime-config/stale/project/out/RuntimeApp.runtimeconfig.dev.json" Lines="old dev" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)runtime-config/%(_RuntimeConfigCase.Identity)/project/RuntimeConfig.proj&quot; &quot;-p:TestCase=%(_RuntimeConfigCase.Mode)&quot;"
+          Condition="'%(_RuntimeConfigCase.Identity)' != 'missing-template'" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)runtime-config/missing-template/project/RuntimeConfig.proj&quot; -p:TestCase=missing-template"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_MissingRuntimeConfigTemplateExitCode" />
+    </Exec>
+    <Error Condition="'$(_MissingRuntimeConfigTemplateExitCode)' == '0' or Exists('$(_TestDirectory)runtime-config/missing-template/project/obj/genbuild/build.ninja') or Exists('$(_TestDirectory)runtime-config/missing-template/project/obj/genbuild/build.ninja.actions')"
+           Text="An explicit missing template without a producer must fail without publishing a graph." />
+    <Error Condition="Exists('$(_TestDirectory)runtime-config/short/project/obj/generated.template.json') or Exists('$(_TestDirectory)runtime-config/short/project/out/RuntimeApp.runtimeconfig.json') or Exists('$(_TestDirectory)runtime-config/short/project/out/RuntimeApp.runtimeconfig.dev.json')"
+           Text="Runtime-config construction must not execute template producers or JSON writers." />
+    <ReadLinesFromFile File="$(_TestDirectory)runtime-config/stale/project/out/RuntimeApp.runtimeconfig.json">
+      <Output TaskParameter="Lines" PropertyName="_StaleRuntimeConfigMain" />
+    </ReadLinesFromFile>
+    <ReadLinesFromFile File="$(_TestDirectory)runtime-config/stale/project/out/RuntimeApp.runtimeconfig.dev.json">
+      <Output TaskParameter="Lines" PropertyName="_StaleRuntimeConfigDev" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_StaleRuntimeConfigMain)' != 'old main' or '$(_StaleRuntimeConfigDev)' != 'old dev'" Text="Runtime-config construction must leave stale outputs untouched." />
+    <ItemGroup>
+      <_RuntimeConfigExecution Include="@(_RuntimeConfigCase)" Exclude="@(_RuntimeConfigNegative);missing-template" />
+    </ItemGroup>
+    <Exec WorkingDirectory="$(_TestDirectory)runtime-config/%(_RuntimeConfigExecution.Identity)/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)runtime-config/ordinary-%(_RuntimeConfigOrdinary.Identity)/project/RuntimeConfig.proj&quot; -p:TestCase=%(_RuntimeConfigOrdinary.Identity)" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)runtime-config/ordinary-%(_RuntimeConfigOrdinary.Identity)/project/RuntimeConfig.proj&quot; -t:Build -p:TestCase=%(_RuntimeConfigOrdinary.Identity)" />
+    <ItemGroup>
+      <_RuntimeConfigRelocated Include="short;another longer checkout;stale;existing-template;late-parameter;ordinary-generated" />
+      <_RuntimeConfigComparable Include="self-contained;no-template;release" />
+    </ItemGroup>
+    <GetFileHash Files="@(_RuntimeConfigRelocated->'$(_TestDirectory)runtime-config/%(Identity)/project/out/RuntimeApp.runtimeconfig.json')">
+      <Output TaskParameter="Items" ItemName="_RuntimeConfigMainHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_RuntimeConfigRelocated->'$(_TestDirectory)runtime-config/%(Identity)/project/out/RuntimeApp.runtimeconfig.dev.json')">
+      <Output TaskParameter="Items" ItemName="_RuntimeConfigDevHash" />
+    </GetFileHash>
+    <Error Condition="'@(_RuntimeConfigMainHash->'%(FileHash)'->Distinct()->Count())' != '1' or '@(_RuntimeConfigDevHash->'%(FileHash)'->Distinct()->Count())' != '1'" Text="Relocated runtime-config actions must match ordinary main/dev JSON bytes." />
+    <ItemGroup>
+      <_RuntimeConfigPair Include="$(_TestDirectory)runtime-config/%(_RuntimeConfigComparable.Identity)/project/out/RuntimeApp.runtimeconfig.json">
+        <Baseline>$(_TestDirectory)runtime-config/ordinary-%(_RuntimeConfigComparable.Identity)/project/out/RuntimeApp.runtimeconfig.json</Baseline>
+      </_RuntimeConfigPair>
+      <_RuntimeConfigPair Include="$(_TestDirectory)runtime-config/%(_RuntimeConfigComparable.Identity)/project/out/RuntimeApp.runtimeconfig.dev.json" Condition="'%(_RuntimeConfigComparable.Identity)' != 'release'">
+        <Baseline>$(_TestDirectory)runtime-config/ordinary-%(_RuntimeConfigComparable.Identity)/project/out/RuntimeApp.runtimeconfig.dev.json</Baseline>
+      </_RuntimeConfigPair>
+    </ItemGroup>
+    <GetFileHash Files="@(_RuntimeConfigPair)">
+      <Output TaskParameter="Items" ItemName="_RuntimeConfigPairHash" />
+    </GetFileHash>
+    <ItemGroup>
+      <_RuntimeConfigBaseline Include="%(_RuntimeConfigPairHash.Baseline)" ExpectedHash="%(_RuntimeConfigPairHash.FileHash)" />
+    </ItemGroup>
+    <GetFileHash Files="@(_RuntimeConfigBaseline)">
+      <Output TaskParameter="Items" ItemName="_RuntimeConfigBaselineHash" />
+    </GetFileHash>
+    <Error Condition="'%(_RuntimeConfigBaselineHash.ExpectedHash)' != '%(_RuntimeConfigBaselineHash.FileHash)'"
+           Text="Runtime-config framework/self-contained semantics must match ordinary generation." />
+    <Error Condition="Exists('$(_TestDirectory)runtime-config/release/project/out/RuntimeApp.runtimeconfig.dev.json')"
+           Text="Release must not publish an inactive dev config." />
+    <PropertyGroup>
+      <_LateRuntimeConfig>$([System.IO.File]::ReadAllText('$(_TestDirectory)runtime-config/late-default/project/out/RuntimeApp.runtimeconfig.json'))</_LateRuntimeConfig>
+      <_GeneratedRuntimeConfig>$([System.IO.File]::ReadAllText('$(_TestDirectory)runtime-config/short/project/out/RuntimeApp.runtimeconfig.json'))</_GeneratedRuntimeConfig>
+    </PropertyGroup>
+    <Error Condition="!$(_LateRuntimeConfig.Contains('&quot;selectedDuringEvaluation&quot;: true'))"
+           Text="The engine must select a default template present during fresh Build evaluation." />
+    <Error Condition="!$(_GeneratedRuntimeConfig.Contains('generated after construction')) or !$(_GeneratedRuntimeConfig.Contains('&quot;count&quot;: 12')) or $(_GeneratedRuntimeConfig.Contains('$(_TestDirectory)'))"
+           Text="Runtime-config execution must merge generated templates and host overrides without physical paths." />
+    <MakeDir Directories="$(_TestDirectory)runtime-config/write-failure/project/out/RuntimeApp.runtimeconfig.json" />
+    <Delete Files="$(_TestDirectory)runtime-config/deleted-template/project/missing.template.json" />
+    <ItemGroup>
+      <_RuntimeConfigInvocationCandidate Include="$(_TestDirectory)runtime-config/%(_RuntimeConfigNegative.Identity)/project/obj/genbuild/build.ninja.actions/*.json">
+        <Case>%(_RuntimeConfigNegative.Identity)</Case>
+      </_RuntimeConfigInvocationCandidate>
+      <_RuntimeConfigFailureInvocation Include="@(_RuntimeConfigInvocationCandidate)" Condition="$([System.IO.File]::ReadAllText('%(_RuntimeConfigInvocationCandidate.Identity)').Contains('Microsoft.NET.Build.Tasks.WriteRuntimeConfig'))" />
+    </ItemGroup>
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot; --invocation &quot;%(_RuntimeConfigFailureInvocation.Identity)&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_RuntimeConfigFailureExitCode" />
+    </Exec>
+    <Error Condition="'@(_RuntimeConfigFailureInvocation->Count())' != '5' or @(_RuntimeConfigFailureExitCode->AnyHaveMetadataValue('Identity', '0'))"
+           Text="Invalid/missing runtime-config inputs and write failures must fail independent execution." />
+    <Error Condition="Exists('$(_TestDirectory)runtime-config/%(_RuntimeConfigNegative.Identity)/project/out/RuntimeApp.runtimeconfig.dev.json')"
+           Text="Invalid runtime-config actions must not publish a dev file." />
   </Target>
   <Target Name="TestDeps">
     <MakeDir Directories="$(_TestDirectory)deps" />

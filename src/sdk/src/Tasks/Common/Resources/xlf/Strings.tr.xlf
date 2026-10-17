@@ -1058,6 +1058,11 @@ The following are names of parameters or literal values and should not be transl
         <target state="new">NETSDK1250: Dependency generation requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</target>
         <note>{StrBegins="NETSDK1250: "}{Locked="{0}"}</note>
       </trans-unit>
+      <trans-unit id="UndeclaredRuntimeConfigInput">
+        <source>NETSDK1252: Runtime configuration requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</source>
+        <target state="new">NETSDK1252: Runtime configuration requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</target>
+        <note>{StrBegins="NETSDK1252: "}{Locked="{0}"}</note>
+      </trans-unit>
       <trans-unit id="UnexpectedFileType">
         <source>NETSDK1012: Unexpected file type for '{0}'. Type is both '{1}' and '{2}'.</source>
         <target state="translated">NETSDK1012: '{0}' için beklenmeyen dosya türü. Tür hem '{1}' hem de '{2}'.</target>
@@ -1097,6 +1102,11 @@ The following are names of parameters or literal values and should not be transl
         <source>NETSDK1019: {0} is an unsupported framework.</source>
         <target state="translated">NETSDK1019: {0} çerçevesi desteklenmiyor.</target>
         <note>{StrBegins="NETSDK1019: "}</note>
+      </trans-unit>
+      <trans-unit id="UnsupportedRuntimeConfigParameter">
+        <source>NETSDK1251: Declared-I/O runtime configuration does not support '{0}' with value '{1}'. Supply explicit inputs, outputs, and portable probing paths.</source>
+        <target state="new">NETSDK1251: Declared-I/O runtime configuration does not support '{0}' with value '{1}'. Supply explicit inputs, outputs, and portable probing paths.</target>
+        <note>{StrBegins="NETSDK1251: "}{Locked="{0}"}{Locked="{1}"}</note>
       </trans-unit>
       <trans-unit id="UnsupportedRuntimeIdentifier">
         <source>NETSDK1056: Project is targeting runtime '{0}' but did not resolve any runtime-specific packages. This runtime may not be supported by the target framework.</source>

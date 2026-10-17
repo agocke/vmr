@@ -27,6 +27,7 @@ Copyright (c) .NET Foundation. All rights reserved.
   <UsingTask TaskName="GenerateDepsFile" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="WriteDepsFile" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="GenerateRuntimeConfigurationFiles" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="WriteRuntimeConfig" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="GetAssemblyVersion" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="GenerateSatelliteAssemblies" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
@@ -38,6 +39,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     <GenerateRuntimeConfigurationFiles Condition=" '$(GenerateRuntimeConfigurationFiles)' == '' and '$(TargetFrameworkIdentifier)' == '.NETCoreApp' and ('$(HasRuntimeOutput)' == 'true' or '$(EnableComHosting)' == 'true' or '$(EnableDynamicLoading)' == 'true') ">true</GenerateRuntimeConfigurationFiles>
     <AlwaysIncludeCoreFrameworkInRuntimeConfig Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' and $([MSBuild]::VersionLessThan('$(TargetFrameworkVersion)', '6.0'))">false</AlwaysIncludeCoreFrameworkInRuntimeConfig>
     <AlwaysIncludeCoreFrameworkInRuntimeConfig Condition="'$(AlwaysIncludeCoreFrameworkInRuntimeConfig)' == ''">true</AlwaysIncludeCoreFrameworkInRuntimeConfig>
+    <_UserRuntimeConfigWasSpecified Condition="'$(UserRuntimeConfig)' != ''">true</_UserRuntimeConfigWasSpecified>
     <UserRuntimeConfig Condition=" '$(UserRuntimeConfig)' == '' ">$(MSBuildProjectDirectory)/runtimeconfig.template.json</UserRuntimeConfig>
     <GenerateSatelliteAssembliesForCore Condition=" '$(GenerateSatelliteAssembliesForCore)' == '' and '$(MSBuildRuntimeType)' == 'Core' ">true</GenerateSatelliteAssembliesForCore>
     <ComputeNETCoreBuildOutputFiles Condition=" '$(ComputeNETCoreBuildOutputFiles)' == '' and '$(TargetFrameworkIdentifier)' == '.NETCoreApp'">true</ComputeNETCoreBuildOutputFiles>
@@ -68,7 +70,9 @@ Copyright (c) .NET Foundation. All rights reserved.
   <ItemGroup>
     <GenerateRuntimeConfigurationFilesInputs Include="$(ProjectAssetsFile)" />
     <GenerateRuntimeConfigurationFilesInputs Include="$(ProjectAssetsCacheFile)" />
-    <GenerateRuntimeConfigurationFilesInputs Include="$(UserRuntimeConfig)" Condition=" Exists($(UserRuntimeConfig)) " />
+    <_RuntimeConfigTemplateInput Include="$(UserRuntimeConfig)"
+                                 Condition="('$(MSBuildHardenedGraph)' == 'true' and '$(_UserRuntimeConfigWasSpecified)' == 'true') or Exists($(UserRuntimeConfig))" />
+    <GenerateRuntimeConfigurationFilesInputs Include="@(_RuntimeConfigTemplateInput)" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFrameworks)' != '' And '$(TargetFramework)' != ''">
@@ -458,7 +462,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       <_WriteIncludedFrameworks Condition="'$(SelfContained)' == 'true' and '$(_TargetFrameworkVersionWithoutV)' &gt;= '3.1'">true</_WriteIncludedFrameworks>
     </PropertyGroup>
 
-    <GenerateRuntimeConfigurationFiles AssetsFilePath="$(ProjectAssetsFile)"
+    <GenerateRuntimeConfigurationFiles Condition="'$(MSBuildHardenedGraph)' != 'true'"
+                                       AssetsFilePath="$(ProjectAssetsFile)"
                                        TargetFramework="$(TargetFramework)"
                                        TargetFrameworkMoniker="$(TargetFrameworkMoniker)"
                                        RuntimeConfigPath="$(ProjectRuntimeConfigFilePath)"
@@ -478,12 +483,45 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     </GenerateRuntimeConfigurationFiles>
 
-    <ItemGroup>
-      <!-- Do this in an ItemGroup instead of as an output parameter of the GenerateDepsFile task so that it still gets added to the item set
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <_RuntimeConfigSelectedTemplate Remove="@(_RuntimeConfigSelectedTemplate)" />
+      <_RuntimeConfigSelectedTemplate Include="$(UserRuntimeConfig)"
+                                      Condition="'$(_UserRuntimeConfigWasSpecified)' == 'true' or '@(_RuntimeConfigTemplateInput)' != '' or !$([System.String]::Equals('$(UserRuntimeConfig)', '$(MSBuildProjectDirectory)/runtimeconfig.template.json'))" />
+      <_RuntimeConfigOutput Remove="@(_RuntimeConfigOutput)" />
+      <_RuntimeConfigOutput Include="$(ProjectRuntimeConfigFilePath)" />
+      <_RuntimeConfigOutput Include="$(ProjectRuntimeConfigDevFilePath)"
+                            Condition="'$(ProjectRuntimeConfigDevFilePath)' != '' and ('$(GenerateProbingPathsToRuntimeConfigDevFile)' == 'true' or '$(EnableHotReloadInRuntimeConfigDevFile)' == 'true')" />
+    </ItemGroup>
+    <WriteRuntimeConfig Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                        DeclaredInputs="$(ProjectAssetsFile);@(_RuntimeConfigSelectedTemplate)"
+                        DeclaredOutputs="@(_RuntimeConfigOutput)"
+                        AssetsFilePath="$(ProjectAssetsFile)"
+                        TargetFramework="$(TargetFramework)"
+                        TargetFrameworkMoniker="$(TargetFrameworkMoniker)"
+                        RuntimeConfigPath="$(ProjectRuntimeConfigFilePath)"
+                        RuntimeConfigDevPath="$(ProjectRuntimeConfigDevFilePath)"
+                        RuntimeIdentifier="$(RuntimeIdentifier)"
+                        PlatformLibraryName="$(MicrosoftNETPlatformLibrary)"
+                        RuntimeFrameworks="@(RuntimeFramework)"
+                        RollForward="$(RollForward)"
+                        UserRuntimeConfig="@(_RuntimeConfigSelectedTemplate)"
+                        HostConfigurationOptions="@(RuntimeHostConfigurationOption)"
+                        AdditionalProbingPaths="@(AdditionalProbingPath)"
+                        IsSelfContained="$(SelfContained)"
+                        WriteIncludedFrameworks="$(_WriteIncludedFrameworks)"
+                        GenerateProbingPathsToRuntimeConfigDevFile="$(GenerateProbingPathsToRuntimeConfigDevFile)"
+                        GenerateHotReloadRuntimeOptionsToRuntimeConfigDevFile="$(EnableHotReloadInRuntimeConfigDevFile)"
+                        AlwaysIncludeCoreFramework="$(AlwaysIncludeCoreFrameworkInRuntimeConfig)" />
+
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
+      <!-- Do this in an ItemGroup instead of as an output parameter of the GenerateRuntimeConfigurationFiles task so that it still gets added to the item set
           during incremental builds when the task is skipped -->
-      <FileWrites Include="$(ProjectRuntimeConfigFilePath)" Condition="'$(MSBuildHardenedGraph)' == 'true' Or Exists('$(ProjectRuntimeConfigFilePath)')"/>
+      <FileWrites Include="$(ProjectRuntimeConfigFilePath)" Condition="Exists('$(ProjectRuntimeConfigFilePath)')"/>
       <FileWrites Include="$(ProjectRuntimeConfigDevFilePath)"
-                  Condition="'$(ProjectRuntimeConfigDevFilePath)' != '' And ('$(MSBuildHardenedGraph)' == 'true' Or Exists('$(ProjectRuntimeConfigDevFilePath)'))"/>
+                  Condition="'$(ProjectRuntimeConfigDevFilePath)' != '' And Exists('$(ProjectRuntimeConfigDevFilePath)')"/>
+    </ItemGroup>
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <FileWrites Include="@(_RuntimeConfigOutput)" />
     </ItemGroup>
 
   </Target>
