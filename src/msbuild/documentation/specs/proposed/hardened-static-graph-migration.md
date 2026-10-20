@@ -318,8 +318,47 @@ checks independent main/reference/PDB publication after compilation, static
 bookkeeping, metadata and opt-outs, renamed reference destinations, relocation,
 stale replacement and failure. Compare ordinary and hardened copying from
 identical binary inputs, rather than conflating copy behavior with differences
-in compiler path-mapping policy. Copy-local references, modules, documentation,
-satellites and other Copy families require their own adaptations.
+in compiler path-mapping policy. Modules, documentation,
+satellites and other Copy families require their own adaptations. Explicit
+copy-local implementation/symbol publication follows the pattern below.
+
+## Resolve artifact paths, not assembly names
+
+[ResolveReferencePaths](../../../src/Tasks/ResolveReferencePaths.cs) is a
+zero-I/O transformation over the complete supplied reference closure, not an
+annotation on stock RAR. Accept explicit paths relative to captured project
+context or absolute paths, including generated files that do not exist yet.
+Reject simple/display assembly names even with `HintPath`, search tokens,
+wildcards, URIs and invalid paths. Permitted `AssemblySearchPaths` settings are
+not permission to look up names or discover files.
+
+Preserve caller metadata and normalize explicit `ReferenceAssembly` and
+`DebugSymbolsFile` paths. Compilation consumes the reference assembly when
+present; dependency manifests and runtime copies retain the implementation
+identity. Project-reference metadata comes from child target returns, not
+Restore snapshots of generated assemblies. Do not open binaries or inspect
+old outputs to determine these identities.
+
+Use explicit `Private` to override `CopyLocal`; absent either, framework
+references are not copied and other references are. A supplied symbols path
+produces a related artifact and follows the same copy policy. There is no
+sibling-file, transitive dependency, satellite or assembly-version discovery.
+Callers must supply any required closure and related artifacts explicitly.
+
+Copy-local uses the same content-only `CopyFiles` action, with exact output
+paths derived from `OutDir`, `DestinationSubDirectory` and filenames.
+Keep `FileWritesShareable` static, honor the common-output-directory opt-out,
+and reject link/read-only overrides. Duplicate/colliding outputs fail rather
+than silently selecting a winner. Ordinary RAR and Copy keep their existing
+behavior.
+
+The [shipped-target fixture](../../../../../genbuild/tests/ProjectReference/ReferencePaths.proj)
+checks generated compile/runtime paths, metadata, copy opt-outs, stale
+replacement, rejected names/options and independent failure. The SDK
+[executable](../../../../../genbuild/tests/ProjectReference/App/App.csproj)
+and [renamed library](../../../../../genbuild/tests/ProjectReference/Library/Library.csproj)
+exercise real compilation, implementation/PDB producer edges, startup and
+ordinary-equivalent dependency JSON without prebuilding references.
 
 ## Leave caching to the execution system
 

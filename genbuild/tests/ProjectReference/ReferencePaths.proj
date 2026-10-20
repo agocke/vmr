@@ -1,0 +1,51 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <OutDir>out/</OutDir>
+    <ResolveAssemblyReferencesDependsOn>_ValidateHardenedAssemblySearchPaths</ResolveAssemblyReferencesDependsOn>
+    <AssemblySearchPaths>{HintPathFromItem}</AssemblySearchPaths>
+    <UseCommonOutputDirectory Condition="'$(Case)' == 'common-output'">true</UseCommonOutputDirectory>
+    <CreateHardLinksForCopyLocalIfPossible Condition="'$(Case)' == 'hardlink'">true</CreateHardLinksForCopyLocalIfPossible>
+    <CreateSymbolicLinksForCopyLocalIfPossible Condition="'$(Case)' == 'symlink'">true</CreateSymbolicLinksForCopyLocalIfPossible>
+    <OverwriteReadOnlyFiles Condition="'$(Case)' == 'read-only'">true</OverwriteReadOnlyFiles>
+  </PropertyGroup>
+  <ItemGroup>
+    <ReferencePath Include="missing-framework/framework.dll" FrameworkFile="true" />
+    <_ResolvedProjectReferencePaths Include="generated/implementation.dll">
+      <ReferenceAssembly>generated/ref/api.dll</ReferenceAssembly>
+      <DebugSymbolsFile>generated/implementation.pdb</DebugSymbolsFile>
+      <ReferenceSourceTarget>ProjectReference</ReferenceSourceTarget>
+      <OriginalProjectReferenceItemSpec>../DifferentProject/Project.csproj</OriginalProjectReferenceItemSpec>
+      <DestinationSubDirectory>nested/</DestinationSubDirectory>
+      <Aliases>custom</Aliases>
+      <Private Condition="'$(Case)' == 'private-false'">false</Private>
+    </_ResolvedProjectReferencePaths>
+    <Reference Include="Assembly.Name" Condition="'$(Case)' == 'name' or '$(Case)' == 'name-hint'">
+      <HintPath Condition="'$(Case)' == 'name-hint'">generated/implementation.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <Import Project="ReferencePaths.targets" />
+  <Target Name="ResolveReferences" DependsOnTargets="ResolveAssemblyReferences" />
+  <Target Name="Produce">
+    <WriteLinesToFile File="generated/implementation.dll" Lines="implementation" Overwrite="true" DeclaredInputs="" DeclaredOutputs="generated/implementation.dll" />
+    <WriteLinesToFile File="generated/implementation.pdb" Lines="symbols" Overwrite="true" DeclaredInputs="" DeclaredOutputs="generated/implementation.pdb" />
+    <WriteLinesToFile File="generated/ref/api.dll" Lines="compile reference" Overwrite="true" DeclaredInputs="" DeclaredOutputs="generated/ref/api.dll" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="Produce;FindReferenceAssembliesForReferences;_CopyFilesMarkedCopyLocal">
+    <PropertyGroup>
+      <_ExpectedImplementation>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'generated/implementation.dll'))</_ExpectedImplementation>
+      <_ExpectedReference>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'generated/ref/api.dll'))</_ExpectedReference>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ProjectReference Include="@(ReferencePath)" Condition="'%(ReferencePath.ReferenceSourceTarget)' == 'ProjectReference'" />
+      <_CompileProjectReference Include="@(ReferencePathWithRefAssemblies)" Condition="'%(ReferencePathWithRefAssemblies.ReferenceSourceTarget)' == 'ProjectReference'" />
+    </ItemGroup>
+    <Error Condition="'@(_ProjectReference)' != '$(_ExpectedImplementation)' or '@(_ProjectReference->'%(ProjectReferenceOriginalItemSpec)')' != '../DifferentProject/Project.csproj' or '@(_ProjectReference->'%(Aliases)')' != 'custom'"
+           Text="Reference resolution must normalize paths and retain project-reference metadata." />
+    <Error Condition="'@(_CompileProjectReference)' != '$(_ExpectedReference)' or '@(_CompileProjectReference->'%(OriginalPath)')' != '@(_ProjectReference)'"
+           Text="Compilation must use the explicit reference assembly while preserving its implementation identity." />
+    <Error Condition="('$(Case)' == 'private-false' or '$(Case)' == 'common-output') and '@(FileWritesShareable)' != ''"
+           Text="Disabled copy-local publication must not register outputs." />
+    <Error Condition="'$(Case)' != 'private-false' and '$(Case)' != 'common-output' and '@(FileWritesShareable)' != 'out/nested/implementation.dll;out/nested/implementation.pdb'"
+           Text="Copy-local output bookkeeping must be static and honor destination metadata, without copying framework assemblies." />
+  </Target>
+</Project>

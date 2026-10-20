@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net11.0</TargetFramework>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>Renamed.Library</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Greeting.cs" />

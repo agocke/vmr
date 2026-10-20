@@ -184,6 +184,11 @@
         <target state="new">MSB3670: Hardened action graphs do not support a PostBuildEvent with RunPostBuildEvent="{0}" because it requires failure-time execution. Use OnBuildSuccess or leave PostBuildEvent empty.</target>
         <note>{StrBegin="MSB3670: "}{0} is the RunPostBuildEvent value. PostBuildEvent, RunPostBuildEvent, and OnBuildSuccess are not localized.</note>
       </trans-unit>
+      <trans-unit id="CommonSdk.HardenedReferencePath">
+        <source>MSB3671: Hardened reference resolution requires an explicit file path for "{0}", not "{1}". Assembly names, search tokens, and wildcards are not supported.</source>
+        <target state="new">MSB3671: Hardened reference resolution requires an explicit file path for "{0}", not "{1}". Assembly names, search tokens, and wildcards are not supported.</target>
+        <note>{StrBegin="MSB3671: "}{0} is a task parameter or item metadata name. {1} is the unsupported reference value.</note>
+      </trans-unit>
       <trans-unit id="CommonSdk.InvalidConfigurationTextWhenBuildingInsideVisualStudio">
         <source>The BaseOutputPath/OutputPath property is not set for project '{0}'.  Please check to make sure that you have specified a valid combination of Configuration and Platform for this project.  Configuration='{1}'  Platform='{2}'. This error may also appear if some other project is trying to follow a project-to-project reference to this project, this project has been unloaded or is not included in the solution, and the referencing project does not build using the same or an equivalent Configuration or Platform.</source>
         <target state="translated">未設定專案 '{0}' 的BaseOutputPath/OutputPath屬性。 請檢查以確定您已為此專案指定有效的組態與平台組合。 設定='{1}' 平臺='{2}'。如果其他項目嘗試遵循此專案的專案對專案參考、此專案已卸除或未包含在方案中，且參考專案未使用相同或相等的組態或平臺建置，也可能會出現此錯誤。</target>

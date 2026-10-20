@@ -498,7 +498,8 @@ product data. Ordinary Copy/CopyRefAssembly and marker behavior are unchanged.
 Packaged tests cover compiler-to-copy ordering, relocated/ordinary byte
 equivalence from identical inputs, stale replacement, renamed reference
 outputs, static metadata, disabled products/symbols, rejected modes and fatal
-independent publication errors. Other Copy families remain unadmitted.
+independent publication errors. Copy-local implementation/symbol publication
+uses the same task as described below; other Copy families remain unadmitted.
 
 Automatic cleanup is now ordinary-only: hardened Build omits IncrementalClean,
 prior/current clean-ledger collection and `_CleanRecordFileWrites`, including
@@ -547,10 +548,11 @@ Common's preparation sites, not every SDK or custom directory operation.
 Other copy families remain outside the admitted profile. Earlier task-rejection
 chains should not be treated as independently reachable blockers now that this
 bounded graph constructs successfully.
-Broader RAR and compiler option profiles still need audited
+Broader reference and compiler option profiles still need audited
 action-graph adaptation. Broader SDK `Build` profiles remain unsupported; ambient
-discovery has not been allowed as a fallback. Complete execution of the bounded
-project-reference closure below before broadening the `Build` lifecycle.
+discovery has not been allowed as a fallback. The bounded project-reference
+closure below completes this execution milestone; broadening the `Build`
+lifecycle remains separate work.
 
 Use existing SDK overlays for a single-framework C# hello-world profile:
 
@@ -561,14 +563,15 @@ construction -> generated source -> compiler -> final output copy
 Complete restore/fetch before fresh graph generation. Supply exact compiler,
 reference, analyzer, generator, and other tool inputs. Start with a supported
 compile closure, then extend toward `Build` without weakening the contract.
-Add a two-project fixture with static child returns and configured-project
+Use a two-project fixture with static child returns and configured-project
 identity; child artifacts flow through file edges, not nested engine calls.
 
-The bounded single-project SDK Build and startup are implemented. The packaged
-cross-project action fixture independently executes child and root producers,
-and a real SDK executable/library fixture verifies Restore preparation across
-the closure without prebuilding binaries. Full SDK project-reference Build is
-not yet implemented. Project configuration and child framework XML formatting
+The bounded single-project and SDK executable/library Build graphs and startup
+are implemented. The packaged cross-project action fixture independently
+executes child and root producers, and the real SDK fixture verifies Restore
+preparation and construction across the closure without prebuilding binaries.
+Broader SDK project-reference profiles remain unsupported. Project configuration
+and child framework XML formatting
 are now audited zero-I/O construction tasks. Child `GetTargetFrameworks` metadata
 matches ordinary execution, including item-definition defaults and sequential
 metadata assignments on new items; updates of existing items retain their
@@ -596,19 +599,37 @@ capture. In particular, empty `Targets` leaves the parameter unset, preserving
 default-target outputs. Capturing it as an empty array previously constructed
 child actions but silently dropped their returned artifacts.
 
-The first SDK project-reference rejection is now `ResolveAssemblyReference`.
-Adapt generated-reference resolution and copy-local publication without
-introducing ambient discovery, prebuilding references during Restore or
-blanket-admitting RAR. Failed construction publishes no partial executable graph.
-The hardened resolver must accept only explicit file paths. Reject simple or
-display assembly names and search-based resolution as machine-dependent;
-generated project references must arrive as explicit artifact paths, not names
-to resolve against the machine.
+Hardened `ResolveAssemblyReferences` now selects zero-I/O `ResolveReferencePaths`
+over prepared references and explicit project outputs. It normalizes paths
+against captured project context and preserves metadata without opening
+assemblies, checking existence or discovering dependencies. Simple/display
+assembly names fail even with `HintPath`; search tokens, wildcards and invalid
+paths also fail before graph publication. The existing `AssemblySearchPaths`
+guard remains, but its permitted settings do not enable lookup. Stock RAR
+remains ordinary-only, with no ambient discovery or name-resolution fallback.
+Callers must supply the complete reference closure; dependency discovery,
+version unification and related-file/satellite discovery are not implemented.
 
-**Done when:** Ninja builds from clean outputs after MSBuild exits, compilation
-and project-reference outputs match ordinary MSBuild, and failures identify
-the originating project/task. Broaden platform and parallelism coverage as
-those scenarios are admitted.
+Child protocol metadata supplies an absolute compile `ReferenceAssembly` and,
+when symbols are published, `DebugSymbolsFile`. Compilation uses the reference
+assembly while runtime publication consumes the implementation DLL and symbols.
+Copy-local uses explicit content-only `CopyFiles` actions, preserves destination
+subdirectories and static `FileWritesShareable`, honors private/framework/copy
+metadata and the common-output opt-out, and rejects link/read-only modes.
+Ordinary RAR, copying and project metadata remain unchanged.
+
+Packaged smoke constructs the SDK executable/library graph from absent binaries,
+executes all twenty actions after MSBuild exits, and starts the executable with
+its renamed library. Copied DLL/PDB bytes match their producers; the dependency
+manifest matches ordinary Build. Shipped-target cases cover generated paths,
+compile/runtime separation, metadata and opt-outs, stale replacement, invalid
+names/options without partial publication, and fatal independent copy failure.
+The ordinary comparison uses a fresh compiler process, not a potentially
+incompatible shared server.
+
+**Bounded execution milestone complete:** Ninja builds the two-project closure
+from clean outputs after MSBuild exits. Broader dependency, platform and
+parallelism profiles remain separate work.
 
 ## 6. Exercise dotnet/runtime
 

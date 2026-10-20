@@ -184,6 +184,11 @@
         <target state="new">MSB3670: Hardened action graphs do not support a PostBuildEvent with RunPostBuildEvent="{0}" because it requires failure-time execution. Use OnBuildSuccess or leave PostBuildEvent empty.</target>
         <note>{StrBegin="MSB3670: "}{0} is the RunPostBuildEvent value. PostBuildEvent, RunPostBuildEvent, and OnBuildSuccess are not localized.</note>
       </trans-unit>
+      <trans-unit id="CommonSdk.HardenedReferencePath">
+        <source>MSB3671: Hardened reference resolution requires an explicit file path for "{0}", not "{1}". Assembly names, search tokens, and wildcards are not supported.</source>
+        <target state="new">MSB3671: Hardened reference resolution requires an explicit file path for "{0}", not "{1}". Assembly names, search tokens, and wildcards are not supported.</target>
+        <note>{StrBegin="MSB3671: "}{0} is a task parameter or item metadata name. {1} is the unsupported reference value.</note>
+      </trans-unit>
       <trans-unit id="CommonSdk.InvalidConfigurationTextWhenBuildingInsideVisualStudio">
         <source>The BaseOutputPath/OutputPath property is not set for project '{0}'.  Please check to make sure that you have specified a valid combination of Configuration and Platform for this project.  Configuration='{1}'  Platform='{2}'. This error may also appear if some other project is trying to follow a project-to-project reference to this project, this project has been unloaded or is not included in the solution, and the referencing project does not build using the same or an equivalent Configuration or Platform.</source>
         <target state="translated">La proprietà BaseOutputPath/OutputPath non è impostata per il progetto '{0}'.  Assicurarsi di aver specificato una combinazione valida di Configurazione e Piattaforma per questo progetto.  Configuration='{1}' Platform='{2}'. Questo errore può verificarsi anche se un altro progetto sta tentando di seguire un riferimento da progetto a progetto a questo progetto, se il progetto è stato scaricato o non è incluso nella soluzione e il progetto di riferimento non viene compilato usando la stessa configurazione o una piattaforma equivalente.</target>

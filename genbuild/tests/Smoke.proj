@@ -85,7 +85,7 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-closure preparation, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-reference execution and startup, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
   </Target>
   <Target Name="TestProjectReferences">
     <PropertyGroup>
@@ -104,7 +104,7 @@
     <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)App/App.csproj&quot; $(_ProjectReferenceArguments) -bl:&quot;$(_ProjectReferenceRoot)restore.binlog&quot;" />
     <Error Condition="!Exists('$(_ProjectReferenceRoot)App/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)Library/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)App/obj/frameworkreferences/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/frameworkreferences/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/cscinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/cscinputs/Library.csproj.g.props')"
            Text="SDK Restore must prepare framework/compiler inputs throughout the project-reference closure." />
-    <Error Condition="Exists('$(_ProjectReferenceRoot)App/bin') or Exists('$(_ProjectReferenceRoot)Library/bin') or Exists('$(_ProjectReferenceRoot)App/obj/Debug/net11.0/App.dll') or Exists('$(_ProjectReferenceRoot)Library/obj/Debug/net11.0/Library.dll')"
+    <Error Condition="Exists('$(_ProjectReferenceRoot)App/bin') or Exists('$(_ProjectReferenceRoot)Library/bin') or Exists('$(_ProjectReferenceRoot)App/obj/Debug/net11.0/App.dll') or Exists('$(_ProjectReferenceRoot)Library/obj/Debug/net11.0/Renamed.Library.dll')"
            Text="Project-reference preparation must not prebuild referenced assemblies." />
     <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)Metadata.proj&quot; -t:Build $(_ProjectReferenceArguments) -p:MetadataFile=ordinary-metadata.txt -bl:&quot;$(_ProjectReferenceRoot)ordinary-metadata.binlog&quot;" />
     <Exec Command="$(_App) build &quot;$(_ProjectReferenceRoot)Metadata.proj&quot; $(_ProjectReferenceArguments) -p:MetadataFile=metadata.txt -p:MSBuildEmitActionGraph=&quot;$(_ProjectReferenceRoot)metadata.ninja&quot; -bl:&quot;$(_ProjectReferenceRoot)metadata.binlog&quot;" />
@@ -119,6 +119,7 @@
            Text="SDK target-framework metadata returned to parent construction must match ordinary execution." />
     <CallTarget Targets="TestFrameworkSelection" />
     <CallTarget Targets="TestNativeManifest" />
+    <CallTarget Targets="TestReferencePaths" />
     <Exec Command="$(_App) build &quot;$(_ProjectReferenceRoot)Actions.proj&quot; -p:MSBuildEmitActionGraph=&quot;$(_ProjectReferenceGraph)&quot; -bl:&quot;$(_ProjectReferenceRoot)build.binlog&quot;" />
     <Error Condition="Exists('$(_ProjectReferenceRoot)out/application.txt') or Exists('$(_ProjectReferenceRoot)Library/out/library.txt') or Exists('$(_ProjectReferenceRoot)Library/obj/genbuild/build.ninja')"
            Text="Child requests must contribute actions to the root graph without executing or publishing their own graph." />
@@ -139,6 +140,92 @@
     </PropertyGroup>
     <Error Condition="'$(_ProjectReferenceBytes)' != '$(_ProjectReferenceOrdinaryBytes)'"
            Text="Independent project-reference outputs must match ordinary execution." />
+    <Exec Command="$(_App) build &quot;$(_ProjectReferenceRoot)App/App.csproj&quot; $(_ProjectReferenceArguments) -p:MSBuildEmitActionGraph=&quot;$(_ProjectReferenceRoot)sdk.ninja&quot; -bl:&quot;$(_ProjectReferenceRoot)sdk.binlog&quot;" />
+    <Error Condition="Exists('$(_ProjectReferenceRoot)App/bin/Debug/net11.0/App.dll') or Exists('$(_ProjectReferenceRoot)Library/bin/Debug/net11.0/Renamed.Library.dll') or Exists('$(_ProjectReferenceRoot)Library/obj/Debug/net11.0/Renamed.Library.dll')"
+           Text="SDK project-reference construction must not prebuild either project." />
+    <Exec WorkingDirectory="$(_ProjectReferenceRoot)" Command="ninja -f sdk.ninja" />
+    <Error Condition="!Exists('$(_ProjectReferenceRoot)App/bin/Debug/net11.0/Renamed.Library.dll') or !Exists('$(_ProjectReferenceRoot)App/bin/Debug/net11.0/Renamed.Library.pdb')"
+           Text="Copy-local publication must include the explicitly declared implementation assembly and symbols." />
+    <GetFileHash Files="$(_ProjectReferenceRoot)Library/bin/Debug/net11.0/Renamed.Library.dll;$(_ProjectReferenceRoot)App/bin/Debug/net11.0/Renamed.Library.dll">
+      <Output TaskParameter="Items" ItemName="_SdkProjectReferenceAssemblyHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_ProjectReferenceRoot)Library/bin/Debug/net11.0/Renamed.Library.pdb;$(_ProjectReferenceRoot)App/bin/Debug/net11.0/Renamed.Library.pdb">
+      <Output TaskParameter="Items" ItemName="_SdkProjectReferenceSymbolsHash" />
+    </GetFileHash>
+    <Error Condition="@(_SdkProjectReferenceAssemblyHash->'%(FileHash)'->Distinct()->Count()) != '1' or @(_SdkProjectReferenceSymbolsHash->'%(FileHash)'->Distinct()->Count()) != '1'"
+           Text="Copy-local outputs must match the producer artifacts byte for byte." />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_ProjectReferenceRoot)App/bin/Debug/net11.0/App.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_SdkProjectReferenceProgramOutput" />
+    </Exec>
+    <Error Condition="'@(_SdkProjectReferenceProgramOutput)' != 'Hello from a project reference.'"
+           Text="The independently built SDK executable must load and call its renamed project-reference implementation." />
+    <Copy SourceFiles="$(_ProjectReferenceRoot)App/bin/Debug/net11.0/App.deps.json" DestinationFiles="$(_ProjectReferenceRoot)independent.deps.json" />
+    <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)App/App.csproj&quot; -t:Build $(_ProjectReferenceArguments) -p:UseSharedCompilation=false -bl:&quot;$(_ProjectReferenceRoot)sdk-ordinary.binlog&quot;" />
+    <GetFileHash Files="$(_ProjectReferenceRoot)independent.deps.json;$(_ProjectReferenceRoot)App/bin/Debug/net11.0/App.deps.json">
+      <Output TaskParameter="Items" ItemName="_SdkProjectReferenceDepsHash" />
+    </GetFileHash>
+    <Error Condition="@(_SdkProjectReferenceDepsHash->'%(FileHash)'->Distinct()->Count()) != '1'"
+           Text="Project-reference dependency manifests must match ordinary Build, including renamed outputs and versions." />
+  </Target>
+  <Target Name="TestReferencePaths">
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
+             Query="/Project/Target[@Name='ResolveAssemblyReferences' or @Name='_ValidateHardenedAssemblySearchPaths' or @Name='FindReferenceAssembliesForReferences' or @Name='_CopyFilesMarkedCopyLocal']">
+      <Output TaskParameter="Result" ItemName="_ReferencePathTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_ReferencePathTarget->Count())' != '4'" Text="The packaged Common targets must contain reference resolution and copy-local publication." />
+    <ItemGroup>
+      <_ReferencePathCase Include="normal;stale;write-failure;private-false;common-output" />
+      <_ReferencePathNegative Include="name;name-hint" Code="MSB3671" />
+      <_ReferencePathNegative Include="hardlink;symlink;read-only" Code="MSB3098" />
+      <_ReferencePathCase Include="@(_ReferencePathNegative)" />
+      <_ReferencePathRoot Include="@(_ReferencePathCase->'$(_TestDirectory)reference-paths/%(Identity)/')" />
+      <_ReferencePathExecution Include="normal;stale;private-false;common-output" />
+    </ItemGroup>
+    <MakeDir Directories="@(_ReferencePathRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/ReferencePaths.proj" DestinationFolder="%(_ReferencePathRoot.Identity)" />
+    <WriteLinesToFile File="%(_ReferencePathRoot.Identity)ReferencePaths.targets" Lines="&lt;Project&gt;;@(_ReferencePathTarget);&lt;/Project&gt;" Overwrite="true" />
+    <MakeDir Directories="$(_TestDirectory)reference-paths/stale/out/nested" />
+    <WriteLinesToFile File="$(_TestDirectory)reference-paths/stale/out/nested/implementation.dll" Lines="old assembly" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)reference-paths/stale/out/nested/implementation.pdb" Lines="old symbols" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)reference-paths/%(_ReferencePathCase.Identity)/ReferencePaths.proj&quot; -p:Case=%(_ReferencePathCase.Identity)"
+          Condition="'%(_ReferencePathCase.Code)' == ''" />
+    <Error Condition="Exists('$(_TestDirectory)reference-paths/normal/generated') or Exists('$(_TestDirectory)reference-paths/normal/out')"
+           Text="Explicit reference resolution and copy-local construction must not read generated assemblies or publish files." />
+    <ReadLinesFromFile File="$(_TestDirectory)reference-paths/stale/out/nested/implementation.dll">
+      <Output TaskParameter="Lines" PropertyName="_ReferencePathStaleContents" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_ReferencePathStaleContents)' != 'old assembly'" Text="Copy-local construction must leave old output untouched." />
+    <Exec WorkingDirectory="$(_TestDirectory)reference-paths/%(_ReferencePathExecution.Identity)" Command="ninja -f obj/genbuild/build.ninja" />
+    <GetFileHash Files="$(_TestDirectory)reference-paths/normal/generated/implementation.dll;$(_TestDirectory)reference-paths/normal/out/nested/implementation.dll;$(_TestDirectory)reference-paths/stale/out/nested/implementation.dll">
+      <Output TaskParameter="Items" ItemName="_ReferencePathAssemblyHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_TestDirectory)reference-paths/normal/generated/implementation.pdb;$(_TestDirectory)reference-paths/normal/out/nested/implementation.pdb;$(_TestDirectory)reference-paths/stale/out/nested/implementation.pdb">
+      <Output TaskParameter="Items" ItemName="_ReferencePathSymbolsHash" />
+    </GetFileHash>
+    <Error Condition="@(_ReferencePathAssemblyHash->'%(FileHash)'->Distinct()->Count()) != '1' or @(_ReferencePathSymbolsHash->'%(FileHash)'->Distinct()->Count()) != '1'"
+           Text="Copy-local must use the explicit implementation and symbols, honor destination metadata and replace stale bytes." />
+    <Error Condition="Exists('$(_TestDirectory)reference-paths/private-false/out') or Exists('$(_TestDirectory)reference-paths/common-output/out') or Exists('$(_TestDirectory)reference-paths/normal/out/nested/api.dll')"
+           Text="Private=false and common-output opt-outs must be honored; compile reference assemblies are not runtime copies." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)reference-paths/%(_ReferencePathNegative.Identity)/ReferencePaths.proj&quot; -p:Case=%(_ReferencePathNegative.Identity) -flp:&quot;LogFile=$(_TestDirectory)reference-paths/%(_ReferencePathNegative.Identity)/rejected.log;Verbosity=quiet&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_ReferencePathRejectedExitCode" />
+    </Exec>
+    <Error Condition="@(_ReferencePathRejectedExitCode->AnyHaveMetadataValue('Identity', '0')) or !$([System.IO.File]::ReadAllText('$(_TestDirectory)reference-paths/%(_ReferencePathNegative.Identity)/rejected.log').Contains('%(_ReferencePathNegative.Code)')) or Exists('$(_TestDirectory)reference-paths/%(_ReferencePathNegative.Identity)/obj/genbuild/build.ninja') or Exists('$(_TestDirectory)reference-paths/%(_ReferencePathNegative.Identity)/obj/genbuild/build.ninja.actions') or Exists('$(_TestDirectory)reference-paths/%(_ReferencePathNegative.Identity)/generated')"
+           Text="Non-path references, even with HintPath, and unsupported copy-local modes must fail explicitly without partial graphs or execution." />
+    <Exec WorkingDirectory="$(_TestDirectory)reference-paths/write-failure"
+          Command="ninja -f obj/genbuild/build.ninja &quot;$([System.IO.Path]::GetFullPath('$(_TestDirectory)reference-paths/write-failure/generated/implementation.dll'))&quot; &quot;$([System.IO.Path]::GetFullPath('$(_TestDirectory)reference-paths/write-failure/generated/implementation.pdb'))&quot;" />
+    <MakeDir Directories="$(_TestDirectory)reference-paths/write-failure/out/nested/implementation.dll" />
+    <ItemGroup>
+      <_ReferencePathInvocation Include="$(_TestDirectory)reference-paths/write-failure/obj/genbuild/build.ninja.actions/*.json" />
+      <_ReferencePathCopyInvocation Include="@(_ReferencePathInvocation)"
+                                   Condition="$([System.IO.File]::ReadAllText('%(_ReferencePathInvocation.Identity)').Contains('Microsoft.Build.Tasks.CopyFiles'))" />
+    </ItemGroup>
+    <Error Condition="'@(_ReferencePathCopyInvocation->Count())' != '1'" Text="Copy-local publication must be an independent declared action." />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot; --invocation &quot;@(_ReferencePathCopyInvocation)&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ReferencePathCopyFailureExitCode" />
+    </Exec>
+    <Error Condition="'$(_ReferencePathCopyFailureExitCode)' == '0'" Text="Independent copy-local publication failure must be fatal." />
   </Target>
   <Target Name="TestFrameworkSelection">
     <PropertyGroup>

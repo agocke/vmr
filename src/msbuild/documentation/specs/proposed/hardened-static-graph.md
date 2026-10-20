@@ -115,7 +115,38 @@ File-I/O actions cannot return MSBuild values in the prototype. A generator's
 output path, for example, must be established through static items or
 properties and passed to both generator and compiler. Construction knows the
 path; execution supplies the contents. Only zero-I/O invocations may use
-`<Output>` mappings.
+ordinary task `<Output>` mappings. Engine construction intrinsics return
+construction-time target values instead, as described below.
+
+### Intrinsic project requests
+
+`MSBuild` is represented as a task in project XML, but the bound engine
+intrinsic is special-cased as a graph-construction operation, like `CallTarget`.
+It does not require an ordinary task's DeclaredIO annotation and is not emitted
+as a file-I/O action. This exception does not apply to custom tasks merely named
+`MSBuild`.
+
+With statically known projects and request parameters, the intrinsic constructs
+the referenced configured-project subgraphs as part of the same root graph.
+Each child's evaluation and target construction must obey the same hardened
+restrictions as the parent: engine-managed discovery stays constrained,
+construction values must be available, ordinary tasks need audited DeclaredIO,
+only zero-I/O task invocations execute, and file-I/O actions cannot use
+`<Output>` mappings. Recursing through `MSBuild` does not permit an unrestricted
+nested build or a fallback to ordinary task execution. A violation in any child
+fails the root construction without publishing a partial graph.
+
+The intrinsic's `<Output TaskParameter="TargetOutputs" ...>` mappings return
+the child's construction-time `Returns` values, including supported legacy
+`Outputs` returns. These may describe paths whose producer actions have been
+recorded but not executed; they cannot depend on file-action results or reads
+of not-yet-produced files. Normal parameter binding, metadata propagation and
+configured-project identity are preserved.
+
+An empty `Projects` list is a construction-time no-op: `TargetOutputs` is
+empty, item outputs append nothing, property outputs become empty, and
+`MSBuildLastTaskResult` becomes `true`. Unavailable project lists or request
+parameters remain unsupported.
 
 ### Output parent directories
 
@@ -246,18 +277,27 @@ Visual Studio directory-layout discovery is disabled in this profile.
 Ordinary builds retain their previous behavior.
 
 The Common reference-resolution target validates the effective
-`AssemblySearchPaths` before its resolution dependencies. Supported entries
+`AssemblySearchPaths` before its resolution dependencies. Permitted entries
 are `{CandidateAssemblyFiles}`, `{HintPathFromItem}`,
 `{TargetFrameworkDirectory}`, and explicitly configured fully qualified
 directories. Unsupported tokens or relative search directories fail with
 MSB3669 rather than being silently removed from an explicit override.
-Reference inputs should come from workspace files, pinned/restored reference
-packs, packages, or explicitly selected roots—not untracked installation
-fallbacks. Capturing an installation path alone does not pin its contents.
+This guard does not enable searches: hardened `ResolveAssemblyReferences`
+selects zero-I/O `ResolveReferencePaths`, not stock RAR. Every reference identity
+must already be a file path, relative to the captured project directory or
+absolute. Simple/display assembly names, search tokens, wildcards and URIs fail;
+`HintPath` does not make a non-path identity acceptable.
 
-This is a search-policy restriction, not complete hermetic reference
-resolution: RAR still needs an audited DeclaredIO implementation and a
-complete file/tool input closure before it can participate in an action graph.
+Reference inputs must supply the complete closure from workspace artifacts,
+pinned/restored reference packs and packages, including explicit generated
+project outputs. Capturing an installation path alone does not pin its contents.
+Resolution normalizes paths and preserves supplied metadata without opening
+assemblies, checking existence, discovering dependencies or unifying versions.
+Generated references must remain execution-time artifacts, not Restore snapshots.
+Explicit `ReferenceAssembly` metadata supplies the compile contract; implementation
+identities and optional `DebugSymbolsFile` metadata supply copy-local artifacts.
+Framework/copy-local/private metadata controls publication without inspecting
+assemblies. Related-file and satellite discovery remain outside this profile.
 
 ## Graph construction
 
@@ -287,13 +327,9 @@ construction tasks a second time. No additional target interpreter is added.
 - Expand supported `MSBuild` and `CallTarget` intrinsics into construction
   state and dependency edges, not host commands that invoke MSBuild.
   Configured projects retain their global-property and inner-build identity.
-  An `MSBuild` invocation with statically known parameters and a provably
-  empty `Projects` list is a construction-time no-op. Normal parameter binding
-  and output gathering still apply: `TargetOutputs` is empty, item outputs
-  append nothing, property outputs become empty, and `MSBuildLastTaskResult`
-  becomes `true`. No action or nested build is emitted. Nonempty or unavailable
-  project lists remain unsupported. Only the bound engine intrinsic gets this
-  exemption; custom tasks named `MSBuild` still require DeclaredIO auditing.
+  [Intrinsic project requests](#intrinsic-project-requests) construct child
+  subgraphs under the same restrictions and return construction-time values,
+  not execution results.
 - Preserve required file and control dependencies, initially conservatively.
   Associate generated inputs with their producers, reject conflicting output
   ownership and cycles, and do not mistake stale generated files for sources.
@@ -436,10 +472,10 @@ task-specific sandbox implementations.
 
 ## Prototype boundary and later work
 
-The implemented emitter initially supports Unix shell commands, one project
-per invocation, conservative action ordering, and dependencies on earlier
-producers. It rejects forward-produced inputs, tasks without DeclaredIO,
-cross-project `MSBuild` tasks, hosting/ContinueOnError overrides, and `OnError`.
+The implemented emitter supports Unix shell commands, one root project with
+supported configured-project requests, conservative action ordering, and
+dependencies on earlier producers. It rejects forward-produced inputs,
+ordinary tasks without DeclaredIO, and unsupported hosting/error-control modes.
 `DependsOnTargets`, before/after targets, batching, and supported `CallTarget`
 construction use the existing hardened walk. Participating zero-I/O tasks
 must use explicit DeclaredIO with empty declarations. The separate Pure
@@ -466,7 +502,7 @@ every declared output must exist on success. Inputs are existing external
 regular files or required outputs of predecessor actions; generated inputs
 need not exist during construction.
 
-Reject Unaudited tasks, unresolved parameters, task factories, specialized
+Reject unaudited ordinary tasks, unresolved parameters, task factories, specialized
 runtime/architecture hosting, `OnError`, non-default `ContinueOnError`,
 execution-time status control, directory outputs, optional input absences,
 optional/deleted outputs, in-place updates, and outputless file-I/O actions.

@@ -70,7 +70,9 @@ with all four packaged providers, SDK Restore, standalone C# compilation,
 dependency/runtime-configuration publication and final assembly/reference/PDB
 copying. They also check cleanup-free SDK Build graph construction and independent
 execution through final artifact publication and program startup on the external
-runtime.
+runtime. A clean SDK executable/library closure also constructs and executes
+without prebuilding references, including renamed library outputs, copy-local
+symbols and ordinary-equivalent dependency manifests.
 Compiler actions run analyzers and the Regex generator, consume generated
 sources, and produce byte-identical assemblies, reference assemblies and
 portable PDBs across relocated checkouts.
@@ -88,9 +90,10 @@ sources, using NuGet's existing .NET 10 target inside the .NET 11 app. Its targe
 come from the same source tree; no pinned NuGet task package or nested SDK build
 is used. Compiler and other external tool dependencies remain pinned.
 
-The bounded single-framework SDK hello-world profile emits a full Build graph,
-executes independently, and starts on the external runtime. Remaining copy
-families and broader RAR profiles still need adaptations.
+The bounded single-framework SDK C# profile emits full Build graphs for
+hello-world and an executable/library closure, executes independently, and
+starts on the external runtime. Other copy families and broader reference
+profiles still need adaptations.
 SDK duplicate-item and executable-reference validation run as zero-I/O
 construction tasks. `GetAssemblyVersion` also runs during construction: it
 parses the supplied version string without inspecting an assembly or discovering
@@ -167,8 +170,10 @@ does not propagate source timestamps/attributes, compare old destinations,
 use MVID/size/timestamp skips, retry, or create links. Explicit link/read-only
 override modes are rejected. The copy-up-to-date marker and its bookkeeping
 are omitted in hardened mode; ordinary copying and marker behavior are unchanged.
-Other copy families, such as copy-local references, documentation and satellites,
-remain unsupported.
+Copy-local implementation assemblies and explicitly supplied symbols use the
+same content-only task, honoring `Private`, `CopyLocal`, destination-subdirectory
+metadata and common-output-directory opt-outs. Documentation, discovered
+satellites and other copy families remain unsupported.
 Automatic `IncrementalClean`, prior/current clean-ledger collection and
 `_CleanRecordFileWrites` are omitted in hardened mode. Restore no longer
 captures a clean ledger, and Build does not import old clean snapshots.
@@ -196,7 +201,12 @@ declared file output; unrelated empty-directory effects remain unsupported.
 Intrinsic `MSBuild` calls with static project lists and parameters use the
 ordinary engine's configured-project requests during construction. Children
 contribute to one root graph; they never become nested-build actions or publish
-partial bundles. Static target returns preserve ordinary metadata, global
+partial bundles. The bound engine task is specially handled as a construction
+intrinsic, not admitted as an ordinary non-pure task. Every child's evaluation
+and target construction obey the same hardened restrictions as the parent.
+Its `TargetOutputs` mappings return construction-time values, not results of
+file actions; see [intrinsic project requests](../src/msbuild/documentation/specs/proposed/hardened-static-graph.md#intrinsic-project-requests).
+Static target returns preserve ordinary metadata, global
 property propagation, `Returns`/legacy `Outputs`, and duplicate-output rules.
 Repeated and diamond references reuse completed configured targets; skipped
 targets can run on later requests. Each action retains its own project directory.
@@ -226,13 +236,25 @@ when no manifest generation is requested, even if stale output exists.
 Ordinary existence-based queries remain unchanged; actual manifest-generation
 requests still fail at unsupported discovery rather than being ignored.
 
-This is not yet complete SDK project-reference Build support: the executable/library
-fixture first stops at `ResolveAssemblyReference`. Generated-assembly resolution
-and copy-local publication still need adaptation; RAR is not blanket-admitted.
-The packaged smoke covers SDK closure preparation,
-ordinary-equivalent child framework metadata and framework selection, and
-independent execution of a non-SDK cross-project action graph. It also checks
-empty/stale native-manifest queries and rejection of requested manifest discovery.
+Hardened `ResolveAssemblyReferences` selects zero-I/O `ResolveReferencePaths`,
+not stock RAR. Inputs must be explicit file paths, relative to the captured
+project directory or absolute, even when a `HintPath` is available. Simple/display
+assembly names, search tokens and wildcards fail with MSB3671. The task normalizes
+paths and preserves metadata without opening assemblies, checking existence,
+discovering dependencies or unifying versions. Callers must supply the complete
+reference closure; generated outputs remain producer edges, not Restore snapshots.
+Explicit `ReferenceAssembly` metadata selects the compile contract while the
+implementation path and optional `DebugSymbolsFile` select runtime copies.
+Permitted `AssemblySearchPaths` settings do not enable lookup in this profile.
+Ordinary builds retain stock RAR and Copy.
+
+The packaged smoke executes a clean SDK executable/library graph after MSBuild
+exits, starts the executable with its renamed library, and compares dependency
+manifest bytes with ordinary Build. It also covers closure preparation, child
+framework metadata/selection, a non-SDK cross-project graph, copy-local metadata
+and opt-outs, stale replacement, rejected names/options and independent failures.
+Empty/stale native-manifest queries and rejection of requested manifest discovery
+remain covered.
 Workload resolution is disabled in this prototype.
 
 For adapting targets and tasks, see the

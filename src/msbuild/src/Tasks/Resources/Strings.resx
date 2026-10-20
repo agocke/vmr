@@ -3217,7 +3217,11 @@
     <value>MSB3670: Hardened action graphs do not support a PostBuildEvent with RunPostBuildEvent="{0}" because it requires failure-time execution. Use OnBuildSuccess or leave PostBuildEvent empty.</value>
     <comment>{StrBegin="MSB3670: "}{0} is the RunPostBuildEvent value. PostBuildEvent, RunPostBuildEvent, and OnBuildSuccess are not localized.</comment>
   </data>
-  <!-- Next available general task message code: MSB3671. -->
+  <data name="CommonSdk.HardenedReferencePath">
+    <value>MSB3671: Hardened reference resolution requires an explicit file path for "{0}", not "{1}". Assembly names, search tokens, and wildcards are not supported.</value>
+    <comment>{StrBegin="MSB3671: "}{0} is a task parameter or item metadata name. {1} is the unsupported reference value.</comment>
+  </data>
+  <!-- Next available general task message code: MSB3672. -->
 
   <!--
         The tasks message bucket is: MSB3001 - MSB3999
