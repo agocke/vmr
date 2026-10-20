@@ -386,13 +386,8 @@ Copyright (C) Microsoft Corporation. All rights reserved.
   </PropertyGroup>
 
   <PropertyGroup>
-    <_HardenedCleanFileWritesImport>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(CleanFile).hardened.props'))</_HardenedCleanFileWritesImport>
     <_HardenedUnmanagedRegistrationCacheImport>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', 'hardened', '$(Configuration)', '$(Platform)', '$(TargetFramework)', '$(MSBuildProjectFile).UnmanagedRegistration.cache.props'))</_HardenedUnmanagedRegistrationCacheImport>
   </PropertyGroup>
-
-  <Import
-      Project="$(_HardenedCleanFileWritesImport)"
-      Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
   <Import
       Project="$(_HardenedUnmanagedRegistrationCacheImport)"
@@ -412,7 +407,8 @@ Copyright (C) Microsoft Corporation. All rights reserved.
   <ItemGroup>
     <IntermediateAssembly Include="$(IntermediateOutputPath)$(TargetName)$(TargetExt)"/>
     <FinalDocFile Include="@(DocFileItem->'$(OutDir)%(Filename)%(Extension)')"/>
-    <CopyUpToDateMarker Include="$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildCopyMarkerName)'))" />
+    <CopyUpToDateMarker Include="$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildCopyMarkerName)'))"
+                        Condition="'$(MSBuildHardenedGraph)' != 'true'" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(ProduceReferenceAssembly)' == 'true'">
@@ -2326,7 +2322,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         <TargetFrameworkIdentifier>$(TargetFrameworkIdentifier)</TargetFrameworkIdentifier>
         <TargetFrameworkVersion>$(TargetFrameworkVersion.TrimStart('vV'))</TargetFrameworkVersion>
         <ReferenceAssembly Condition="'$(ProduceReferenceAssembly)' == 'true'">$(TargetRefPath)</ReferenceAssembly>
-        <CopyUpToDateMarker>@(CopyUpToDateMarker)</CopyUpToDateMarker>
+        <CopyUpToDateMarker Condition="'$(MSBuildHardenedGraph)' != 'true'">@(CopyUpToDateMarker)</CopyUpToDateMarker>
       </TargetPathWithTargetPlatformMoniker>
     </ItemGroup>
   </Target>
@@ -5014,8 +5010,20 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     </PropertyGroup>
 
     <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true'">
+      <MainAssembly Include="@(IntermediateAssembly->'$(OutDir)%(Filename)%(Extension)')" />
       <FileWrites Include="@(IntermediateAssembly->'$(OutDir)%(Filename)%(Extension)')" />
     </ItemGroup>
+
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and (('$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true') or ('$(_DebugSymbolsProduced)' == 'true' and '$(SkipCopyingSymbolsToOutputDirectory)' != 'true' and '$(CopyOutputSymbolsToOutputDirectory)' == 'true'))">
+      <_UnsupportedBuildCopyOption Include="CreateHardLinksForCopyFilesToOutputDirectoryIfPossible" Condition="'$(CreateHardLinksForCopyFilesToOutputDirectoryIfPossible)' == 'true'" />
+      <_UnsupportedBuildCopyOption Include="CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible" Condition="'$(CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible)' == 'true'" />
+      <_UnsupportedBuildCopyOption Include="ErrorIfLinkFailsForCopyFilesToOutputDirectory" Condition="'$(ErrorIfLinkFailsForCopyFilesToOutputDirectory)' == 'true'" />
+      <_UnsupportedBuildCopyOption Include="OverwriteReadOnlyFiles" Condition="'$(OverwriteReadOnlyFiles)' == 'true'" />
+    </ItemGroup>
+    <MSBuildInternalMessage Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(_UnsupportedBuildCopyOption)' != ''"
+                            ResourceName="General.InvalidValue"
+                            FormatArguments="%(_UnsupportedBuildCopyOption.Identity);CopyFiles"
+                            Severity="Error" DeclaredInputs="" DeclaredOutputs="" />
 
     <!-- Copy the build product (.dll or .exe). -->
     <Copy
@@ -5028,7 +5036,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         UseHardlinksIfPossible="$(CreateHardLinksForCopyFilesToOutputDirectoryIfPossible)"
         UseSymboliclinksIfPossible="$(CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible)"
         ErrorIfLinkFails="$(ErrorIfLinkFailsForCopyFilesToOutputDirectory)"
-        Condition="'$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true'"
+        Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true'"
             >
 
       <Output TaskParameter="DestinationFiles" ItemName="MainAssembly"/>
@@ -5037,10 +5045,17 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
     </Copy>
 
+    <CopyFiles SourceFiles="@(IntermediateAssembly)"
+               DestinationFiles="@(IntermediateAssembly->'$(OutDir)%(Filename)%(Extension)')"
+               DeclaredInputs="@(IntermediateAssembly)"
+               DeclaredOutputs="@(IntermediateAssembly->'$(OutDir)%(Filename)%(Extension)')"
+               Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true'" />
+
     <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'
       and '$(ProduceReferenceAssembly)' == 'true'
       and '$(CopyBuildOutputToOutputDirectory)' == 'true'
       and '$(SkipCopyBuildProduct)' != 'true'">
+      <ReferenceAssembly Include="$(TargetRefPath)" />
       <FileWrites Include="$(TargetRefPath)" />
     </ItemGroup>
 
@@ -5048,13 +5063,19 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     <CopyRefAssembly
         SourcePath="@(IntermediateRefAssembly)"
         DestinationPath="$(TargetRefPath)"
-        Condition="'$(ProduceReferenceAssembly)' == 'true' and '$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true'"
+        Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(ProduceReferenceAssembly)' == 'true' and '$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true'"
             >
 
       <Output TaskParameter="DestinationPath" ItemName="ReferenceAssembly"/>
       <Output TaskParameter="DestinationPath" ItemName="FileWrites" Condition="'$(MSBuildHardenedGraph)' != 'true'"/>
 
     </CopyRefAssembly>
+
+    <CopyFiles SourceFiles="@(IntermediateRefAssembly)"
+               DestinationFiles="$(TargetRefPath)"
+               DeclaredInputs="@(IntermediateRefAssembly)"
+               DeclaredOutputs="$(TargetRefPath)"
+               Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ProduceReferenceAssembly)' == 'true' and '$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true'" />
 
     <Message Importance="High" Text="$(MSBuildProjectName) -&gt; @(MainAssembly->'%(FullPath)')" Condition="'$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)'!='true'" DeclaredInputs="" DeclaredOutputs="" />
 
@@ -5063,23 +5084,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       AlwaysCreate="true"
       Condition="'$(MSBuildHardenedGraph)' != 'true' and (('$(ProduceReferenceAssembly)' == 'true' and '$(_WroteMainAssemblyToOutputDirectory)' == 'true') or '$(_CopyLocalReferencesCopiedInThisBuild)' == 'true')" />
 
-    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
-      <_CopyUpToDateMarkerInput
-          Include="@(IntermediateAssembly->'$(OutDir)%(Filename)%(Extension)')"
-          Condition="'$(ProduceReferenceAssembly)' == 'true' and '$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true'" />
-      <_CopyUpToDateMarkerInput
-          Include="@(ReferenceCopyLocalPaths->'$(OutDir)%(DestinationSubDirectory)%(Filename)%(Extension)')"
-          Condition="'$(UseCommonOutputDirectory)' != 'true'" />
-    </ItemGroup>
-
-    <WriteFileFingerprint
-        Files="@(_CopyUpToDateMarkerInput)"
-        File="@(CopyUpToDateMarker)"
-        DeclaredInputs="@(_CopyUpToDateMarkerInput);@(CopyUpToDateMarker)"
-        DeclaredOutputs="@(CopyUpToDateMarker)"
-        Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(_CopyUpToDateMarkerInput)' != ''" />
-
-    <ItemGroup Condition="'$(ProduceReferenceAssembly)' == 'true'">
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(ProduceReferenceAssembly)' == 'true'">
       <FileWrites Include="@(CopyUpToDateMarker)" />
     </ItemGroup>
 
@@ -5132,11 +5137,17 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         UseHardlinksIfPossible="$(CreateHardLinksForCopyFilesToOutputDirectoryIfPossible)"
         UseSymboliclinksIfPossible="$(CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible)"
         ErrorIfLinkFails="$(ErrorIfLinkFailsForCopyFilesToOutputDirectory)"
-        Condition="'$(_DebugSymbolsProduced)'=='true' and '$(SkipCopyingSymbolsToOutputDirectory)' != 'true' and '$(CopyOutputSymbolsToOutputDirectory)'=='true'">
+        Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(_DebugSymbolsProduced)'=='true' and '$(SkipCopyingSymbolsToOutputDirectory)' != 'true' and '$(CopyOutputSymbolsToOutputDirectory)'=='true'">
 
       <Output TaskParameter="DestinationFiles" ItemName="FileWrites" Condition="'$(MSBuildHardenedGraph)' != 'true'"/>
 
     </Copy>
+
+    <CopyFiles SourceFiles="@(_DebugSymbolsIntermediatePath)"
+               DestinationFiles="@(_DebugSymbolsOutputPath)"
+               DeclaredInputs="@(_DebugSymbolsIntermediatePath)"
+               DeclaredOutputs="@(_DebugSymbolsOutputPath)"
+               Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(_DebugSymbolsProduced)' == 'true' and '$(SkipCopyingSymbolsToOutputDirectory)' != 'true' and '$(CopyOutputSymbolsToOutputDirectory)' == 'true'" />
 
     <!-- Copy the resulting XML documentation file, if any. -->
     <Copy
@@ -5262,7 +5273,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       <_CopyLocalReferencesCopiedInThisBuild Condition="'@(ReferencesCopiedInThisBuild)' != '' and '$(WroteAtLeastOneFile)' == 'true'">true</_CopyLocalReferencesCopiedInThisBuild>
     </PropertyGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <FileWrites Include="@(CopyUpToDateMarker)" />
     </ItemGroup>
 
@@ -5924,20 +5935,6 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     ============================================================
     -->
   <Target
-      Name="_WriteHardenedCleanFileWritesImport"
-      BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
-      AfterTargets="Restore"
-      Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
-
-    <WriteCleanFileWritesImport
-        CleanFile="$(IntermediateOutputPath)$(CleanFile)"
-        ImportFile="$(_HardenedCleanFileWritesImport)"
-        DeclaredInputs="$(IntermediateOutputPath)$(CleanFile)"
-        DeclaredOutputs="$(_HardenedCleanFileWritesImport)" />
-
-  </Target>
-
-  <Target
       Name="_WriteHardenedUnmanagedRegistrationCacheImport"
       BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
       AfterTargets="Restore"
@@ -5951,8 +5948,10 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
   </Target>
 
+  <!-- Hardened output cleanup belongs to the executor, not the product action graph. -->
   <Target
        Name="IncrementalClean"
+       Condition="'$(MSBuildHardenedGraph)' != 'true'"
        DependsOnTargets="$(IncrementalCleanDependsOn);_CleanGetCurrentAndPriorFileWrites">
 
     <!-- Subtract list of files produced in prior builds from list of files produced in this build. -->
@@ -6022,12 +6021,12 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
   <Target
        Name="_CleanGetCurrentAndPriorFileWrites"
+       Condition="'$(MSBuildHardenedGraph)' != 'true'"
        DependsOnTargets="_CheckForCompileOutputs;_SGenCheckForOutputs">
 
     <!-- Read the list of files produced by a prior builds from disk. -->
     <ReadLinesFromFile
-        File="$(IntermediateOutputPath)$(CleanFile)"
-        Condition="'$(MSBuildHardenedGraph)' != 'true'">
+        File="$(IntermediateOutputPath)$(CleanFile)">
       <Output TaskParameter="Lines" ItemName="_CleanUnfilteredPriorFileWrites"/>
     </ReadLinesFromFile>
 
@@ -6035,11 +6034,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         Convert the list of references to the absolute paths so we can make valid comparisons
         across two lists
          -->
-    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
-      <_ResolveAssemblyReferenceResolvedFilesAbsolute Include="@(_ResolveAssemblyReferenceResolvedFiles->'%(FullPath)')" />
-    </ItemGroup>
-
-    <ConvertToAbsolutePath Paths="@(_ResolveAssemblyReferenceResolvedFiles)" Condition="'$(MSBuildHardenedGraph)' != 'true'">
+    <ConvertToAbsolutePath Paths="@(_ResolveAssemblyReferenceResolvedFiles)">
       <Output TaskParameter="AbsolutePaths" ItemName="_ResolveAssemblyReferenceResolvedFilesAbsolute"/>
     </ConvertToAbsolutePath>
 
@@ -6194,10 +6189,6 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       <Output TaskParameter="Lines" ItemName="_CleanPriorFileWrites"/>
     </ReadLinesFromFile>
 
-    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
-      <_CleanPriorFileWrites Include="@(_CleanUnfilteredPriorFileWrites)" />
-    </ItemGroup>
-
     <!-- Find all files in the final output directory. -->
     <FindUnderPathWithDeterministicSemantics DeclaredInputs="" DeclaredOutputs="" Path="$(OutDir)" Files="@(_CleanPriorFileWrites)">
       <Output TaskParameter="InPath" ItemName="_CleanPriorFileWritesInOutput"/>
@@ -6243,92 +6234,22 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     Files written in prior builds are not removed from Clean cache.
     ============================================================
     -->
-  <PropertyGroup>
-    <_CleanRecordFileWritesDependsOn Condition="'$(MSBuildHardenedGraph)' != 'true'">_CleanGetCurrentAndPriorFileWrites</_CleanRecordFileWritesDependsOn>
-  </PropertyGroup>
-
   <Target
        Name="_CleanRecordFileWrites"
-       DependsOnTargets="$(_CleanRecordFileWritesDependsOn)">
-
-    <!--
-        CoreBuild may fail before or after _CleanGetCurrentAndPriorFileWrites. In hardened mode,
-        derive fresh private items from the failure-path union of FileWrites so the OnError path
-        does not inherit partially-computed clean state.
-        -->
-    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
-      <_CleanRecordResolvedFilesAbsolute Include="@(_ResolveAssemblyReferenceResolvedFiles->'%(FullPath)')" />
-      <_CleanRecordPriorFileWrites Include="@(_CleanUnfilteredPriorFileWrites)" Exclude="@(_CleanRecordResolvedFilesAbsolute)" />
-    </ItemGroup>
-
-    <FindUnderPathWithDeterministicSemantics DeclaredInputs="" DeclaredOutputs=""
-        Condition="'$(MSBuildHardenedGraph)' == 'true' and !$(TrackFileWritesShareableOutsideOfProjectDirectory)"
-        Path="$(MSBuildProjectDirectory)"
-        Files="@(FileWritesShareable)"
-        UpdateToAbsolutePaths="true">
-      <Output TaskParameter="InPath" ItemName="_CleanRecordFileWritesShareableInProject" />
-    </FindUnderPathWithDeterministicSemantics>
-
-    <FindUnderPathWithDeterministicSemantics DeclaredInputs="" DeclaredOutputs=""
-        Condition="'$(MSBuildHardenedGraph)' == 'true' and !$(TrackFileWritesShareableOutsideOfProjectDirectory)"
-        Path="$(OutDir)"
-        Files="@(FileWrites);@(_CleanRecordFileWritesShareableInProject)"
-        UpdateToAbsolutePaths="true">
-      <Output TaskParameter="InPath" ItemName="_CleanRecordCurrentFileWritesInOutput" />
-    </FindUnderPathWithDeterministicSemantics>
-
-    <FindUnderPathWithDeterministicSemantics DeclaredInputs="" DeclaredOutputs=""
-        Condition="'$(MSBuildHardenedGraph)' == 'true' and $(TrackFileWritesShareableOutsideOfProjectDirectory)"
-        Path="$(OutDir)"
-        Files="@(FileWrites);@(FileWritesShareable)"
-        UpdateToAbsolutePaths="true">
-      <Output TaskParameter="InPath" ItemName="_CleanRecordCurrentFileWritesInOutput" />
-    </FindUnderPathWithDeterministicSemantics>
-
-    <FindUnderPathWithDeterministicSemantics DeclaredInputs="" DeclaredOutputs=""
-        Condition="'$(MSBuildHardenedGraph)' == 'true' and !$(TrackFileWritesShareableOutsideOfProjectDirectory)"
-        Path="$(IntermediateOutputPath)"
-        Files="@(FileWrites);@(_CleanRecordFileWritesShareableInProject)"
-        UpdateToAbsolutePaths="true">
-      <Output TaskParameter="InPath" ItemName="_CleanRecordCurrentFileWritesInIntermediate" />
-    </FindUnderPathWithDeterministicSemantics>
-
-    <FindUnderPathWithDeterministicSemantics DeclaredInputs="" DeclaredOutputs=""
-        Condition="'$(MSBuildHardenedGraph)' == 'true' and $(TrackFileWritesShareableOutsideOfProjectDirectory)"
-        Path="$(IntermediateOutputPath)"
-        Files="@(FileWrites);@(FileWritesShareable)"
-        UpdateToAbsolutePaths="true">
-      <Output TaskParameter="InPath" ItemName="_CleanRecordCurrentFileWritesInIntermediate" />
-    </FindUnderPathWithDeterministicSemantics>
-
-    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
-      <_CleanRecordCurrentFileWritesWithNoReferences
-          Include="@(_CleanRecordCurrentFileWritesInOutput);@(_CleanRecordCurrentFileWritesInIntermediate)"
-          Exclude="@(_CleanRecordResolvedFilesAbsolute)" />
-    </ItemGroup>
+       Condition="'$(MSBuildHardenedGraph)' != 'true'"
+       DependsOnTargets="_CleanGetCurrentAndPriorFileWrites">
 
     <!--
         Merge list of files from prior builds with the current build and then
         remove duplicates.
         -->
     <RemoveDuplicates DeclaredInputs="" DeclaredOutputs=""
-        Condition="'$(MSBuildHardenedGraph)' != 'true'"
         Inputs="@(_CleanPriorFileWrites);@(_CleanCurrentFileWrites)">
       <Output TaskParameter="Filtered" ItemName="_CleanUniqueFileWrites"/>
     </RemoveDuplicates>
 
-    <RemoveDuplicates DeclaredInputs="" DeclaredOutputs=""
-        Condition="'$(MSBuildHardenedGraph)' == 'true'"
-        Inputs="@(_CleanRecordPriorFileWrites);@(_CleanRecordCurrentFileWritesWithNoReferences)">
-      <Output TaskParameter="Filtered" ItemName="_CleanUniqueFileWrites"/>
-    </RemoveDuplicates>
-
     <!-- Make sure the directory exists. -->
-    <MakeDir Directories="$(IntermediateOutputPath)" Condition="'$(MSBuildHardenedGraph)' != 'true'"/>
-    <RemoveDuplicates Inputs="$(IntermediateOutputPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'"
-                      DeclaredInputs="" DeclaredOutputs="">
-      <Output TaskParameter="Filtered" ItemName="_MSBuildRequiredOutputDirectory"/>
-    </RemoveDuplicates>
+    <MakeDir Directories="$(IntermediateOutputPath)"/>
 
     <!-- Write merged file list back to disk, replacing existing contents. -->
     <WriteLinesToFile

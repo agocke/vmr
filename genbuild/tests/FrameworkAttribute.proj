@@ -2,8 +2,8 @@
   <PropertyGroup>
     <AttributeOutputPath Condition="'$(AttributeOutputPath)' == ''">$(MSBuildProjectDirectory)/framework-attribute/$(TestCase)/generated.cs</AttributeOutputPath>
     <TargetFrameworkMoniker>.NETCoreApp,Version=v10.0</TargetFrameworkMoniker>
+    <TargetFrameworkMonikerDisplayName>.NET 10.0</TargetFrameworkMonikerDisplayName>
     <TargetFrameworkMonikerAssemblyAttributesPath>$(AttributeOutputPath)</TargetFrameworkMonikerAssemblyAttributesPath>
-    <TargetFrameworkMonikerAssemblyAttributeText>[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v10.0")]</TargetFrameworkMonikerAssemblyAttributeText>
     <GenerateTargetFrameworkAttribute>true</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
   <ItemGroup>

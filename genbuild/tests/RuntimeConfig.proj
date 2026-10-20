@@ -17,7 +17,7 @@
     <SelfContained Condition="'$(TestCase)' == 'self-contained'">true</SelfContained>
     <RuntimeIdentifier Condition="'$(SelfContained)' == 'true'">linux-x64</RuntimeIdentifier>
     <GenerateProbingPathsToRuntimeConfigDevFile Condition="'$(TestCase)' == 'package-probe'">true</GenerateProbingPathsToRuntimeConfigDevFile>
-    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <EnableDynamicLoading Condition="'$(TestCase)' != 'default-roll-forward'">true</EnableDynamicLoading>
     <_TemplateText>{"configProperties":{"setting":"generated after construction","count":4,"enabled":false,"text":"a+b"}}</_TemplateText>
     <MicrosoftNETBuildTasksAssembly>$(MSBuildSDKsPath)/Microsoft.NET.Sdk/tools/net11.0/Microsoft.NET.Build.Tasks.dll</MicrosoftNETBuildTasksAssembly>
     <_AssetsText>{"version":3,"targets":{"net11.0":{},"net11.0/linux-x64":{}},"libraries":{},"projectFileDependencyGroups":{"net11.0":[]},"packageFolders":{"$(MSBuildProjectDirectory)/machine-specific-cache/":{}},"project":{"version":"1.0.0","restore":{"projectUniqueName":"$(MSBuildProjectFullPath)","projectName":"RuntimeApp","projectPath":"$(MSBuildProjectFullPath)","projectStyle":"PackageReference"},"frameworks":{"net11.0":{"targetAlias":"net11.0"}}}}</_AssetsText>

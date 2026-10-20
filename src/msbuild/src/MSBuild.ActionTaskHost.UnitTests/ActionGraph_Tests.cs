@@ -22,6 +22,87 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     private readonly ITestOutputHelper _output = output;
 
     [UnixOnlyTheory]
+    [InlineData(null, "<null>|constructor-default")]
+    [InlineData("", "<null>|constructor-default")]
+    [InlineData("$(Missing)", "<null>|constructor-default")]
+    [InlineData("literal%253B%3Bvalue", "literal%3B;value|literal%3B;value")]
+    public void CapturedScalarParametersMatchOrdinaryDefaults(string? value, string expected)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = Path.Combine(directory, "parameters.proj");
+        XElement task = new("GraphParameterTask",
+            new XAttribute("File", "$(ResultFile)"),
+            new XAttribute("DeclaredInputs", ""),
+            new XAttribute("DeclaredOutputs", "$(ResultFile)"));
+        if (value is not null)
+        {
+            task.Add(new XAttribute("NullText", value), new XAttribute("DefaultText", value));
+        }
+
+        XDocument contents = new(new XElement("Project",
+            new XElement("UsingTask",
+                new XAttribute("TaskName", "GraphParameterTask"),
+                new XAttribute("AssemblyFile", typeof(GraphParameterTask).Assembly.Location)),
+            new XElement("Target", new XAttribute("Name", "Build"), task)));
+        File.WriteAllText(project, contents.ToString());
+
+        RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" -p:ResultFile=ordinary.txt -nr:false -v:minimal", out bool succeeded, outputHelper: _output);
+        succeeded.ShouldBeTrue();
+        File.ReadAllText(Path.Combine(directory, "ordinary.txt")).ShouldBe(expected);
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, "-p:ResultFile=action.txt").ShouldBeTrue();
+        File.Exists(Path.Combine(directory, "action.txt")).ShouldBeFalse();
+        string manifest = Directory.GetFiles(graph + ".actions", "*.json").ShouldHaveSingleItem();
+        using JsonDocument invocation = JsonDocument.Parse(File.ReadAllText(manifest));
+        JsonElement parameters = invocation.RootElement.GetProperty("parameters");
+        bool hasValue = value is { Length: > 0 } && value != "$(Missing)";
+        parameters.TryGetProperty("NullText", out _).ShouldBe(hasValue);
+        parameters.TryGetProperty("DefaultText", out _).ShouldBe(hasValue);
+
+        Ninja(graph, out succeeded);
+
+        succeeded.ShouldBeTrue();
+        File.ReadAllBytes(Path.Combine(directory, "action.txt"))
+            .ShouldBe(File.ReadAllBytes(Path.Combine(directory, "ordinary.txt")));
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("")]
+    [InlineData("$(Missing)")]
+    public void CapturedRequiredScalarParametersRejectEmptyValues(string value)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = Path.Combine(directory, "parameters.proj");
+        XDocument contents = new(new XElement("Project",
+            new XElement("UsingTask",
+                new XAttribute("TaskName", "GraphParameterTask"),
+                new XAttribute("AssemblyFile", typeof(GraphParameterTask).Assembly.Location)),
+            new XElement("Target", new XAttribute("Name", "Build"),
+                new XElement("GraphParameterTask",
+                    new XAttribute("File", value),
+                    new XAttribute("DeclaredInputs", ""),
+                    new XAttribute("DeclaredOutputs", "result.txt")))));
+        File.WriteAllText(project, contents.ToString());
+
+        string ordinaryLog = RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" -nr:false -v:minimal", out bool succeeded, outputHelper: _output);
+        succeeded.ShouldBeFalse();
+        ordinaryLog.ShouldContain("MSB4044");
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log).ShouldBeFalse();
+
+        log.ShouldContain("MSB4044");
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "result.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyTheory]
     [InlineData(false, false)]
     [InlineData(false, true)]
     [InlineData(true, false)]
@@ -258,7 +339,8 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
             string sdk = Path.Combine(snapshotDirectory, "restore.csproj.platform-sdk.props");
             string unmanaged = Path.Combine(snapshotDirectory, "restore.csproj.UnmanagedRegistration.cache.props");
             string clean = Path.Combine(directory, "obj", "Debug", framework, "restore.csproj.FileListAbsolute.txt.hardened.props");
-            string[] imports = [sdk, unmanaged, clean];
+            File.Exists(clean).ShouldBeFalse();
+            string[] imports = [sdk, unmanaged];
             foreach (string file in imports)
             {
                 File.Exists(file).ShouldBe(capture, file);
@@ -275,16 +357,6 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
                 XNamespace ns = cache.Name.Namespace;
                 (cache.Element(ns + "PropertyGroup")?.Element(ns + "_HardenedUnmanagedRegistrationCacheExists")?.Value ?? "")
                     .ShouldBe(multiTarget ? "true" : "");
-                IEnumerable<XElement> priorWrites = XDocument.Load(clean).Descendants(ns + "_CleanUnfilteredPriorFileWrites");
-                if (multiTarget)
-                {
-                    priorWrites.ShouldHaveSingleItem().Attribute("Include")!.Value
-                        .ShouldBe(Path.Combine(directory, "prior-" + framework + ".dll"));
-                }
-                else
-                {
-                    priorWrites.ShouldBeEmpty();
-                }
             }
         }
 
@@ -1487,7 +1559,8 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         }
 
         XElement prepare = new("Target", new XAttribute("Name", "PrepareDirectories"));
-        foreach (XElement makeDir in common.Descendants("MakeDir"))
+        foreach (XElement makeDir in common.Descendants("MakeDir")
+            .Where(element => element.Parent!.Attribute("Condition")?.Value != "'$(MSBuildHardenedGraph)' != 'true'"))
         {
             XElement requirement = makeDir.ElementsAfterSelf().First();
             requirement.Element("Output")!.Attribute("ItemName")!.Value.ShouldBe("_MSBuildRequiredOutputDirectory");
@@ -1587,6 +1660,25 @@ public sealed class MSBuild : Utilities.Task
     public override bool Execute()
     {
         System.IO.File.WriteAllText(File, "unaudited task executed");
+        return true;
+    }
+}
+
+[MSBuildDeclaredIOTask]
+public sealed class GraphParameterTask : Utilities.Task, IMultiThreadableTask
+{
+    public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+    public ITaskItem[] DeclaredInputs { get; set; } = [];
+    public ITaskItem[] DeclaredOutputs { get; set; } = [];
+    public string? NullText { get; set; }
+    public string DefaultText { get; set; } = "constructor-default";
+
+    [Required]
+    public string File { get; set; } = "";
+
+    public override bool Execute()
+    {
+        System.IO.File.WriteAllText(TaskEnvironment.GetAbsolutePath(File).Value, $"{NullText ?? "<null>"}|{DefaultText}");
         return true;
     }
 }

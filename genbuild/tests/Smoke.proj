@@ -41,14 +41,42 @@
     <CallTarget Targets="TestIncrementalCaches" />
     <CallTarget Targets="TestSourceLink" />
     <CallTarget Targets="TestCsc" />
+    <CallTarget Targets="TestCopyOutputs" />
+    <CallTarget Targets="TestCleanup" />
     <CallTarget Targets="TestDeps" />
     <CallTarget Targets="TestRuntimeConfig" />
-    <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
+    <PropertyGroup>
+      <_SdkGraph>$([System.IO.Path]::GetFullPath('$(_TestDirectory)sdk-build.ninja'))</_SdkGraph>
+      <_SdkHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_SdkHostOS>
+      <_SdkHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_SdkHostOS>
+      <_SdkHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_SdkHostOS>
+      <_SdkHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_SdkHostOS>
+      <_SdkArguments>-p:DirectoryBuildPropsPath=&quot;$(_TestDirectory)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_TestDirectory)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_TestDirectory)Directory.Packages.props&quot; -p:MSBuildGraphHostOS=$(_SdkHostOS)</_SdkArguments>
+      <_LegacyCleanFile>$(_TestDirectory)obj/Debug/net11.0/HelloWorld.csproj.FileListAbsolute.txt</_LegacyCleanFile>
+    </PropertyGroup>
+    <MakeDir Directories="$(_LegacyCleanFile)" />
+    <WriteLinesToFile File="$(_LegacyCleanFile).hardened.props" Lines="not an MSBuild project" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; $(_SdkArguments) -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)HelloWorld.csproj&quot; $(_SdkArguments) -p:MSBuildEmitActionGraph=&quot;$(_SdkGraph)&quot; -bl:&quot;$(_TestDirectory)sdk-build-{}.binlog&quot;" />
+    <Error Condition="!Exists('$(_SdkGraph)') or !Exists('$(_SdkGraph).actions') or Exists('$(_TestDirectory)obj/Debug/net11.0/HelloWorld.dll') or Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.dll') or Exists('$(_TestDirectory)obj/Debug/net11.0/.NETCoreApp,Version=v11.0.AssemblyAttributes.cs')"
+           Text="SDK Build must emit its graph without executing product actions." />
+    <ReadLinesFromFile File="$(_LegacyCleanFile).hardened.props">
+      <Output TaskParameter="Lines" PropertyName="_LegacyCleanSnapshot" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_LegacyCleanSnapshot)' != 'not an MSBuild project' or $([System.IO.File]::ReadAllText('$(_SdkGraph)').Contains('FileListAbsolute.txt'))"
+           Text="Restore and graph construction must ignore obsolete clean snapshots and ledger state." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
       <Output TaskParameter="Result" ItemName="_CompileReference" />
     </XmlPeek>
     <Error Condition="'@(_CompileReference)' == ''" Text="Restore did not capture compiler reference inputs." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f &quot;$(_SdkGraph)&quot;" />
+    <Error Condition="!Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.dll') or !Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.pdb') or !Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.deps.json') or !Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.runtimeconfig.json')"
+           Text="Independent SDK graph execution must publish its assembly, symbols and runtime manifests." />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_TestDirectory)bin/Debug/net11.0/HelloWorld.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_SdkProgramOutput" />
+    </Exec>
+    <Error Condition="'@(_SdkProgramOutput)' != 'Hello from genbuild.'" Text="The program built by the SDK action graph did not run correctly on the external runtime." />
     <WriteLinesToFile File="$(_TestDirectory)compile.rsp" Lines="@(_CompileReference->'-r:&quot;%(Identity)&quot;');&quot;$(_TestDirectory)HelloWorld.cs&quot;" Overwrite="true" />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_TestDirectory)HelloWorld.dll&quot; @&quot;$(_TestDirectory)compile.rsp&quot;" />
     <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_TestDirectory)HelloWorld.runtimeconfig.json" />
@@ -56,7 +84,149 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, packaged compiler execution, dependency-manifest and runtime-config publication. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestCleanup">
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
+             Query="/Project/Target[@Name='IncrementalClean' or @Name='_CleanGetCurrentAndPriorFileWrites' or @Name='_CleanRecordFileWrites']">
+      <Output TaskParameter="Result" ItemName="_CleanupTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_CleanupTarget->Count())' != '3'" Text="The packaged Common targets must contain the ordinary cleanup closure." />
+    <ItemGroup>
+      <_CleanupCase Include="fresh;stale;obstructed;ordinary" />
+      <_CleanupExecution Include="fresh;stale;obstructed" />
+      <_CleanupPrior Include="stale;ordinary" />
+      <_CleanupRoot Include="@(_CleanupCase->'$(_TestDirectory)cleanup/%(Identity)/')" />
+    </ItemGroup>
+    <MakeDir Directories="@(_CleanupRoot->'%(Identity)out');@(_CleanupRoot->'%(Identity)obj')" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Cleanup.proj" DestinationFolder="%(_CleanupRoot.Identity)" />
+    <WriteLinesToFile File="%(_CleanupRoot.Identity)Cleanup.targets" Lines="&lt;Project&gt;;@(_CleanupTarget);&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)cleanup/%(_CleanupPrior.Identity)/obj/ledger.txt"
+                      Lines="$([System.IO.Path]::GetFullPath('$(_TestDirectory)cleanup/%(_CleanupPrior.Identity)/out/obsolete.txt'));$([System.IO.Path]::GetFullPath('$(_TestDirectory)cleanup/%(_CleanupPrior.Identity)/obj/obsolete.txt'))"
+                      Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)cleanup/%(_CleanupPrior.Identity)/out/obsolete.txt" Lines="prior output" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)cleanup/%(_CleanupPrior.Identity)/obj/obsolete.txt" Lines="prior intermediate" Overwrite="true" />
+    <WriteLinesToFile File="%(_CleanupRoot.Identity)out/user.txt" Lines="not an owned output" Overwrite="true" />
+    <MakeDir Directories="$(_TestDirectory)cleanup/obstructed/obj/ledger.txt;$(_TestDirectory)cleanup/obstructed/obj/ledger.txt.hardened.props" />
+    <ReadLinesFromFile File="$(_TestDirectory)cleanup/stale/obj/ledger.txt">
+      <Output TaskParameter="Lines" PropertyName="_CleanupPriorLedger" />
+    </ReadLinesFromFile>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)cleanup/%(_CleanupExecution.Identity)/Cleanup.proj&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)cleanup/%(_CleanupExecution.Identity)/out/current.txt') or Exists('$(_TestDirectory)cleanup/%(_CleanupExecution.Identity)/obj/intermediate.txt')"
+           Text="Cleanup-free graph construction must not execute product actions." />
+    <Error Condition="$([System.IO.File]::ReadAllText('$(_TestDirectory)cleanup/%(_CleanupExecution.Identity)/obj/genbuild/build.ninja').Contains('ledger.txt'))"
+           Text="Legacy cleanup state must not be a graph input or output." />
+    <Exec WorkingDirectory="$(_TestDirectory)cleanup/%(_CleanupExecution.Identity)" Command="ninja -f obj/genbuild/build.ninja" />
+    <Error Condition="!Exists('$(_TestDirectory)cleanup/%(_CleanupExecution.Identity)/out/current.txt') or !Exists('$(_TestDirectory)cleanup/%(_CleanupExecution.Identity)/obj/intermediate.txt')"
+           Text="Omitting cleanup must preserve product actions." />
+    <ReadLinesFromFile File="$(_TestDirectory)cleanup/stale/obj/ledger.txt">
+      <Output TaskParameter="Lines" PropertyName="_CleanupAfterLedger" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_CleanupAfterLedger)' != '$(_CleanupPriorLedger)' or !Exists('$(_TestDirectory)cleanup/stale/out/obsolete.txt') or !Exists('$(_TestDirectory)cleanup/stale/obj/obsolete.txt') or Exists('$(_TestDirectory)cleanup/fresh/obj/ledger.txt') or !Exists('$(_TestDirectory)cleanup/obstructed/obj/ledger.txt')"
+           Text="Hardened execution must not read, reconcile, create or delete legacy cleanup state or obsolete outputs." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)cleanup/ordinary/Cleanup.proj&quot; -t:Produce,IncrementalClean" />
+    <Error Condition="Exists('$(_TestDirectory)cleanup/ordinary/out/obsolete.txt') or Exists('$(_TestDirectory)cleanup/ordinary/obj/obsolete.txt')"
+           Text="Ordinary builds must retain incremental cleanup." />
+    <ReadLinesFromFile File="$(_TestDirectory)cleanup/ordinary/obj/ledger.txt">
+      <Output TaskParameter="Lines" ItemName="_CleanupOrdinaryLedger" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_CleanupOrdinaryLedger->Count())' != '2' or !@(_CleanupOrdinaryLedger->AnyHaveMetadataValue('Identity', '$([System.IO.Path]::GetFullPath('$(_TestDirectory)cleanup/ordinary/out/current.txt'))')) or !@(_CleanupOrdinaryLedger->AnyHaveMetadataValue('Identity', '$([System.IO.Path]::GetFullPath('$(_TestDirectory)cleanup/ordinary/obj/intermediate.txt'))'))"
+           Text="Ordinary builds must reconcile and retain the current output ledger." />
+    <Error Condition="!Exists('%(_CleanupRoot.Identity)out/user.txt')"
+           Text="Neither build profile may delete unowned files." />
+  </Target>
+  <Target Name="TestCopyOutputs">
+    <MakeDir Directories="$(_TestDirectory)copies" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_TestDirectory)copies" />
+    <WriteLinesToFile File="$(_TestDirectory)copies/Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)copies/Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)copies/Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)copies/HelloWorld.csproj&quot;" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets" Query="/Project/Target[@Name='CopyFilesToOutputDirectory']">
+      <Output TaskParameter="Result" ItemName="_CopyOutputTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_CopyOutputTarget->Count())' != '1'" Text="The packaged Common targets must contain build-output publication." />
+    <ItemGroup>
+      <_CopyCase Include="short;another longer checkout;stale;ordinary;write-failure" Mode="normal" />
+      <_CopyCase Include="disabled" Mode="disabled" />
+      <_CopyCase Include="skip-product" Mode="skip-product" />
+      <_CopyCase Include="no-symbols" Mode="no-symbols" />
+      <_CopyNegative Include="hardlink" Mode="hardlink" />
+      <_CopyNegative Include="symlink" Mode="symlink" />
+      <_CopyNegative Include="read-only" Mode="read-only" />
+      <_CopyNegative Include="link-error" Mode="link-error" />
+      <_CopyNegative Include="self-copy" Mode="self-copy" />
+      <_CopyCase Include="@(_CopyNegative)" />
+      <_CopyRoot Include="@(_CopyCase->'$(_TestDirectory)copies/%(Identity)/project/')" />
+      <_CopyExecution Include="short;another longer checkout;stale;disabled;skip-product;no-symbols" />
+    </ItemGroup>
+    <MakeDir Directories="@(_CopyRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)CopyOutputs.proj;$(MSBuildThisFileDirectory)Csc.proj" DestinationFolder="%(_CopyRoot.Identity)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_CopyRoot.Identity)Program.cs" />
+    <Copy SourceFiles="$(_TestDirectory)copies/obj/frameworkreferences/HelloWorld.csproj.g.props" DestinationFiles="%(_CopyRoot.Identity)FrameworkInputs.props" />
+    <WriteLinesToFile File="%(_CopyRoot.Identity)CopyOutputs.targets" Lines="&lt;Project&gt;;@(_CopyOutputTarget);&lt;/Project&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)copies/%(_CopyCase.Identity)/project/CopyOutputs.proj&quot; -p:TestCase=%(_CopyCase.Mode)" />
+    <MakeDir Directories="$(_TestDirectory)copies/stale/project/out/ref;$(_TestDirectory)copies/stale/project/obj/copy.marker" />
+    <WriteLinesToFile File="$(_TestDirectory)copies/stale/project/out/Hello.dll" Lines="stale main" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)copies/stale/project/out/ref/renamed.dll" Lines="stale ref" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)copies/stale/project/out/Hello.pdb" Lines="stale PDB" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)copies/%(_CopyCase.Identity)/project/CopyOutputs.proj&quot; -p:TestCase=%(_CopyCase.Mode)"
+          Condition="'%(_CopyCase.Identity)' != 'ordinary' and '%(_CopyCase.Identity)' != 'hardlink' and '%(_CopyCase.Identity)' != 'symlink' and '%(_CopyCase.Identity)' != 'read-only' and '%(_CopyCase.Identity)' != 'link-error' and '%(_CopyCase.Identity)' != 'self-copy'" />
+    <Error Condition="Exists('$(_TestDirectory)copies/short/project/obj/Hello.dll') or Exists('$(_TestDirectory)copies/short/project/out/Hello.dll') or Exists('$(_TestDirectory)copies/short/project/out/ref/renamed.dll') or Exists('$(_TestDirectory)copies/short/project/out/Hello.pdb')"
+           Text="Build-output construction must not compile or copy any files." />
+    <ReadLinesFromFile File="$(_TestDirectory)copies/stale/project/out/Hello.dll">
+      <Output TaskParameter="Lines" PropertyName="_CopyStaleMain" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_CopyStaleMain)' != 'stale main'" Text="Copy construction must leave stale destination content untouched." />
+    <Exec WorkingDirectory="$(_TestDirectory)copies/%(_CopyExecution.Identity)/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <MakeDir Directories="$(_TestDirectory)copies/ordinary/project/out/ref" />
+    <Copy SourceFiles="$(_TestDirectory)copies/short/project/obj/Hello.dll;$(_TestDirectory)copies/short/project/obj/ref/Hello.dll;$(_TestDirectory)copies/short/project/obj/Hello.pdb"
+          DestinationFiles="$(_TestDirectory)copies/ordinary/project/obj/Hello.dll;$(_TestDirectory)copies/ordinary/project/obj/ref/Hello.dll;$(_TestDirectory)copies/ordinary/project/obj/Hello.pdb" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)copies/ordinary/project/CopyOutputs.proj&quot; -t:CopyFilesToOutputDirectory -p:TestCase=normal" />
+    <ItemGroup>
+      <_CopyResult Include="short;another longer checkout;stale;ordinary" />
+      <_CopyMainResult Include="@(_CopyResult->'$(_TestDirectory)copies/%(Identity)/project/out/Hello.dll')" />
+      <_CopyRefResult Include="@(_CopyResult->'$(_TestDirectory)copies/%(Identity)/project/out/ref/renamed.dll')" />
+      <_CopyPdbResult Include="@(_CopyResult->'$(_TestDirectory)copies/%(Identity)/project/out/Hello.pdb')" />
+    </ItemGroup>
+    <GetFileHash Files="@(_CopyMainResult)">
+      <Output TaskParameter="Items" ItemName="_CopyMainHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_CopyRefResult)">
+      <Output TaskParameter="Items" ItemName="_CopyRefHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_CopyPdbResult)">
+      <Output TaskParameter="Items" ItemName="_CopyPdbHash" />
+    </GetFileHash>
+    <Error Condition="'@(_CopyMainHash->'%(FileHash)'->Distinct()->Count())' != '1' or '@(_CopyRefHash->'%(FileHash)'->Distinct()->Count())' != '1' or '@(_CopyPdbHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Relocated main/reference/PDB copies must match ordinary bytes and replace stale outputs." />
+    <Error Condition="Exists('$(_TestDirectory)copies/disabled/project/out/Hello.dll') or Exists('$(_TestDirectory)copies/disabled/project/out/ref/renamed.dll') or Exists('$(_TestDirectory)copies/disabled/project/out/Hello.pdb') or Exists('$(_TestDirectory)copies/no-symbols/project/out/Hello.pdb')"
+           Text="Disabled copies must not publish artifacts." />
+    <Error Condition="Exists('$(_TestDirectory)copies/skip-product/project/out/Hello.dll') or Exists('$(_TestDirectory)copies/skip-product/project/out/ref/renamed.dll') or !Exists('$(_TestDirectory)copies/skip-product/project/out/Hello.pdb')"
+           Text="Skipping the product must preserve independent symbol-copy selection." />
+    <Error Condition="!Exists('$(_TestDirectory)copies/ordinary/project/obj/copy.marker') or !Exists('$(_TestDirectory)copies/stale/project/obj/copy.marker')"
+           Text="Ordinary marker behavior and the hardened obstructing marker directory must be retained." />
+    <Error Condition="'%(_CopyExecution.Identity)' != 'stale' and Exists('$(_TestDirectory)copies/%(_CopyExecution.Identity)/project/obj/copy.marker')"
+           Text="Hardened copy publication must not write timestamp/cache markers." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)copies/%(_CopyNegative.Identity)/project/CopyOutputs.proj&quot; -p:TestCase=%(_CopyNegative.Mode)"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_CopyRejectedExitCode" />
+    </Exec>
+    <Error Condition="@(_CopyRejectedExitCode->AnyHaveMetadataValue('Identity', '0')) or Exists('$(_TestDirectory)copies/%(_CopyNegative.Identity)/project/obj/genbuild/build.ninja') or Exists('$(_TestDirectory)copies/%(_CopyNegative.Identity)/project/obj/genbuild/build.ninja.actions') or Exists('$(_TestDirectory)copies/%(_CopyNegative.Identity)/project/obj/Hello.dll')"
+           Text="Unsupported copy modes must fail without a graph, action invocations or compiled output." />
+    <Exec WorkingDirectory="$(_TestDirectory)copies/write-failure/project" Command="ninja -f obj/genbuild/build.ninja &quot;$([System.IO.Path]::GetFullPath('$(_TestDirectory)copies/write-failure/project/obj/Hello.dll'))&quot;" />
+    <MakeDir Directories="$(_TestDirectory)copies/write-failure/project/out/Hello.dll" />
+    <ItemGroup>
+      <_CopyInvocationCandidate Include="$(_TestDirectory)copies/write-failure/project/obj/genbuild/build.ninja.actions/*.json" />
+      <_CopyFailureInvocation Include="@(_CopyInvocationCandidate)"
+                              Condition="$([System.IO.File]::ReadAllText('%(_CopyInvocationCandidate.Identity)').Contains('Microsoft.Build.Tasks.CopyFiles')) and $([System.IO.File]::ReadAllText('%(_CopyInvocationCandidate.Identity)').Contains('Hello.dll')) and !$([System.IO.File]::ReadAllText('%(_CopyInvocationCandidate.Identity)').Contains('renamed.dll'))" />
+    </ItemGroup>
+    <Error Condition="'@(_CopyFailureInvocation->Count())' != '1'" Text="The main-assembly copy must be an independent action." />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot; --invocation &quot;@(_CopyFailureInvocation)&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_CopyFailureExitCode" />
+    </Exec>
+    <Error Condition="'$(_CopyFailureExitCode)' == '0'" Text="Independent copy publication errors must be fatal." />
   </Target>
   <Target Name="TestRuntimeConfig">
     <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets"
@@ -75,6 +245,7 @@
       <_RuntimeConfigCase Include="late-parameter" Mode="late-parameter" />
       <_RuntimeConfigCase Include="self-contained" Mode="self-contained" />
       <_RuntimeConfigCase Include="no-template" Mode="no-template" />
+      <_RuntimeConfigCase Include="default-roll-forward" Mode="default-roll-forward" />
       <_RuntimeConfigCase Include="late-default" Mode="late-default" />
       <_RuntimeConfigCase Include="release" Mode="release" />
       <_RuntimeConfigCase Include="missing-template" Mode="missing-template" />
@@ -85,7 +256,7 @@
       <_RuntimeConfigNegative Include="write-failure" Mode="write-failure" />
       <_RuntimeConfigCase Include="@(_RuntimeConfigNegative)" />
       <_RuntimeConfigRoot Include="@(_RuntimeConfigCase->'$(_TestDirectory)runtime-config/%(Identity)/project/')" />
-      <_RuntimeConfigOrdinary Include="generated;self-contained;no-template;release" />
+      <_RuntimeConfigOrdinary Include="generated;self-contained;no-template;default-roll-forward;release" />
       <_RuntimeConfigRoot Include="@(_RuntimeConfigOrdinary->'$(_TestDirectory)runtime-config/ordinary-%(Identity)/project/')" />
     </ItemGroup>
     <MakeDir Directories="@(_RuntimeConfigRoot)" />
@@ -127,7 +298,7 @@
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)runtime-config/ordinary-%(_RuntimeConfigOrdinary.Identity)/project/RuntimeConfig.proj&quot; -t:Build -p:TestCase=%(_RuntimeConfigOrdinary.Identity)" />
     <ItemGroup>
       <_RuntimeConfigRelocated Include="short;another longer checkout;stale;existing-template;late-parameter;ordinary-generated" />
-      <_RuntimeConfigComparable Include="self-contained;no-template;release" />
+      <_RuntimeConfigComparable Include="self-contained;no-template;default-roll-forward;release" />
     </ItemGroup>
     <GetFileHash Files="@(_RuntimeConfigRelocated->'$(_TestDirectory)runtime-config/%(Identity)/project/out/RuntimeApp.runtimeconfig.json')">
       <Output TaskParameter="Items" ItemName="_RuntimeConfigMainHash" />
@@ -160,7 +331,10 @@
     <PropertyGroup>
       <_LateRuntimeConfig>$([System.IO.File]::ReadAllText('$(_TestDirectory)runtime-config/late-default/project/out/RuntimeApp.runtimeconfig.json'))</_LateRuntimeConfig>
       <_GeneratedRuntimeConfig>$([System.IO.File]::ReadAllText('$(_TestDirectory)runtime-config/short/project/out/RuntimeApp.runtimeconfig.json'))</_GeneratedRuntimeConfig>
+      <_DefaultRuntimeConfig>$([System.IO.File]::ReadAllText('$(_TestDirectory)runtime-config/default-roll-forward/project/out/RuntimeApp.runtimeconfig.json'))</_DefaultRuntimeConfig>
     </PropertyGroup>
+    <Error Condition="$(_DefaultRuntimeConfig.Contains('&quot;rollForward&quot;'))"
+           Text="An unset RollForward must retain the ordinary task default and remain absent from runtime configuration." />
     <Error Condition="!$(_LateRuntimeConfig.Contains('&quot;selectedDuringEvaluation&quot;: true'))"
            Text="The engine must select a default template present during fresh Build evaluation." />
     <Error Condition="!$(_GeneratedRuntimeConfig.Contains('generated after construction')) or !$(_GeneratedRuntimeConfig.Contains('&quot;count&quot;: 12')) or $(_GeneratedRuntimeConfig.Contains('$(_TestDirectory)'))"
@@ -492,7 +666,11 @@
              Query="/Project/Target[@Name='GenerateTargetFrameworkMonikerAttribute']">
       <Output TaskParameter="Result" ItemName="_FrameworkAttributeTarget" />
     </XmlPeek>
-    <Error Condition="'@(_FrameworkAttributeTarget->Count())' != '1'" Text="The packaged Common targets must contain one framework attribute target." />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.CSharp.CurrentVersion.targets"
+             Query="/Project/Target[@Name='_SetTargetFrameworkMonikerAttribute']">
+      <Output TaskParameter="Result" ItemName="_FrameworkAttributeTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_FrameworkAttributeTarget->Count())' != '2'" Text="The packaged Common and C# targets must contain framework attribute preparation and publication." />
     <WriteLinesToFile File="$(_TestDirectory)FrameworkAttribute.targets"
                       Lines="&lt;Project&gt;;@(_FrameworkAttributeTarget);&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)FrameworkAttribute.proj&quot; -p:TestCase=graph -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)framework-attribute.ninja&quot;" />
@@ -501,10 +679,15 @@
     <ReadLinesFromFile File="$(_TestDirectory)framework-attribute/graph/generated.cs">
       <Output TaskParameter="Lines" ItemName="_FrameworkAttributeContents" />
     </ReadLinesFromFile>
-    <Error Condition="'@(_FrameworkAttributeContents)' != '[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(&quot;.NETCoreApp,Version=v10.0&quot;)]'"
+    <Error Condition="'@(_FrameworkAttributeContents)' != '// &lt;autogenerated /&gt;;using System%3b;using System.Reflection%3b;[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(&quot;.NETCoreApp,Version=v10.0&quot;, FrameworkDisplayName = &quot;.NET 10.0&quot;)]'"
            Text="The framework attribute action did not publish the expected content." />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)FrameworkAttribute.proj&quot; -p:TestCase=ordinary" />
     <Error Condition="!Exists('$(_TestDirectory)framework-attribute/ordinary/generated.cs')" Text="Ordinary framework attribute generation must still write its output." />
+    <GetFileHash Files="$(_TestDirectory)framework-attribute/graph/generated.cs;$(_TestDirectory)framework-attribute/ordinary/generated.cs">
+      <Output TaskParameter="Items" ItemName="_FrameworkAttributeHash" />
+    </GetFileHash>
+    <Error Condition="'@(_FrameworkAttributeHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Independent framework attribute publication must preserve ordinary source bytes, including escaped semicolons." />
     <MakeDir Directories="$(_TestDirectory)framework-attribute/ordinary-failure/generated.cs" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)FrameworkAttribute.proj&quot; -p:TestCase=ordinary-failure -flp:&quot;LogFile=$(_TestDirectory)framework-attribute-ordinary-failure.log;WarningsOnly&quot;" />
     <Error Condition="!$([System.IO.File]::ReadAllText('$(_TestDirectory)framework-attribute-ordinary-failure.log').Contains('MSB3491'))"

@@ -1,0 +1,44 @@
+<Project DefaultTargets="Build">
+  <Import Project="Csc.proj" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.CopyRefAssembly" AssemblyFile="$(_CompilerDirectory)Microsoft.Build.Tasks.CodeAnalysis.dll" />
+  <PropertyGroup>
+    <OutDir>out/</OutDir>
+    <OutDir Condition="'$(TestCase)' == 'self-copy'">obj/</OutDir>
+    <TargetRefPath>$(OutDir)ref/renamed.dll</TargetRefPath>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <_DebugSymbolsProduced>true</_DebugSymbolsProduced>
+    <CopyBuildOutputToOutputDirectory Condition="'$(TestCase)' == 'disabled'">false</CopyBuildOutputToOutputDirectory>
+    <CopyOutputSymbolsToOutputDirectory Condition="'$(TestCase)' == 'disabled' or '$(TestCase)' == 'no-symbols'">false</CopyOutputSymbolsToOutputDirectory>
+    <SkipCopyBuildProduct Condition="'$(TestCase)' == 'skip-product'">true</SkipCopyBuildProduct>
+    <CreateHardLinksForCopyFilesToOutputDirectoryIfPossible Condition="'$(TestCase)' == 'hardlink'">true</CreateHardLinksForCopyFilesToOutputDirectoryIfPossible>
+    <CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible Condition="'$(TestCase)' == 'symlink'">true</CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible>
+    <OverwriteReadOnlyFiles Condition="'$(TestCase)' == 'read-only'">true</OverwriteReadOnlyFiles>
+    <ErrorIfLinkFailsForCopyFilesToOutputDirectory Condition="'$(TestCase)' == 'link-error'">true</ErrorIfLinkFailsForCopyFilesToOutputDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <IntermediateAssembly Update="@(IntermediateAssembly)" Publication="retained" />
+    <_DebugSymbolsIntermediatePath Include="obj/Hello.pdb" />
+    <_DebugSymbolsOutputPath Include="$(OutDir)Hello.pdb" />
+    <CopyUpToDateMarker Include="obj/copy.marker" />
+  </ItemGroup>
+  <Import Project="CopyOutputs.targets" />
+  <Target Name="ComputeIntermediateSatelliteAssemblies" />
+  <Target Name="_CopyFilesMarkedCopyLocal" />
+  <Target Name="_CopySourceItemsToOutputDirectory" />
+  <Target Name="_CopyAppConfigFile" />
+  <Target Name="_CopyManifestFiles" />
+  <Target Name="_CheckForCompileOutputs" />
+  <Target Name="_SGenCheckForOutputs" />
+  <Target Name="Build" DependsOnTargets="_SetPathMapFromSourceRoots;Produce;CoreCompile;CopyFilesToOutputDirectory">
+    <Error Condition="'$(MSBuildHardenedGraph)' == 'true' and @(FileWrites->AnyHaveMetadataValue('Identity', 'obj/copy.marker'))"
+           Text="The copy-up-to-date marker is not a hardened artifact." />
+    <Error Condition="'$(TestCase)' != 'disabled' and '$(TestCase)' != 'skip-product' and ('@(MainAssembly)' != '$(OutDir)Hello.dll' or '@(MainAssembly->'%(Publication)')' != 'retained' or '@(ReferenceAssembly)' != '$(TargetRefPath)')"
+           Text="Main/reference paths and source metadata must be statically available." />
+    <Error Condition="'$(TestCase)' != 'disabled' and '$(TestCase)' != 'skip-product' and (@(FileWrites->WithMetadataValue('Identity', '$(OutDir)Hello.dll')->Count()) != 1 or @(FileWrites->WithMetadataValue('Identity', '$(TargetRefPath)')->Count()) != 1)"
+           Text="Main/reference FileWrites must be static without duplicates." />
+    <Error Condition="('$(TestCase)' == 'disabled' or '$(TestCase)' == 'skip-product') and ('@(MainAssembly)' != '' or '@(ReferenceAssembly)' != '')"
+           Text="Disabled product copies must not publish main/reference bookkeeping." />
+    <Error Condition="('$(TestCase)' == 'disabled' or '$(TestCase)' == 'no-symbols') and @(FileWrites->AnyHaveMetadataValue('Identity', '$(OutDir)Hello.pdb'))"
+           Text="Disabled symbol copies must not register final PDB output." />
+  </Target>
+</Project>

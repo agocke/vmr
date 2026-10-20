@@ -171,6 +171,7 @@
     <Compile Include="BuildCacheDisposeWrapper.cs" />
     <Compile Include="DownloadFile.cs" />
     <Compile Include="FileIO\GetFileHash.cs" />
+    <Compile Include="FileIO\CopyFiles.cs" />
     <Compile Include="FileIO\HashEncoding.cs" />
     <Compile Include="FileIO\ReconcileCleanFileWrites.cs" />
     <Compile Include="FileIO\VerifyFileHash.cs" />

@@ -80,6 +80,47 @@ public sealed class HardenedTargetValidator_Tests(ITestOutputHelper output)
             new Dictionary<string, HardenedTaskClassification>());
     }
 
+    [Theory]
+    [InlineData("first%3Bsecond;third", "first;second", "third")]
+    [InlineData("literal%253B;percent%2525", "literal%3B", "percent%25")]
+    [InlineData("first;second", "first", "second")]
+    public void TargetPropertyEscapingMatchesOrdinaryBuild(string value, string firstItem, string secondItem)
+    {
+        string projectXml = $$"""
+            <Project>
+              <PropertyGroup>
+                <Initial>{{value}}</Initial>
+              </PropertyGroup>
+              <Target Name="Build">
+                <PropertyGroup>
+                  <Assigned>{{value}}</Assigned>
+                  <FromEvaluation>$(Initial)</FromEvaluation>
+                  <Chained>$(Assigned)</Chained>
+                </PropertyGroup>
+                <ItemGroup>
+                  <Direct Include="$(Assigned)" />
+                  <FromEvaluation Include="$(FromEvaluation)" />
+                  <Chained Include="$(Chained)" />
+                </ItemGroup>
+              </Target>
+            </Project>
+            """;
+        using TestEnvironment environment = TestEnvironment.Create(_output);
+
+        (ProjectInstance ordinaryProject, Lookup validationLookup) = BuildOrdinaryAndValidateHardened(
+            environment,
+            projectXml,
+            new Dictionary<string, HardenedTaskClassification>());
+
+        string[] itemTypes = ["Direct", "FromEvaluation", "Chained"];
+        foreach (string itemType in itemTypes)
+        {
+            DescribeItemSpecs(validationLookup.GetItems(itemType))
+                .ShouldBe(DescribeItemSpecs(ordinaryProject.GetItems(itemType)));
+            DescribeItemSpecs(validationLookup.GetItems(itemType)).ShouldBe([firstItem, secondItem]);
+        }
+    }
+
     [Fact]
     public void TargetBucketBodyOrderMatchesOrdinaryBuild()
     {

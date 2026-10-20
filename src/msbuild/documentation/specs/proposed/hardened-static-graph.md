@@ -91,11 +91,25 @@ possible failure states.
 
 Common's `CoreBuild` uses an explicit fail-fast profile in hardened mode:
 failure does not run post-build events or update the clean-file ledger with
-partial writes. Successful-build bookkeeping remains unchanged, and ordinary
-MSBuild retains its failure handlers. A nonempty `PostBuildEvent` with
+partial writes. Automatic incremental cleanup and clean-ledger bookkeeping are
+also omitted on success; ordinary MSBuild retains its cleanup and failure
+handlers. A nonempty `PostBuildEvent` with
 `RunPostBuildEvent=Always` or `OnOutputUpdated` fails with MSB3670 rather than
 silently losing failure-time behavior. Use `OnBuildSuccess` or no event.
 This profile does not implement general failure-path execution.
+
+Cleaning is execution-system functionality, not a file-producing build action.
+Hardened Build omits `IncrementalClean`, `_CleanGetCurrentAndPriorFileWrites`
+and `_CleanRecordFileWrites`, without reading, replaying or updating the legacy
+clean ledger. Product `FileWrites` and semantic producer prerequisites remain
+available independently of that bookkeeping.
+
+A future executor can clean the current graph's declared outputs; safely
+pruning outputs absent from a later graph requires persistent output ownership.
+It must not infer ownership from arbitrary directory contents or delete
+unowned files. This functionality is deferred: current execution leaves stale
+outputs untouched. Explicit MSBuild Clean/Rebuild and arbitrary semantic
+Delete operations are not supported by omitting automatic cleanup.
 
 File-I/O actions cannot return MSBuild values in the prototype. A generator's
 output path, for example, must be established through static items or
@@ -111,7 +125,7 @@ Parent directories are execution scaffolding, not owned directory-tree
 artifacts. No directory action, timestamp dependency, or success stamp is
 emitted. File/directory collisions fail without deleting existing paths.
 
-Common's five `MakeDir` call sites retain their ordinary behavior outside
+Common's participating `MakeDir` call sites retain their ordinary behavior outside
 hardened mode. During construction they instead use the audited zero-I/O
 `RemoveDuplicates` task to accumulate `_MSBuildRequiredOutputDirectory` items.
 The emitter captures these requirements as tasks return, including from
@@ -186,14 +200,14 @@ In this prototype, the queries run during ordinary Restore's evaluation and
 the Restore target hook persists their results. Ordinary non-hardened builds
 retain their existing discovery behavior.
 
-The same flag also snapshots the prior clean-file ledger into
-`$(IntermediateOutputPath)/$(CleanFile).hardened.props` and the presence of the
-unmanaged-registration cache into
+The same flag also snapshots the presence of the unmanaged-registration cache into
 `$(BaseIntermediateOutputPath)/hardened/$(Configuration)/$(Platform)/$(TargetFramework)/$(MSBuildProjectFile).UnmanagedRegistration.cache.props`.
-Absent caches still produce valid imports. Both hooks participate in each
+Absent caches still produce valid imports. The hook participates in each
 framework's Restore traversal, and unchanged snapshots are not rewritten.
 The per-configuration/framework paths prevent concurrent captures from
 overwriting one another.
+The prior clean-file ledger is not a Restore discovery input: it is neither
+captured nor replayed, and obsolete `$(CleanFile).hardened.props` files are ignored.
 
 With the coordinated SDK, SourceLink, and Roslyn overlays, the same Restore
 flag also prepares framework-reference and repository snapshots and initializes

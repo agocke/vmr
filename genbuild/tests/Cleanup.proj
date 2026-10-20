@@ -1,0 +1,35 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <OutDir>out/</OutDir>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <CleanFile>ledger.txt</CleanFile>
+    <TrackFileWritesShareableOutsideOfProjectDirectory>false</TrackFileWritesShareableOutsideOfProjectDirectory>
+    <IncrementalCleanDependsOn>LegacyCleanDependency</IncrementalCleanDependsOn>
+  </PropertyGroup>
+  <ItemGroup>
+    <FileWrites Include="out/current.txt;obj/intermediate.txt" />
+  </ItemGroup>
+  <Import Project="Cleanup.targets" />
+  <Target Name="_CheckForCompileOutputs" />
+  <Target Name="_SGenCheckForOutputs" />
+  <Target Name="LegacyCleanDependency">
+    <PropertyGroup>
+      <LegacyCleanDependencyRan>true</LegacyCleanDependencyRan>
+    </PropertyGroup>
+  </Target>
+  <Target Name="Produce">
+    <WriteLinesToFile File="out/current.txt" Lines="current output" Overwrite="true" Encoding="UTF-8"
+                      DeclaredInputs="" DeclaredOutputs="out/current.txt" />
+    <WriteLinesToFile File="obj/intermediate.txt" Lines="intermediate output" Overwrite="true" Encoding="UTF-8"
+                      DeclaredInputs="" DeclaredOutputs="obj/intermediate.txt" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="Produce;IncrementalClean;_CleanRecordFileWrites">
+    <Error Condition="'$(MSBuildHardenedGraph)' == 'true' and ('$(LegacyCleanDependencyRan)' != '' or '@(_CleanCurrentFileWrites)' != '' or '@(_CleanPriorFileWrites)' != '')"
+           Text="Hardened builds must omit the automatic cleanup/ledger closure." />
+    <Error Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(LegacyCleanDependencyRan)' != 'true'"
+           Text="Ordinary incremental cleanup prerequisites must still run." />
+    <Error Condition="'@(FileWrites)' != 'out/current.txt;obj/intermediate.txt'"
+           Text="Omitting cleanup must preserve product FileWrites." />
+  </Target>
+  <Target Name="Restore" />
+</Project>

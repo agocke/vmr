@@ -28,6 +28,7 @@ namespace Microsoft.Build.Tasks
             Utilities.Task.RegisterTask<MakeDir>();
             Utilities.Task.RegisterTask<RemoveDir>();
             Utilities.Task.RegisterTask<Copy>();
+            Utilities.Task.RegisterTask<CopyFiles>();
             Utilities.Task.RegisterTask<Delete>();
             Utilities.Task.RegisterTask<Touch>();
             Utilities.Task.RegisterTask<WriteLinesToFile>();

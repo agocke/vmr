@@ -273,7 +273,7 @@ Writer tests cover literal escaping and unchanged-file timestamps.
 
 The prototype deliberately uses unrestricted ordinary Restore as its trusted
 preparation stage. `MSBuildRestoreGraphInputs=true` captures SDK discovery,
-the prior clean ledger, unmanaged-registration-cache presence, framework
+unmanaged-registration-cache presence, framework
 references, and SourceLink repository information, and initializes Roslyn's
 analyzer semaphore. Preparation runs during ordinary Restore rather than
 depending on hardened mode; cache, repository, and analyzer hooks also
@@ -311,11 +311,11 @@ and absent assembly-folder configuration, explicit search roots, rejection
 before graph publication, and unchanged ordinary-build search sources.
 
 A fresh ordinary Restore followed by hardened Build now passes platform
-discovery, `TargetDir` computation, both cache imports, and assembly-folder
+discovery, `TargetDir` computation, the unmanaged-cache import, and assembly-folder
 initialization. The SDK omits optional target-framework telemetry and the
 preview-SDK banner during hardened graph construction because neither
 produces build artifacts; ordinary Restore and Build retain their behavior.
-The coordinated SDK's ordinary Restore prepares all six imports/marker
+The coordinated SDK's ordinary Restore prepares the required imports/marker
 inputs, and fresh hardened Build gets past snapshot replay.
 It also gets past NuGet classification and SDK duplicate-item validation.
 Explicit fail-fast `ContinueOnError` values (including `false` and
@@ -336,7 +336,7 @@ with MSB3670. The validator skips only provably disabled `OnError` handlers;
 potentially active handlers still prevent graph publication.
 
 The action host now prepares declared file-output parents after validating
-the invocation and before executing the task. Common's five directory
+the invocation and before executing the task. Common's participating directory
 preparation sites accumulate zero-I/O requirements instead of running
 `MakeDir` during construction. Each requested directory must be covered by a
 declared file output beneath it before the graph can be published. Unrelated
@@ -477,29 +477,76 @@ retain their prior behavior. Packaged tests cover main/dev and Release output,
 framework-dependent/self-contained configuration, existing/missing/generated
 templates, late selection, relocation, stale replacement and independent errors.
 
+Common's main assembly, reference-assembly and PDB publication now selects
+content-only `CopyFiles` actions. Equal-length explicit source/destination
+vectors must match their declarations; outputs must be unique and disjoint
+from inputs. Source fan-out is supported. Paths use captured project context,
+and the host prepares output parents. The task copies bytes without source
+timestamp/attribute propagation, old-output reads, size/timestamp/MVID skips,
+retries, link modes or execution-time MSBuild returns. Explicit link and
+read-only override requests fail rather than being silently ignored.
+
+`MainAssembly`, `ReferenceAssembly` and `FileWrites` are static, with source
+item metadata and copy opt-outs retained. Hardened mode omits the
+copy-up-to-date marker, its fingerprint action, cleanup registration and
+project-reference protocol metadata; it is incremental bookkeeping, not
+product data. Ordinary Copy/CopyRefAssembly and marker behavior are unchanged.
+Packaged tests cover compiler-to-copy ordering, relocated/ordinary byte
+equivalence from identical inputs, stale replacement, renamed reference
+outputs, static metadata, disabled products/symbols, rejected modes and fatal
+independent publication errors. Other Copy families remain unadmitted.
+
+Automatic cleanup is now ordinary-only: hardened Build omits IncrementalClean,
+prior/current clean-ledger collection and `_CleanRecordFileWrites`, including
+their cleanup-only dependencies. Restore no longer snapshots the ledger and
+Build does not import obsolete clean snapshots. Product FileWrites and
+semantic producers remain intact. Packaged cases verify missing/stale/obstructing
+ledgers, independent product publication without cleanup actions, preserved
+stale/unowned files and ordinary deletion/ledger reconciliation. Restore
+process tests cover single/multiple frameworks without a clean snapshot.
+
+Cleaning current graph outputs and safely pruning obsolete owned outputs belong
+to the executor. Neither is implemented here; pruning needs persistent ownership
+records rather than arbitrary directory deletion. Explicit MSBuild Clean/Rebuild
+and arbitrary semantic Delete actions remain unsupported.
+
 With directory import paths and construction host OS supplied explicitly to both Restore and Build,
 the fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
 executable-reference validation, WinMD validation, editorconfig generation,
 framework attribute generation, assembly version derivation, source-root mapping,
 SourceLink generation and compiler preparation. There are no remaining hash,
-deferred-hash, source-root mapping, SourceLink, compiler, deps or runtime-config task-rejection
-diagnostics in this probe.
-The first unsupported task is now `Copy`, followed by `CopyRefAssembly`, further
-`Copy`/`Delete` calls and dependent deferred-value diagnostics.
-Failed construction publishes neither a graph nor action invocations and
-writes no framework attribute, assembly-info, editorconfig or SourceLink file.
+deferred-hash, source-root mapping, SourceLink, compiler, deps, runtime-config,
+assembly/reference/PDB copy or deferred `MainAssembly` diagnostics in this probe.
+The bounded SDK hello-world Build now emits ten independent actions without
+writing product payloads. Packaged smoke verifies construction even with an
+obstructing ledger directory and a malformed obsolete clean snapshot.
+Target-time property assignment now preserves escaped values, matching ordinary
+MSBuild until item/task binding. Regressions cover literal semicolons, literal
+percent escapes, actual list separators and chained property assignments.
+The framework-attribute fixture uses the shipped C# text-producing target and
+compares independent publication with ordinary source bytes.
+Independent SDK execution now completes all ten actions, including compilation
+and final assembly/reference/PDB and runtime-manifest publication. Packaged smoke
+executes that graph, checks its final outputs and runs the resulting program on
+the external runtime; the direct packaged-compiler smoke remains separate.
+Action capture preserves ordinary empty-scalar omission rather than assigning
+empty strings. Independent tasks retain null and constructor defaults, nonempty
+escaped values still bind, and empty required scalars fail during construction
+just as in ordinary builds. Process regressions compare ordinary and independent
+output bytes. Default runtime configuration now matches ordinary generation
+without an invalid empty `rollForward` setting; main/dev JSON equality and SDK
+program startup are passing smoke cases.
 Other diagnostic invocations need explicit declarations as their target
 closures are admitted. The SDK's satellite-assembly target also retains an
 unadapted `MakeDir`; the structural-directory profile currently covers
 Common's preparation sites, not every SDK or custom directory operation.
-The probe still reports unsupported copying and cleanup operations.
-Some diagnostics follow unavailable earlier outputs; fix the first unsupported
-operations and re-probe rather than treating
-all diagnostics as independently reachable blockers.
+Other copy families remain outside the admitted profile. Earlier task-rejection
+chains should not be treated as independently reachable blockers now that this
+bounded graph constructs successfully.
 Broader RAR and compiler option profiles still need audited
-action-graph adaptation. Full SDK `Build` remains unsupported; ambient
-discovery has not been allowed as a fallback. Establish the bounded compile
-closure below before broadening to the full `Build` lifecycle.
+action-graph adaptation. Broader SDK `Build` profiles remain unsupported; ambient
+discovery has not been allowed as a fallback. Complete execution of the bounded
+compile closure below before broadening the `Build` lifecycle.
 
 Use existing SDK overlays for a single-framework C# hello-world profile:
 

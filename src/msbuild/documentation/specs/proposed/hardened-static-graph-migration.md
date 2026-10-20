@@ -264,6 +264,39 @@ main/dev compatibility, self-contained included frameworks, Release's main-only
 output, relocation, overwrite behavior and independent failure. Ordinary
 GenerateRuntimeConfigurationFiles, Publish and designer behavior is unchanged.
 
+## Copy contents, not incremental state
+
+[CopyFiles](../../../src/Tasks/FileIO/CopyFiles.cs) is a content transformation
+between explicit source/destination vectors, not an annotation on the richer
+ordinary Copy or CopyRefAssembly tasks. Derive destination identities and
+`MainAssembly`, `ReferenceAssembly` and `FileWrites` during construction;
+retain source item metadata and the target's product/symbol opt-outs.
+Do not request execution-time output items from the action.
+
+Require matching declarations and equally sized vectors. One source may feed
+multiple destinations, but outputs must be unique and disjoint from every
+input, including normalized path aliases. Validate the whole set before
+writing, so an earlier copy cannot overwrite a later source. Resolve paths
+against captured project context. Output-parent creation belongs to the host.
+Copy bytes without propagating source timestamps or attributes, reading old
+destinations, retrying, or using size/timestamp/MVID skips. Explicit link or
+read-only override requests are unsupported, not silently ignored. Missing
+sources and write failures fail; multi-file publication is not transactional.
+
+Omit the copy-up-to-date marker and its fingerprint action in hardened mode,
+including cleanup and project-reference bookkeeping. It is not product data,
+and its physical-path hash and old-output comparison are not a portable
+transformation. Keep ordinary Copy/CopyRefAssembly and marker behavior on
+their existing path; do not alter unrelated fingerprint APIs.
+
+The [shipped-target fixture](../../../../../genbuild/tests/CopyOutputs.proj)
+checks independent main/reference/PDB publication after compilation, static
+bookkeeping, metadata and opt-outs, renamed reference destinations, relocation,
+stale replacement and failure. Compare ordinary and hardened copying from
+identical binary inputs, rather than conflating copy behavior with differences
+in compiler path-mapping policy. Copy-local references, modules, documentation,
+satellites and other Copy families require their own adaptations.
+
 ## Leave caching to the execution system
 
 Tasks define transformations, not caching strategies. In hardened mode, do
@@ -299,6 +332,28 @@ cache wrappers likewise retain resource/reference and platform preparation.
 Real examples: [assembly-info cache](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.GenerateAssemblyInfo.targets),
 [compile-input cache](../../../src/Tasks/Microsoft.Common.CurrentVersion.targets),
 and [runtime-config cache](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.Sdk.targets).
+
+## Leave cleanup to the execution system
+
+Do not convert a legacy cleanup ledger into Restore discovery inputs or
+declared-I/O delete/reconciliation actions. Common's `IncrementalClean`,
+`_CleanGetCurrentAndPriorFileWrites` and `_CleanRecordFileWrites` are
+ordinary-only. Hardened Restore does not capture the ledger, and fresh Build
+does not import old clean snapshots. Preserve product `FileWrites` and
+semantic producers; only the automatic cleanup/bookkeeping closure is omitted.
+
+An executor can clean current outputs from graph declarations. Pruning obsolete
+outputs additionally needs persistent ownership records for previous graphs,
+with protection for inputs, shared outputs and unowned files. That is separate
+executor work, not a task-local cache or a reason to inspect/delete arbitrary
+directory contents. Until implemented, stale outputs remain untouched.
+
+This intentional opt-in behavior does not admit arbitrary semantic Delete
+actions or implement explicit MSBuild Clean/Rebuild. Ordinary cleanup remains
+unchanged. The [shipped-target fixture](../../../../../genbuild/tests/Cleanup.proj)
+checks missing/stale/obstructing ledgers, retained product actions and
+FileWrites, no legacy cleanup dependencies in the graph, preserved unowned
+files, and ordinary deletion/ledger reconciliation.
 
 ## Split mixed responsibilities into stable tasks
 

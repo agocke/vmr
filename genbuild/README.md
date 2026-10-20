@@ -66,8 +66,11 @@ independent Ninja execution, explicit NuGet project-style classification, SDK
 duplicate-item, executable-reference and filename-only WinMD validation, exact
 editorconfig and framework attribute generation, assembly version derivation,
 cache-free assembly generation, source-root mapping, exact SourceLink publication
-with all four packaged providers, SDK Restore, standalone C# compilation and
-dependency-manifest publication.
+with all four packaged providers, SDK Restore, standalone C# compilation,
+dependency/runtime-configuration publication and final assembly/reference/PDB
+copying. They also check cleanup-free SDK Build graph construction and independent
+execution through final artifact publication and program startup on the external
+runtime.
 Compiler actions run analyzers and the Regex generator, consume generated
 sources, and produce byte-identical assemblies, reference assemblies and
 portable PDBs across relocated checkouts.
@@ -82,8 +85,9 @@ explicitly selected or implied by `PackageReference` items. It never searches fo
 Ordinary Restore retains NuGet's existing classification and discovery.
 The app uses this VMR's NuGet targets with the pinned NuGet managed dependencies.
 
-Full SDK Build graph support is unfinished: dependency/runtime configuration,
-copy and cleanup operations still need adaptations, as do broader RAR profiles.
+The bounded single-framework SDK hello-world profile now emits a full Build
+graph, but its execution is unfinished. Remaining copy families and broader
+RAR profiles still need adaptations.
 SDK duplicate-item and executable-reference validation run as zero-I/O
 construction tasks. `GetAssemblyVersion` also runs during construction: it
 parses the supplied version string without inspecting an assembly or discovering
@@ -152,9 +156,32 @@ newlines on every host. Published probing paths must be nonempty relative paths;
 backslashes and trailing separators are normalized. Requesting automatic probes
 from absolute NuGet-cache roots fails rather than embedding machine locations.
 Ordinary Build, Publish and designer behavior remains unchanged.
-With explicit directory imports and construction host OS, the fresh full SDK
-graph probe now first rejects `Copy`, followed by `CopyRefAssembly`, further
-copying, cleanup and dependent deferred values.
+Common's hardened main assembly, reference-assembly and PDB publication uses
+content-only `CopyFiles` actions with explicit source/destination vectors.
+`MainAssembly`, `ReferenceAssembly` and `FileWrites` are computed during
+construction, preserving source item metadata and copy opt-outs. The task
+does not propagate source timestamps/attributes, compare old destinations,
+use MVID/size/timestamp skips, retry, or create links. Explicit link/read-only
+override modes are rejected. The copy-up-to-date marker and its bookkeeping
+are omitted in hardened mode; ordinary copying and marker behavior are unchanged.
+Other copy families, such as copy-local references, documentation and satellites,
+remain unsupported.
+Automatic `IncrementalClean`, prior/current clean-ledger collection and
+`_CleanRecordFileWrites` are omitted in hardened mode. Restore no longer
+captures a clean ledger, and Build does not import old clean snapshots.
+Cleaning current graph outputs and safely pruning obsolete owned outputs belong
+to the executor, not build actions; that functionality is not implemented yet.
+Stale/unowned files are left untouched. Ordinary cleanup remains unchanged;
+explicit MSBuild Clean/Rebuild and arbitrary Delete actions remain unsupported.
+With explicit directory imports and construction host OS, the fresh SDK
+hello-world Build graph now emits ten actions without creating product files.
+Target-time property assignment preserves MSBuild escaping, so generated framework
+attributes retain their semicolons and match ordinary source bytes. Independent
+execution completes all ten actions, including compilation and final publication.
+Action capture leaves empty scalar parameters unset, preserving ordinary task
+defaults instead of explicitly passing empty strings. Default runtime configuration
+matches ordinary generation, and the resulting SDK-built program runs on the
+external runtime.
 Common's hardened `CoreBuild` does not run failure handlers or record partial
 writes for later Clean. Nonempty post-build events using `Always` or `OnOutputUpdated`
 are rejected; use `OnBuildSuccess` or no event. Ordinary MSBuild retains its

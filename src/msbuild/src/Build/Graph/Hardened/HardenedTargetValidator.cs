@@ -598,7 +598,7 @@ internal sealed class HardenedTargetValidator
         HardenedValue<string> propertyValue;
         if (overwrites &&
             propertyState.IsStatic &&
-            TryExpandConcreteExpression(
+            TryExpandConcreteExpressionLeaveEscaped(
                 property,
                 property.Value,
                 property.Location,

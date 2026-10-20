@@ -1606,7 +1606,7 @@ namespace Microsoft.Build.BackEnd
                     // Expand out all the metadata, properties, and item vectors in the string.
                     string expandedParameterValue = _batchBucket.Expander.ExpandIntoStringAndUnescape(parameterValue, ExpanderOptions.ExpandAll, parameterLocation);
 
-                    if (expandedParameterValue.Length == 0 && !(ActionParameters is not null && parameterType == typeof(string)))
+                    if (expandedParameterValue.Length == 0)
                     {
                         success = true;
                     }
