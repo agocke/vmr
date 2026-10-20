@@ -1,0 +1,11 @@
+<Project DefaultTargets="Build">
+  <Target Name="Restore" />
+  <Target Name="Build">
+    <MSBuild Projects="Library/Library.csproj" Targets="GetTargetFrameworks">
+      <Output TaskParameter="TargetOutputs" ItemName="FrameworkInfo" />
+    </MSBuild>
+    <WriteLinesToFile File="$(MetadataFile)" Overwrite="true"
+                      Lines="@(FrameworkInfo->'%(TargetFrameworks)|%(TargetFrameworkMonikers)|%(TargetPlatformMonikers)|%(AdditionalPropertiesFromProject)|%(IsRidAgnostic)')"
+                      DeclaredInputs="" DeclaredOutputs="$(MetadataFile)" />
+  </Target>
+</Project>

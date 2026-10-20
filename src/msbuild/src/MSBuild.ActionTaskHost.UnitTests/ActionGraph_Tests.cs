@@ -22,6 +22,493 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     private readonly ITestOutputHelper _output = output;
 
     [UnixOnlyTheory]
+    [InlineData("assigned")]
+    [InlineData("unassigned")]
+    [InlineData("disabled")]
+    [InlineData("synthetic")]
+    [InlineData("invalid-guid")]
+    [InlineData("invalid-xml")]
+    public void AssignedProjectConfigurationsAreStaticWithoutReferencedFiles(string mode)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = Path.Combine(directory, "root.proj");
+        const string rootGuid = "{11111111-1111-1111-1111-111111111111}";
+        const string childGuid = "{22222222-2222-2222-2222-222222222222}";
+        const string syntheticGuid = "{33333333-3333-3333-3333-333333333333}";
+        XElement solution = new("SolutionConfiguration",
+            new XElement("ProjectConfiguration",
+                new XAttribute("Project", rootGuid), new XAttribute("AbsolutePath", project), "Debug|AnyCPU"),
+            new XElement("ProjectConfiguration",
+                new XAttribute("Project", childGuid),
+                new XAttribute("AbsolutePath", Path.Combine(directory, "missing", "Library.proj")),
+                new XAttribute("BuildProjectInSolution", mode != "disabled"), "Release|AnyCPU"));
+        if (mode == "unassigned")
+        {
+            solution.Elements().Last().Remove();
+        }
+        else if (mode == "synthetic")
+        {
+            solution.Elements().First().Add(new XElement("ProjectDependency", new XAttribute("Project", syntheticGuid)));
+            solution.Add(new XElement("ProjectConfiguration",
+                new XAttribute("Project", syntheticGuid),
+                new XAttribute("AbsolutePath", Path.Combine(directory, "missing", "Synthetic.proj")), "Debug|AnyCPU"));
+        }
+
+        XElement root = XElement.Parse("""
+            <Project DefaultTargets="Build">
+              <ItemGroup>
+                <ProjectReference Include="missing/Library.proj" GlobalPropertiesToRemove="Existing" Payload="literal%3Bvalue" />
+              </ItemGroup>
+              <Target Name="Build" DependsOnTargets="AssignProjectConfiguration">
+                <WriteLinesToFile File="$(ResultFile)" Overwrite="true"
+                                  Lines="@(ProjectReferenceWithConfiguration->'%(Identity)|%(SetConfiguration)|%(SetPlatform)|%(BuildReference)|%(ReferenceOutputAssembly)|%(GlobalPropertiesToRemove)|%(Payload)|%(SkipGetTargetFrameworkProperties)')"
+                                  DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+              </Target>
+            </Project>
+            """);
+        root.Element("ItemGroup")!.Element("ProjectReference")!
+            .SetAttributeValue("Project", mode == "invalid-guid" ? "not-a-guid" : childGuid);
+        root.AddFirst(new XElement("PropertyGroup",
+            new XElement("CurrentSolutionConfigurationContents", mode == "invalid-xml" ? "<invalid" : solution.ToString()),
+            new XElement("ShouldUnsetParentConfigurationAndPlatform", "true")));
+        string sdk = Path.Combine(Path.GetDirectoryName(RunnerUtilities.BootstrapDotnetHostPath)!,
+            "sdk", RunnerUtilities.BootstrapSdkVersion);
+        XElement common = XDocument.Load(Path.Combine(sdk, "Microsoft.Common.CurrentVersion.targets")).Root!;
+        root.Add(new XElement(common.Elements("Target")
+            .Where(target => target.Attribute("Name")?.Value == "AssignProjectConfiguration").ShouldHaveSingleItem()));
+        File.WriteAllText(project, root.ToString());
+        RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" -p:ResultFile=ordinary.txt -nr:false -v:minimal", out bool success, outputHelper: _output);
+        bool valid = !mode.StartsWith("invalid", StringComparison.Ordinal);
+        success.ShouldBe(valid);
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, "-p:ResultFile=action.txt").ShouldBe(valid);
+
+        Directory.Exists(Path.Combine(directory, "missing")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "action.txt")).ShouldBeFalse();
+        if (!valid)
+        {
+            File.Exists(graph).ShouldBeFalse();
+            Directory.Exists(graph + ".actions").ShouldBeFalse();
+            return;
+        }
+
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(1);
+        Ninja(graph, out success);
+
+        success.ShouldBeTrue();
+        File.ReadAllBytes(Path.Combine(directory, "action.txt"))
+            .ShouldBe(File.ReadAllBytes(Path.Combine(directory, "ordinary.txt")));
+        string result = File.ReadAllText(Path.Combine(directory, "action.txt"));
+        result.ShouldContain("literal;value");
+        if (mode == "unassigned")
+        {
+            result.ShouldContain("Existing;Configuration;Platform");
+        }
+        else
+        {
+            result.ShouldContain("Configuration=Release|Platform=AnyCPU|");
+        }
+
+        if (mode == "disabled")
+        {
+            result.ShouldContain("|false|false|");
+        }
+        else if (mode == "synthetic")
+        {
+            result.ShouldContain("Synthetic.proj|Configuration=Debug|Platform=AnyCPU|true|false|TargetFramework|");
+        }
+    }
+
+    [UnixOnlyTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void HardenedProjectReferenceExistenceIsValidatedByEngineRequests(bool exists)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        if (exists)
+        {
+            File.WriteAllText(Path.Combine(directory, "child.proj"), """
+                <Project><Target Name="Describe" Returns="static-value" /></Project>
+                """);
+        }
+
+        XElement root = XElement.Parse("""
+            <Project DefaultTargets="Build">
+              <ItemGroup><ProjectReferenceWithConfiguration Include="child.proj" /></ItemGroup>
+              <Target Name="Build" DependsOnTargets="_SplitProjectReferencesByFileExistence">
+                <MSBuild Projects="@(_MSBuildProjectReferenceExistent)" Targets="Describe">
+                  <Output TaskParameter="TargetOutputs" ItemName="Returned" />
+                </MSBuild>
+                <WriteLinesToFile File="result.txt" Lines="@(Returned)" Overwrite="true"
+                                  DeclaredInputs="" DeclaredOutputs="result.txt" />
+              </Target>
+            </Project>
+            """);
+        string sdk = Path.Combine(Path.GetDirectoryName(RunnerUtilities.BootstrapDotnetHostPath)!,
+            "sdk", RunnerUtilities.BootstrapSdkVersion);
+        XElement common = XDocument.Load(Path.Combine(sdk, "Microsoft.Common.CurrentVersion.targets")).Root!;
+        root.Add(new XElement(common.Elements("Target")
+            .Where(target => target.Attribute("Name")?.Value == "_SplitProjectReferencesByFileExistence").ShouldHaveSingleItem()));
+        string project = Path.Combine(directory, "root.proj");
+        File.WriteAllText(project, root.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, out string log).ShouldBe(exists);
+
+        File.Exists(Path.Combine(directory, "result.txt")).ShouldBeFalse();
+        if (!exists)
+        {
+            log.ShouldContain("MSB3202");
+            File.Exists(graph).ShouldBeFalse();
+            Directory.Exists(graph + ".actions").ShouldBeFalse();
+            return;
+        }
+
+        Ninja(graph, out bool success);
+
+        success.ShouldBeTrue();
+        File.ReadAllText(Path.Combine(directory, "result.txt")).Trim().ShouldBe("static-value");
+    }
+
+    [UnixOnlyTheory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("$(MissingTargets)")]
+    [InlineData("Describe")]
+    public void ChildDefaultTargetOutputsMatchOrdinaryBuild(string? targets)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        File.WriteAllText(Path.Combine(directory, "child.proj"), """
+            <Project DefaultTargets="Describe">
+              <Target Name="Describe" Returns="@(Product)">
+                <ItemGroup>
+                  <Product Include="static-child" Tag="literal%3Bvalue" />
+                </ItemGroup>
+              </Target>
+            </Project>
+            """);
+        XElement call = new("MSBuild", new XAttribute("Projects", "child.proj"),
+            new XElement("Output", new XAttribute("TaskParameter", "TargetOutputs"),
+                new XAttribute("ItemName", "Returned")));
+        if (targets is not null)
+        {
+            call.Add(new XAttribute("Targets", targets));
+        }
+
+        string project = Path.Combine(directory, "root.proj");
+        File.WriteAllText(project, new XElement("Project",
+            new XElement("Target", new XAttribute("Name", "Build"), call,
+                new XElement("WriteLinesToFile",
+                    new XAttribute("File", "$(ResultFile)"),
+                    new XAttribute("Lines", "@(Returned->'%(Identity)|%(Tag)')"),
+                    new XAttribute("Overwrite", "true"),
+                    new XAttribute("DeclaredInputs", ""),
+                    new XAttribute("DeclaredOutputs", "$(ResultFile)")))).ToString());
+        RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" -p:ResultFile=ordinary.txt -nr:false -v:minimal", out bool success, outputHelper: _output);
+        success.ShouldBeTrue();
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, "-p:ResultFile=action.txt").ShouldBeTrue();
+        Ninja(graph, out success);
+
+        success.ShouldBeTrue();
+        File.ReadAllBytes(Path.Combine(directory, "action.txt"))
+            .ShouldBe(File.ReadAllBytes(Path.Combine(directory, "ordinary.txt")));
+        File.ReadAllText(Path.Combine(directory, "action.txt")).Trim().ShouldBe("static-child|literal;value");
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("returns", false, 2)]
+    [InlineData("returns", true, 3)]
+    [InlineData("legacy", false, 2)]
+    [InlineData("legacy", true, 3)]
+    [InlineData("suppressed", false, 0)]
+    public void ChildTargetReturnRulesMatchOrdinaryBuild(string mode, bool keepDuplicates, int count)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        XElement child = new("Project",
+            new XElement("Target",
+                new XAttribute("Name", "Query"),
+                new XAttribute(mode == "returns" ? "Returns" : "Outputs", "@(Product)"),
+                new XAttribute("KeepDuplicateOutputs", keepDuplicates),
+                new XElement("ItemGroup",
+                    new XElement("Product", new XAttribute("Include", "one;one;two"),
+                        new XAttribute("KeepDuplicates", "true"), new XAttribute("Tag", "literal%3Bvalue")))));
+        if (mode == "suppressed")
+        {
+            child.Add(new XElement("Target", new XAttribute("Name", "Unused"), new XAttribute("Returns", "")));
+        }
+
+        File.WriteAllText(Path.Combine(directory, "child.proj"), child.ToString());
+        string project = Path.Combine(directory, "root.proj");
+        File.WriteAllText(project, """
+            <Project>
+              <Target Name="Build">
+                <MSBuild Projects="child.proj" Targets="Missing;Query" SkipNonexistentTargets="true" RunEachTargetSeparately="true">
+                  <Output TaskParameter="TargetOutputs" ItemName="Returned" />
+                </MSBuild>
+                <PropertyGroup><ReturnedCount>@(Returned->Count())</ReturnedCount></PropertyGroup>
+                <WriteLinesToFile File="$(ResultFile)" Lines="count=$(ReturnedCount);@(Returned->'%(Identity)|%(Tag)')"
+                                  Overwrite="true" DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+              </Target>
+            </Project>
+            """);
+        RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" -p:ResultFile=ordinary.txt -nr:false -v:minimal", out bool success, outputHelper: _output);
+        success.ShouldBeTrue();
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, "-p:ResultFile=action.txt").ShouldBeTrue();
+        Ninja(graph, out success);
+
+        success.ShouldBeTrue();
+        File.ReadAllBytes(Path.Combine(directory, "action.txt"))
+            .ShouldBe(File.ReadAllBytes(Path.Combine(directory, "ordinary.txt")));
+        File.ReadAllLines(Path.Combine(directory, "action.txt"))[0].ShouldBe("count=" + count);
+    }
+
+    [UnixOnlyFact]
+    public void DiamondReferencesRecordTheSharedProducerOnlyOnce()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        File.WriteAllText(Path.Combine(directory, "leaf.proj"), """
+            <Project>
+              <Target Name="Build" Returns="$(MSBuildProjectDirectory)/leaf.txt">
+                <WriteLinesToFile File="leaf.txt" Lines="shared" Overwrite="true"
+                                  DeclaredInputs="" DeclaredOutputs="leaf.txt" />
+              </Target>
+            </Project>
+            """);
+        foreach (string name in new[] { "left", "right" })
+        {
+            File.WriteAllText(Path.Combine(directory, name + ".proj"), """
+                <Project>
+                  <Target Name="Build" Returns="@(Leaf)">
+                    <MSBuild Projects="leaf.proj" Targets="Build">
+                      <Output TaskParameter="TargetOutputs" ItemName="Leaf" />
+                    </MSBuild>
+                  </Target>
+                </Project>
+                """);
+        }
+
+        string project = Path.Combine(directory, "root.proj");
+        File.WriteAllText(project, """
+            <Project>
+              <Target Name="Build">
+                <MSBuild Projects="left.proj;right.proj" Targets="Build" BuildInParallel="true">
+                  <Output TaskParameter="TargetOutputs" ItemName="References" />
+                </MSBuild>
+                <PropertyGroup><ReferenceCount>@(References->Count())</ReferenceCount></PropertyGroup>
+                <WriteLinesToFile File="result.txt" Lines="count=$(ReferenceCount)" Overwrite="true"
+                                  DeclaredInputs="@(References)" DeclaredOutputs="result.txt" />
+              </Target>
+            </Project>
+            """);
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph).ShouldBeTrue();
+
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(2);
+        File.Exists(Path.Combine(directory, "leaf.txt")).ShouldBeFalse();
+        Ninja(graph, out bool success);
+
+        success.ShouldBeTrue();
+        File.ReadAllText(Path.Combine(directory, "leaf.txt")).Trim().ShouldBe("shared");
+        File.ReadAllText(Path.Combine(directory, "result.txt")).Trim().ShouldBe("count=2");
+    }
+
+    [UnixOnlyFact]
+    public void AConditionallySkippedChildTargetCanRunInALaterRequest()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        File.WriteAllText(Path.Combine(directory, "child.proj"), """
+            <Project>
+              <Target Name="Conditional" Condition="'$(Enabled)' == 'true'" Returns="executed">
+                <WriteLinesToFile File="child.txt" Lines="executed" Overwrite="true"
+                                  DeclaredInputs="" DeclaredOutputs="child.txt" />
+              </Target>
+              <Target Name="Enable">
+                <PropertyGroup><Enabled>true</Enabled></PropertyGroup>
+              </Target>
+            </Project>
+            """);
+        string project = Path.Combine(directory, "root.proj");
+        File.WriteAllText(project, """
+            <Project>
+              <Target Name="Build">
+                <MSBuild Projects="child.proj" Targets="Conditional" />
+                <MSBuild Projects="child.proj" Targets="Enable" />
+                <MSBuild Projects="child.proj" Targets="Conditional">
+                  <Output TaskParameter="TargetOutputs" ItemName="Returned" />
+                </MSBuild>
+                <WriteLinesToFile File="root.txt" Lines="@(Returned)" Overwrite="true"
+                                  DeclaredInputs="child.txt" DeclaredOutputs="root.txt" />
+              </Target>
+            </Project>
+            """);
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph).ShouldBeTrue();
+        Ninja(graph, out bool success);
+
+        success.ShouldBeTrue();
+        File.ReadAllText(Path.Combine(directory, "root.txt")).Trim().ShouldBe("executed");
+    }
+
+    [UnixOnlyFact]
+    public void ProjectReferencesShareOneGraphAndPreserveConfiguredTargetState()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string childDirectory = Path.Combine(directory, "child");
+        Directory.CreateDirectory(childDirectory);
+        string child = Path.Combine(childDirectory, "child.proj");
+        File.WriteAllText(child, """
+            <Project>
+              <Target Name="Query" Returns="@(Product)">
+                <PropertyGroup>
+                  <Prepared>$(Common)$(Removed)-$(Variant)</Prepared>
+                </PropertyGroup>
+                <ItemGroup>
+                  <Product Include="out/$(Variant).txt" Payload="$(Prepared)%3Bescaped" />
+                </ItemGroup>
+              </Target>
+              <Target Name="Build" DependsOnTargets="Query" Returns="@(Product)">
+                <WriteLinesToFile File="@(Product)" Lines="$(Prepared)" Overwrite="true"
+                                  DeclaredInputs="" DeclaredOutputs="@(Product)" />
+              </Target>
+            </Project>
+            """);
+        string project = Path.Combine(directory, "root.proj");
+        File.WriteAllText(project, """
+            <Project>
+              <ItemGroup>
+                <Child Include="child/child.proj" AdditionalProperties="Variant=one" UndefineProperties="Removed" Caller="first" />
+                <Child Include="child/child.proj" AdditionalProperties="Variant=two" UndefineProperties="Removed" Caller="second" />
+              </ItemGroup>
+              <Target Name="Build">
+                <MSBuild Projects="@(Child)" Targets="Query" RebaseOutputs="true" Properties="Common=shared;Removed=stale">
+                  <Output TaskParameter="TargetOutputs" ItemName="Queries" />
+                </MSBuild>
+                <MSBuild Projects="@(Child)" Targets="Build" RebaseOutputs="true" Properties="Common=shared;Removed=stale">
+                  <Output TaskParameter="TargetOutputs" ItemName="Built" />
+                </MSBuild>
+                <MSBuild Projects="@(Child)" Targets="Build" RebaseOutputs="true" Properties="Common=shared;Removed=stale" />
+                <WriteLinesToFile File="$(SummaryFile)" Overwrite="true"
+                                  Lines="@(Queries->'%(Identity)|%(Payload)|%(Caller)|%(MSBuildSourceProjectFile)|%(MSBuildSourceTargetName)');@(Built->'%(Identity)|%(Payload)|%(Caller)|%(MSBuildSourceProjectFile)|%(MSBuildSourceTargetName)')"
+                                  DeclaredInputs="@(Built)" DeclaredOutputs="$(SummaryFile)" />
+              </Target>
+            </Project>
+            """);
+        RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" -p:SummaryFile=ordinary.txt -nr:false -v:minimal", out bool success, outputHelper: _output);
+        success.ShouldBeTrue();
+        string[] outputs = [Path.Combine(childDirectory, "out", "one.txt"), Path.Combine(childDirectory, "out", "two.txt")];
+        foreach (string file in outputs)
+        {
+            File.Delete(file);
+        }
+
+        string graph = Path.Combine(directory, "build.ninja");
+        Generate(project, graph, "-p:SummaryFile=action.txt").ShouldBeTrue();
+
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(3);
+        File.Exists(Path.Combine(directory, "action.txt")).ShouldBeFalse();
+        foreach (string file in outputs)
+        {
+            File.Exists(file).ShouldBeFalse();
+        }
+
+        Ninja(graph, out success);
+
+        success.ShouldBeTrue();
+        File.ReadAllText(outputs[0]).Trim().ShouldBe("shared-one");
+        File.ReadAllText(outputs[1]).Trim().ShouldBe("shared-two");
+        File.ReadAllBytes(Path.Combine(directory, "action.txt"))
+            .ShouldBe(File.ReadAllBytes(Path.Combine(directory, "ordinary.txt")));
+        string summary = File.ReadAllText(Path.Combine(directory, "action.txt"));
+        summary.ShouldContain("shared-one;escaped|first|");
+        summary.ShouldContain("shared-two;escaped|second|");
+        summary.ShouldContain("|Query");
+        summary.ShouldContain("|Build");
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("missing", "MSB3202")]
+    [InlineData("cycle", "circular")]
+    [InlineData("conflict", "conflicting outputs")]
+    [InlineData("override", "unaudited tasks")]
+    [InlineData("destination", "child project changing")]
+    [InlineData("remove-host", "MSBuildGraphHostOS")]
+    [InlineData("child-failure", "DeclaredIO")]
+    public void InvalidProjectReferenceClosurePublishesNothing(string mode, string expected)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = Path.Combine(directory, "root.proj");
+        string child = Path.Combine(directory, "child.proj");
+        XElement call = new("MSBuild", new XAttribute("Projects", "child.proj"), new XAttribute("Targets", "Build"));
+        if (mode == "destination")
+        {
+            call.SetAttributeValue("Properties", "MSBuildEmitActionGraph=" + Path.Combine(directory, "other.ninja"));
+        }
+        else if (mode == "remove-host")
+        {
+            call.SetAttributeValue("RemoveProperties", "MSBuildGraphHostOS");
+        }
+
+        XElement root = new("Project",
+            new XElement("Target", new XAttribute("Name", "Build"),
+                new XElement("WriteLinesToFile",
+                    new XAttribute("File", "root.txt"), new XAttribute("Lines", "root"),
+                    new XAttribute("Overwrite", "true"),
+                    new XAttribute("DeclaredInputs", ""), new XAttribute("DeclaredOutputs", "root.txt")),
+                call));
+        if (mode == "override")
+        {
+            root.AddFirst(new XElement("UsingTask",
+                new XAttribute("TaskName", typeof(MSBuild).FullName!),
+                new XAttribute("AssemblyFile", typeof(MSBuild).Assembly.Location)));
+            call.SetAttributeValue("File", Path.Combine(directory, "unaudited.txt"));
+            call.Attribute("Targets")!.Remove();
+        }
+
+        File.WriteAllText(project, root.ToString());
+        if (mode != "missing")
+        {
+            string body = mode switch
+            {
+                "cycle" => """<MSBuild Projects="root.proj" Targets="Build" />""",
+                "child-failure" => """<Exec Command="must-not-run" />""",
+                _ => $"""<WriteLinesToFile File="{(mode == "conflict" ? "root.txt" : "child.txt")}" Lines="child" Overwrite="true" DeclaredInputs="" DeclaredOutputs="{(mode == "conflict" ? "root.txt" : "child.txt")}" />""",
+            };
+            File.WriteAllText(child, $"""<Project><Target Name="Build">{body}</Target></Project>""");
+        }
+
+        string graph = Path.Combine(directory, "build.ninja");
+        Generate(project, graph, out string log).ShouldBeFalse();
+
+        log.ShouldContain(expected, Case.Insensitive);
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "other.ninja")).ShouldBeFalse();
+        Directory.Exists(Path.Combine(directory, "other.ninja.actions")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "root.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "child.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "unaudited.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyTheory]
     [InlineData(null, "<null>|constructor-default")]
     [InlineData("", "<null>|constructor-default")]
     [InlineData("$(Missing)", "<null>|constructor-default")]
@@ -1007,8 +1494,8 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     }
 
     [UnixOnlyTheory]
-    [InlineData("Projects", "missing-child.proj", "MSB4286")]
-    [InlineData("Projects", "%3B", "MSB4286")]
+    [InlineData("Projects", "missing-child.proj", "MSB3202")]
+    [InlineData("Projects", "%3B", "MSB3202")]
     [InlineData("BuildInParallel", "invalid-boolean", "invalid-boolean")]
     [InlineData("UnknownParameter", "value", "UnknownParameter")]
     [InlineData("TaskParameter", "UnknownOutput", "UnknownOutput")]

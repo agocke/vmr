@@ -81,6 +81,30 @@ metadata into content URLs; they do not contact the server or query Git.
 Keep repository discovery and URL translation preparation in Restore, not in
 these construction-time transformations.
 
+Project-reference configuration and framework XML formatting follow the same
+rule. `AssignProjectConfiguration` uses supplied project metadata and solution
+XML; `CombineTargetFrameworkInfoProperties` and `CombineXmlElements` format
+supplied values. They do not need the referenced project or assembly to exist.
+Project evaluation remains an intrinsic engine request, not a file-I/O task
+action or a reason to prebuild referenced binaries during Restore.
+Keep those requests on ordinary parameter binding rather than action capture:
+an empty optional `Targets` vector must stay unset so the default target's
+outputs are returned, not discarded.
+NuGet's nearest-framework task likewise selects from supplied framework, alias
+and platform metadata, preserving fallback diagnostics without inspecting project
+files. Ship its source-built dependency closure with the annotations; modifying
+a source file cannot change a separately pinned binary. Keep new declaration
+parameters on hardened-only call sites when ordinary hosts may load older task
+assemblies.
+
+Separate optional output placeholders from requested product effects.
+Common always creates an `_ApplicationManifestFinal` path, even for a library
+that requests no manifest generation. Hardened `GetNativeManifest` skips the
+ordinary existence query in that case instead of adopting stale output. Actual
+ClickOnce, Appx, native-reference or isolated-COM manifest requests still reach
+the unsupported discovery path and fail; this is not blanket manifest support.
+Ordinary queries retain their existing existence-based behavior.
+
 Real examples: [assembly version derivation](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/GetAssemblyVersion.cs),
 [source-root mapping](../../../../roslyn/src/Compilers/Core/MSBuildTask/MapSourceRoots.cs),
 and [SourceLink URL derivation](../../../../sourcelink/src/Common/GitProvider/GetSourceLinkUrlGitTask.cs).

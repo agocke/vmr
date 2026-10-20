@@ -1,0 +1,62 @@
+<Project DefaultTargets="Build">
+  <UsingTask TaskName="NuGet.Build.Tasks.GetReferenceNearestTargetFrameworkTask"
+             AssemblyFile="$(MSBuildToolsPath)/NuGet.Build.Tasks.dll" />
+  <PropertyGroup>
+    <CurrentFramework>.NETCoreApp,Version=v8.0</CurrentFramework>
+    <CurrentAlias>net8.0</CurrentAlias>
+    <ReferenceFrameworks>net6.0;net8.0</ReferenceFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Case)' == 'nearest'">
+    <ReferenceFrameworks>net6.0;net7.0</ReferenceFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Case)' == 'alias'">
+    <CurrentAlias>second</CurrentAlias>
+    <ReferenceFrameworks>first;second</ReferenceFrameworks>
+    <ReferenceMonikers>.NETCoreApp,Version=v8.0;.NETCoreApp,Version=v8.0</ReferenceMonikers>
+    <ReferencePlatforms>None;None</ReferencePlatforms>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Case)' == 'platform'">
+    <CurrentPlatform>Windows,Version=10.0.19041.0</CurrentPlatform>
+    <ReferenceFrameworks>desktop;portable</ReferenceFrameworks>
+    <ReferenceMonikers>.NETCoreApp,Version=v8.0;.NETCoreApp,Version=v8.0</ReferenceMonikers>
+    <ReferencePlatforms>Windows,Version=10.0.17763.0;None</ReferencePlatforms>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Case)' == 'fallback'">
+    <CurrentFramework>.NETStandard,Version=v2.0</CurrentFramework>
+    <CurrentAlias>netstandard2.0</CurrentAlias>
+    <FallbackFrameworks>net461</FallbackFrameworks>
+    <ReferenceFrameworks>net461</ReferenceFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Case)' == 'unspecified'">
+    <ReferenceFrameworks />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Case)' == 'incompatible'">
+    <ReferenceFrameworks>net9.0</ReferenceFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Case)' == 'invalid'">
+    <CurrentFramework>not-a-framework</CurrentFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="missing/Library.csproj"
+               TargetFrameworks="$(ReferenceFrameworks)"
+               TargetFrameworkMonikers="$(ReferenceMonikers)"
+               TargetPlatformMonikers="$(ReferencePlatforms)"
+               MSBuildSourceProjectFile="missing/Library.csproj"
+               Payload="literal%3Bvalue" />
+  </ItemGroup>
+  <Target Name="Restore" />
+  <Target Name="Build">
+    <GetReferenceNearestTargetFrameworkTask CurrentProjectName="App"
+                                           CurrentProjectTargetFramework="$(CurrentFramework)"
+                                           CurrentProjectTargetPlatform="$(CurrentPlatform)"
+                                           CurrentProjectTargetFrameworkProperty="$(CurrentAlias)"
+                                           FallbackTargetFrameworks="$(FallbackFrameworks)"
+                                           AnnotatedProjectReferences="@(Reference)"
+                                           DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="AssignedProjects" ItemName="Assigned" />
+    </GetReferenceNearestTargetFrameworkTask>
+    <WriteLinesToFile File="$(ResultFile)" Overwrite="true"
+                      Lines="@(Assigned->'%(Identity)|%(NearestTargetFramework)|%(Payload)')"
+                      DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+  </Target>
+</Project>

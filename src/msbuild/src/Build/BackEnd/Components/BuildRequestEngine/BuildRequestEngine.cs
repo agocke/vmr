@@ -428,6 +428,11 @@ namespace Microsoft.Build.BackEnd
                         }
 
                         BuildRequestEntry entry = new BuildRequestEntry(request, config, taskEnvironment);
+                        if (_componentHost.BuildParameters.HardenedGraphValidation &&
+                            _requestsByGlobalRequestId.TryGetValue(request.ParentGlobalRequestId, out BuildRequestEntry parentEntry))
+                        {
+                            entry.ActionGraph = parentEntry.ActionGraph;
+                        }
 
                         entry.OnStateChanged += BuildRequestEntry_StateChanged;
 

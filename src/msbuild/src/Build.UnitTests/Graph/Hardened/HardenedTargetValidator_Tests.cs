@@ -122,6 +122,83 @@ public sealed class HardenedTargetValidator_Tests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void IncludedMetadataAssignmentsMatchOrdinaryBuild()
+    {
+        const string projectXml = """
+            <Project>
+              <ItemDefinitionGroup>
+                <Entry><DefaultValue>default%3Bvalue</DefaultValue></Entry>
+              </ItemDefinitionGroup>
+              <ItemGroup>
+                <Existing Include="existing"><Value>before</Value></Existing>
+              </ItemGroup>
+              <Target Name="Build">
+                <ItemGroup>
+                  <Entry Include="new">
+                    <Value></Value>
+                    <Value Condition="'%(Value)' == ''">true</Value>
+                    <Value Condition="'%(Value)' == ''">false</Value>
+                    <Escaped>literal%3Bvalue%253B</Escaped>
+                    <Observed>%(Value)|%(Entry.Value)|%(Escaped)|%(DefaultValue)</Observed>
+                  </Entry>
+                  <Existing>
+                    <Value>after</Value>
+                    <Observed>%(Value)</Observed>
+                  </Existing>
+                </ItemGroup>
+              </Target>
+            </Project>
+            """;
+        using TestEnvironment environment = TestEnvironment.Create(_output);
+
+        (ProjectInstance ordinaryProject, Lookup validationLookup) = BuildOrdinaryAndValidateHardened(
+            environment, projectXml, new Dictionary<string, HardenedTaskClassification>());
+
+        foreach (string itemType in new[] { "Entry", "Existing" })
+        {
+            validationLookup.GetItems(itemType).ShouldHaveSingleItem().GetMetadataValue("Observed")
+                .ShouldBe(ordinaryProject.GetItems(itemType).ShouldHaveSingleItem().GetMetadataValue("Observed"));
+        }
+
+        validationLookup.GetItems("Entry").ShouldHaveSingleItem().GetMetadataValue("Observed")
+            .ShouldBe("true|true|literal;value%3B|default;value");
+        validationLookup.GetItems("Existing").ShouldHaveSingleItem().GetMetadataValue("Observed").ShouldBe("before");
+    }
+
+    [Theory]
+    [InlineData("%(Value)")]
+    [InlineData("%(Entry.Value)")]
+    public void IncludedMetadataRetainsDeferredAssignmentState(string reference)
+    {
+        IReadOnlyList<InvalidProjectFileException> diagnostics = ValidateDiagnostics(
+            $$"""
+            <Project>
+              <Target Name="Build">
+                <ItemGroup>
+                  <Entry Include="new">
+                    <Value>$(DeferredValue)</Value>
+                    <Observed>{{reference}}</Observed>
+                  </Entry>
+                </ItemGroup>
+                <WriteLinesToFile File="result.txt" Lines="@(Entry->'%(Observed)')"
+                                  DeclaredInputs="" DeclaredOutputs="result.txt" />
+              </Target>
+            </Project>
+            """,
+            new Dictionary<string, HardenedTaskClassification>
+            {
+                ["WriteLinesToFile"] = HardenedTaskClassification.DeclaredIO,
+            },
+            lookup => lookup.EnableHardenedState().SetProperty(
+                "DeferredValue",
+                HardenedValue<string>.NonStatic(ValueState.Deferred(new ValueOrigin("deferred task output")))));
+
+        diagnostics.ShouldContain(
+            diagnostic => diagnostic.ErrorCode == "MSB4288",
+            string.Join(Environment.NewLine, diagnostics.Select(diagnostic => diagnostic.Message)));
+    }
+
+    [Fact]
     public void TargetBucketBodyOrderMatchesOrdinaryBuild()
     {
         const string projectXml = """

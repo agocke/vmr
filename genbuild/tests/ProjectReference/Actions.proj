@@ -1,0 +1,17 @@
+<Project DefaultTargets="Build">
+  <Target Name="Restore" />
+  <Target Name="Build">
+    <MSBuild Projects="Library/Actions.proj" Targets="Describe">
+      <Output TaskParameter="TargetOutputs" ItemName="Description" />
+    </MSBuild>
+    <MSBuild Projects="Library/Actions.proj" Targets="Build">
+      <Output TaskParameter="TargetOutputs" ItemName="Built" />
+    </MSBuild>
+    <MSBuild Projects="Library/Actions.proj" Targets="Build" />
+    <Error Condition="'@(Description)' != '@(Built)' or '@(Built->'%(Message)')' != 'Hello from a child project.'"
+           Text="Project references must return static paths and metadata across requests."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <CopyFiles SourceFiles="@(Built)" DestinationFiles="out/application.txt"
+               DeclaredInputs="@(Built)" DeclaredOutputs="out/application.txt" />
+  </Target>
+</Project>

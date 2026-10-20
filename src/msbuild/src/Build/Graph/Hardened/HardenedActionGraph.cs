@@ -80,11 +80,12 @@ internal sealed class HardenedActionGraph
     private readonly string _directory;
     private readonly string _hostOS;
     private readonly Dictionary<string, string> _environment;
-    private readonly List<ActionInvocation> _actions = [];
-    private readonly Dictionary<string, ElementLocation> _requiredOutputDirectories = new(FileUtilities.PathComparer);
+    private readonly List<ActionInvocation> _actions;
+    private readonly Dictionary<string, ElementLocation> _requiredOutputDirectories;
+    private readonly Dictionary<int, HardenedTargetValidator> _validators;
     private readonly ElementLocation _location;
 
-    internal HardenedActionGraph(ProjectInstance project, TaskEnvironment environment)
+    internal HardenedActionGraph(ProjectInstance project, TaskEnvironment environment, HardenedActionGraph? parent = null)
     {
         _location = project.ProjectFileLocation;
         _directory = project.Directory;
@@ -107,6 +108,25 @@ internal sealed class HardenedActionGraph
         }
 
         _environment = actionEnvironment;
+        if (parent is not null)
+        {
+            Require(FileUtilities.PathsEqual(_destination, parent._destination) &&
+                FileUtilities.PathsEqual(_host, parent._host) &&
+                FileUtilities.PathsEqual(_dotnet, parent._dotnet) &&
+                _hostOS == parent._hostOS,
+                "a child project changing action graph destination, hosts, or host OS");
+            Require(_environment.Count == parent._environment.Count,
+                "a child project changing the action environment");
+            foreach (KeyValuePair<string, string> variable in _environment)
+            {
+                Require(parent._environment.TryGetValue(variable.Key, out string? value) && value == variable.Value,
+                    "a child project changing the action environment");
+            }
+        }
+
+        _actions = parent?._actions ?? [];
+        _requiredOutputDirectories = parent?._requiredOutputDirectories ?? new(FileUtilities.PathComparer);
+        _validators = parent?._validators ?? [];
         Require(!NativeMethodsShared.IsWindows, "Windows action command quoting");
         Require(Path.IsPathRooted(_host) && File.Exists(_host), "a missing or nonabsolute MSBuildActionTaskHost");
         Require(Path.IsPathRooted(_dotnet) && File.Exists(_dotnet), "a missing or nonabsolute MSBuildActionDotNetHost");
@@ -115,6 +135,17 @@ internal sealed class HardenedActionGraph
     internal TaskEnvironment CreateConstructionEnvironment()
         => TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(
             _directory, _environment);
+
+    internal HardenedTargetValidator GetValidator(int configurationId)
+    {
+        if (!_validators.TryGetValue(configurationId, out HardenedTargetValidator? validator))
+        {
+            validator = new HardenedTargetValidator();
+            _validators.Add(configurationId, validator);
+        }
+
+        return validator;
+    }
 
     internal void RequireOutputDirectories(IEnumerable<ProjectItemInstance> directories, ElementLocation location)
     {

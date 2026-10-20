@@ -594,82 +594,8 @@ namespace Microsoft.Build.BackEnd
                         bucket.LeaveScope();
                     }
 
-                    string targetReturns = _target.Returns;
-                    ElementLocation targetReturnsLocation = _target.ReturnsLocation;
-
-                    // If there are no targets in the project file that use the "Returns" attribute, that means that we
-                    // revert to the legacy behavior in the case where Returns is not specified (null, rather
-                    // than the empty string, which indicates no returns).  Legacy behavior is for all
-                    // of the target's Outputs to be returned.
-                    // On the other hand, if there is at least one target in the file that uses the Returns attribute,
-                    // then all targets in the file are run according to the new behaviour (return nothing unless otherwise
-                    // specified by the Returns attribute).
-                    if (targetReturns == null)
-                    {
-                        if (!_target.ParentProjectSupportsReturnsAttribute)
-                        {
-                            targetReturns = _target.Outputs;
-                            targetReturnsLocation = _target.OutputsLocation;
-                        }
-                    }
-
-                    if (!String.IsNullOrEmpty(targetReturns))
-                    {
-                        // Determine if we should keep duplicates.
-                        bool keepDupes = ConditionEvaluator.EvaluateCondition(
-                                 _target.KeepDuplicateOutputs,
-                                 ParserOptions.AllowPropertiesAndItemLists,
-                                 _expander,
-                                 ExpanderOptions.ExpandPropertiesAndItems,
-                                 requestEntry.ProjectRootDirectory,
-                                 _target.KeepDuplicateOutputsLocation,
-                                 FileSystems.Default,
-                                 projectLoggingContext);
-
-                        // NOTE: we need to gather the outputs in batches, because the output specification may reference item metadata
-                        // Also, we are using the baseLookup, which has possibly had changes made to it since the project started.  Because of this, the
-                        // set of outputs calculated here may differ from those which would have been calculated at the beginning of the target.  It is
-                        // assumed the user intended this.
-                        List<ItemBucket> batchingBuckets = BatchingEngine.PrepareBatchingBuckets(GetBatchableParametersForTarget(), _baseLookup, _target.Location, targetLoggingContext);
-
-                        if (keepDupes)
-                        {
-                            List<TaskItem> targetOutputItemsList = new();
-                            foreach (ItemBucket bucket in batchingBuckets)
-                            {
-                                if (targetOutputItems is null)
-                                {
-                                    // As an optimization, use the results for the first bucket and if there are no more buckets to process, only a single list is allocated.
-                                    targetOutputItemsList = bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(targetReturns, ExpanderOptions.ExpandAll, targetReturnsLocation).ToList();
-                                }
-                                else
-                                {
-                                    targetOutputItemsList.AddRange(bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(targetReturns, ExpanderOptions.ExpandAll, targetReturnsLocation));
-                                }
-                            }
-
-                            targetOutputItems = targetOutputItemsList.ToArray();
-                        }
-                        else
-                        {
-                            // Optimize for only one bucket by initializing the HashSet<T> with the first one's items in case there are a lot of items, it won't need to be resized.
-                            if (batchingBuckets.Count == 1)
-                            {
-                                targetOutputItems = new HashSet<TaskItem>(batchingBuckets[0].Expander.ExpandIntoTaskItemsLeaveEscaped(targetReturns, ExpanderOptions.ExpandAll, targetReturnsLocation)).ToArray();
-                            }
-                            else
-                            {
-                                HashSet<TaskItem> addedItems = new HashSet<TaskItem>();
-                                foreach (ItemBucket bucket in batchingBuckets)
-                                {
-                                    IList<TaskItem> itemsToAdd = bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(targetReturns, ExpanderOptions.ExpandAll, targetReturnsLocation);
-                                    addedItems.UnionWith(itemsToAdd);
-                                }
-
-                                targetOutputItems = addedItems.ToArray();
-                            }
-                        }
-                    }
+                    targetOutputItems = GatherTargetOutputs(
+                        _target, _baseLookup, _expander, requestEntry.ProjectRootDirectory, targetLoggingContext);
                 }
                 finally
                 {
@@ -901,26 +827,105 @@ namespace Microsoft.Build.BackEnd
         /// target.  We should consider doing something similar for perf reasons.
         /// </summary>
         /// <returns>A list of batchable parameters</returns>
-        private List<string> GetBatchableParametersForTarget()
+        private List<string> GetBatchableParametersForTarget() => GetBatchableParametersForTarget(_target);
+
+        private static List<string> GetBatchableParametersForTarget(ProjectTargetInstance target)
         {
             List<string> batchableTargetParameters = new List<string>();
 
-            if (_target.Inputs.Length > 0)
+            if (target.Inputs.Length > 0)
             {
-                batchableTargetParameters.Add(_target.Inputs);
+                batchableTargetParameters.Add(target.Inputs);
             }
 
-            if (_target.Outputs.Length > 0)
+            if (target.Outputs.Length > 0)
             {
-                batchableTargetParameters.Add(_target.Outputs);
+                batchableTargetParameters.Add(target.Outputs);
             }
 
-            if (!string.IsNullOrEmpty(_target.Returns))
+            if (!string.IsNullOrEmpty(target.Returns))
             {
-                batchableTargetParameters.Add(_target.Returns);
+                batchableTargetParameters.Add(target.Returns);
             }
 
             return batchableTargetParameters;
+        }
+
+        internal static TaskItem[] GatherTargetOutputs(
+            ProjectTargetInstance target,
+            Lookup lookup,
+            Expander<ProjectPropertyInstance, ProjectItemInstance> expander,
+            string projectDirectory,
+            TargetLoggingContext loggingContext)
+        {
+            // Outputs is the legacy return value only when the entire project omits Returns.
+            string returns = target.Returns;
+            ElementLocation location = target.ReturnsLocation;
+            if (returns is null && !target.ParentProjectSupportsReturnsAttribute)
+            {
+                returns = target.Outputs;
+                location = target.OutputsLocation;
+            }
+
+            if (string.IsNullOrEmpty(returns))
+            {
+                return [];
+            }
+
+            bool keepDuplicates = ConditionEvaluator.EvaluateCondition(
+                target.KeepDuplicateOutputs,
+                ParserOptions.AllowPropertiesAndItemLists,
+                expander,
+                ExpanderOptions.ExpandPropertiesAndItems,
+                projectDirectory,
+                target.KeepDuplicateOutputsLocation,
+                FileSystems.Default,
+                loggingContext);
+
+            // Rebatch using the updated lookup, not the state at target entry.
+            List<ItemBucket> buckets = BatchingEngine.PrepareBatchingBuckets(
+                GetBatchableParametersForTarget(target), lookup, target.Location, loggingContext, target);
+            // Construction has no logging context, so batching leaves its expanders uninitialized.
+            if (buckets.Count == 1)
+            {
+                ItemBucket bucket = buckets[0];
+                if (loggingContext is null)
+                {
+                    bucket.Initialize(loggingContext);
+                }
+
+                IList<TaskItem> items = bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(returns, ExpanderOptions.ExpandAll, location);
+                return keepDuplicates ? items.ToArray() : new HashSet<TaskItem>(items).ToArray();
+            }
+
+            if (keepDuplicates)
+            {
+                List<TaskItem> items = [];
+                foreach (ItemBucket bucket in buckets)
+                {
+                    if (loggingContext is null)
+                    {
+                        bucket.Initialize(loggingContext);
+                    }
+
+                    items.AddRange(bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(returns, ExpanderOptions.ExpandAll, location));
+                }
+
+                return items.ToArray();
+            }
+
+            HashSet<TaskItem> uniqueItems = [];
+            foreach (ItemBucket bucket in buckets)
+            {
+                if (loggingContext is null)
+                {
+                    bucket.Initialize(loggingContext);
+                }
+
+                uniqueItems.UnionWith(bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(returns, ExpanderOptions.ExpandAll, location));
+            }
+
+            return uniqueItems.ToArray();
         }
 
         /// <summary>

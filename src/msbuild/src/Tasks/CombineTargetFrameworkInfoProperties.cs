@@ -13,8 +13,13 @@ namespace Microsoft.Build.Tasks
     /// Combines items that represent properties and values into an XML representation.
     /// </summary>
     [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
     public class CombineTargetFrameworkInfoProperties : TaskExtension
     {
+        public ITaskItem[] DeclaredInputs { get; set; } = [];
+
+        public ITaskItem[] DeclaredOutputs { get; set; } = [];
+
         /// <summary>
         /// The root element name to use for the generated XML string
         /// </summary>

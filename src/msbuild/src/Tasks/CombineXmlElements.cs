@@ -12,8 +12,13 @@ namespace Microsoft.Build.Tasks
     /// Combines multiple XML elements
     /// </summary>
     [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
     public class CombineXmlElements : TaskExtension
     {
+        public ITaskItem[] DeclaredInputs { get; set; } = [];
+
+        public ITaskItem[] DeclaredOutputs { get; set; } = [];
+
         /// <summary>
         /// The root element name to use for the generated XML string
         /// </summary>

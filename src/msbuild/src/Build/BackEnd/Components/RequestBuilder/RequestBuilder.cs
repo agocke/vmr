@@ -35,7 +35,7 @@ namespace Microsoft.Build.BackEnd
     /// <summary>
     /// Implementation of IRequestBuilder
     /// </summary>
-    internal class RequestBuilder : IRequestBuilder, IRequestBuilderCallback, IBuildComponent
+    internal class RequestBuilder : IRequestBuilder, ITargetBuilderCallback, IBuildComponent
     {
         /// <summary>
         /// The dedicated scheduler object.
@@ -320,6 +320,9 @@ namespace Microsoft.Build.BackEnd
         }
 
         #region IRequestBuilderCallback Members
+
+        Task<ITargetResult[]> ITargetBuilderCallback.LegacyCallTarget(string[] targets, bool continueOnError, Microsoft.Build.Construction.ElementLocation referenceLocation)
+            => throw new InvalidOperationException("Hardened CallTarget is handled by the target validator.");
 
         /// <summary>
         /// This method instructs the request builder to build the specified projects using the specified parameters.  This is
@@ -1254,7 +1257,16 @@ namespace Microsoft.Build.BackEnd
                     "action graph construction");
                 if (emitActions)
                 {
-                    _requestEntry.ActionGraph = new HardenedActionGraph(actionProject, _requestEntry.TaskEnvironment);
+                    ProjectErrorUtilities.VerifyThrowInvalidProject(
+                        _componentHost.BuildParameters.MaxNodeCount == 1 && !_componentHost.BuildParameters.MultiThreaded,
+                        actionProject.ProjectFileLocation, "HardenedGraphUnsupportedConstruct",
+                        "multi-node or multi-threaded graph construction", "action graph construction");
+                    ProjectErrorUtilities.VerifyThrowInvalidProject(
+                        _requestEntry.Request.IsRootRequest || _requestEntry.ActionGraph is not null,
+                        actionProject.ProjectFileLocation, "HardenedGraphUnsupportedConstruct",
+                        "a child request without its root construction graph", "action graph construction");
+                    _requestEntry.ActionGraph = new HardenedActionGraph(
+                        actionProject, _requestEntry.TaskEnvironment, _requestEntry.ActionGraph);
                 }
 
                 if (_componentHost.BuildParameters.HardenedGraphValidation)
@@ -1276,9 +1288,16 @@ namespace Microsoft.Build.BackEnd
                     string originalThreadDirectory = FileUtilities.CurrentThreadWorkingDirectory;
                     TaskEnvironment constructionEnvironment = _requestEntry.ActionGraph.CreateConstructionEnvironment();
                     _requestEntry.TaskEnvironment = constructionEnvironment;
+                    HardenedTargetValidator validator = _requestEntry.ActionGraph.GetValidator(_requestEntry.Request.ConfigurationId);
                     try
                     {
-                        HardenedTargetValidator validator = new(
+                        diagnostics = validator.Construct(
+                            project,
+                            baseLookup,
+                            allTargets.Where(target =>
+                                !_requestEntry.Request.BuildRequestDataFlags.HasFlag(BuildRequestDataFlags.SkipNonexistentTargets) ||
+                                project.Targets.ContainsKey(target.name)).Select(target => target.name),
+                            itemOperationPlan,
                             (task, taskIdentityParameters) =>
                                 HardenedTaskClassificationResolver.Classify(
                                     project,
@@ -1287,11 +1306,6 @@ namespace Microsoft.Build.BackEnd
                                     taskIdentityParameters),
                             (target, task, lookup) =>
                                 ExecuteHardenedConstructionTask(constructionTaskBuilder, target, task, lookup));
-                        diagnostics = validator.Validate(
-                            project,
-                            baseLookup,
-                            allTargets.Select(target => target.name),
-                            itemOperationPlan);
                     }
                     finally
                     {
@@ -1311,13 +1325,18 @@ namespace Microsoft.Build.BackEnd
                         throw diagnostics[0];
                     }
 
-                    _requestEntry.ActionGraph.Publish();
+                    if (_requestEntry.Request.IsRootRequest)
+                    {
+                        _requestEntry.ActionGraph.Publish();
+                    }
+
                     BuildResult graphResult = new(_requestEntry.Request);
                     foreach (var target in allTargets)
                     {
-                        graphResult.AddResultsForTarget(target.name, new TargetResult(
-                            Array.Empty<ProjectItemInstance.TaskItem>(),
-                            new WorkUnitResult(WorkUnitResultCode.Success, WorkUnitActionCode.Continue, null)));
+                        if (project.Targets.ContainsKey(target.name))
+                        {
+                            graphResult.AddResultsForTarget(target.name, validator.GetTargetResult(target.name));
+                        }
                     }
 
                     graphResult.EvaluationId = project.EvaluationId;
@@ -1390,7 +1409,7 @@ namespace Microsoft.Build.BackEnd
                     WorkUnitResult result = taskBuilder.ExecuteTask(
                         targetLoggingContext,
                         _requestEntry,
-                        (ITargetBuilderCallback)_targetBuilder,
+                        this,
                         task,
                         TaskExecutionMode.ExecuteTaskAndGatherOutputs,
                         lookup,

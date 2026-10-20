@@ -1,0 +1,20 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <_DeploymentApplicationManifestIdentity>Native.Library</_DeploymentApplicationManifestIdentity>
+    <GenerateClickOnceManifests Condition="'$(Case)' == 'clickonce'">true</GenerateClickOnceManifests>
+    <GenerateAppxManifest Condition="'$(Case)' == 'appx'">true</GenerateAppxManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <_ApplicationManifestFinal Include="$(MSBuildProjectDirectory)/native.manifest" />
+    <NativeReference Include="missing-dependency.manifest" Condition="'$(Case)' == 'native'" />
+    <ResolvedIsolatedComModules Include="missing-module.dll" Condition="'$(Case)' == 'com'" />
+  </ItemGroup>
+  <Import Project="NativeManifest.targets" />
+  <Target Name="Restore" />
+  <Target Name="Build" DependsOnTargets="GetNativeManifest">
+    <WriteLinesToFile File="$(ResultFile)" Overwrite="true"
+                      Lines="Native;@(ComputedApplicationManifest->'%(Identity)|%(HintPath)')"
+                      DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+  </Target>
+</Project>

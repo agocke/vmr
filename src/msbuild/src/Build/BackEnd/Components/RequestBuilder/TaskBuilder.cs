@@ -770,7 +770,11 @@ namespace Microsoft.Build.BackEnd
         private async ValueTask<WorkUnitResult> ExecuteInstantiatedTask(TaskExecutionHost taskExecutionHost, TaskLoggingContext taskLoggingContext, TaskHost taskHost, ItemBucket bucket, TaskExecutionMode howToExecuteTask)
         {
             UpdateContinueOnError(bucket, taskHost);
-            taskExecutionHost.ActionParameters = _buildRequestEntry.ActionGraph is null ? null : new(MSBuildNameIgnoreCaseComparer.Default);
+            bool isConstructionMSBuild = _buildRequestEntry.ActionGraph is not null &&
+                taskExecutionHost.TaskInstance is MSBuild;
+            taskExecutionHost.ActionParameters = _buildRequestEntry.ActionGraph is null || isConstructionMSBuild
+                ? null
+                : new(MSBuildNameIgnoreCaseComparer.Default);
 
             bool taskResult = false;
 
@@ -784,9 +788,7 @@ namespace Microsoft.Build.BackEnd
             }
             else
             {
-                bool isEmptyMSBuild = _buildRequestEntry.ActionGraph is not null &&
-                    taskExecutionHost.TaskInstance is MSBuild { Projects.Length: 0 };
-                if (_buildRequestEntry.ActionGraph is { } graph && !isEmptyMSBuild)
+                if (_buildRequestEntry.ActionGraph is { } graph && !isConstructionMSBuild)
                 {
                     ProjectErrorUtilities.VerifyThrowInvalidProject(
                         taskExecutionHost.SupportsActionGraph,
@@ -803,11 +805,7 @@ namespace Microsoft.Build.BackEnd
                 // If this is the MSBuild task, we need to execute it's special internal method.
                 try
                 {
-                    if (isEmptyMSBuild)
-                    {
-                        taskResult = true;
-                    }
-                    else if (taskExecutionHost.TaskInstance is MSBuild msbuildTask)
+                    if (taskExecutionHost.TaskInstance is MSBuild msbuildTask)
                     {
                         // https://github.com/dotnet/msbuild/issues/11025
                         // The metaproject's inner <MSBuild> tasks are generator-authored plumbing,

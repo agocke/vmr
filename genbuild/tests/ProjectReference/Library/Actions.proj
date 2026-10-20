@@ -1,0 +1,14 @@
+<Project DefaultTargets="Build">
+  <Target Name="Describe" Returns="@(Product)">
+    <PropertyGroup>
+      <Message>Hello from a child project.</Message>
+    </PropertyGroup>
+    <ItemGroup>
+      <Product Include="$(MSBuildProjectDirectory)/out/library.txt" Message="$(Message)" />
+    </ItemGroup>
+  </Target>
+  <Target Name="Build" DependsOnTargets="Describe" Returns="@(Product)">
+    <WriteLinesToFile File="@(Product)" Lines="$(Message)" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="@(Product)" />
+  </Target>
+</Project>

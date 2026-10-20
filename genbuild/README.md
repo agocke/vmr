@@ -18,7 +18,7 @@ Run these commands from the **VMR root**:
 dotnet msbuild genbuild/genbuild.proj -m:1 -nr:false -bl:{}
 ```
 
-This builds the selected MSBuild, SDK-task, Roslyn, and SourceLink projects and
+This builds the selected MSBuild, SDK-task, Roslyn, SourceLink, and NuGet projects and
 assembles the app in `artifacts/bin/genbuild/Debug/`. It does not build the full
 SDK, templates, workloads, or a runtime.
 
@@ -83,11 +83,14 @@ Hardened NuGet classification supports the `PackageReference` style when it is
 explicitly selected or implied by `PackageReference` items. It never searches for
 `packages.config`; other styles or inputs requiring discovery fail explicitly.
 Ordinary Restore retains NuGet's existing classification and discovery.
-The app uses this VMR's NuGet targets with the pinned NuGet managed dependencies.
+The app builds NuGet tasks and their managed dependency closure from this VMR's
+sources, using NuGet's existing .NET 10 target inside the .NET 11 app. Its targets
+come from the same source tree; no pinned NuGet task package or nested SDK build
+is used. Compiler and other external tool dependencies remain pinned.
 
-The bounded single-framework SDK hello-world profile now emits a full Build
-graph, but its execution is unfinished. Remaining copy families and broader
-RAR profiles still need adaptations.
+The bounded single-framework SDK hello-world profile emits a full Build graph,
+executes independently, and starts on the external runtime. Remaining copy
+families and broader RAR profiles still need adaptations.
 SDK duplicate-item and executable-reference validation run as zero-I/O
 construction tasks. `GetAssemblyVersion` also runs during construction: it
 parses the supplied version string without inspecting an assembly or discovering
@@ -142,7 +145,7 @@ for other native formats or absent version information. Malformed or conflicting
 version information fails explicitly. This deliberately avoids OS-specific
 `FileVersionInfo` and installation-side resource lookup; ordinary
 `GenerateDepsFile`, Publish and designer builds keep their existing behavior.
-The pinned SDK-driver dependency closure is also staged beside the SDK tasks so
+The SDK-driver dependency closure is also staged beside the SDK tasks so
 independent actions require no driver process or ambient assembly searches.
 Hardened Build selects `WriteRuntimeConfig` for the main runtime configuration
 and the optional dev file, including Debug's Hot Reload defaults. It shares
@@ -190,10 +193,46 @@ no fallback to ordinary Build.
 The action host prepares declared output-file parents. Common directory
 preparation is accepted only when every requested directory contains a
 declared file output; unrelated empty-directory effects remain unsupported.
-Leaf-project `MSBuild` calls with provably empty project lists are accepted as
-construction-time no-ops with normal parameter and output validation.
-Nonempty or unavailable project lists still require unsupported cross-project
-expansion.
+Intrinsic `MSBuild` calls with static project lists and parameters use the
+ordinary engine's configured-project requests during construction. Children
+contribute to one root graph; they never become nested-build actions or publish
+partial bundles. Static target returns preserve ordinary metadata, global
+property propagation, `Returns`/legacy `Outputs`, and duplicate-output rules.
+Repeated and diamond references reuse completed configured targets; skipped
+targets can run on later requests. Each action retains its own project directory.
+Intrinsic project requests bypass file-action parameter capture, preserving
+ordinary default-target outputs when `Targets` is omitted or expands to empty.
+Construction is currently single-node and single-threaded, even when an
+`MSBuild` call requests `BuildInParallel`. Unavailable project lists and custom
+tasks merely named `MSBuild` remain unsupported.
+
+SDK Restore prepares framework and compiler inputs for the project-reference
+closure without compiling referenced assemblies. `AssignProjectConfiguration`
+and the target-framework XML formatters run as audited zero-I/O construction
+tasks over supplied metadata. Child `GetTargetFrameworks` returns match ordinary
+execution, including sequential metadata assignments and item-definition defaults.
+Hardened project-reference splitting leaves project-file validation to intrinsic
+engine requests: missing requested projects fail with `MSB3202` rather than being
+skipped by the ordinary existence split.
+
+NuGet's `GetReferenceNearestTargetFrameworkTask` is also an audited zero-I/O
+construction task. It preserves ordinary nearest-framework, alias, platform,
+fallback and invalid-input behavior without opening the referenced project.
+Only hardened Common targets supply the new declaration parameters; ordinary
+calls remain compatible with older NuGet task assemblies.
+
+Hardened `GetNativeManifest` does not inspect the default manifest placeholder
+when no manifest generation is requested, even if stale output exists.
+Ordinary existence-based queries remain unchanged; actual manifest-generation
+requests still fail at unsupported discovery rather than being ignored.
+
+This is not yet complete SDK project-reference Build support: the executable/library
+fixture first stops at `ResolveAssemblyReference`. Generated-assembly resolution
+and copy-local publication still need adaptation; RAR is not blanket-admitted.
+The packaged smoke covers SDK closure preparation,
+ordinary-equivalent child framework metadata and framework selection, and
+independent execution of a non-SDK cross-project action graph. It also checks
+empty/stale native-manifest queries and rejection of requested manifest discovery.
 Workload resolution is disabled in this prototype.
 
 For adapting targets and tasks, see the

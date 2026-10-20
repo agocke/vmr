@@ -18,8 +18,13 @@ using NuGet.ProjectModel;
 namespace NuGet.Build.Tasks
 {
     [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
     public class GetReferenceNearestTargetFrameworkTask : Task
     {
+        public ITaskItem[] DeclaredInputs { get; set; } = [];
+
+        public ITaskItem[] DeclaredOutputs { get; set; } = [];
+
         private const string NEAREST_TARGET_FRAMEWORK = "NearestTargetFramework";
         private const string TARGET_FRAMEWORKS = "TargetFrameworks";
         private const string TARGET_FRAMEWORK_MONIKERS = "TargetFrameworkMonikers";

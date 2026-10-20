@@ -6,7 +6,8 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="NuGet.Build.Tasks" Version="$(NuGetBuildTasksPackageVersion)" GeneratePathProperty="true" IncludeAssets="compile;runtime" />
+    <ProjectReference Include="../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.Build.Tasks.csproj"
+                      AdditionalProperties="TargetFrameworks=net10.0" />
     <PackageReference Include="Microsoft.NET.HostModel" Version="$(MicrosoftNETHostModelPackageVersion)" />
     <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="$(MicrosoftExtensionsDependencyModelPackageVersion)" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="$(SystemSecurityCryptographyPkcsPackageVersion)" />
@@ -18,14 +19,14 @@
     <ItemGroup>
       <_Dependency Include="@(ReferenceCopyLocalPaths)" Exclude="@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Framework'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Utilities.Core'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Tasks.Core'))" />
       <_Compiler Include="$(PkgMicrosoft_Net_Compilers_Toolset)/tasks/netcore/bincore/**/*" />
-      <_NuGetTarget Include="$(PkgNuGet_Build_Tasks)/runtimes/any/native/**/*" />
+      <_NuGetTarget Include="$(MSBuildThisFileDirectory)../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.props;$(MSBuildThisFileDirectory)../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.targets;$(MSBuildThisFileDirectory)../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.RestoreEx.targets;$(MSBuildThisFileDirectory)../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.Build.Tasks.Pack.targets" />
     </ItemGroup>
-    <Error Condition="'@(_Compiler)' == '' or '@(_NuGetTarget)' == ''" Text="The pinned compiler or NuGet restore targets are missing from their packages." />
+    <Error Condition="'@(_Compiler)' == ''" Text="The pinned compiler is missing from its package." />
     <Copy SourceFiles="@(_Dependency)" DestinationFiles="@(_Dependency->'$(GenBuildToolsetDirectory)%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <!-- Independent SDK task actions do not run inside the driver's additional-deps context. -->
     <Copy SourceFiles="@(_Dependency)" DestinationFiles="@(_Dependency->'$(GenBuildToolsetDirectory)Sdks/Microsoft.NET.Sdk/tools/$(TargetFramework)/%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_Compiler)" DestinationFiles="@(_Compiler->'$(GenBuildToolsetDirectory)Roslyn/bincore/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(_NuGetTarget)" DestinationFiles="@(_NuGetTarget->'$(GenBuildToolsetDirectory)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_NuGetTarget)" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(TargetPath);$(ProjectDepsFilePath)" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />
     <Error Condition="'$(GenBuildTargetingPackVersion)' == ''" Text="Use genbuild.proj to select the targeting-pack metadata matching its bundled framework definitions." />
     <Copy SourceFiles="$(NuGetPackageRoot)microsoft.netcore.app.ref/$(GenBuildTargetingPackVersion)/data/PackageOverrides.txt" DestinationFolder="$(GenBuildToolsetDirectory)PrunePackageData/$(TargetFrameworkVersion.TrimStart('v'))/Microsoft.NETCore.App/" SkipUnchangedFiles="true" />

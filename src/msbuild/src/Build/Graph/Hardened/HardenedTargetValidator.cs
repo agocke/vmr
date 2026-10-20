@@ -68,18 +68,21 @@ internal sealed class HardenedTargetValidator
     ];
 
     private readonly Dictionary<string, HardenedTaskDescriptor> _taskDescriptors;
-    private readonly HardenedTaskClassifier? _taskClassifier;
-    private readonly HardenedConstructionTaskExecutor? _constructionTaskExecutor;
+    private HardenedTaskClassifier? _taskClassifier;
+    private HardenedConstructionTaskExecutor? _constructionTaskExecutor;
     private readonly List<InvalidProjectFileException> _diagnostics = [];
     private readonly List<HardenedDeclaredIOFootprint> _declaredIOFootprints = [];
     private readonly HashSet<string> _diagnosticKeys = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ValueState> _targetResults =
         new(MSBuildNameIgnoreCaseComparer.Default);
     private readonly HashSet<string> _activeTargets = new(MSBuildNameIgnoreCaseComparer.Default);
+    private readonly HashSet<string> _visitedTargets = new(MSBuildNameIgnoreCaseComparer.Default);
+    private readonly Dictionary<string, TargetResult> _completedTargetResults = new(MSBuildNameIgnoreCaseComparer.Default);
     private readonly HardenedExpressionDescriptorCache _expressionDescriptors = new();
     private Lookup? _validationLookup;
     private Expander<ProjectPropertyInstance, ProjectItemInstance>? _concreteExpander;
     private IMetadataTable? _activeMetadata;
+    private Dictionary<string, HardenedValue<string>>? _activeMetadataAssignments;
     private ProjectInstance? _project;
     private string? _projectDirectory;
     private HardenedItemOperationPlan? _itemOperationPlan;
@@ -165,6 +168,8 @@ internal sealed class HardenedTargetValidator
         _diagnosticKeys.Clear();
         _targetResults.Clear();
         _activeTargets.Clear();
+        _visitedTargets.Clear();
+        _completedTargetResults.Clear();
         _expressionDescriptors.Clear();
         _validationLookup = lookup.Clone();
         _validationLookup.EnableHardenedState();
@@ -176,20 +181,56 @@ internal sealed class HardenedTargetValidator
                 "true",
                 mayBeReserved: true));
         _activeMetadata = null;
+        _activeMetadataAssignments = null;
         _project = project;
         _projectDirectory = project.Directory;
         _itemOperationPlan = itemOperationPlan;
         _concreteExpander = CreateConcreteExpander(_validationLookup);
 
-        HashSet<string> visitedTargets = new(MSBuildNameIgnoreCaseComparer.Default);
         foreach (string targetName in targetNames)
         {
             ArgumentException.ThrowIfNullOrEmpty(targetName);
-            ValidateTarget(project, targetName, project.ProjectFileLocation, visitedTargets);
+            ValidateTarget(project, targetName, project.ProjectFileLocation, _visitedTargets);
         }
 
         return _diagnostics;
     }
+
+    internal IReadOnlyList<InvalidProjectFileException> Construct(
+        ProjectInstance project,
+        Lookup lookup,
+        IEnumerable<string> targetNames,
+        HardenedItemOperationPlan itemOperationPlan,
+        HardenedTaskClassifier taskClassifier,
+        HardenedConstructionTaskExecutor constructionTaskExecutor)
+    {
+        if (_project is null)
+        {
+            Validate(project, lookup, [], itemOperationPlan);
+        }
+
+        HardenedTaskClassifier? previousClassifier = _taskClassifier;
+        HardenedConstructionTaskExecutor? previousExecutor = _constructionTaskExecutor;
+        _taskClassifier = taskClassifier;
+        _constructionTaskExecutor = constructionTaskExecutor;
+        try
+        {
+            foreach (string target in targetNames)
+            {
+                ValueState state = ValidateTarget(project, target, project.ProjectFileLocation, _visitedTargets);
+                RequireStatic(state, project.ProjectFileLocation, $"return value of target '{target}'", target);
+            }
+
+            return _diagnostics;
+        }
+        finally
+        {
+            _taskClassifier = previousClassifier;
+            _constructionTaskExecutor = previousExecutor;
+        }
+    }
+
+    internal TargetResult GetTargetResult(string targetName) => _completedTargetResults[targetName];
 
     private ValueState ValidateTarget(
         ProjectInstance project,
@@ -437,6 +478,27 @@ internal sealed class HardenedTargetValidator
         }
 
         _targetResults[targetName] = targetResult;
+        if (_constructionTaskExecutor is not null && _diagnostics.Count == 0 && targetResult.IsStatic)
+        {
+            if (targetExecutes)
+            {
+                ValidateCondition(
+                    target, target.KeepDuplicateOutputs, target.KeepDuplicateOutputsLocation,
+                    $"the KeepDuplicateOutputs attribute of target '{target.Name}'");
+            }
+            if (_diagnostics.Count == 0)
+            {
+                TaskItem[] outputs = targetExecutes
+                    ? TargetEntry.GatherTargetOutputs(target, ValidationLookup, ConcreteExpander, ProjectDirectory, loggingContext: null)
+                    : [];
+                _completedTargetResults[targetName] = new TargetResult(
+                    outputs,
+                    new WorkUnitResult(
+                        targetExecutes ? WorkUnitResultCode.Success : WorkUnitResultCode.Skipped,
+                        WorkUnitActionCode.Continue, null));
+            }
+        }
+
         foreach (TargetSpecification afterTarget in project.GetTargetsWhichRunAfter(target.Name))
         {
             ValidateTarget(
@@ -449,6 +511,11 @@ internal sealed class HardenedTargetValidator
         }
 
         _activeTargets.Remove(targetName);
+        if (!targetExecutes && _constructionTaskExecutor is not null)
+        {
+            visitedTargets.Remove(targetName);
+        }
+
         return targetResult;
     }
 
@@ -845,11 +912,11 @@ internal sealed class HardenedTargetValidator
         taskControlState = ValueState.Combine(taskControlState, declaredIOState);
         bool zeroIO = _declaredIOFootprints.Count > footprintCount &&
             _declaredIOFootprints[footprintCount] is { InputPaths.Count: 0, OutputPaths.Count: 0 };
-        bool isStaticallyEmptyMSBuild = isMSBuild &&
+        bool isConstructionMSBuild = isMSBuild &&
             classification == HardenedTaskClassification.Unaudited &&
-            HasStaticallyEmptyMSBuildProjects(task, taskControlState);
+            HasStaticMSBuildProjects(task, taskControlState);
 
-        if (classification != HardenedTaskClassification.DeclaredIO && !isCallTarget && !isStaticallyEmptyMSBuild)
+        if (classification != HardenedTaskClassification.DeclaredIO && !isCallTarget && !isConstructionMSBuild)
         {
             ReportUnsupported(task.Location, $"task '{task.Name}' without explicit DeclaredIO", "action graph construction");
         }
@@ -870,7 +937,7 @@ internal sealed class HardenedTargetValidator
                 visitedTargets,
                 callTargetScope ?? throw new InvalidOperationException("CallTarget scope was not captured."));
         }
-        else if (isStaticallyEmptyMSBuild)
+        else if (isConstructionMSBuild)
         {
             intrinsicTaskOutputState = ValueState.Static;
         }
@@ -878,11 +945,11 @@ internal sealed class HardenedTargetValidator
         HardenedConstructionTaskExecutor? constructionTaskExecutor = _constructionTaskExecutor;
         bool zeroIOTaskExecuted = false;
         if (constructionTaskExecutor is not null && taskControlState.IsStatic &&
-            (classification == HardenedTaskClassification.DeclaredIO || isStaticallyEmptyMSBuild) &&
+            (classification == HardenedTaskClassification.DeclaredIO || isConstructionMSBuild) &&
             _diagnostics.Count == 0)
         {
             constructionTaskExecutor(target, task, ValidationLookup);
-            zeroIOTaskExecuted = zeroIO || isStaticallyEmptyMSBuild;
+            zeroIOTaskExecuted = zeroIO || isConstructionMSBuild;
         }
 
         foreach (ProjectTaskInstanceChild output in task.Outputs)
@@ -1026,7 +1093,7 @@ internal sealed class HardenedTargetValidator
                             destination,
                             ValidationLookup.GetProperty(destination)?.EvaluatedValue ?? string.Empty);
                     }
-                    else if (isStaticallyEmptyMSBuild && outputState.IsStatic)
+                    else if (isConstructionMSBuild && outputState.IsStatic)
                     {
                         Context.SetConcreteProperty(destination, string.Empty, updateLookup: true);
                     }
@@ -1048,7 +1115,7 @@ internal sealed class HardenedTargetValidator
         }
 
         callTargetScope?.CallerAssignedProperties.Add(ReservedPropertyNames.lastTaskResult);
-        if (isStaticallyEmptyMSBuild)
+        if (isConstructionMSBuild)
         {
             Context.SetConcreteProperty(ReservedPropertyNames.lastTaskResult, "true", updateLookup: true);
         }
@@ -1069,7 +1136,7 @@ internal sealed class HardenedTargetValidator
 
         return new TaskValidationResult(
             canStopOnFailure,
-            Executed: !zeroIOTaskExecuted && !isStaticallyEmptyMSBuild,
+            Executed: !zeroIOTaskExecuted && !isConstructionMSBuild,
             callTargetScope?.Clone());
     }
 
@@ -1175,7 +1242,7 @@ internal sealed class HardenedTargetValidator
         return ValueState.Combine(taskControlState, metadataState);
     }
 
-    private bool HasStaticallyEmptyMSBuildProjects(
+    private bool HasStaticMSBuildProjects(
         ProjectTaskInstance task,
         ValueState taskControlState)
     {
@@ -1194,7 +1261,7 @@ internal sealed class HardenedTargetValidator
 
         foreach (string _ in ExpressionShredder.SplitSemiColonSeparatedList(expandedProjects))
         {
-            return false;
+            return _constructionTaskExecutor is not null;
         }
 
         return true;
@@ -2365,6 +2432,19 @@ internal sealed class HardenedTargetValidator
             state = ValueState.Combine(state, metadataState);
         }
 
+        if (_activeMetadataAssignments is not null && descriptor.BatchMetadata is not null)
+        {
+            foreach (MetadataReference reference in descriptor.BatchMetadata.Values)
+            {
+                if ((reference.ItemName is null ||
+                     MSBuildNameIgnoreCaseComparer.Default.Equals(reference.ItemName, implicitItemType)) &&
+                    _activeMetadataAssignments.TryGetValue(reference.MetadataName, out HardenedValue<string> assignedValue))
+                {
+                    state = ValueState.Combine(state, assignedValue.State);
+                }
+            }
+        }
+
         if (requireStatic && !RequireStatic(state, effectiveLocation, context, expression))
         {
             canEvaluate = false;
@@ -2837,6 +2917,42 @@ internal sealed class HardenedTargetValidator
     {
         var assignedMetadata =
             new Dictionary<string, HardenedValue<string>>(MSBuildNameIgnoreCaseComparer.Default);
+        if (item.Metadata.Count == 0)
+        {
+            return assignedMetadata;
+        }
+
+        IMetadataTable? parentMetadata = _activeMetadata;
+        Dictionary<string, HardenedValue<string>>? parentAssignments = _activeMetadataAssignments;
+        ItemGroupIntrinsicTask.NestedMetadataTable? metadataTable = null;
+        if (item.Include.Length != 0 || item.Exclude.Length != 0)
+        {
+            Project.ItemDefinitions.TryGetValue(item.ItemType, out ProjectItemDefinitionInstance? itemDefinition);
+            metadataTable = new ItemGroupIntrinsicTask.NestedMetadataTable(item.ItemType, parentMetadata, itemDefinition);
+            _activeMetadata = metadataTable;
+            _activeMetadataAssignments = assignedMetadata;
+            ConcreteExpander.Metadata = metadataTable;
+        }
+
+        try
+        {
+            ValidateMetadataAssignments(item, assignedMetadata, metadataTable);
+        }
+        finally
+        {
+            ConcreteExpander.Metadata = parentMetadata;
+            _activeMetadata = parentMetadata;
+            _activeMetadataAssignments = parentAssignments;
+        }
+
+        return assignedMetadata;
+    }
+
+    private void ValidateMetadataAssignments(
+        ProjectItemGroupTaskItemInstance item,
+        Dictionary<string, HardenedValue<string>> assignedMetadata,
+        ItemGroupIntrinsicTask.NestedMetadataTable? metadataTable)
+    {
         foreach (ProjectItemGroupTaskMetadataInstance metadata in item.Metadata)
         {
             ConditionValidationResult conditionResult = ValidateCondition(
@@ -2879,6 +2995,7 @@ internal sealed class HardenedTargetValidator
                     out string expandedValue))
             {
                 assignedMetadata[metadata.Name] = HardenedValue<string>.Static(expandedValue);
+                metadataTable?.SetValue(metadata.Name, expandedValue);
             }
             else
             {
@@ -2892,8 +3009,6 @@ internal sealed class HardenedTargetValidator
                 assignedMetadata[metadata.Name] = HardenedValue<string>.NonStatic(metadataState);
             }
         }
-
-        return assignedMetadata;
     }
 
     private ValueState GetDeduplicationState(

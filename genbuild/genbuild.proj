@@ -112,8 +112,7 @@
     <Copy SourceFiles="$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.targets" DestinationFolder="$(_Sdk)codestyle/vb/build/" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_CSharpConfig)" DestinationFiles="@(_CSharpConfig->'$(_Sdk)codestyle/cs/build/config/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_VisualBasicConfig)" DestinationFiles="@(_VisualBasicConfig->'$(_Sdk)codestyle/vb/build/config/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(GenBuildRoot)src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.targets" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />
-    <WriteLinesToFile File="$(GenBuildOutputDirectory)component-inputs.txt" Lines="VMR=$(GenBuildRoot);BootstrapSdk=$(GenBuildBootstrapSdk);Configuration=$(Configuration);Compiler and NuGet versions: src/sdk/eng/Version.Details.props" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <WriteLinesToFile File="$(GenBuildOutputDirectory)component-inputs.txt" Lines="VMR=$(GenBuildRoot);BootstrapSdk=$(GenBuildBootstrapSdk);Configuration=$(Configuration);NuGet sources: src/nuget-client;Compiler version: src/sdk/eng/Version.Details.props" Overwrite="true" WriteOnlyWhenDifferent="true" />
     <Message Importance="high" Text="genbuild app: $(GenBuildOutputDirectory)genbuild.dll (external .NET runtime required; no SDK redist)" />
   </Target>
 

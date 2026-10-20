@@ -33,8 +33,8 @@ ordinary builds unchanged outside the opt-in hardened graph-generation path.
 
 Cross-component prototype work lives together under the VMR's `src/msbuild`,
 `src/sdk`, `src/sourcelink`, and `src/roslyn` directories. NuGet integration
-lives in `src/nuget-client`: the standalone app stages the local NuGet targets
-while retaining the pinned NuGet managed dependency closure.
+lives in `src/nuget-client`: the standalone app builds the NuGet task/dependency
+closure and stages the matching targets from that source tree.
 The integration baseline is VMR commit
 `baa2aa16da04556ac274562798d2fbd7cfe7bc9a`.
 
@@ -90,9 +90,10 @@ Additional arguments are forwarded to MSBuild, including an explicit
 
 The app carries locally-built engine/common targets, SDK targets/tasks,
 SourceLink, Roslyn tasks, analyzer manifests, and the independent task host.
-NuGet's managed dependency closure and the compiler are restored at versions
-from `src/sdk/eng/Version.Details.props`. The additional dependency manifest
-makes NuGet available without the SDK driver's runtime manifest.
+NuGet's managed dependency closure is source-built using its existing .NET 10
+target; the compiler and other external tool dependencies remain pinned by
+`src/sdk/eng/Version.Details.props`. The additional dependency manifest makes
+NuGet available without the SDK driver's runtime manifest.
 
 The current .NET 11 framework definitions and RID/pruning metadata are
 build-time inputs from the selected bootstrap SDK. Pruning data for its current
@@ -179,11 +180,14 @@ file-I/O task. Invalid construction publishes no executable partial graph.
 Focused cases cover buckets, generated inputs, conflicting writes, cycles,
 paths with spaces/dollars/colons, and supported cross-project routing.
 
-The first single-project Unix slice is implemented. Cross-project `MSBuild`
-routing, forward producer resolution, Windows commands, full tool closures,
-and graph-input inventories remain work rather than supported fallbacks.
-Provably empty `MSBuild` project lists are supported as the leaf-project base
-case; they do not require cross-project routing or emit an action.
+The Unix slice supports intrinsic cross-project `MSBuild` routing through the
+ordinary engine with static parameters. Configured projects share one graph,
+published only after the root succeeds. Static target returns use the ordinary
+return-gathering implementation, and configured-target state survives metadata
+queries followed by Build requests. Construction currently requires one node
+and no multi-threaded mode. Forward producer resolution, Windows commands,
+full tool closures and graph-input inventories remain work rather than
+supported fallbacks. Provably empty project lists remain a no-action base case.
 
 ## 4. Execute a small build with Ninja
 
@@ -344,16 +348,16 @@ empty-directory effects remain unsupported, even if the directory already
 exists. There are no directory actions or stamps; ordinary `MakeDir` behavior
 is unchanged.
 
-`MSBuild` calls with statically known parameters and provably empty `Projects`
-lists now complete during construction without entering a nested build.
-Normal binding and output gathering validate their parameters and mappings,
-append no output items, clear mapped output properties, and set
-`MSBuildLastTaskResult` to `true`. Tests cover both Common
-`GetTargetFrameworks` platform-negotiation variants with no references,
-ordinary output semantics, and rejection of nonempty, unavailable, missing,
-and invalid inputs. The bound-task guard also rejects unaudited custom tasks
-named `MSBuild`, even with explicit empty declarations. Nonempty cross-project
-expansion remains unsupported.
+`MSBuild` calls with statically known parameters now use normal binding,
+configuration requests and output mappings during construction. Empty project
+lists remain no-ops. Nonempty lists expand child targets into the shared graph,
+not independent nested-build actions. Tests cover distinct configurations,
+additional/removed global properties, caller/source metadata, rebased paths,
+`Returns`/legacy `Outputs` and duplicate rules, diamond producer reuse, skipped
+target reexecution, and failure without partial publication. Root and child
+requests must retain the same destination, hosts, host OS and selected action
+environment. Unavailable parameters remain rejected, as do unaudited custom
+tasks named `MSBuild`, even with explicit empty declarations.
 
 SDK `ValidateExecutableReferences` now runs as an audited zero-I/O construction
 task with explicit empty declarations at its SDK call site. It parses supplied
@@ -546,7 +550,7 @@ bounded graph constructs successfully.
 Broader RAR and compiler option profiles still need audited
 action-graph adaptation. Broader SDK `Build` profiles remain unsupported; ambient
 discovery has not been allowed as a fallback. Complete execution of the bounded
-compile closure below before broadening the `Build` lifecycle.
+project-reference closure below before broadening the `Build` lifecycle.
 
 Use existing SDK overlays for a single-framework C# hello-world profile:
 
@@ -559,6 +563,47 @@ reference, analyzer, generator, and other tool inputs. Start with a supported
 compile closure, then extend toward `Build` without weakening the contract.
 Add a two-project fixture with static child returns and configured-project
 identity; child artifacts flow through file edges, not nested engine calls.
+
+The bounded single-project SDK Build and startup are implemented. The packaged
+cross-project action fixture independently executes child and root producers,
+and a real SDK executable/library fixture verifies Restore preparation across
+the closure without prebuilding binaries. Full SDK project-reference Build is
+not yet implemented. Project configuration and child framework XML formatting
+are now audited zero-I/O construction tasks. Child `GetTargetFrameworks` metadata
+matches ordinary execution, including item-definition defaults and sequential
+metadata assignments on new items; updates of existing items retain their
+ordinary pre-update metadata view. Missing requested project files fail through
+intrinsic engine requests (`MSB3202`) instead of ordinary existence-based skipping.
+
+The standalone toolset now builds NuGet tasks and their managed dependency closure
+from the VMR's NuGet projects, constrained to their existing .NET 10 target.
+Targets and managed binaries come from the same source tree, and the same
+dependency files are staged beside independently hosted SDK tasks. NuGet's
+nearest-framework task is admitted with explicit zero-I/O declarations, retaining
+ordinary alias, platform and fallback selection and diagnostics. Its compatibility
+marker is recognized by namespace/name as specified by the task contract; no
+engine admission allowlist or duplicate selection algorithm is used. Only the
+hardened Common invocation passes declaration parameters, so ordinary calls still
+work with older NuGet task assemblies.
+
+Hardened `GetNativeManifest` skips the ordinary output existence query when no
+manifest generation is requested, rather than adopting a stale placeholder.
+Requested ClickOnce, Appx, native-reference and isolated-COM discovery remains
+unsupported; ordinary behavior is unchanged.
+
+Intrinsic project requests use ordinary parameter binding, without file-action
+capture. In particular, empty `Targets` leaves the parameter unset, preserving
+default-target outputs. Capturing it as an empty array previously constructed
+child actions but silently dropped their returned artifacts.
+
+The first SDK project-reference rejection is now `ResolveAssemblyReference`.
+Adapt generated-reference resolution and copy-local publication without
+introducing ambient discovery, prebuilding references during Restore or
+blanket-admitting RAR. Failed construction publishes no partial executable graph.
+The hardened resolver must accept only explicit file paths. Reject simple or
+display assembly names and search-based resolution as machine-dependent;
+generated project references must arrive as explicit artifact paths, not names
+to resolve against the machine.
 
 **Done when:** Ninja builds from clean outputs after MSBuild exits, compilation
 and project-reference outputs match ordinary MSBuild, and failures identify

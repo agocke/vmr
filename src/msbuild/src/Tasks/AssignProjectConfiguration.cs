@@ -14,9 +14,14 @@ using Microsoft.Build.Shared;
 namespace Microsoft.Build.Tasks
 {
     [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
     public class AssignProjectConfiguration : ResolveProjectBase
     {
         #region Properties
+
+        public ITaskItem[] DeclaredInputs { get; set; } = [];
+
+        public ITaskItem[] DeclaredOutputs { get; set; } = [];
 
         /// <summary>
         /// A special XML string containing a project configuration for each project - we need to simply

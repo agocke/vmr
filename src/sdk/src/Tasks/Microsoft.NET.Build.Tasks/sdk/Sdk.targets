@@ -78,6 +78,11 @@ Copyright (c) .NET Foundation. All rights reserved.
   <Import Project="$(_ContainersTargetsDir)Microsoft.NET.Build.Containers.targets"
     Condition="$(_IsNotSetContainersTargetsDir) AND Exists('$(_ContainersTargetsDir)Microsoft.NET.Build.Containers.targets')" />
 
+  <PropertyGroup>
+    <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_GenerateFrameworkReferenceFetchManifest</MSBuildPrepareGraphInputsDependsOn>
+    <MSBuildPrepareGraphInputsDependsOn Condition="'$(Language)' == 'C#'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureCscToolInputs</MSBuildPrepareGraphInputsDependsOn>
+  </PropertyGroup>
+
   <Target Name="_ComputeFrameworkReferenceFetchManifestProfile"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true'">
     <ItemGroup>
@@ -90,7 +95,6 @@ Copyright (c) .NET Foundation. All rights reserved.
     <PropertyGroup>
       <_FrameworkReferenceFetchManifestFrameworkReferences>@(FrameworkReference, ', ')</_FrameworkReferenceFetchManifestFrameworkReferences>
       <_FrameworkReferenceFetchManifestPackageReferences>@(PackageReference, ', ')</_FrameworkReferenceFetchManifestPackageReferences>
-      <_FrameworkReferenceFetchManifestProjectReferences>@(ProjectReference, ', ')</_FrameworkReferenceFetchManifestProjectReferences>
       <_FrameworkReferenceFetchManifestReferences>@(Reference, ', ')</_FrameworkReferenceFetchManifestReferences>
       <_FrameworkReferenceFetchManifestProfileSupported
         Condition="'$(IsCrossTargetingBuild)' != 'true' and
@@ -98,7 +102,6 @@ Copyright (c) .NET Foundation. All rights reserved.
                    '@(FrameworkReference->Count())' == '1' and
                    '@(_SupportedFrameworkReferenceFetchManifestFrameworkReference->Count())' == '1' and
                    '@(PackageReference->Count())' == '0' and
-                   '@(ProjectReference->Count())' == '0' and
                    '@(Reference->Count())' == '0' and
                    '$(RuntimeIdentifier)' == '' and
                    '$(RuntimeIdentifiers)' == ''">true</_FrameworkReferenceFetchManifestProfileSupported>
@@ -134,11 +137,6 @@ Copyright (c) .NET Foundation. All rights reserved.
       Condition="'@(PackageReference)' != ''"
       ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
       FormatArguments="PackageReference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestPackageReferences)'))"
-      ContinueOnError="ErrorAndContinue" />
-    <NETSdkError
-      Condition="'@(ProjectReference)' != ''"
-      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
-      FormatArguments="ProjectReference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestProjectReferences)'))"
       ContinueOnError="ErrorAndContinue" />
     <NETSdkError
       Condition="'@(Reference)' != ''"
