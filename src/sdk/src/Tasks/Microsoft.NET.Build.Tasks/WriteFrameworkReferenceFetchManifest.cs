@@ -57,7 +57,10 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
             writer.WriteStartElement("PropertyGroup");
             WriteProperty(writer, "_FrameworkReferenceFetchManifestVersion", "1");
             WriteProperty(writer, "_UsingFrameworkReferenceManifest", "true");
-            WriteProperty(writer, "SkipResolvePackageAssets", "true");
+            writer.WriteStartElement("SkipResolvePackageAssets");
+            writer.WriteAttributeString("Condition", "'$(MSBuildHardenedGraph)' != 'true'");
+            writer.WriteString("true");
+            writer.WriteEndElement();
             WriteProperty(writer, "DisableCheckingDuplicateNuGetItems", "true");
             WriteProperty(writer, "UseAppHostFromAssetsFile", "false");
             writer.WriteEndElement();

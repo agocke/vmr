@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Xml;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
+using NuGet.ProjectModel;
 
 namespace Microsoft.NET.Build.Tasks;
 
@@ -18,6 +19,12 @@ public sealed class WriteNuGetInputs : TaskBase
     [Required]
     public string OutputFile { get; set; } = null!;
 
+    public bool CapturePackageContext { get; set; }
+
+    public string CompilerApiVersion { get; set; } = "";
+
+    public string ProjectLanguage { get; set; } = "";
+
     protected override void ExecuteCore()
     {
         string content;
@@ -26,7 +33,7 @@ public sealed class WriteNuGetInputs : TaskBase
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(InputFile));
             content = GenerateManifest(document.RootElement);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException or BuildErrorException)
         {
             Log.LogError(Strings.ErrorReadingAssetsFile, $"{InputFile}: {ex.Message}");
             return;
@@ -56,14 +63,118 @@ public sealed class WriteNuGetInputs : TaskBase
             writer.WriteStartElement("PropertyGroup");
             writer.WriteElementString("_NuGetInputsFormatVersion", "1");
             writer.WriteElementString("_NuGetInputsSourceFile", Escape(InputFile));
+            if (CapturePackageContext)
+            {
+                writer.WriteElementString("_NuGetPackageContextVersion", "1");
+                writer.WriteElementString("_NuGetCompilerApiVersion", Escape(CompilerApiVersion));
+            }
             writer.WriteEndElement();
             writer.WriteStartElement("ItemGroup");
             WriteValue(writer, root, "$");
+            if (CapturePackageContext)
+            {
+                WritePackageContext(writer, root);
+            }
             writer.WriteEndElement();
             writer.WriteEndElement();
         }
 
         return content.ToString();
+    }
+
+    private void WritePackageContext(XmlWriter writer, JsonElement root)
+    {
+        if ((ProjectLanguage is "C#" or "VB") && string.IsNullOrEmpty(CompilerApiVersion))
+        {
+            throw new FormatException("Missing compiler API identity during package preparation.");
+        }
+        // Discovery is confined to preparation. Build reconstructs only the model
+        // fields used by selection, directly from the persisted facts.
+        LockFile lockFile = new LockFileFormat().Parse(root.GetRawText(), InputFile);
+        if (lockFile.Version is not (3 or 4))
+        {
+            throw new FormatException("Invalid assets model during package preparation.");
+        }
+        NuGetPackageResolver resolver = NuGetPackageResolver.CreateResolver(lockFile);
+        foreach (LockFileLibrary library in lockFile.Libraries)
+        {
+            if (!library.IsPackage())
+            {
+                continue;
+            }
+            string directory = resolver.GetPackageDirectory(library.Name, library.Version, out string packageRoot);
+            if (directory == null)
+            {
+                throw new FormatException($"Missing package '{library.Name}/{library.Version}' during preparation.");
+            }
+            WriteContextItem(writer, "_NuGetPackageLocation", library.Name + "/" + library.Version.ToNormalizedString(),
+                ("PackageDirectory", directory), ("PackageRoot", packageRoot));
+        }
+        HashSet<string> relatedFiles = new(StringComparer.Ordinal);
+        HashSet<string> locales = new(StringComparer.Ordinal);
+        foreach (LockFileTarget target in lockFile.Targets)
+        {
+            foreach (LockFileTargetLibrary library in target.Libraries)
+            {
+                if (!library.IsPackage())
+                {
+                    continue;
+                }
+                foreach (LockFileItem asset in library.CompileTimeAssemblies.Concat(library.RuntimeAssemblies))
+                {
+                    if (asset.IsPlaceholderFile() || !asset.Properties.TryGetValue("related", out string? related))
+                    {
+                        continue;
+                    }
+                    foreach (string extension in related.Split(';'))
+                    {
+                        if (extension is not (".pdb" or ".xml"))
+                        {
+                            continue;
+                        }
+                        string path = Path.ChangeExtension(resolver.ResolvePackageAssetPath(library, asset.Path), extension);
+                        if (relatedFiles.Add(path))
+                        {
+                            WriteContextItem(writer, "_NuGetRelatedFile", path, ("Exists", File.Exists(path) ? "true" : "false"));
+                        }
+                    }
+                }
+                foreach (LockFileItem asset in library.ResourceAssemblies)
+                {
+                    if (asset.IsPlaceholderFile())
+                    {
+                        continue;
+                    }
+                    if (!asset.Properties.TryGetValue("locale", out string? locale))
+                    {
+                        throw new FormatException($"Missing resource locale for '{asset.Path}'.");
+                    }
+                    if (locales.Add(locale))
+                    {
+                        try
+                        {
+                            string normalized = CultureInfo.GetCultureInfo(locale).Name;
+                            WriteContextItem(writer, "_NuGetLocale", "$" + locale, ("Locale", locale), ("Name", normalized), ("Valid", "true"));
+                        }
+                        catch (CultureNotFoundException)
+                        {
+                            WriteContextItem(writer, "_NuGetLocale", "$" + locale, ("Locale", locale), ("Name", locale), ("Valid", "false"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static void WriteContextItem(XmlWriter writer, string type, string identity, params (string Name, string Value)[] metadata)
+    {
+        writer.WriteStartElement(type);
+        writer.WriteAttributeString("Include", Escape(identity));
+        foreach ((string name, string value) in metadata)
+        {
+            writer.WriteElementString(name, Escape(value));
+        }
+        writer.WriteEndElement();
     }
 
     private static void WriteValue(XmlWriter writer, JsonElement value, string path)

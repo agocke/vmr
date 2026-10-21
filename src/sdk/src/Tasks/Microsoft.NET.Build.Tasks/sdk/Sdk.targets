@@ -56,6 +56,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Import Project="$(MSBuildThisFileDirectory)..\targets\Microsoft.NET.ApiCompat.targets" />
 
+  <Import Project="$(MSBuildThisFileDirectory)..\targets\Microsoft.NET.NuGetInputs.targets"
+          Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(IsCrossTargetingBuild)' != 'true'" />
+
   <!-- Import targets from NuGet.Build.Tasks.Pack package/Sdk -->
   <PropertyGroup Condition="'$(NuGetBuildTasksPackTargets)' == '' AND '$(ImportNuGetBuildTasksPackTargetsFromSdk)' != 'false'">
     <NuGetBuildTasksPackTargets>$(MSBuildThisFileDirectory)..\..\..\NuGet.Build.Tasks.Pack.targets</NuGetBuildTasksPackTargets>
@@ -81,11 +84,13 @@ Copyright (c) .NET Foundation. All rights reserved.
   <PropertyGroup>
     <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_CaptureNuGetInputs;_GenerateFrameworkReferenceFetchManifest</MSBuildPrepareGraphInputsDependsOn>
     <MSBuildPrepareGraphInputsDependsOn Condition="'$(Language)' == 'C#'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureCscToolInputs</MSBuildPrepareGraphInputsDependsOn>
+    <_CaptureNuGetInputsDependsOn Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">_ResolveCompilerVersion</_CaptureNuGetInputsDependsOn>
   </PropertyGroup>
 
   <UsingTask TaskName="WriteNuGetInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
   <Target Name="_CaptureNuGetInputs"
+          DependsOnTargets="$(_CaptureNuGetInputsDependsOn)"
           Condition="'$(MSBuildHardenedGraph)' != 'true'">
     <PropertyGroup>
       <_NuGetInputFile Condition="'$(ProjectAssetsFile)' == ''">$(MSBuildProjectExtensionsPath)project.assets.json</_NuGetInputFile>
@@ -94,8 +99,15 @@ Copyright (c) .NET Foundation. All rights reserved.
       <NuGetInputsPath Condition="'$(NuGetInputsPath)' == ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(MSBuildProjectFile).g.props</NuGetInputsPath>
       <NuGetInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(NuGetInputsPath)'))</NuGetInputsPath>
     </PropertyGroup>
-    <WriteNuGetInputs InputFile="$(_NuGetInputFile)" OutputFile="$(NuGetInputsPath)" />
+    <WriteNuGetInputs InputFile="$(_NuGetInputFile)" OutputFile="$(NuGetInputsPath)"
+                      CapturePackageContext="$(MSBuildRestoreGraphInputs)" CompilerApiVersion="$(CompilerApiVersion)"
+                      ProjectLanguage="$(Language)" />
   </Target>
+
+  <Target Name="_PrepareNuGetAnalyzersForGraph"
+          BeforeTargets="_CaptureCscToolInputs"
+          DependsOnTargets="ResolveLockFileAnalyzers"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
 
   <Target Name="_CaptureNuGetInputsAfterRestore"
           AfterTargets="Restore"
@@ -113,14 +125,12 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <PropertyGroup>
       <_FrameworkReferenceFetchManifestFrameworkReferences>@(FrameworkReference, ', ')</_FrameworkReferenceFetchManifestFrameworkReferences>
-      <_FrameworkReferenceFetchManifestPackageReferences>@(PackageReference, ', ')</_FrameworkReferenceFetchManifestPackageReferences>
       <_FrameworkReferenceFetchManifestReferences>@(Reference, ', ')</_FrameworkReferenceFetchManifestReferences>
       <_FrameworkReferenceFetchManifestProfileSupported
         Condition="'$(IsCrossTargetingBuild)' != 'true' and
                    '$(TargetFrameworks)' == '' and
                    '@(FrameworkReference->Count())' == '1' and
                    '@(_SupportedFrameworkReferenceFetchManifestFrameworkReference->Count())' == '1' and
-                   '@(PackageReference->Count())' == '0' and
                    '@(Reference->Count())' == '0' and
                    '$(RuntimeIdentifier)' == '' and
                    '$(RuntimeIdentifiers)' == ''">true</_FrameworkReferenceFetchManifestProfileSupported>
@@ -151,11 +161,6 @@ Copyright (c) .NET Foundation. All rights reserved.
                   '@(_SupportedFrameworkReferenceFetchManifestFrameworkReference->Count())' != '1')"
       ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
       FormatArguments="FrameworkReference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestFrameworkReferences)'))"
-      ContinueOnError="ErrorAndContinue" />
-    <NETSdkError
-      Condition="'@(PackageReference)' != ''"
-      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
-      FormatArguments="PackageReference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestPackageReferences)'))"
       ContinueOnError="ErrorAndContinue" />
     <NETSdkError
       Condition="'@(Reference)' != ''"

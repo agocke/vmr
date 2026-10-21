@@ -73,6 +73,10 @@ execution through final artifact publication and program startup on the external
 runtime. A clean SDK executable/library closure also constructs and executes
 without prebuilding references, including renamed library outputs, copy-local
 symbols and ordinary-equivalent dependency manifests.
+An offline package fixture also selects distinct reference/runtime assemblies
+and a compatible package generator, then independently compiles and starts the
+consumer. Package selection runs with assets JSON and package directories
+removed; full graph publication retains external-input validation.
 Compiler actions run analyzers and the Regex generator, consume generated
 sources, and produce byte-identical assemblies, reference assemblies and
 portable PDBs across relocated checkouts.
@@ -95,13 +99,14 @@ disables that resolver during hardened Build; package-SDK import bindings still
 need explicit capture and replay rather than package-cache searches or downloads.
 
 Framework-reference preparation currently accepts only the bounded
-single-framework profile without package references. A real
+single-framework profile, now including package references. A real
 `System.Collections.Immutable` trial targeting runtime's `net10.0` minimum
 framework resolves the pinned Arcade SDK, then stops during Restore with
 `NETSDK1247`: the project retains its multi-targeting declaration and includes
-compiler/API-tool package references. Extending preparation to configured inner
-builds and their package assets is required before constructing this runtime
-graph. No runtime library compilation or independent execution is established.
+compiler/API-tool package references. The package-reference rejection has since
+been replaced by prepared selection, but configured-inner-build preparation,
+package-SDK import replay and broader compiler/tool profiles remain necessary.
+No runtime library graph, compilation or independent execution is established.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,
@@ -109,11 +114,20 @@ ordered package folders, dependencies, asset metadata and unknown fields.
 This preserves underlying data rather than freezing selected package-task
 outputs. A separate zero-I/O `ReadNuGetAssets` task now exposes an explicitly
 named target's libraries, asset groups, dependencies and file inventory directly
-from these facts. Its shipped target is explicitly imported; the default SDK
-Build still does not use this view instead of `ResolvePackageAssets`.
-Package-location preparation, SDK selection policy and broader framework
-preparation remain required; existing package-profile rejection is unchanged.
-See the [encoding and remaining work](../src/msbuild/documentation/specs/proposed/hardened-static-graph-implementation.md#nuget-fact-capture).
+from these facts. Hardened SDK Build now imports the facts automatically and
+selects a separate zero-I/O `ResolveNuGetAssets` task. It reuses SDK package
+policy over a direct model projection and direct item sink, without NuGet's
+ambient JSON reader, package probing or binary asset cache. Restore additionally
+records selected package locations, related-file presence, locale normalization
+and compiler API identity; package generators join the prepared compiler closure.
+Standard reference, analyzer and copy-local item composition is retained.
+Content preprocessing, additional frameworks, simple framework-assembly names
+and file conflicts requiring ordinary assembly inspection fail explicitly.
+Multi-targeting and RID preparation remain unsupported. Dependency/runtime-config
+actions still read declared assets JSON during execution; migrating those
+consumers to facts remains required by the eventual design.
+See [prepared SDK package selection](../src/msbuild/documentation/specs/proposed/hardened-static-graph-implementation.md#prepared-sdk-package-selection)
+for the encoding, boundaries and execution proof.
 
 The bounded single-framework SDK C# profile emits full Build graphs for
 hello-world and an executable/library closure, executes independently, and

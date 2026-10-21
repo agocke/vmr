@@ -1,0 +1,28 @@
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <UseAppHost>false</UseAppHost>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="PackageProgram.cs" />
+    <PackageReference Include="GenBuild.Smoke.Package" Version="1.0.0" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup Condition="'$(TestCase)' == 'selection'">
+    <BuildDependsOn>InspectPackageAssets</BuildDependsOn>
+  </PropertyGroup>
+  <Target Name="InspectPackageAssets" DependsOnTargets="ResolvePackageAssets">
+    <WriteLinesToFile File="$(MSBuildProjectDirectory)/../selected-assets.txt"
+                      Lines="@(ResolvedCompileFileDefinitions->'compile|%(Identity)');@(RuntimeCopyLocalItems->'runtime|%(Identity)');@(ResolvedAnalyzers->'analyzer|%(Identity)')"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="$(MSBuildProjectDirectory)/../selected-assets.txt" />
+  </Target>
+  <Target Name="TestMissingPackageLocation" BeforeTargets="ResolvePackageAssets"
+          Condition="'$(TestCase)' == 'missing-location' and '$(MSBuildHardenedGraph)' == 'true'">
+    <ItemGroup>
+      <_NuGetPackageLocation Remove="@(_NuGetPackageLocation)" />
+    </ItemGroup>
+  </Target>
+</Project>

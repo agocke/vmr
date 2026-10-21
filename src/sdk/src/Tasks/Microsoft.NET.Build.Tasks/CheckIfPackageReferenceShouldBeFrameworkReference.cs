@@ -8,8 +8,13 @@ using Microsoft.Build.Framework;
 namespace Microsoft.NET.Build.Tasks
 {
     [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
     public sealed class CheckIfPackageReferenceShouldBeFrameworkReference : TaskBase
     {
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
+
         public ITaskItem[] PackageReferences { get; set; } = Array.Empty<ITaskItem>();
 
         public ITaskItem[] FrameworkReferences { get; set; } = Array.Empty<ITaskItem>();

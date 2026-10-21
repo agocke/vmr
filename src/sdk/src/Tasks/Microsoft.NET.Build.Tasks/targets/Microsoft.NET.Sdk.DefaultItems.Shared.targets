@@ -88,7 +88,8 @@ Copyright (c) .NET Foundation. All rights reserved.
           PackageReferences="@(PackageReference)"
           FrameworkReferences="@(FrameworkReference)"
           PackageReferenceToReplace="Microsoft.AspNetCore.All"
-          FrameworkReferenceToUse="Microsoft.AspNetCore.App">
+          FrameworkReferenceToUse="Microsoft.AspNetCore.App"
+          DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="ShouldRemovePackageReference" PropertyName="_ShouldRemoveAspNetCoreAll" />
     </CheckIfPackageReferenceShouldBeFrameworkReference>
 
@@ -101,7 +102,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       PackageReferences="@(PackageReference)"
       FrameworkReferences="@(FrameworkReference)"
       PackageReferenceToReplace="Microsoft.AspNetCore.App"
-      FrameworkReferenceToUse="Microsoft.AspNetCore.App">
+      FrameworkReferenceToUse="Microsoft.AspNetCore.App"
+      DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="ShouldRemovePackageReference" PropertyName="_ShouldRemoveAspNetCoreApp" />
       <Output TaskParameter="ShouldAddFrameworkReference" PropertyName="_ShouldAddAspNetCoreAppFrameworkReference" />
     </CheckIfPackageReferenceShouldBeFrameworkReference>
@@ -128,7 +130,8 @@ Copyright (c) .NET Foundation. All rights reserved.
     <ApplyImplicitVersions TargetFrameworkVersion="$(_TargetFrameworkVersionWithoutV)"
                            TargetLatestRuntimePatch="$(TargetLatestRuntimePatch)"
                            PackageReferences="@(PackageReference)"
-                           ImplicitPackageReferenceVersions="@(ImplicitPackageReferenceVersion)">
+                           ImplicitPackageReferenceVersions="@(ImplicitPackageReferenceVersion)"
+                           DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="PackageReferencesToUpdate" ItemName="PackageReferenceToUpdate" />
       <Output TaskParameter="SdkBuildWarnings" ItemName="SdkBuildWarning" />
     </ApplyImplicitVersions>
@@ -153,14 +156,15 @@ Copyright (c) .NET Foundation. All rights reserved.
   <!-- Remove package references with metadata IsImplicitlyDefined = true, if there are other PackageReference items with the same identity -->
   <Target Name="CheckForImplicitPackageReferenceOverrides"
           BeforeTargets="_CheckForInvalidConfigurationAndPlatform;CollectPackageReferences"
-          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true'">
+          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(MSBuildHardenedGraph)' == 'true'">
     <PropertyGroup>
       <ImplicitPackageReferenceInformationLink>https://aka.ms/sdkimplicitrefs</ImplicitPackageReferenceInformationLink>
     </PropertyGroup>
 
     <CheckForImplicitPackageReferenceOverrides
         PackageReferenceItems="@(PackageReference)"
-        MoreInformationLink="$(ImplicitPackageReferenceInformationLink)">
+        MoreInformationLink="$(ImplicitPackageReferenceInformationLink)"
+        DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="ItemsToRemove" ItemName="_PackageReferenceToRemove" />
       <Output TaskParameter="ItemsToAdd" ItemName="_PackageReferenceToAdd" />
     </CheckForImplicitPackageReferenceOverrides>

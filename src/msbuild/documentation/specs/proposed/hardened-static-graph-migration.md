@@ -115,6 +115,18 @@ an ordered list of candidate folders is not proof of which folder contains a
 package. Project-produced libraries and analyzers must remain future producer
 outputs, not existing-file snapshots.
 
+The [prepared SDK selection path](hardened-static-graph-implementation.md#prepared-sdk-package-selection)
+reuses ordinary policy with a direct fact-to-model projection and direct item
+sink. Restore records selected package locations, related-file presence/absence,
+locale normalization and compiler identity; Build consumes that context without
+discovery. Keep the ordinary cache path unchanged, but do not serialize through
+it merely to reuse selection logic. Feed standard reference/analyzer/copy-local
+items so the existing compiler and publication composition retains its semantics.
+Check no-discovery selection with JSON/package files absent, separately from
+full graph publication, which still validates declared external inputs. The
+dependency/runtime-config execution actions still consume declared assets JSON;
+their eventual fact migration is not completed by making package selection pure.
+
 Separate optional output placeholders from requested product effects.
 Common always creates an `_ApplicationManifestFinal` path, even for a library
 that requests no manifest generation. Hardened `GetNativeManifest` skips the

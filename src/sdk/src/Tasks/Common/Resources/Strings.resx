@@ -1090,5 +1090,9 @@ You may need to build the project on another operating system or architecture, o
     <value>NETSDK1253: Prepared NuGet input facts are invalid: {0} Run Restore with graph-input preparation enabled before constructing the build graph.</value>
     <comment>{StrBegins="NETSDK1253: "}{Locked="{0}"}</comment>
   </data>
-  <!-- The latest message added is InvalidNuGetInputFacts. Please update this value with each PR to catch parallel PRs both adding a new message -->
+  <data name="UnsupportedNuGetAssetsInput" xml:space="preserve">
+    <value>NETSDK1254: Prepared package resolution does not support '{0}' with value '{1}'. Supply supported package assets and explicit preparation context.</value>
+    <comment>{StrBegins="NETSDK1254: "}{Locked="{0}"}{Locked="{1}"}</comment>
+  </data>
+  <!-- The latest message added is UnsupportedNuGetAssetsInput. Please update this value with each PR to catch parallel PRs both adding a new message -->
 </root>

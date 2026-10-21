@@ -8,8 +8,13 @@ using Microsoft.Build.Framework;
 namespace Microsoft.NET.Build.Tasks
 {
     [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
     public sealed class ApplyImplicitVersions : TaskBase
     {
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
+
         public string TargetFrameworkVersion { get; set; }
 
         public bool TargetLatestRuntimePatch { get; set; }

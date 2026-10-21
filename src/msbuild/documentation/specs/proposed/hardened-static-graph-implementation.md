@@ -654,13 +654,14 @@ The first real probe selects `System.Collections.Immutable` with
 The evaluated closure still includes the matching reference project and ILLink
 tool/analyzer projects; the older target does not make these dependencies optional.
 
-Source-built package-SDK resolution now gets ordinary Restore through the
-pinned Arcade import. Preparation then fails with `NETSDK1247`, before assets
-or a graph are produced: the framework-reference fetch profile rejects the
-retained `TargetFrameworks` declaration and the compiler/API-tool
-`PackageReference` items. Its current manifest deliberately sets
-`SkipResolvePackageAssets`; merely dropping those guards would lose package
-inputs rather than support them. The next slice must prepare each configured
+Source-built package-SDK resolution gets ordinary Restore through the
+pinned Arcade import. The initial preparation probe failed with `NETSDK1247`,
+before assets or a graph were produced: the framework-reference fetch profile
+rejected both the retained `TargetFrameworks` declaration and compiler/API-tool
+`PackageReference` items. Prepared package selection below replaces the package
+rejection and enables asset selection in hardened manifest mode. Configured
+inner builds and their broader tool profiles have not been reprobed or enabled.
+The next slice must prepare each configured
 inner build's resolved package/framework/compiler inputs while preserving child
 framework selection and generated-tool producer edges. It must not prebuild the
 selected library, remove its real references/analyzers, or disable validation.
@@ -687,11 +688,11 @@ text, object/array order, case-sensitive keys, unknown fields and literal
 MSBuild syntax survive XML/MSBuild escaping. No package or project output is
 opened while encoding the JSON.
 
-This is the data representation, not a replacement asset-selection policy.
-The default SDK Build does not yet use the facts instead of `ResolvePackageAssets`,
-and existing profile rejection remains in place. Actual package-location
-discovery, SDK selection policy, configured-inner-build framework preparation
-and migration of other JSON consumers are subsequent work. In particular,
+This is the data representation, not a snapshot of asset-selection results.
+The prepared SDK policy below consumes it during hardened construction, while
+the explicit raw-capture path remains usable without discovery context.
+Configured-inner-build framework preparation and migration of other JSON
+consumers remain subsequent work. In particular,
 the declared-I/O dependency/runtime-configuration writers still read their
 declared JSON inputs; the eventual design must replace all consumed NuGet JSON
 data with item/property facts, not stop at selected package-task results.
@@ -728,8 +729,9 @@ Explicitly importing
 loads `NuGetInputsPath` and exposes `_ReadNuGetAssets`. Set `NuGetAssetsTarget`
 to the exact target key; its four outputs are `_NuGetTargetLibrary`,
 `_NuGetTargetAsset`, `_NuGetTargetDependency` and `_NuGetLibraryFile`.
-This entry point is not automatically imported by the SDK. It neither probes
-package folders nor applies `ResolvePackageAssets` policy such as analyzer
+The SDK now imports this file in hardened inner builds, but `_ReadNuGetAssets`
+still requires an explicit request and exact target key. This raw view neither
+probes package folders nor applies `ResolvePackageAssets` policy such as analyzer
 version filtering, placeholder exclusion or copy-local selection.
 
 The view deliberately does not reconstruct a `LockFile` through NuGet's
@@ -744,7 +746,61 @@ results. The packaged fixture deletes both original and synthetic assets JSON,
 constructs the shipped view with nonexistent package paths and future project
 placeholders, and independently publishes ordinary-equivalent values. Missing
 targets and invalid fact formats publish neither a graph nor action invocations.
-This establishes the view, not full package-policy or runtime-library support.
+These checks establish the raw view alone, separately from the SDK policy below.
+
+### Prepared SDK package selection
+
+Hardened SDK `ResolvePackageAssets` now calls
+[`ResolveNuGetAssets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ResolveNuGetAssets.cs)
+with empty I/O declarations. It validates the raw facts and projects consumed
+fields directly into NuGet model objects through
+[`NuGetAssets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/NuGetAssets.cs),
+without invoking NuGet's ambient project-spec reader. The ordinary task's
+selection policy is shared through an injected model/resolver and direct item
+sink, not a binary cache or an in-memory cache-file round-trip.
+
+Ordinary graph-input preparation extends the same manifest with context version
+`_NuGetPackageContextVersion=1` and `_NuGetCompilerApiVersion`. The raw fact
+format remains 1. `_NuGetPackageLocation` records each package's normalized
+identity, `PackageDirectory` and selected `PackageRoot`; ordered candidate
+folders alone would not establish the selected root. `_NuGetRelatedFile` records
+explicit presence/absence of related PDB/XML paths. `_NuGetLocale` records the
+original locale, normalized name and validity. Build's
+[`PreparedPackageResolver`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/PreparedPackageResolver.cs)
+requires these facts instead of searching packages, probing related files or
+consulting installed cultures. Missing, duplicate or invalid context fails
+without selected outputs. Explicit raw capture can still opt out of context
+with `MSBuildRestoreGraphInputs=false`.
+
+The existing SDK targets compose `ResolvedCompileFileDefinitions`,
+`ResolvedAnalyzers`, runtime/native/resource copy-local items and transitive
+project references into `Reference`, `Analyzer` and `ReferenceCopyLocalPaths`.
+Compile/reference and runtime implementation paths remain distinct. Restore
+also selects package analyzers before capturing their tool-dependency closure.
+The package/framework replacement checks, implicit-version application and
+implicit-reference override checks run as audited zero-I/O computations;
+ordinary policy and task selection are unchanged.
+
+The supported preparation profile is still a single target framework with
+`Microsoft.NETCore.App`, no RID and no retained multi-targeting declaration.
+Content preprocessing, additional framework references, simple framework-assembly
+references and package/framework or duplicate file conflicts that require
+ordinary assembly inspection fail with `NETSDK1254`. Ordinary package resolution,
+its binary cache, and discovery behavior remain unchanged.
+
+The offline [package fixture](../../../../../genbuild/tests/PackageReferences.csproj)
+and [smoke target](../../../../../genbuild/tests/Smoke.proj) remove assets JSON
+and the isolated package directory before selection, then independently publish
+the selected paths. They restore external inputs before full Build graph
+publication: the engine still validates declared input files, and dependency/
+runtime-config actions still declare JSON reads. No consumer is prebuilt.
+Eleven independent actions compile against the reference assembly, run only the
+compatible C# generator, publish the runtime implementation and start the
+consumer on an SDK-free external runtime. Dependency/runtime-config JSON matches
+ordinary Build, and runtime assembly bytes match the package implementation.
+Missing location/context cases publish neither graph nor action invocations.
+This proves bounded SDK PackageReference execution, not configured runtime
+library support or completion of the remaining JSON-consumer migration.
 
 ## After the prototype
 

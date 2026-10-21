@@ -1,12 +1,15 @@
 <!-- Licensed to the .NET Foundation under one or more agreements.
      The .NET Foundation licenses this file to you under the MIT license. -->
 <Project>
-  <!-- Explicit import only: this view does not replace ResolvePackageAssets policy. -->
+  <!-- SDK hardened builds use the same facts as explicitly imported asset views. -->
   <PropertyGroup>
     <NuGetInputsPath Condition="'$(NuGetInputsPath)' == ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(MSBuildProjectFile).g.props</NuGetInputsPath>
     <NuGetInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(NuGetInputsPath)'))</NuGetInputsPath>
   </PropertyGroup>
   <Import Project="$(NuGetInputsPath)" />
+  <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(CompilerApiVersion)' == ''">
+    <CompilerApiVersion>$(_NuGetCompilerApiVersion)</CompilerApiVersion>
+  </PropertyGroup>
   <UsingTask TaskName="ReadNuGetAssets" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <Target Name="_ReadNuGetAssets">
     <ReadNuGetAssets FormatVersion="$(_NuGetInputsFormatVersion)"

@@ -26,6 +26,14 @@ namespace Microsoft.NET.Build.Tasks
     [MSBuildMultiThreadableTask]
     public sealed class ResolvePackageAssets : TaskBase, IMultiThreadableTask
     {
+        public ResolvePackageAssets()
+        {
+        }
+
+        internal ResolvePackageAssets(Logger logger) : base(logger)
+        {
+        }
+
         public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
 
         #region Input Items
@@ -358,26 +366,56 @@ namespace Microsoft.NET.Build.Tasks
         {
             using (var reader = new CacheReader(this))
             {
-                // NOTE: Order (alphabetical by group name followed by log messages) must match writer.
-                Analyzers = reader.ReadItemGroup();
-                ApphostsForShimRuntimeIdentifiers = reader.ReadItemGroup();
-                CompileTimeAssemblies = reader.ReadItemGroup();
-                ContentFilesToPreprocess = reader.ReadItemGroup();
-                DebugSymbolsFiles = reader.ReadItemGroup();
-                FrameworkAssemblies = reader.ReadItemGroup();
-                FrameworkReferences = reader.ReadItemGroup();
-                NativeLibraries = reader.ReadItemGroup();
-                PackageDependencies = reader.ReadItemGroup();
-                PackageDependenciesDesignTime = reader.ReadItemGroup();
-                PackageFolders = reader.ReadItemGroup();
-                ReferenceDocumentationFiles = reader.ReadItemGroup();
-                ResourceAssemblies = reader.ReadItemGroup();
-                RuntimeAssemblies = reader.ReadItemGroup();
-                RuntimeTargets = reader.ReadItemGroup();
-                TransitiveProjectReferences = reader.ReadItemGroup();
-
-                _logMessages = reader.ReadItemGroup();
+                ReadItemGroups(reader.ReadItemGroup);
             }
+        }
+
+        internal void ReadPreparedAssets(
+            LockFile lockFile,
+            IPackageResolver resolver,
+            Func<string, bool> fileExists,
+            Func<string, string> normalizeLocale)
+        {
+            using var writer = new CacheWriter(this, lockFile, resolver, fileExists, normalizeLocale);
+            using var groups = writer.CollectItemGroups().GetEnumerator();
+            ReadItemGroups(() =>
+            {
+                if (!groups.MoveNext())
+                {
+                    throw new InvalidOperationException("Missing package asset group.");
+                }
+                return groups.Current;
+            });
+            SetImplicitMetadataForCompileTimeAssemblies();
+            foreach (var item in CompileTimeAssemblies)
+            {
+                item.SetMetadata(MetadataKeys.HintPath, ProjectCollection.Escape(item.ItemSpec));
+            }
+            SetImplicitMetadataForFrameworkAssemblies();
+            LogMessagesToMSBuild();
+        }
+
+        private void ReadItemGroups(Func<ITaskItem[]> next)
+        {
+            // NOTE: Order (alphabetical by group name followed by log messages) must match writer.
+            Analyzers = next();
+            ApphostsForShimRuntimeIdentifiers = next();
+            CompileTimeAssemblies = next();
+            ContentFilesToPreprocess = next();
+            DebugSymbolsFiles = next();
+            FrameworkAssemblies = next();
+            FrameworkReferences = next();
+            NativeLibraries = next();
+            PackageDependencies = next();
+            PackageDependenciesDesignTime = next();
+            PackageFolders = next();
+            ReferenceDocumentationFiles = next();
+            ResourceAssemblies = next();
+            RuntimeAssemblies = next();
+            RuntimeTargets = next();
+            TransitiveProjectReferences = next();
+
+            _logMessages = next();
         }
 
         private void SetImplicitMetadataForCompileTimeAssemblies()
@@ -704,6 +742,11 @@ namespace Microsoft.NET.Build.Tasks
             private Placeholder _metadataStringTablePosition;
             private string _targetFramework;
             private int _itemCount;
+            private readonly Func<string, bool> _fileExists = File.Exists;
+            private readonly Func<string, string> _normalizeLocale =
+                locale => System.Globalization.CultureInfo.GetCultureInfo(locale).Name;
+            private List<ITaskItem[]> _collectedGroups;
+            private List<TaskItem> _collectedItems;
 
             public bool CanWriteToCacheFile { get; set; }
 
@@ -770,6 +813,32 @@ namespace Microsoft.NET.Build.Tasks
                 {
                     ComputePackageExclusions();
                 }
+            }
+
+            internal CacheWriter(
+                ResolvePackageAssets task,
+                LockFile lockFile,
+                IPackageResolver resolver,
+                Func<string, bool> fileExists,
+                Func<string, string> normalizeLocale)
+            {
+                _task = task;
+                _targetFramework = task.TargetFramework;
+                _lockFile = lockFile;
+                _packageResolver = resolver;
+                _fileExists = fileExists;
+                _normalizeLocale = normalizeLocale;
+                _compileTimeTarget = lockFile.GetTargetAndThrowIfNotFound(_targetFramework, null);
+                _runtimeTarget = lockFile.GetTargetAndThrowIfNotFound(_targetFramework, task.EffectiveRuntimeIdentifier);
+                CanWriteToCacheFile = true;
+                _collectedGroups = new List<ITaskItem[]>();
+                ComputePackageExclusions();
+            }
+
+            internal List<ITaskItem[]> CollectItemGroups()
+            {
+                WriteItemGroups();
+                return _collectedGroups;
             }
 
             public void WriteToCacheFile()
@@ -1208,6 +1277,15 @@ namespace Microsoft.NET.Build.Tasks
 
             private void WriteItemGroup(Action writeItems)
             {
+                if (_collectedGroups != null)
+                {
+                    _collectedItems = new List<TaskItem>();
+                    writeItems();
+                    _collectedGroups.Add(_collectedItems.ToArray());
+                    _collectedItems = null;
+                    return;
+                }
+
                 var placeholder = WritePlaceholder();
                 _itemCount = 0;
                 writeItems();
@@ -1287,7 +1365,7 @@ namespace Microsoft.NET.Build.Tasks
                             if (StringComparer.InvariantCulture.Equals(fileExtension, extension))
                             {
                                 string xmlFilePath = Path.ChangeExtension(itemSpec, fileExtension);
-                                if (File.Exists(xmlFilePath))
+                                if (_fileExists(xmlFilePath))
                                 {
                                     WriteItem(xmlFilePath, library);
                                 }
@@ -1727,7 +1805,7 @@ namespace Microsoft.NET.Build.Tasks
                         // file systems when the locale-specific assets are copied.
                         try
                         {
-                            var normalizedLocale = System.Globalization.CultureInfo.GetCultureInfo(locale).Name;
+                            var normalizedLocale = _normalizeLocale(locale);
                             if (normalizedLocale != locale)
                             {
                                 var tfm = _lockFile.GetTargetAndThrowIfNotFound(_targetFramework, null).TargetFramework;
@@ -1900,6 +1978,11 @@ namespace Microsoft.NET.Build.Tasks
 
             private void WriteItem(string itemSpec)
             {
+                if (_collectedItems != null)
+                {
+                    _collectedItems.Add(new TaskItem(ProjectCollection.Escape(itemSpec)));
+                    return;
+                }
                 FlushMetadata();
                 _itemCount++;
                 _writer.Write(ProjectCollection.Escape(itemSpec));
@@ -1916,6 +1999,11 @@ namespace Microsoft.NET.Build.Tasks
             {
                 if (!string.IsNullOrEmpty(value))
                 {
+                    if (_collectedItems != null)
+                    {
+                        _collectedItems[_collectedItems.Count - 1].SetMetadata(key, ProjectCollection.Escape(value));
+                        return;
+                    }
                     _bufferedMetadata.Add(GetMetadataIndex(key));
                     _bufferedMetadata.Add(GetMetadataIndex(value));
                 }

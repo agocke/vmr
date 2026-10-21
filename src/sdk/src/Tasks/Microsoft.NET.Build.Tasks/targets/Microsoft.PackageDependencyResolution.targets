@@ -147,7 +147,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     </ResolvePackageDependenciesForBuildDependsOn>
   </PropertyGroup>
   <Target Name="ResolvePackageDependenciesForBuild"
-          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And
+          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(MSBuildHardenedGraph)' == 'true') And
                      (('$(DesignTimeBuild)' != 'true' and '$(_CleaningWithoutRebuilding)' != 'true')
                       Or Exists('$(ProjectAssetsFile)'))"
           BeforeTargets="AssignProjectConfiguration"
@@ -176,13 +176,15 @@ Copyright (c) .NET Foundation. All rights reserved.
            AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="Microsoft.NET.Build.Tasks.ResolvePackageAssets"
             AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="Microsoft.NET.Build.Tasks.ResolveNuGetAssets"
+            AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
   <!-- The condition on this target causes it to be skipped during design-time builds if
         the restore operation hasn't run yet.  This is to avoid displaying an error in
         the Visual Studio error list when a project is created before NuGet restore has
         run and created the assets file. -->
   <Target Name="RunResolvePackageDependencies"
-          Condition=" '$(DesignTimeBuild)' != 'true' Or Exists('$(ProjectAssetsFile)')">
+          Condition="'$(MSBuildHardenedGraph)' != 'true' And ('$(DesignTimeBuild)' != 'true' Or Exists('$(ProjectAssetsFile)'))">
 
     <!-- Verify that the assets file has a target for the right framework.  Otherwise, if we restored for the
          wrong framework, we'd end up finding no references to pass to the compiler, and we'd get a ton of
@@ -213,7 +215,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <!-- Reads the version of the compiler APIs that are currently being used in order to pick the correct Roslyn components. -->
   <Target Name="_ResolveCompilerVersion"
-          Condition="'$(CompilerApiVersion)' == '' And
+          Condition="'$(MSBuildHardenedGraph)' != 'true' And '$(CompilerApiVersion)' == '' And
                      ('$(Language)' == 'C#' Or '$(Language)' == 'VB') And
                      Exists('$(RoslynTasksAssembly)')">
 
@@ -265,6 +267,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     </ItemGroup>
 
     <ResolvePackageAssets
+      Condition="'$(MSBuildHardenedGraph)' != 'true'"
       ProjectAssetsFile="$(ProjectAssetsFile)"
       ProjectAssetsCacheFile="$(ProjectAssetsCacheFile)"
       ProjectPath="$(MSBuildProjectFullPath)"
@@ -312,6 +315,54 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="PackageDependencies" ItemName="PackageDependencies" />
       <Output TaskParameter="PackageDependenciesDesignTime" ItemName="_PackageDependenciesDesignTime" />
     </ResolvePackageAssets>
+
+    <ResolveNuGetAssets
+      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+      FormatVersion="$(_NuGetInputsFormatVersion)"
+      PackageContextVersion="$(_NuGetPackageContextVersion)"
+      Facts="@(_NuGetInput)"
+      PackageLocations="@(_NuGetPackageLocation)"
+      RelatedFiles="@(_NuGetRelatedFile)"
+      Locales="@(_NuGetLocale)"
+      FrameworkCompileReferences="@(_FrameworkReferenceManifestCompileReference)"
+      ExistingAnalyzers="@(Analyzer)"
+      ProjectAssetsFile="$(_NuGetInputsSourceFile)"
+      ProjectPath="$(MSBuildProjectFullPath)"
+      ProjectLanguage="$(Language)"
+      CompilerApiVersion="$(CompilerApiVersion)"
+      EmitAssetsLogMessages="$(EmitAssetsLogMessages)"
+      TargetFramework="$(TargetFramework)"
+      RuntimeIdentifier="$(RuntimeIdentifier)"
+      PlatformLibraryName="$(MicrosoftNETPlatformLibrary)"
+      IsSelfContained="$(SelfContained)"
+      MarkPackageReferencesAsExternallyResolved="$(MarkPackageReferencesAsExternallyResolved)"
+      DisableFrameworkAssemblies="$(DisableLockFileFrameworks)"
+      CopyLocalRuntimeTargetAssets="$(CopyLocalRuntimeTargetAssets)"
+      DisableTransitiveProjectReferences="$(DisableTransitiveProjectReferences)"
+      DisableTransitiveFrameworkReferences="$(DisableTransitiveFrameworkReferences)"
+      EnsureRuntimePackageDependencies="$(EnsureRuntimePackageDependencies)"
+      VerifyMatchingImplicitPackageVersion="$(VerifyMatchingImplicitPackageVersion)"
+      ExpectedPlatformPackages="@(ExpectedPlatformPackages)"
+      SatelliteResourceLanguages="$(SatelliteResourceLanguages)"
+      PackageReferences="@(PackageReference)"
+      DefaultImplicitPackages="$(DefaultImplicitPackages)"
+      DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="Analyzers" ItemName="ResolvedAnalyzers" />
+      <Output TaskParameter="ContentFilesToPreprocess" ItemName="_ContentFilesToPreprocess" />
+      <Output TaskParameter="DebugSymbolsFiles" ItemName="_DebugSymbolsFiles" />
+      <Output TaskParameter="ReferenceDocumentationFiles" ItemName="_ReferenceDocumentationFiles" />
+      <Output TaskParameter="FrameworkAssemblies" ItemName="ResolvedFrameworkAssemblies" />
+      <Output TaskParameter="FrameworkReferences" ItemName="TransitiveFrameworkReference" />
+      <Output TaskParameter="NativeLibraries" ItemName="NativeCopyLocalItems" />
+      <Output TaskParameter="ResourceAssemblies" ItemName="ResourceCopyLocalItems" />
+      <Output TaskParameter="RuntimeAssemblies" ItemName="RuntimeCopyLocalItems" />
+      <Output TaskParameter="RuntimeTargets" ItemName="RuntimeTargetsCopyLocalItems" />
+      <Output TaskParameter="CompileTimeAssemblies" ItemName="ResolvedCompileFileDefinitions" />
+      <Output TaskParameter="TransitiveProjectReferences" ItemName="_TransitiveProjectReferences" />
+      <Output TaskParameter="PackageFolders" ItemName="AssetsFilePackageFolder" />
+      <Output TaskParameter="PackageDependencies" ItemName="PackageDependencies" />
+      <Output TaskParameter="PackageDependenciesDesignTime" ItemName="_PackageDependenciesDesignTime" />
+    </ResolveNuGetAssets>
 
     <ItemGroup Condition="'$(CopyDebugSymbolFilesFromPackages)' == 'true'">
       <ReferenceCopyLocalPaths Include="@(_DebugSymbolsFiles)"></ReferenceCopyLocalPaths>
@@ -460,7 +511,8 @@ Copyright (c) .NET Foundation. All rights reserved.
          simple name as the ItemSpec.  This will prevent the VS project system from marking
          a reference with a warning.  See https://github.com/dotnet/sdk/issues/1499 -->
     <JoinItems Left="@(ResolvedCompileFileDefinitions)" LeftKey="FileName" LeftMetadata="*"
-               Right="@(Reference)" RightKey="" RightMetadata="*">
+               Right="@(Reference)" RightKey="" RightMetadata="*"
+               Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <Output TaskParameter="JoinResult" ItemName="_JoinedResolvedCompileFileDefinitions" />
     </JoinItems>
 

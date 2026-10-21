@@ -1108,6 +1108,11 @@ The following are names of parameters or literal values and should not be transl
         <target state="translated">NETSDK1019: {0}은(는) 지원되지 않는 프레임워크입니다.</target>
         <note>{StrBegins="NETSDK1019: "}</note>
       </trans-unit>
+      <trans-unit id="UnsupportedNuGetAssetsInput">
+        <source>NETSDK1254: Prepared package resolution does not support '{0}' with value '{1}'. Supply supported package assets and explicit preparation context.</source>
+        <target state="new">NETSDK1254: Prepared package resolution does not support '{0}' with value '{1}'. Supply supported package assets and explicit preparation context.</target>
+        <note>{StrBegins="NETSDK1254: "}{Locked="{0}"}{Locked="{1}"}</note>
+      </trans-unit>
       <trans-unit id="UnsupportedRuntimeConfigParameter">
         <source>NETSDK1251: Declared-I/O runtime configuration does not support '{0}' with value '{1}'. Supply explicit inputs, outputs, and portable probing paths.</source>
         <target state="new">NETSDK1251: Declared-I/O runtime configuration does not support '{0}' with value '{1}'. Supply explicit inputs, outputs, and portable probing paths.</target>

@@ -8,8 +8,13 @@ using Microsoft.Build.Framework;
 namespace Microsoft.NET.Build.Tasks
 {
     [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
     public class CheckForImplicitPackageReferenceOverrides : TaskBase
     {
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
+
         [Required]
         public ITaskItem[] PackageReferenceItems { get; set; }
 

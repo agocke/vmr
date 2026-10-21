@@ -80,6 +80,7 @@
     </Exec>
     <Error Condition="'@(_SdkProgramOutput)' != 'Hello from genbuild.'" Text="The program built by the SDK action graph did not run correctly on the external runtime." />
     <CallTarget Targets="TestProjectReferences" />
+    <CallTarget Targets="TestPackageReferences" />
     <WriteLinesToFile File="$(_TestDirectory)compile.rsp" Lines="@(_CompileReference->'-r:&quot;%(Identity)&quot;');&quot;$(_TestDirectory)HelloWorld.cs&quot;" Overwrite="true" />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_TestDirectory)HelloWorld.dll&quot; @&quot;$(_TestDirectory)compile.rsp&quot;" />
     <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_TestDirectory)HelloWorld.runtimeconfig.json" />
@@ -88,6 +89,93 @@
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
     <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, Restore-only package-SDK resolution, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-reference execution and startup, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestPackageReferences">
+    <PropertyGroup>
+      <_PackageRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'package-references'))</_PackageRoot>
+      <_PackageSeedArguments>-p:DirectoryBuildPropsPath=&quot;$(_PackageRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_PackageRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_PackageRoot)Directory.Packages.props&quot; -p:RestoreSources=&quot;$(_PackageRoot)feed&quot;</_PackageSeedArguments>
+      <_PackageArguments>$(_PackageSeedArguments) -p:RestorePackagesPath=&quot;$(_PackageRoot)packages&quot;</_PackageArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_PackageRoot)seed;$(_PackageRoot)feed;$(_PackageRoot)package/ref/net11.0;$(_PackageRoot)package/lib/net11.0;$(_PackageRoot)package/analyzers/dotnet/roslyn4.0/cs;$(_PackageRoot)package/analyzers/dotnet/roslyn99.0/cs;$(_PackageRoot)package/analyzers/dotnet/vb;$(_PackageRoot)app" />
+    <WriteLinesToFile File="$(_PackageRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_PackageRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_PackageRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_PackageRoot)seed" />
+    <Exec Command="$(_App) restore &quot;$(_PackageRoot)seed/HelloWorld.csproj&quot; $(_PackageSeedArguments) -bl:&quot;$(_PackageRoot)seed.binlog&quot;" />
+    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_PackageCompilerReference" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/nugetinputs/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_NuGetInput[@Include='%2524/project/restore/packagesPath']/Value/text()">
+      <Output TaskParameter="Result" PropertyName="_PackageSeedCache" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/frameworkreferences/HelloWorld.csproj.g.props" Query="(/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/NuGetPackageVersion/text())[1]">
+      <Output TaskParameter="Result" PropertyName="_PackageFrameworkVersion" />
+    </XmlPeek>
+    <ItemGroup>
+      <_PackageFrameworkArchive Include="$(_PackageSeedCache)/microsoft.netcore.app.ref/$(_PackageFrameworkVersion)/*.nupkg;$(_PackageSeedCache)/microsoft.aspnetcore.app.ref/$(_PackageFrameworkVersion)/*.nupkg" />
+    </ItemGroup>
+    <Error Condition="'@(_PackageFrameworkArchive->Count())' != '2'" Text="The standalone toolset's matching framework archives must be available locally for this offline fixture." />
+    <Copy SourceFiles="@(_PackageFrameworkArchive)" DestinationFolder="$(_PackageRoot)feed" />
+    <WriteLinesToFile File="$(_PackageRoot)compile.rsp" Lines="@(_PackageCompilerReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -deterministic+ -out:&quot;$(_PackageRoot)package/lib/net11.0/PackageApi.dll&quot; -refout:&quot;$(_PackageRoot)package/ref/net11.0/PackageApi.dll&quot; -debug:portable -pdb:&quot;$(_PackageRoot)package/lib/net11.0/PackageApi.pdb&quot; @&quot;$(_PackageRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)PackageLibrary.cs&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -deterministic+ -out:&quot;$(_PackageRoot)package/analyzers/dotnet/roslyn4.0/cs/PackageGenerator.dll&quot; -r:&quot;$(_AppDirectory)/toolset/Roslyn/bincore/Microsoft.CodeAnalysis.dll&quot; @&quot;$(_PackageRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)PackageGenerator.cs&quot;" />
+    <Copy SourceFiles="$(_PackageRoot)package/analyzers/dotnet/roslyn4.0/cs/PackageGenerator.dll" DestinationFolder="$(_PackageRoot)package/analyzers/dotnet/roslyn99.0/cs" />
+    <WriteLinesToFile File="$(_PackageRoot)package/analyzers/dotnet/vb/NotAnAnalyzer.dll" Lines="Wrong-language assets must never be loaded." Overwrite="true" />
+    <WriteLinesToFile File="$(_PackageRoot)package/GenBuild.Smoke.Package.nuspec"
+                      Lines="&lt;package&gt;&lt;metadata&gt;&lt;id&gt;GenBuild.Smoke.Package&lt;/id&gt;&lt;version&gt;1.0.0&lt;/version&gt;&lt;authors&gt;genbuild&lt;/authors&gt;&lt;description&gt;Offline package selection fixture&lt;/description&gt;&lt;/metadata&gt;&lt;/package&gt;" Overwrite="true" />
+    <ZipDirectory SourceDirectory="$(_PackageRoot)package" DestinationFile="$(_PackageRoot)feed/GenBuild.Smoke.Package.1.0.0.nupkg" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)PackageReferences.csproj;$(MSBuildThisFileDirectory)PackageProgram.cs" DestinationFolder="$(_PackageRoot)app" />
+    <Exec Command="$(_App) restore &quot;$(_PackageRoot)app/PackageReferences.csproj&quot; $(_PackageArguments) -bl:&quot;$(_PackageRoot)restore.binlog&quot;" />
+    <Error Condition="Exists('$(_PackageRoot)app/bin') or !Exists('$(_PackageRoot)app/obj/nugetinputs/PackageReferences.csproj.g.props')" Text="Package preparation must capture context without compiling the consumer." />
+    <XmlPeek XmlInputPath="$(_PackageRoot)app/obj/nugetinputs/PackageReferences.csproj.g.props" Query="/Project/PropertyGroup/_NuGetPackageContextVersion/text()">
+      <Output TaskParameter="Result" PropertyName="_PackageContextVersion" />
+    </XmlPeek>
+    <Error Condition="'$(_PackageContextVersion)' != '1'" Text="Restore must capture the package-discovery context." />
+    <ItemGroup>
+      <_PackageCacheFile Include="$(_PackageRoot)packages/**/*" />
+    </ItemGroup>
+    <Move SourceFiles="@(_PackageCacheFile)" DestinationFiles="@(_PackageCacheFile->'$(_PackageRoot)unavailable/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <RemoveDir Directories="$(_PackageRoot)packages" />
+    <Move SourceFiles="$(_PackageRoot)app/obj/project.assets.json" DestinationFiles="$(_PackageRoot)assets.saved" />
+    <Exec Command="$(_App) build &quot;$(_PackageRoot)app/PackageReferences.csproj&quot; $(_PackageArguments) -p:TestCase=selection -p:MSBuildEmitActionGraph=&quot;$(_PackageRoot)selection.ninja&quot; -bl:&quot;$(_PackageRoot)selection.binlog&quot;" />
+    <Error Condition="!Exists('$(_PackageRoot)selection.ninja') or Exists('$(_PackageRoot)selected-assets.txt') or Exists('$(_PackageRoot)packages') or Exists('$(_PackageRoot)app/obj/project.assets.json') or Exists('$(_PackageRoot)app/bin')"
+           Text="Package selection must construct from facts without JSON, package directories or consumer binaries." />
+    <Exec WorkingDirectory="$(_PackageRoot)app" Command="ninja -f &quot;$(_PackageRoot)selection.ninja&quot;" />
+    <ReadLinesFromFile File="$(_PackageRoot)selected-assets.txt">
+      <Output TaskParameter="Lines" ItemName="_SelectedPackageAsset" />
+    </ReadLinesFromFile>
+    <Error Condition="!@(_SelectedPackageAsset->AnyHaveMetadataValue('Identity', 'compile|$(_PackageRoot)packages/genbuild.smoke.package/1.0.0/ref/net11.0/PackageApi.dll')) or
+                      !@(_SelectedPackageAsset->AnyHaveMetadataValue('Identity', 'runtime|$(_PackageRoot)packages/genbuild.smoke.package/1.0.0/lib/net11.0/PackageApi.dll')) or
+                      !@(_SelectedPackageAsset->AnyHaveMetadataValue('Identity', 'analyzer|$(_PackageRoot)packages/genbuild.smoke.package/1.0.0/analyzers/dotnet/roslyn4.0/cs/PackageGenerator.dll'))"
+           Text="Prepared selection must preserve compile/runtime separation and compatible generator paths without probing files." />
+    <Move SourceFiles="@(_PackageCacheFile->'$(_PackageRoot)unavailable/%(RecursiveDir)%(Filename)%(Extension)')" DestinationFiles="@(_PackageCacheFile)" />
+    <Move SourceFiles="$(_PackageRoot)assets.saved" DestinationFiles="$(_PackageRoot)app/obj/project.assets.json" />
+    <Exec Command="$(_App) build &quot;$(_PackageRoot)app/PackageReferences.csproj&quot; $(_PackageArguments) -p:MSBuildEmitActionGraph=&quot;$(_PackageRoot)package.ninja&quot; -bl:&quot;$(_PackageRoot)build.binlog&quot;" />
+    <Error Condition="!Exists('$(_PackageRoot)package.ninja') or Exists('$(_PackageRoot)app/bin') or Exists('$(_PackageRoot)app/obj/Debug/net11.0/PackageReferences.dll')"
+           Text="Full graph construction must validate external inputs without compiling the consumer." />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_PackageRoot)package.ninja').Contains('/ref/net11.0/PackageApi.dll')) or !$([System.IO.File]::ReadAllText('$(_PackageRoot)package.ninja').Contains('/lib/net11.0/PackageApi.dll')) or !$([System.IO.File]::ReadAllText('$(_PackageRoot)package.ninja').Contains('/roslyn4.0/cs/PackageGenerator.dll')) or $([System.IO.File]::ReadAllText('$(_PackageRoot)package.ninja').Contains('/roslyn99.0/')) or $([System.IO.File]::ReadAllText('$(_PackageRoot)package.ninja').Contains('NotAnAnalyzer.dll'))"
+           Text="The graph must distinguish compile/runtime assets and select only compatible package generators." />
+    <Exec WorkingDirectory="$(_PackageRoot)app" Command="ninja -f &quot;$(_PackageRoot)package.ninja&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_PackageRoot)app/bin/Debug/net11.0/PackageReferences.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_PackageProgramOutput" />
+    </Exec>
+    <Error Condition="'@(_PackageProgramOutput)' != 'runtime package implementation + package generator ran'"
+           Text="Independent compilation must use the package generator and publish its runtime implementation." />
+    <Exec Command="$(_App) restore &quot;$(_PackageRoot)app/PackageReferences.csproj&quot; $(_PackageArguments) -t:Build -p:UseSharedCompilation=false -p:OutputPath=&quot;$(_PackageRoot)ordinary/bin/&quot; -p:IntermediateOutputPath=&quot;$(_PackageRoot)ordinary/obj/&quot; -bl:&quot;$(_PackageRoot)ordinary.binlog&quot;" />
+    <Error Condition="$([System.IO.File]::ReadAllText('$(_PackageRoot)app/bin/Debug/net11.0/PackageReferences.deps.json')) != $([System.IO.File]::ReadAllText('$(_PackageRoot)ordinary/bin/PackageReferences.deps.json')) or $([System.IO.File]::ReadAllText('$(_PackageRoot)app/bin/Debug/net11.0/PackageReferences.runtimeconfig.json')) != $([System.IO.File]::ReadAllText('$(_PackageRoot)ordinary/bin/PackageReferences.runtimeconfig.json'))"
+           Text="Package dependency and runtime manifests must preserve ordinary Build semantics." />
+    <GetFileHash Files="$(_PackageRoot)packages/genbuild.smoke.package/1.0.0/lib/net11.0/PackageApi.dll;$(_PackageRoot)app/bin/Debug/net11.0/PackageApi.dll;$(_PackageRoot)ordinary/bin/PackageApi.dll">
+      <Output TaskParameter="Items" ItemName="_PackageRuntimeHash" />
+    </GetFileHash>
+    <Error Condition="'@(_PackageRuntimeHash->'%(FileHash)'->Distinct()->Count())' != '1'" Text="Publication must copy the implementation, not the reference assembly." />
+    <Exec Command="$(_App) build &quot;$(_PackageRoot)app/PackageReferences.csproj&quot; $(_PackageArguments) -p:TestCase=missing-location -p:MSBuildEmitActionGraph=&quot;$(_PackageRoot)missing-location.ninja&quot; -bl:&quot;$(_PackageRoot)missing-location.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_PackageMissingLocationExit" />
+    </Exec>
+    <Exec Command="$(_App) build &quot;$(_PackageRoot)app/PackageReferences.csproj&quot; $(_PackageArguments) -p:_NuGetPackageContextVersion=2 -p:MSBuildEmitActionGraph=&quot;$(_PackageRoot)invalid-context.ninja&quot; -bl:&quot;$(_PackageRoot)invalid-context.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_PackageInvalidContextExit" />
+    </Exec>
+    <Error Condition="'$(_PackageMissingLocationExit)' == '0' or '$(_PackageInvalidContextExit)' == '0' or Exists('$(_PackageRoot)missing-location.ninja') or Exists('$(_PackageRoot)missing-location.ninja.actions') or Exists('$(_PackageRoot)invalid-context.ninja') or Exists('$(_PackageRoot)invalid-context.ninja.actions')"
+           Text="Missing locations and invalid package context must fail without publishing partial graphs." />
   </Target>
   <Target Name="TestNuGetInputs">
     <PropertyGroup>
