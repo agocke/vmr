@@ -79,9 +79,28 @@ Copyright (c) .NET Foundation. All rights reserved.
     Condition="$(_IsNotSetContainersTargetsDir) AND Exists('$(_ContainersTargetsDir)Microsoft.NET.Build.Containers.targets')" />
 
   <PropertyGroup>
-    <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_GenerateFrameworkReferenceFetchManifest</MSBuildPrepareGraphInputsDependsOn>
+    <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_CaptureNuGetInputs;_GenerateFrameworkReferenceFetchManifest</MSBuildPrepareGraphInputsDependsOn>
     <MSBuildPrepareGraphInputsDependsOn Condition="'$(Language)' == 'C#'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureCscToolInputs</MSBuildPrepareGraphInputsDependsOn>
   </PropertyGroup>
+
+  <UsingTask TaskName="WriteNuGetInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+
+  <Target Name="_CaptureNuGetInputs"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'">
+    <PropertyGroup>
+      <_NuGetInputFile Condition="'$(ProjectAssetsFile)' == ''">$(MSBuildProjectExtensionsPath)project.assets.json</_NuGetInputFile>
+      <_NuGetInputFile Condition="'$(ProjectAssetsFile)' != ''">$(ProjectAssetsFile)</_NuGetInputFile>
+      <_NuGetInputFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(_NuGetInputFile)'))</_NuGetInputFile>
+      <NuGetInputsPath Condition="'$(NuGetInputsPath)' == ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(MSBuildProjectFile).g.props</NuGetInputsPath>
+      <NuGetInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(NuGetInputsPath)'))</NuGetInputsPath>
+    </PropertyGroup>
+    <WriteNuGetInputs InputFile="$(_NuGetInputFile)" OutputFile="$(NuGetInputsPath)" />
+  </Target>
+
+  <Target Name="_CaptureNuGetInputsAfterRestore"
+          AfterTargets="Restore"
+          DependsOnTargets="_CaptureNuGetInputs"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
 
   <Target Name="_ComputeFrameworkReferenceFetchManifestProfile"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true'">

@@ -94,6 +94,13 @@ NuGet's managed dependency closure is source-built using its existing .NET 10
 target; the compiler and other external tool dependencies remain pinned by
 `src/sdk/eng/Version.Details.props`. The additional dependency manifest makes
 NuGet available without the SDK driver's runtime manifest.
+The source-built NuGet SDK resolver is also staged in the standard
+`SdkResolvers` layout. Ordinary Restore can resolve package SDKs pinned by
+`global.json`; hardened Build explicitly disables that resolver so discovery
+and downloads cannot occur during construction. Capturing and replaying exact
+package-SDK import bindings remains a prerequisite for those Build profiles.
+An offline packaged smoke checks local-feed resolution and fail-closed Build
+behavior even after the SDK package has been restored.
 
 The current .NET 11 framework definitions and RID/pruning metadata are
 build-time inputs from the selected bootstrap SDK. Pruning data for its current
@@ -634,11 +641,68 @@ parallelism profiles remain separate work.
 ## 6. Exercise dotnet/runtime
 
 After SDK compilation works, select one bounded managed library under
-`~/code/runtime/src/libraries` and construct its compile closure. Complete
+`src/runtime/src/libraries` and construct its compile closure. Complete
 restore and prerequisite tool/reference builds beforehand. Use real source
 generation and compiler actions, then expand to managed project-reference
 closures. Treat native runtime/CMake integration as a separate later boundary,
 not a prerequisite for the first managed-library result.
+
+The first real probe selects `System.Collections.Immutable` with
+`TargetFramework=net10.0` and `BuildTargetFramework=net10.0`. This is runtime's
+`NetCoreAppMinimum`; `NetCoreAppPrevious` is empty in this checkout. An isolated
+`ArtifactsDir` keeps the experiment separate from existing runtime products.
+The evaluated closure still includes the matching reference project and ILLink
+tool/analyzer projects; the older target does not make these dependencies optional.
+
+Source-built package-SDK resolution now gets ordinary Restore through the
+pinned Arcade import. Preparation then fails with `NETSDK1247`, before assets
+or a graph are produced: the framework-reference fetch profile rejects the
+retained `TargetFrameworks` declaration and the compiler/API-tool
+`PackageReference` items. Its current manifest deliberately sets
+`SkipResolvePackageAssets`; merely dropping those guards would lose package
+inputs rather than support them. The next slice must prepare each configured
+inner build's resolved package/framework/compiler inputs while preserving child
+framework selection and generated-tool producer edges. It must not prebuild the
+selected library, remove its real references/analyzers, or disable validation.
+Runtime graph construction, Ninja execution, and library tests remain unproven.
+
+### NuGet fact capture
+
+The first preparation piece is
+[`WriteNuGetInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteNuGetInputs.cs).
+Ordinary graph-input preparation captures the complete `project.assets.json`
+to `$(MSBuildProjectExtensionsPath)nugetinputs/$(MSBuildProjectFile).g.props`.
+[`_CaptureNuGetInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/sdk/Sdk.targets)
+also runs through the existing configured-project preparation traversal.
+`NuGetInputsPath` can select a different output path; the source is
+`ProjectAssetsFile`. The target can be explicitly requested after ordinary
+Restore to exercise capture independently of the still-bounded framework profile.
+
+The import contains `_NuGetInputsFormatVersion`, `_NuGetInputsSourceFile` and
+ordered `_NuGetInput` items. Each identity is `$` followed by JSON Pointer
+segments (`~0` for `~`, `~1` for `/`, numeric array indexes). `Kind` records the
+JSON value type and `Value` records scalar contents. Containers are explicit,
+so null, empty string, empty array and empty object remain distinct. Number
+text, object/array order, case-sensitive keys, unknown fields and literal
+MSBuild syntax survive XML/MSBuild escaping. No package or project output is
+opened while encoding the JSON.
+
+This is the data representation, not a replacement asset-selection policy.
+The shipped SDK does not yet import or consume these facts during hardened
+Build, and existing profile rejection remains in place. Pure semantic views,
+actual package-location discovery, configured-inner-build framework preparation
+and migration of other JSON consumers are subsequent work. In particular,
+the declared-I/O dependency/runtime-configuration writers still read their
+declared JSON inputs; the eventual design must replace all consumed NuGet JSON
+data with item/property facts, not stop at selected package-task results.
+
+Focused task coverage checks frameworks/RIDs, future project outputs, package
+and analyzer records, order, types, exact numbers, escaping, BOM input, changed
+contents at unchanged timestamps, and missing/malformed input diagnostics
+without publishing replacement data. Packaged smoke checks preparation
+throughout the SDK project-reference closure, ordinary Restore opt-out, and
+an explicit import into a fresh hardened fixture after deleting the source
+JSON. That fixture is not SDK package consumption or a runtime-library graph.
 
 ## After the prototype
 

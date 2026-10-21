@@ -46,6 +46,16 @@ evaluation constructs an action graph. Use the same configuration,
 framework/platform selection, and intermediate paths for both invocations.
 Making Restore itself a standalone action graph is deferred.
 
+NuGet JSON data that influences graph construction must be prepared as MSBuild
+item/property facts during Restore. This is the eventual representation for
+**all consumed NuGet JSON data**, not just a snapshot of a task's selected
+outputs. Preserve the underlying framework/RID, dependency, asset and metadata
+facts so configuration-dependent selection remains a pure construction-time
+operation. Files produced by project references remain future artifact paths
+with producer edges; preparation must not require those binaries to exist.
+The [initial fact capture](hardened-static-graph-implementation.md#nuget-fact-capture)
+does not yet replace every existing JSON consumer.
+
 ## One task contract
 
 An audited task uses `[MSBuildDeclaredIOTask]` and explicitly supplies both

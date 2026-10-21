@@ -97,6 +97,17 @@ a source file cannot change a separately pinned binary. Keep new declaration
 parameters on hardened-only call sites when ordinary hosts may load older task
 assemblies.
 
+NuGet assets are another discovery input, not a reason to run package resolution
+with filesystem access during construction. Persist the consumed JSON data as
+item/property facts in Restore, preserving underlying data rather than freezing
+`ResolvePackageAssets` outputs and their configuration-dependent policy.
+The [initial capture](hardened-static-graph-implementation.md#nuget-fact-capture)
+encodes the complete JSON structure; pure semantic selection and integration
+remain separate work. Package-folder order and package-location discovery matter:
+an ordered list of candidate folders is not proof of which folder contains a
+package. Project-produced libraries and analyzers must remain future producer
+outputs, not existing-file snapshots.
+
 Separate optional output placeholders from requested product effects.
 Common always creates an `_ApplicationManifestFinal` path, even for a library
 that requests no manifest generation. Hardened `GetNativeManifest` skips the

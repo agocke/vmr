@@ -1,0 +1,13 @@
+<Project DefaultTargets="Build">
+  <Import Project="$(NuGetInputsPath)" />
+  <Target Name="Build">
+    <ItemGroup>
+      <_AssetsVersion Include="@(_NuGetInput)" Condition="'%(_NuGetInput.Identity)' == '$/version'" />
+    </ItemGroup>
+    <Error Condition="'@(_AssetsVersion->'%(Kind)')' != 'Number' or '@(_AssetsVersion->'%(Value)')' != '4'"
+           Text="Prepared NuGet facts must preserve the assets version as a numeric value."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(NuGetFactsOutput)" Lines="@(_AssetsVersion->'%(Value)')" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="$(NuGetFactsOutput)" />
+  </Target>
+</Project>

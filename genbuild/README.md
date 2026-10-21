@@ -89,6 +89,27 @@ The app builds NuGet tasks and their managed dependency closure from this VMR's
 sources, using NuGet's existing .NET 10 target inside the .NET 11 app. Its targets
 come from the same source tree; no pinned NuGet task package or nested SDK build
 is used. Compiler and other external tool dependencies remain pinned.
+The source-built NuGet SDK resolver supports package-SDK discovery during
+ordinary Restore, including versions pinned in `global.json`. The driver
+disables that resolver during hardened Build; package-SDK import bindings still
+need explicit capture and replay rather than package-cache searches or downloads.
+
+Framework-reference preparation currently accepts only the bounded
+single-framework profile without package references. A real
+`System.Collections.Immutable` trial targeting runtime's `net10.0` minimum
+framework resolves the pinned Arcade SDK, then stops during Restore with
+`NETSDK1247`: the project retains its multi-targeting declaration and includes
+compiler/API-tool package references. Extending preparation to configured inner
+builds and their package assets is required before constructing this runtime
+graph. No runtime library compilation or independent execution is established.
+
+Ordinary graph-input preparation now captures the complete assets JSON as
+item/property facts under `obj/nugetinputs/`, including framework/RID data,
+ordered package folders, dependencies, asset metadata and unknown fields.
+This first piece preserves underlying data rather than freezing selected
+package-task outputs. The SDK does not yet import or consume it during hardened
+Build; pure asset selection and broader framework preparation remain required.
+See the [encoding and remaining work](../src/msbuild/documentation/specs/proposed/hardened-static-graph-implementation.md#nuget-fact-capture).
 
 The bounded single-framework SDK C# profile emits full Build graphs for
 hello-world and an executable/library closure, executes independently, and

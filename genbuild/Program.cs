@@ -47,6 +47,8 @@ try
     }
     else
     {
+        // Package SDK discovery belongs to Restore, not hardened construction.
+        start.Environment["MSBUILDDISABLENUGETSDKRESOLVER"] = "1";
         string graph = Path.Combine(Path.GetDirectoryName(project)!, "obj", "genbuild", "build.ninja");
         start.ArgumentList.Add("-t:Build");
         start.ArgumentList.Add("--hardened-graph");

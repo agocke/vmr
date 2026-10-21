@@ -20,6 +20,7 @@
       <Output TaskParameter="ExitCode" PropertyName="_InvalidExitCode" />
     </Exec>
     <Error Condition="'$(_InvalidExitCode)' == '0'" Text="Invalid commands must fail." />
+    <CallTarget Targets="TestNuGetSdkResolution" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -57,7 +58,8 @@
     <MakeDir Directories="$(_LegacyCleanFile)" />
     <WriteLinesToFile File="$(_LegacyCleanFile).hardened.props" Lines="not an MSBuild project" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; $(_SdkArguments) -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
-    <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture framework-reference inputs using the app's targets." />
+    <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props') or !Exists('$(_TestDirectory)obj/nugetinputs/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture NuGet and framework-reference inputs using the app's targets." />
+    <CallTarget Targets="TestNuGetInputs" />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)HelloWorld.csproj&quot; $(_SdkArguments) -p:MSBuildEmitActionGraph=&quot;$(_SdkGraph)&quot; -bl:&quot;$(_TestDirectory)sdk-build-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_SdkGraph)') or !Exists('$(_SdkGraph).actions') or Exists('$(_TestDirectory)obj/Debug/net11.0/HelloWorld.dll') or Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.dll') or Exists('$(_TestDirectory)obj/Debug/net11.0/.NETCoreApp,Version=v11.0.AssemblyAttributes.cs')"
            Text="SDK Build must emit its graph without executing product actions." />
@@ -85,7 +87,66 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-reference execution and startup, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, Restore-only package-SDK resolution, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-reference execution and startup, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestNuGetInputs">
+    <PropertyGroup>
+      <_NuGetInputsRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'nuget-inputs'))</_NuGetInputsRoot>
+      <_NuGetManifest>$(_NuGetInputsRoot)obj/nugetinputs/HelloWorld.csproj.g.props</_NuGetManifest>
+      <_NuGetFactsOutput>$(_NuGetInputsRoot)version.txt</_NuGetFactsOutput>
+    </PropertyGroup>
+    <MakeDir Directories="$(_NuGetInputsRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj;$(MSBuildThisFileDirectory)HelloWorld.cs;$(MSBuildThisFileDirectory)NuGetInputs.proj"
+          DestinationFolder="$(_NuGetInputsRoot)" />
+    <Exec Command="$(_App) restore &quot;$(_NuGetInputsRoot)HelloWorld.csproj&quot; $(_SdkArguments) -p:MSBuildRestoreGraphInputs=false -bl:&quot;$(_NuGetInputsRoot)ordinary-restore.binlog&quot;" />
+    <Error Condition="!Exists('$(_NuGetInputsRoot)obj/project.assets.json') or Exists('$(_NuGetManifest)')"
+           Text="Ordinary Restore without graph-input preparation must not create a NuGet fact manifest." />
+    <Exec Command="$(_App) restore &quot;$(_NuGetInputsRoot)HelloWorld.csproj&quot; $(_SdkArguments) -p:MSBuildRestoreGraphInputs=false -t:_CaptureNuGetInputs -bl:&quot;$(_NuGetInputsRoot)capture.binlog&quot;" />
+    <Error Condition="!Exists('$(_NuGetManifest)') or Exists('$(_NuGetInputsRoot)bin')"
+           Text="Explicit ordinary preparation must capture NuGet facts without compiling the project." />
+    <Delete Files="$(_NuGetInputsRoot)obj/project.assets.json" />
+    <Exec Command="$(_App) build &quot;$(_NuGetInputsRoot)NuGetInputs.proj&quot; -p:NuGetInputsPath=&quot;$(_NuGetManifest)&quot; -p:NuGetFactsOutput=&quot;$(_NuGetFactsOutput)&quot; -p:MSBuildEmitActionGraph=&quot;$(_NuGetInputsRoot)facts.ninja&quot; -bl:&quot;$(_NuGetInputsRoot)facts.binlog&quot;" />
+    <Error Condition="Exists('$(_NuGetFactsOutput)')"
+           Text="Using imported NuGet facts during construction must not execute the file action." />
+    <Exec WorkingDirectory="$(_NuGetInputsRoot)" Command="ninja -f facts.ninja" />
+    <ReadLinesFromFile File="$(_NuGetFactsOutput)">
+      <Output TaskParameter="Lines" PropertyName="_NuGetAssetsVersion" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_NuGetAssetsVersion)' != '4'"
+           Text="An independent action must receive the numeric value from prepared NuGet facts without reopening JSON." />
+  </Target>
+  <Target Name="TestNuGetSdkResolution">
+    <PropertyGroup>
+      <_SdkPackageRoot>$(_TestDirectory)package-sdk/</_SdkPackageRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_SdkPackageRoot)package/Sdk;$(_SdkPackageRoot)feed" />
+    <WriteLinesToFile File="$(_SdkPackageRoot)package/GenBuild.Smoke.Sdk.nuspec"
+                      Lines="&lt;package&gt;&lt;metadata&gt;&lt;id&gt;GenBuild.Smoke.Sdk&lt;/id&gt;&lt;version&gt;1.0.0&lt;/version&gt;&lt;authors&gt;genbuild&lt;/authors&gt;&lt;description&gt;Local SDK resolver smoke fixture&lt;/description&gt;&lt;/metadata&gt;&lt;/package&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_SdkPackageRoot)package/Sdk/Sdk.props"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;ResolvedGenBuildTestSdk&gt;local-sdk-package&lt;/ResolvedGenBuildTestSdk&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_SdkPackageRoot)package/Sdk/Sdk.targets"
+                      Lines="&lt;Project&gt;&lt;Target Name=&quot;Restore&quot;&gt;&lt;WriteLinesToFile File=&quot;sdk-restored.txt&quot; Lines=&quot;%24(ResolvedGenBuildTestSdk)&quot; Overwrite=&quot;true&quot; /&gt;&lt;/Target&gt;&lt;/Project&gt;" Overwrite="true" />
+    <ZipDirectory SourceDirectory="$(_SdkPackageRoot)package" DestinationFile="$(_SdkPackageRoot)feed/GenBuild.Smoke.Sdk.1.0.0.nupkg" />
+    <WriteLinesToFile File="$(_SdkPackageRoot)NuGet.Config"
+                      Lines="&lt;configuration&gt;&lt;packageSources&gt;&lt;clear /&gt;&lt;add key=&quot;local&quot; value=&quot;feed&quot; /&gt;&lt;/packageSources&gt;&lt;config&gt;&lt;add key=&quot;globalPackagesFolder&quot; value=&quot;packages&quot; /&gt;&lt;/config&gt;&lt;/configuration&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_SdkPackageRoot)global.json"
+                      Lines="{ &quot;msbuild-sdks&quot;: { &quot;GenBuild.Smoke.Sdk&quot;: &quot;1.0.0&quot; } }" Overwrite="true" />
+    <WriteLinesToFile File="$(_SdkPackageRoot)Sdk.proj" Lines="&lt;Project Sdk=&quot;GenBuild.Smoke.Sdk&quot; /&gt;" Overwrite="true" />
+    <Exec WorkingDirectory="$(_SdkPackageRoot)" Command="$(_App) restore &quot;$(_SdkPackageRoot)Sdk.proj&quot; -bl:&quot;$(_SdkPackageRoot)restore.binlog&quot;" />
+    <ReadLinesFromFile File="$(_SdkPackageRoot)sdk-restored.txt">
+      <Output TaskParameter="Lines" PropertyName="_SdkRestoreResult" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_SdkRestoreResult)' != 'local-sdk-package' or !Exists('$(_SdkPackageRoot)packages/genbuild.smoke.sdk/1.0.0/Sdk/Sdk.props')" Text="Restore must resolve the globally pinned SDK package from the local feed using the source-built NuGet SDK resolver." />
+    <Exec WorkingDirectory="$(_SdkPackageRoot)" Command="$(_App) build &quot;$(_SdkPackageRoot)Sdk.proj&quot; -p:MSBuildEmitActionGraph=&quot;$(_SdkPackageRoot)build.ninja&quot; -bl:&quot;$(_SdkPackageRoot)build.binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_SdkBuildExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_SdkBuildOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_SdkBuildLog>@(_SdkBuildOutput)</_SdkBuildLog>
+    </PropertyGroup>
+    <Error Condition="'$(_SdkBuildExitCode)' == '0' or !$(_SdkBuildLog.Contains('MSB4236')) or !$(_SdkBuildLog.Contains('MSBUILDDISABLENUGETSDKRESOLVER')) or Exists('$(_SdkPackageRoot)build.ninja') or Exists('$(_SdkPackageRoot)build.ninja.actions')"
+           Text="Hardened Build must reject uncaptured package-SDK imports without running SDK discovery or publishing a partial graph." />
   </Target>
   <Target Name="TestProjectReferences">
     <PropertyGroup>
@@ -102,8 +163,8 @@
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/Library/Actions.proj;$(MSBuildThisFileDirectory)ProjectReference/Library/Library.csproj;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs" DestinationFolder="$(_ProjectReferenceRoot)Library" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/App/App.csproj;$(MSBuildThisFileDirectory)ProjectReference/App/Program.cs" DestinationFolder="$(_ProjectReferenceRoot)App" />
     <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)App/App.csproj&quot; $(_ProjectReferenceArguments) -bl:&quot;$(_ProjectReferenceRoot)restore.binlog&quot;" />
-    <Error Condition="!Exists('$(_ProjectReferenceRoot)App/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)Library/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)App/obj/frameworkreferences/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/frameworkreferences/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/cscinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/cscinputs/Library.csproj.g.props')"
-           Text="SDK Restore must prepare framework/compiler inputs throughout the project-reference closure." />
+    <Error Condition="!Exists('$(_ProjectReferenceRoot)App/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)Library/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)App/obj/frameworkreferences/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/frameworkreferences/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/cscinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/cscinputs/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/nugetinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/nugetinputs/Library.csproj.g.props')"
+           Text="SDK Restore must prepare NuGet/framework/compiler inputs throughout the project-reference closure." />
     <Error Condition="Exists('$(_ProjectReferenceRoot)App/bin') or Exists('$(_ProjectReferenceRoot)Library/bin') or Exists('$(_ProjectReferenceRoot)App/obj/Debug/net11.0/App.dll') or Exists('$(_ProjectReferenceRoot)Library/obj/Debug/net11.0/Renamed.Library.dll')"
            Text="Project-reference preparation must not prebuild referenced assemblies." />
     <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)Metadata.proj&quot; -t:Build $(_ProjectReferenceArguments) -p:MetadataFile=ordinary-metadata.txt -bl:&quot;$(_ProjectReferenceRoot)ordinary-metadata.binlog&quot;" />
