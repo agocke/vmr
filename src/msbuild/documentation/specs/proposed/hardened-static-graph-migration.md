@@ -101,9 +101,16 @@ NuGet assets are another discovery input, not a reason to run package resolution
 with filesystem access during construction. Persist the consumed JSON data as
 item/property facts in Restore, preserving underlying data rather than freezing
 `ResolvePackageAssets` outputs and their configuration-dependent policy.
-The [initial capture](hardened-static-graph-implementation.md#nuget-fact-capture)
-encodes the complete JSON structure; pure semantic selection and integration
-remain separate work. Package-folder order and package-location discovery matter:
+The [capture](hardened-static-graph-implementation.md#nuget-fact-capture)
+encodes the complete JSON structure, and the
+[pure target view](hardened-static-graph-implementation.md#nuget-fact-consumption)
+exposes selected libraries and asset data without reopening JSON or packages.
+This is not `ResolvePackageAssets` policy: placeholders, analyzer candidates and
+project paths still need explicit policy and producer bindings. Avoid assuming
+an in-memory NuGet model reader is pure; its project-metadata parser still
+consults environment and user-settings context. Consume the facts directly,
+keeping any additional discovery in Restore.
+Package-folder order and package-location discovery matter:
 an ordered list of candidate folders is not proof of which folder contains a
 package. Project-produced libraries and analyzers must remain future producer
 outputs, not existing-file snapshots.

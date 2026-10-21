@@ -1086,5 +1086,9 @@ You may need to build the project on another operating system or architecture, o
     <value>NETSDK1252: Runtime configuration requires the undeclared input '{0}'. Declare the file and its producer before executing this action.</value>
     <comment>{StrBegins="NETSDK1252: "}{Locked="{0}"}</comment>
   </data>
-  <!-- The latest message added is UndeclaredRuntimeConfigInput. Please update this value with each PR to catch parallel PRs both adding a new message -->
+  <data name="InvalidNuGetInputFacts" xml:space="preserve">
+    <value>NETSDK1253: Prepared NuGet input facts are invalid: {0} Run Restore with graph-input preparation enabled before constructing the build graph.</value>
+    <comment>{StrBegins="NETSDK1253: "}{Locked="{0}"}</comment>
+  </data>
+  <!-- The latest message added is InvalidNuGetInputFacts. Please update this value with each PR to catch parallel PRs both adding a new message -->
 </root>

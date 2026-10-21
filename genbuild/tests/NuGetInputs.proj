@@ -1,13 +1,26 @@
 <Project DefaultTargets="Build">
-  <Import Project="$(NuGetInputsPath)" />
-  <Target Name="Build">
+  <PropertyGroup>
+    <MicrosoftNETBuildTasksAssembly>$(MSBuildToolsPath)/Sdks/Microsoft.NET.Sdk/tools/net11.0/Microsoft.NET.Build.Tasks.dll</MicrosoftNETBuildTasksAssembly>
+    <NuGetAssetsTarget Condition="'$(NuGetAssetsTarget)' == ''">net11.0</NuGetAssetsTarget>
+  </PropertyGroup>
+  <Import Project="$(MSBuildToolsPath)/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.NuGetInputs.targets" />
+  <Target Name="Build" DependsOnTargets="_ReadNuGetAssets">
     <ItemGroup>
       <_AssetsVersion Include="@(_NuGetInput)" Condition="'%(_NuGetInput.Identity)' == '$/version'" />
     </ItemGroup>
     <Error Condition="'@(_AssetsVersion->'%(Kind)')' != 'Number' or '@(_AssetsVersion->'%(Value)')' != '4'"
            Text="Prepared NuGet facts must preserve the assets version as a numeric value."
            DeclaredInputs="" DeclaredOutputs="" />
-    <WriteLinesToFile File="$(NuGetFactsOutput)" Lines="@(_AssetsVersion->'%(Value)')" Overwrite="true"
+    <Error Condition="'$(TestNuGetAssetViews)' == 'true' and
+                      ('@(_NuGetTargetLibrary->Count())' != '2' or
+                       '@(_NuGetTargetAsset->Count())' != '3' or
+                       '@(_NuGetTargetDependency->Count())' != '1' or
+                       '@(_NuGetLibraryFile->Count())' != '2')"
+           Text="The explicit target view must preserve package/project assets, dependency ranges and the file inventory."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(NuGetFactsOutput)"
+                      Lines="@(_AssetsVersion->'%(Value)');@(_NuGetTargetLibrary->'%(Type)|%(Identity)|%(MSBuildProject)');@(_NuGetTargetAsset->'%(AssetGroup)|%(Library)|%(Identity)|%(Aliases)');@(_NuGetTargetDependency->'%(Identity)|%(VersionRange)');@(_NuGetLibraryFile)"
+                      Overwrite="true"
                       DeclaredInputs="" DeclaredOutputs="$(NuGetFactsOutput)" />
   </Target>
 </Project>

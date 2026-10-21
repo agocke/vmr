@@ -114,6 +114,38 @@
     </ReadLinesFromFile>
     <Error Condition="'$(_NuGetAssetsVersion)' != '4'"
            Text="An independent action must receive the numeric value from prepared NuGet facts without reopening JSON." />
+    <PropertyGroup>
+      <_NuGetAssetManifest>$(_NuGetInputsRoot)asset-inputs.props</_NuGetAssetManifest>
+      <_NuGetAssetOutput>$(_NuGetInputsRoot)assets.txt</_NuGetAssetOutput>
+      <_NuGetAssetArguments>-p:NuGetInputsPath=&quot;$(_NuGetAssetManifest)&quot; -p:NuGetFactsOutput=&quot;$(_NuGetAssetOutput)&quot; -p:TestNuGetAssetViews=true</_NuGetAssetArguments>
+    </PropertyGroup>
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)NuGetAssets.json" DestinationFolder="$(_NuGetInputsRoot)" />
+    <Exec Command="$(_App) restore &quot;$(_NuGetInputsRoot)HelloWorld.csproj&quot; $(_SdkArguments) -p:MSBuildRestoreGraphInputs=false -t:_CaptureNuGetInputs -p:ProjectAssetsFile=&quot;$(_NuGetInputsRoot)NuGetAssets.json&quot; -p:NuGetInputsPath=&quot;$(_NuGetAssetManifest)&quot; -bl:&quot;$(_NuGetInputsRoot)asset-capture.binlog&quot;" />
+    <Delete Files="$(_NuGetInputsRoot)NuGetAssets.json;$(_NuGetInputsRoot)obj/project.assets.json" />
+    <Exec Command="$(_App) build &quot;$(_NuGetInputsRoot)NuGetInputs.proj&quot; $(_NuGetAssetArguments) -p:MSBuildEmitActionGraph=&quot;$(_NuGetInputsRoot)assets.ninja&quot; -bl:&quot;$(_NuGetInputsRoot)asset-views.binlog&quot;" />
+    <Error Condition="Exists('$(_NuGetAssetOutput)') or Exists('$(_NuGetInputsRoot)bin') or
+                      Exists('$(_NuGetInputsRoot)NuGetAssets.json') or Exists('$(_NuGetInputsRoot)obj/project.assets.json')"
+           Text="Pure asset views must construct without assets JSON, file publication or prebuilt project outputs." />
+    <Exec WorkingDirectory="$(_NuGetInputsRoot)" Command="ninja -f assets.ninja" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/MSBuild.dll&quot; &quot;$(_NuGetInputsRoot)NuGetInputs.proj&quot; $(_NuGetAssetArguments) -t:Build -p:NuGetFactsOutput=&quot;$(_NuGetInputsRoot)ordinary-assets.txt&quot; -bl:&quot;$(_NuGetInputsRoot)ordinary-asset-views.binlog&quot;" />
+    <Error Condition="$([System.IO.File]::ReadAllText('$(_NuGetAssetOutput)')) != $([System.IO.File]::ReadAllText('$(_NuGetInputsRoot)ordinary-assets.txt'))"
+           Text="Ordinary and independently executed consumers must receive identical asset views." />
+    <ReadLinesFromFile File="$(_NuGetAssetOutput)">
+      <Output TaskParameter="Lines" ItemName="_NuGetAssetLines" />
+    </ReadLinesFromFile>
+    <Error Condition="!@(_NuGetAssetLines->AnyHaveMetadataValue('Identity', 'compile|Library/1.0.0|bin/placeholder/Renamed.Library.dll|')) or
+                     !@(_NuGetAssetLines->AnyHaveMetadataValue('Identity', 'compile|Package/1.2.3|ref/net11.0/Package.dll|custom'))"
+           Text="Asset views must retain future project paths, package aliases and compile/runtime separation." />
+    <Exec Command="$(_App) build &quot;$(_NuGetInputsRoot)NuGetInputs.proj&quot; $(_NuGetAssetArguments) -p:NuGetAssetsTarget=missing -p:MSBuildEmitActionGraph=&quot;$(_NuGetInputsRoot)missing-target.ninja&quot; -bl:&quot;$(_NuGetInputsRoot)missing-target.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_NuGetMissingTargetExitCode" />
+    </Exec>
+    <Exec Command="$(_App) build &quot;$(_NuGetInputsRoot)NuGetInputs.proj&quot; $(_NuGetAssetArguments) -p:_NuGetInputsFormatVersion=2 -p:MSBuildEmitActionGraph=&quot;$(_NuGetInputsRoot)invalid-format.ninja&quot; -bl:&quot;$(_NuGetInputsRoot)invalid-format.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_NuGetInvalidFormatExitCode" />
+    </Exec>
+    <Error Condition="'$(_NuGetMissingTargetExitCode)' == '0' or '$(_NuGetInvalidFormatExitCode)' == '0' or
+                     Exists('$(_NuGetInputsRoot)missing-target.ninja') or Exists('$(_NuGetInputsRoot)missing-target.ninja.actions') or
+                     Exists('$(_NuGetInputsRoot)invalid-format.ninja') or Exists('$(_NuGetInputsRoot)invalid-format.ninja.actions')"
+           Text="Missing targets and unsupported fact formats must fail without partial graph publication." />
   </Target>
   <Target Name="TestNuGetSdkResolution">
     <PropertyGroup>

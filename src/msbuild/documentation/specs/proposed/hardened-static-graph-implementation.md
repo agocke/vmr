@@ -688,9 +688,9 @@ MSBuild syntax survive XML/MSBuild escaping. No package or project output is
 opened while encoding the JSON.
 
 This is the data representation, not a replacement asset-selection policy.
-The shipped SDK does not yet import or consume these facts during hardened
-Build, and existing profile rejection remains in place. Pure semantic views,
-actual package-location discovery, configured-inner-build framework preparation
+The default SDK Build does not yet use the facts instead of `ResolvePackageAssets`,
+and existing profile rejection remains in place. Actual package-location
+discovery, SDK selection policy, configured-inner-build framework preparation
 and migration of other JSON consumers are subsequent work. In particular,
 the declared-I/O dependency/runtime-configuration writers still read their
 declared JSON inputs; the eventual design must replace all consumed NuGet JSON
@@ -703,6 +703,48 @@ without publishing replacement data. Packaged smoke checks preparation
 throughout the SDK project-reference closure, ordinary Restore opt-out, and
 an explicit import into a fresh hardened fixture after deleting the source
 JSON. That fixture is not SDK package consumption or a runtime-library graph.
+
+### NuGet fact consumption
+
+[`ReadNuGetAssets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ReadNuGetAssets.cs)
+is a separate zero-I/O construction task over the prepared items. It validates
+fact format 1, assets versions 3/4, the ordered tree, JSON Pointer escaping,
+scalar types and the requested target's library definitions before returning
+any items. Missing targets, malformed facts and unsupported versions fail with
+`NETSDK1253`; there is no discovery or parser fallback.
+
+The caller supplies the exact assets target key, such as `net11.0` or
+`net11.0/linux-x64`; legacy framework-name keys such as
+`.NETCoreApp,Version=v11.0` also work unchanged. The task does not infer aliases, choose a
+nearest framework or merge compile/runtime targets. It returns libraries,
+compile/runtime/native/resource/runtime-target/content/analyzer asset groups,
+dependency ranges and the selected libraries' file inventory. Metadata retains
+the source fact pointer, library identity/type, aliases, locale, RID and content
+attributes. Relative paths, placeholders and project entries remain data, not
+resolved binaries. Unknown fields remain available in the original facts.
+
+Explicitly importing
+[`Microsoft.NET.NuGetInputs.targets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.NuGetInputs.targets)
+loads `NuGetInputsPath` and exposes `_ReadNuGetAssets`. Set `NuGetAssetsTarget`
+to the exact target key; its four outputs are `_NuGetTargetLibrary`,
+`_NuGetTargetAsset`, `_NuGetTargetDependency` and `_NuGetLibraryFile`.
+This entry point is not automatically imported by the SDK. It neither probes
+package folders nor applies `ResolvePackageAssets` policy such as analyzer
+version filtering, placeholder exclusion or copy-local selection.
+
+The view deliberately does not reconstruct a `LockFile` through NuGet's
+[in-memory reader](../../../../nuget-client/src/NuGet.Core/NuGet.ProjectModel/JsonPackageSpecReader.Utf8JsonStreamReader.cs):
+that reader still obtains ambient macro/environment and
+user-settings context while parsing project restore metadata. Any such
+discovery belongs in Restore, with explicit inputs for later policy.
+
+Focused coverage exercises both assets versions, exact framework/RID isolation,
+metadata/identity escaping, empty targets and invalid fact trees without partial
+results. The packaged fixture deletes both original and synthetic assets JSON,
+constructs the shipped view with nonexistent package paths and future project
+placeholders, and independently publishes ordinary-equivalent values. Missing
+targets and invalid fact formats publish neither a graph nor action invocations.
+This establishes the view, not full package-policy or runtime-library support.
 
 ## After the prototype
 

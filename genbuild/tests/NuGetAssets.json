@@ -1,0 +1,39 @@
+{
+  "version": 4,
+  "targets": {
+    "net11.0": {
+      "Package/1.2.3": {
+        "type": "package",
+        "dependencies": { "Other": "[2.0.0, 3.0.0)" },
+        "compile": { "ref/net11.0/Package.dll": { "aliases": "custom" } },
+        "runtime": { "lib/net11.0/Package.dll": {} }
+      },
+      "Library/1.0.0": {
+        "type": "project",
+        "compile": { "bin/placeholder/Renamed.Library.dll": {} }
+      }
+    },
+    "net11.0/linux-x64": {
+      "Package/1.2.3": {
+        "type": "package",
+        "runtime": { "runtimes/linux-x64/lib/net11.0/Package.dll": {} }
+      }
+    }
+  },
+  "libraries": {
+    "Package/1.2.3": {
+      "type": "package",
+      "path": "package/1.2.3",
+      "files": [
+        "ref/net11.0/Package.dll",
+        "analyzers/dotnet/cs/Generator.dll"
+      ]
+    },
+    "Library/1.0.0": {
+      "type": "project",
+      "path": "../Library/Library.csproj",
+      "msbuildProject": "../Library/Library.csproj"
+    }
+  },
+  "packageFolders": { "/nonexistent/genbuild-package-cache/": {} }
+}

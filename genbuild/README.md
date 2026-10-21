@@ -106,9 +106,13 @@ graph. No runtime library compilation or independent execution is established.
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,
 ordered package folders, dependencies, asset metadata and unknown fields.
-This first piece preserves underlying data rather than freezing selected
-package-task outputs. The SDK does not yet import or consume it during hardened
-Build; pure asset selection and broader framework preparation remain required.
+This preserves underlying data rather than freezing selected package-task
+outputs. A separate zero-I/O `ReadNuGetAssets` task now exposes an explicitly
+named target's libraries, asset groups, dependencies and file inventory directly
+from these facts. Its shipped target is explicitly imported; the default SDK
+Build still does not use this view instead of `ResolvePackageAssets`.
+Package-location preparation, SDK selection policy and broader framework
+preparation remain required; existing package-profile rejection is unchanged.
 See the [encoding and remaining work](../src/msbuild/documentation/specs/proposed/hardened-static-graph-implementation.md#nuget-fact-capture).
 
 The bounded single-framework SDK C# profile emits full Build graphs for

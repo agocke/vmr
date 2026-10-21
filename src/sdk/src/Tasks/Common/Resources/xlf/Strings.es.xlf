@@ -582,6 +582,11 @@
         <note>{StrBegins="NETSDK1058: "}
 The following are names of parameters or literal values and should not be translated: ItemSpecToUse, Left, Right</note>
       </trans-unit>
+      <trans-unit id="InvalidNuGetInputFacts">
+        <source>NETSDK1253: Prepared NuGet input facts are invalid: {0} Run Restore with graph-input preparation enabled before constructing the build graph.</source>
+        <target state="new">NETSDK1253: Prepared NuGet input facts are invalid: {0} Run Restore with graph-input preparation enabled before constructing the build graph.</target>
+        <note>{StrBegins="NETSDK1253: "}{Locked="{0}"}</note>
+      </trans-unit>
       <trans-unit id="InvalidNuGetVersionString">
         <source>NETSDK1018: Invalid NuGet version string: '{0}'.</source>
         <target state="translated">NETSDK1018: Cadena de versión de NuGet no válida: "{0}".</target>

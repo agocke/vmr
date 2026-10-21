@@ -1,0 +1,22 @@
+<!-- Licensed to the .NET Foundation under one or more agreements.
+     The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+  <!-- Explicit import only: this view does not replace ResolvePackageAssets policy. -->
+  <PropertyGroup>
+    <NuGetInputsPath Condition="'$(NuGetInputsPath)' == ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(MSBuildProjectFile).g.props</NuGetInputsPath>
+    <NuGetInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(NuGetInputsPath)'))</NuGetInputsPath>
+  </PropertyGroup>
+  <Import Project="$(NuGetInputsPath)" />
+  <UsingTask TaskName="ReadNuGetAssets" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <Target Name="_ReadNuGetAssets">
+    <ReadNuGetAssets FormatVersion="$(_NuGetInputsFormatVersion)"
+                    Facts="@(_NuGetInput)"
+                    TargetName="$(NuGetAssetsTarget)"
+                    DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="Libraries" ItemName="_NuGetTargetLibrary" />
+      <Output TaskParameter="Assets" ItemName="_NuGetTargetAsset" />
+      <Output TaskParameter="Dependencies" ItemName="_NuGetTargetDependency" />
+      <Output TaskParameter="Files" ItemName="_NuGetLibraryFile" />
+    </ReadNuGetAssets>
+  </Target>
+</Project>
