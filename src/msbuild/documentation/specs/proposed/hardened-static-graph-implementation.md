@@ -1,45 +1,105 @@
 # Standalone action-graph prototype roadmap
 
-Implement the [action-graph contract](hardened-static-graph.md) in small,
-verifiable slices. MSBuild emits concrete work; Ninja schedules independent
-hosts. This roadmap describes planned work, not implemented behavior.
-Use the [conversion cookbook](hardened-static-graph-migration.md) for practical
-patterns when adapting existing targets and tasks.
+MSBuild constructs concrete work; Ninja schedules independent task hosts.
+This is the implementation checklist for the
+[action-graph contract](hardened-static-graph.md), not a general SDK-support claim.
+Checked items describe implemented, exercised behavior. Unchecked items are
+outstanding work. Use the [conversion cookbook](hardened-static-graph-migration.md)
+for task/target adaptation patterns.
 
 ## Current foundation
 
-- `HardenedTargetValidator` walks target bodies, tracks batching and
-  static/deferred values, and constructs DeclaredIO invocations through a callback.
-- `HardenedTaskClassificationResolver` resolves implementation annotations.
-  `HardenedDeclaredIOFootprint` records paths, not executable actions.
-- In hardened mode, `RequestBuilder` requires graph/host configuration,
-  publishes the constructed bundle, and returns without ordinary `BuildTargets`.
-  Restore is a separate ordinary invocation, not a hardened-mode exception.
-- `TaskExecutionHost` depends on project, batching, and engine logging state.
-- The VMR-level `genbuild` app assembles the graph compiler's toolset without
-  producing an SDK redist or bundling a .NET runtime.
-- `MSBuild.ActionTaskHost` executes a hand-authored JSON invocation in a fresh
-  process without the engine. It binds scalars, arrays, and items with custom
-  metadata; applies explicit context; and checks required declared files.
-- The construction callback now uses normal parameter binding, records nonempty
-  DeclaredIO invocations, and executes zero-I/O invocations with output mappings.
-  Process tests prove a generated Ninja producer/consumer chain, batching,
-  unchanged regeneration, invalidation, and failure propagation.
+- [x] Emit a concrete Ninja graph without executing its file-producing tasks.
+- [x] Run those tasks in engine-free processes after MSBuild exits.
+- [x] Build and start a bounded SDK C# executable on an external, SDK-free runtime.
+- [x] Build an SDK executable/library closure with generated project references.
+- [x] Select prepared package assets, run a package generator, and publish the
+  runtime implementation separately from the compile-time reference assembly.
+- [ ] Prepare and build a real `dotnet/runtime` managed-library closure.
 
-Reuse these pieces without introducing another target interpreter. Keep
-ordinary builds unchanged outside the opt-in hardened graph-generation path.
+The packaged smoke fixtures independently execute ten actions for the basic SDK
+executable, twenty for the executable/library closure, and eleven for the package
+fixture. They check outputs and program startup, not just successful graph emission.
+These are bounded profiles, not arbitrary SDK, runtime, platform, or workload builds.
+
+## The model so far
+
+### Restore discovers; construction computes; execution produces
+
+```text
+ordinary Restore -> prepared inputs and facts
+fresh hardened Build -> build.ninja + concrete invocation manifests
+Ninja -> standalone task hosts -> product files
+```
+
+Restore is deliberately unrestricted, trusted preparation. With
+`MSBuildRestoreGraphInputs=true`, it restores packages and captures discovery
+results, framework references, repository metadata, and compiler/analyzer inputs.
+It does not prebuild the selected product to discover its outputs. Restore and
+Build must use the same configuration, framework selection, and intermediate paths.
+
+Fresh hardened Build evaluates projects and constructs the requested target
+closure. Engine-managed project/import reads and permitted source globs remain
+graph-input discovery; task execution during construction must be zero-I/O.
+Externally discovered data becomes explicit items/properties. Pure derivation
+over those values stays in Build rather than being frozen as selected task results.
+
+Construction binds concrete parameters, records file actions, validates the
+closure, and publishes the bundle without ordinary `BuildTargets` execution.
+Ninja later supplies file contents by running the recorded actions. A task must
+not execute during construction to discover later parameters, branches, or files.
+Unsupported behavior fails explicitly; there is no ordinary-build fallback.
+
+### Values now, file contents later
+
+Both empty `DeclaredInputs` and empty `DeclaredOutputs` permit an audited task
+to execute during construction and return ordinary properties/items/metadata.
+A nonempty footprint makes the invocation a file action: its parameters and
+paths must already be known, and it cannot return execution-time MSBuild values.
+Missing declarations are errors, not implicit empty lists.
+
+A generated source path therefore exists as an item before its contents exist.
+The producer declares that path as an output; the compiler declares it as an
+input. Static `FileWrites` and publication items describe the same known paths
+without depending on task execution or old outputs.
+
+The bound `MSBuild` task is a special construction intrinsic, as is `CallTarget`.
+It constructs child configured-project subgraphs under the parent's restrictions,
+not unrestricted nested builds. `TargetOutputs` carries construction-time target
+`Returns` values, including supported legacy `Outputs` returns.
+
+For a project reference, child target construction establishes the implementation,
+reference-assembly, and symbol paths. The parent receives those paths and metadata,
+feeds the reference assembly into compilation, and publishes the implementation
+and symbols through file actions. Ninja executes the dependency's producers first;
+Restore and construction do not need the referenced binaries to exist.
+
+### Ownership and determinism
+
+Semantic transformations belong to declared actions, not timestamp-cache wrappers.
+Hardened targets retain semantic prerequisites but omit hash stamps, copy markers,
+and automatic clean-ledger machinery. Scheduling, content caching, cleaning, and
+safe obsolete-output pruning belong to the execution system; Ninja currently
+provides scheduling and timestamp-based incrementality, not all of those services.
+
+DeclaredIO asserts deterministic results from explicit data and fixed host context,
+not merely a list of paths. C# compilation mandates determinism and stable path
+mapping. Relocation checks compare product bytes; concrete graph paths do not make
+the graph bundle itself a portable content cache.
+
+Annotations and compiler-plugin contracts are trusted assertions today. Analyzers
+and generators are declared tool inputs under their nominal compiler-input-only
+contract, without a per-plugin gate. General sandbox enforcement remains deferred.
 
 ## VMR integration
 
-Cross-component prototype work lives together under the VMR's `src/msbuild`,
-`src/sdk`, `src/sourcelink`, and `src/roslyn` directories. NuGet integration
-lives in `src/nuget-client`: the standalone app builds the NuGet task/dependency
-closure and stages the matching targets from that source tree.
-The integration baseline is VMR commit
+Coordinated changes live in `src/msbuild`, `src/sdk`, `src/sourcelink`,
+`src/roslyn`, and `src/nuget-client`. The VMR is the source workspace, not the
+product distribution. The integration baseline is VMR commit
 `baa2aa16da04556ac274562798d2fbd7cfe7bc9a`.
 
-Only the following prototype deltas were imported, not the intervening
-upstream history or dependency updates:
+The initial import included only these prototype deltas, not intervening upstream
+history or dependency updates:
 
 | Component | Excluded source base | Included source tip |
 | --- | --- | --- |
@@ -48,33 +108,31 @@ upstream history or dependency updates:
 | SourceLink | `6ec19dda0e195435884deb056354390cfa0c0cf7` | `d9f4f778c5e0acf2c634ea1c5c8e2fe1729bb2a5` |
 | Roslyn | `660df145e35572c84bef325bf7d846aefef0500b` | `873218be8df748732cd64f7eeeafd836c93e8586` |
 
-The SDK delta includes explicit project-relative apphost normalization.
-Roslyn's analyzer-config generator retains this baseline's style
-selection rules while adding declared package assets for hardened construction.
-The source manifest remains the baseline provenance; it is not rewritten to
-claim that these local changes have flowed from the component repositories.
+The source manifest retains baseline provenance; local prototype changes are not
+represented as having flowed from the component repositories.
 
 ### Standalone genbuild app
 
-The VMR is the coordinated source workspace, not the product's distribution
-format. `genbuild/genbuild.proj` at the VMR root builds just the required
-component projects and assembles a framework-dependent app in
-`artifacts/bin/genbuild/Debug`. It does not build the SDK redist, templates,
-workloads, CLI driver, or a runtime. The old composite-SDK script is no longer
-the integration entry point.
+- [x] Assemble a framework-dependent app from selected VMR component projects.
+- [x] Carry locally built MSBuild, Common/SDK targets and tasks, Roslyn tasks,
+  SourceLink providers, analyzer manifests, and the independent action host.
+- [x] Source-build NuGet tasks, SDK resolver, and managed dependencies using
+  NuGet's existing .NET 10 target inside the .NET 11 app.
+- [x] Exercise the packaged app with a runtime-only host, without an installed SDK.
 
-With the MSBuild component's pinned .NET 11 SDK on `PATH`, build from
-`src/msbuild` so the CLI uses that component's SDK selection:
+`genbuild/genbuild.proj` builds into `artifacts/bin/genbuild/Debug`. It does not
+build SDK redist, templates, workloads, the SDK CLI driver, or a runtime. With
+MSBuild's pinned .NET 11 SDK on `PATH`, build from `src/msbuild`:
 
 ```sh
 dotnet msbuild ../../genbuild/genbuild.proj -m:1 -nr:false -bl:{}
 ```
 
-`GenBuildBootstrapSdk` and `GenBuildDotNetHost` can specify explicit build-time
-SDK and host paths. `GenBuildSkipComponentBuild=true` reassembles already-built
-components during iteration; the default builds them from this VMR.
+`GenBuildBootstrapSdk` and `GenBuildDotNetHost` select explicit build-time paths.
+`GenBuildSkipComponentBuild=true` reassembles already-built components; the default
+builds them from this VMR. The old composite-SDK script is not the entry point.
 
-Run the resulting app with an external .NET 11 runtime:
+From the VMR root, run with an external .NET 11 runtime:
 
 ```sh
 dotnet artifacts/bin/genbuild/Debug/genbuild.dll restore path/Project.csproj -bl:{}
@@ -82,741 +140,381 @@ dotnet artifacts/bin/genbuild/Debug/genbuild.dll build path/Project.csproj -bl:{
 ninja -C path -f obj/genbuild/build.ninja
 ```
 
-`restore` is unrestricted ordinary Restore with
-`MSBuildRestoreGraphInputs=true`. `build` starts a separate hardened MSBuild
-process and emits `obj/genbuild/build.ninja`; it does not execute the actions.
-Additional arguments are forwarded to MSBuild, including an explicit
-`MSBuildEmitActionGraph` property to change the output location.
+`restore` performs ordinary preparation. `build` starts a separate hardened
+MSBuild process and emits the graph, not product files. Extra arguments are
+forwarded to MSBuild; `MSBuildEmitActionGraph` changes the graph destination.
+Explicit directory-import paths and `MSBuildGraphHostOS` must be consistent
+between preparation and construction where the profile requires them.
 
-The app carries locally-built engine/common targets, SDK targets/tasks,
-SourceLink, Roslyn tasks, analyzer manifests, and the independent task host.
-NuGet's managed dependency closure is source-built using its existing .NET 10
-target; the compiler and other external tool dependencies remain pinned by
-`src/sdk/eng/Version.Details.props`. The additional dependency manifest makes
-NuGet available without the SDK driver's runtime manifest.
-The source-built NuGet SDK resolver is also staged in the standard
-`SdkResolvers` layout. Ordinary Restore can resolve package SDKs pinned by
-`global.json`; hardened Build explicitly disables that resolver so discovery
-and downloads cannot occur during construction. Capturing and replaying exact
-package-SDK import bindings remains a prerequisite for those Build profiles.
-An offline packaged smoke checks local-feed resolution and fail-closed Build
-behavior even after the SDK package has been restored.
+Compiler/external tool versions remain pinned by `src/sdk/eng/Version.Details.props`.
+Framework definitions and RID/pruning metadata come from the selected bootstrap
+SDK/reference-pack package at build time. Project reference-pack assemblies are
+restored separately, not found through an installed SDK during construction.
+Workload resolution is disabled.
 
-The current .NET 11 framework definitions and RID/pruning metadata are
-build-time inputs from the selected bootstrap SDK. Pruning data for its current
-framework comes from the matching reference-pack package; only metadata, not
-the pack's assemblies, is included in the app. Project reference packs are
-obtained during Restore, not rediscovered from an installed SDK at runtime.
-Workload resolution is explicitly disabled for this prototype profile.
+`genbuild/tests/Smoke.proj` checks CLI errors, paths containing spaces, Restore
+capture, graph-only construction, independent execution, and program startup.
+`GenBuildTestHost` selects an SDK-free runtime installation. Its direct packaged
+compiler check is separate from the full SDK action-graph execution checks.
 
-`genbuild/tests/Smoke.proj` exercises CLI error propagation, paths containing
-spaces, graph-only construction, independent Ninja execution, and SDK Restore
-capture. It also invokes the packaged compiler directly with the captured
-reference assemblies and runs the resulting Hello World program. This compiler
-check does not depend on graph support for Roslyn's `Csc` task.
-Set `GenBuildTestHost` to a runtime-only installation to verify there is no SDK
-dependency at runtime.
-
-The app layout does not make all SDK targets graph-compatible. NuGet's
-`_GetRestoreProjectStyle` target now classifies the supported `PackageReference`
-profile from explicit project inputs without executing its discovery task.
-Other styles or inputs requiring `packages.config` discovery fail during
-construction; ordinary Restore retains its existing behavior. SDK duplicate-item
-validation is an audited zero-I/O task. The smoke fixture imports the shipped
-NuGet and SDK validation targets, covers explicit and item-implied styles in the
-presence of both packages.config layouts, and rejects unsupported styles and
-duplicate items without publishing a graph or executing actions.
-
-Full SDK Build still needs further task adaptations, including `Csc`;
-unsupported construction fails rather than falling back to ordinary execution.
+- [x] Resolve package SDKs pinned in `global.json` during ordinary Restore through
+  the source-built resolver, including an offline local-feed fixture.
+- [x] Disable that discovery resolver during hardened Build and fail closed.
+- [ ] Capture/replay exact package-SDK import bindings for supported Build profiles.
 
 ## 1. Prove an engine-free task host
 
-Start with a hand-authored invocation manifest and `WriteLinesToFile`.
-Implement a reusable console host that loads an exact managed task, binds
-supported parameters, reconstructs item metadata, and sets explicit working
-directory/environment. Supply a small `IBuildEngine` compatibility layer for
-supported diagnostics and services; reject nested builds and unsupported
-hosting. Reuse small binding helpers, not the whole `TaskExecutionHost`.
+- [x] Load an exact task implementation in `MSBuild.ActionTaskHost` without
+  loading the MSBuild engine or another target interpreter.
+- [x] Bind scalars, arrays, and items with order, custom metadata, escaping,
+  required-parameter checks, and ordinary unset/default semantics.
+- [x] Apply explicit project directory, environment, runtime, and host context.
+- [x] Support diagnostics through a small `IBuildEngine` compatibility layer;
+  reject nested builds and unsupported hosting/services.
+- [x] Fail on false results, logged errors, exceptions, missing declared inputs,
+  and missing required outputs.
 
-**Done when:** a fresh process produces the expected file without loading
-`Microsoft.Build`. False results, exceptions, logged errors, and missing
-required outputs fail with useful diagnostics. Parameter checks cover item
-order, metadata, escaping, and unset versus empty values.
-
-This first slice is implemented with process-level tests.
+The host receives a concrete versioned invocation, not MSBuild expressions or
+serialized engine state. It validates the invocation, then creates declared
+output-file parents before executing. Parent creation is scaffolding, not an
+owned directory artifact or a success stamp. Collisions fail without deletion.
 
 ## 2. Unify construction-time tasks under Declared-IO
 
-Migrate participating tasks and target invocations from the separate Pure
-contract to explicit `DeclaredInputs` and `DeclaredOutputs`. Empty lists permit
-construction-time execution with known parameters and ordinary `<Output>`
-mappings. Nonempty footprints remain unexecuted actions and cannot publish
-MSBuild return values. Retire the branch-only Pure attribute, interface, and
-environment; reuse `TaskEnvironment` rather than a second context abstraction.
+- [x] Use `[MSBuildDeclaredIOTask]` and explicit finite `DeclaredInputs` and
+  `DeclaredOutputs` at participating call sites.
+- [x] Execute the zero-I/O case with ordinary output mappings and task context;
+  emit nonempty-footprint invocations without calling `Execute`.
+- [x] Retire the separate construction-time Pure contract and validator-only
+  execution path; reuse `TaskEnvironment`.
+- [x] Reject file-action `<Output>` mappings and unavailable control/parameter
+  values before file-action side effects.
+- [x] Preserve ordinary task/target selection outside the opt-in hardened path.
 
-**Done when:** a zero-I/O task's returned items and metadata can construct a
-later invocation, while missing declarations, unavailable parameters, and
-file-I/O output mappings fail before action side effects.
-
-The existing construction-time task catalog now uses DeclaredIO and ordinary
-task context. Hardened mode has no validator-only execution path. The broader
-SDK overlays remain experimental and require graph-compatible adaptation.
+`HardenedTaskClassificationResolver` checks implementation annotations;
+`HardenedTargetValidator` reuses the existing construction walk and callback.
+`HardenedDeclaredIOFootprint` describes paths; executable actions additionally
+capture parameters and implementation/context. No second interpreter is added.
 
 ## 3. Emit a concrete Ninja graph
 
-Extend the existing partial-evaluation walk to collect actions per concrete
-task bucket. Capture bound parameters, configured-project identity, declared
-paths, implementation/host context, and diagnostic provenance. Associate
-generated inputs with producers and preserve required file/control ordering.
-Expand supported `MSBuild` and `CallTarget` intrinsics during construction.
+- [x] Capture actions per concrete task bucket, including configured-project
+  identity, bound parameters, declarations, host/tool context, and source location.
+- [x] Expand supported `MSBuild`/`CallTarget` requests into a shared root graph.
+- [x] Preserve configured-target state across metadata queries and Build requests,
+  static target returns, property scopes, and repeated/diamond project requests.
+- [x] Associate generated inputs with earlier producers; reject cycles,
+  conflicting output ownership, and stale generated files treated as sources.
+- [x] Publish versioned invocation manifests and a Ninja entry point only after
+  successful root construction, without ordinary `BuildTargets`.
+- [x] Keep unchanged manifests/entry points unchanged on disk; separate Ninja
+  escaping from command quoting.
 
-Write versioned invocation manifests and one Ninja edge per action. Include
-manifests and the host/tool dependency closure as normal inputs; use order-only
-edges only for control precedence. Handle Ninja escaping separately from shell
-quoting, write manifests only on content changes, and emit explicit roots.
-Record graph inputs, but require explicit regeneration after they change.
+Each action is one edge containing all its outputs. Declared input contents,
+manifests, and host/tool dependencies invalidate work; order-only edges carry
+control precedence, not consumed data. External input files must exist at
+publication; predecessor-produced inputs need not exist yet.
 
-Add a graph-only path in `RequestBuilder` that publishes the complete bundle
-and returns without ordinary `BuildTargets`. Enforce the spec's required-file,
-static-value, and fail-fast subset; do not emulate unsupported effects with
-stamps or fall back to ordinary execution.
+The implemented emitter uses Unix commands, one construction node, and conservative
+ordering. Adjacent host/task files are conservative tool dependencies; tools
+elsewhere still need explicit declarations. Graph-input changes require rerunning
+MSBuild explicitly; Ninja does not invoke an automatic regeneration rule.
 
-**Done when:** clean-output generation emits all actions without running any
-file-I/O task. Invalid construction publishes no executable partial graph.
-Focused cases cover buckets, generated inputs, conflicting writes, cycles,
-paths with spaces/dollars/colons, and supported cross-project routing.
-
-The Unix slice supports intrinsic cross-project `MSBuild` routing through the
-ordinary engine with static parameters. Configured projects share one graph,
-published only after the root succeeds. Static target returns use the ordinary
-return-gathering implementation, and configured-target state survives metadata
-queries followed by Build requests. Construction currently requires one node
-and no multi-threaded mode. Forward producer resolution, Windows commands,
-full tool closures and graph-input inventories remain work rather than
-supported fallbacks. Provably empty project lists remain a no-action base case.
+- [ ] Support forward-produced inputs beyond the earlier-producer subset.
+- [ ] Add Windows commands and broader construction/parallelism profiles.
+- [ ] Complete graph-input inventories and automatic runtime/tool closure support.
+- [ ] Add automatic regeneration separately from action execution.
 
 ## 4. Execute a small build with Ninja
 
-Use a repository `.proj` fixture containing a zero-I/O value transformation,
-a file producer, and a consuming file-transform action. Begin with conservative
-ordering and `ninja -j1`.
+- [x] Construct a fixture with a zero-I/O value transformation, file producer,
+  and consuming transformation, then execute it after MSBuild exits.
+- [x] Match ordinary parameters, metadata, and product contents.
+- [x] Make an unchanged second run a no-op; invalidate actions after input,
+  manifest, or host/tool changes.
+- [x] Propagate action failures to dependents and reject unsupported constructs
+  during generation.
+- [x] Compile/run the explicit
+  `src/Samples/ActionGraphHelloWorld/HelloWorld.proj` fixture with the real compiler.
 
-**Done when:**
+That initial fixture uses audited `GraphCSharpCompileTask`, explicit compiler/
+runtime/reference inputs, and a separate runtime-config action. It proves source
+invalidation and real compiler errors without SDK Build. The SDK milestones below
+now exercise shipped targets and the production compiler adapter instead.
 
-- After MSBuild exits, Ninja alone produces the expected files, with one host
-  process per action and no engine loading, reevaluation, or nested builds.
-- Parameters, metadata, and outputs match ordinary execution of the fixture.
-- An unchanged second run is a no-op. Input, manifest, and host/tool changes
-  invalidate the correct actions under Ninja's timestamp rules.
-- Task failure blocks dependents; unsupported constructs fail during generation.
-
-Then test parallel execution where modeled dependencies permit it.
-
-The process fixture covers these behaviors with conservative action ordering.
+Ninja's incrementality is timestamp/command based, not content-addressed caching.
+Timestamp-preserving content changes are not reliably detected by Ninja alone.
 
 ## 5. Compile with the pinned SDK
 
-The explicit compiler fixture is implemented in
-`src/Samples/ActionGraphHelloWorld/HelloWorld.proj`. It uses the test assembly's
-audited `GraphCSharpCompileTask` to invoke the real `csc.dll` with explicit
-sources, references, compiler/runtime files, and one assembly output. A second
-standalone action writes the runtime configuration. MSBuild emits both actions
-without compiling; Ninja produces a runnable `HelloWorld.dll`.
+The bounded single-project and executable/library SDK Build profiles are complete.
+Restore prepares inputs; fresh construction emits actions from clean outputs;
+Ninja independently compiles and publishes runnable programs. The following
+checklist replaces the earlier sequence of individual task-rejection probes.
 
-Process tests cover `Hello, World!`, a no-op second Ninja run, recompilation
-after a source edit without regenerating the graph, and a genuine compiler
-error blocking the runtime-config action. The compiler adapter rejects missing
-declarations for its explicit inputs/output and refuses execution with the
-MSBuild engine loaded. It is a fixture, not a general Roslyn task replacement.
+### Preparation and constrained evaluation
 
-After a Release repository build, supply the installed .NET 11 runtime and
-reference-pack versions explicitly:
+- [x] Capture platform SDK discovery, including absence, without freezing later
+  pure property overrides; replay only during hardened Build.
+- [x] Prepare framework references, unmanaged-registration-cache presence,
+  SourceLink repository metadata, and the analyzer semaphore during Restore.
+- [x] Participate in configured-project/framework Restore traversal; keep saved
+  imports outside Common's automatic project-extension import wildcards.
+- [x] Capture construction host OS in `MSBuildGraphHostOS`; normalize `TargetDir`
+  against the explicit project directory rather than ambient CWD.
+- [x] Support read-only array indexing needed by SDK/Roslyn expressions while
+  retaining the property-function allowlist.
+- [x] Classify supported NuGet `PackageReference` style from explicit inputs,
+  without `packages.config` discovery.
 
-```sh
-source artifacts/sdk-build-env.sh
-sdk_version="$(dotnet --version)"
-runtime_version="<installed .NET 11 runtime version>"
-reference_version="<installed .NET 11 reference-pack version>"
+Preparation opt-out, missing/stale inputs, literal escaping, unchanged snapshot
+timestamps, fresh recapture, and replay after discovery directories disappear
+are covered. Restore does not replay old snapshots as its own discovery results.
+Unsupported SDK/import expressions still require adaptation, not allowlisting
+ambient I/O. See [platform discovery](hardened-static-graph.md#restore-time-platform-sdk-discovery).
 
-dotnet msbuild src/Samples/ActionGraphHelloWorld/HelloWorld.proj --hardened-graph \
-  -p:MSBuildEmitActionGraph="$PWD/artifacts/hello-world/build.ninja" \
-  -p:MSBuildActionTaskHost="$PWD/artifacts/bin/MSBuild.ActionTaskHost/Release/net11.0/MSBuild.ActionTaskHost.dll" \
-  -p:MSBuildActionDotNetHost="$DOTNET_ROOT/dotnet" \
-  -p:CompilerDirectory="$DOTNET_ROOT/sdk/$sdk_version/Roslyn/bincore" \
-  -p:ReferenceAssemblyDirectory="$DOTNET_ROOT/packs/Microsoft.NETCore.App.Ref/$reference_version/ref/net11.0" \
-  -p:RuntimeDirectory="$DOTNET_ROOT/shared/Microsoft.NETCore.App/$runtime_version" \
-  -p:RuntimeVersion="$runtime_version"
-ninja -C artifacts/hello-world -f build.ninja -j1
-dotnet artifacts/hello-world/HelloWorld.dll
-```
+### Static policy and target control
 
-This bypasses SDK `Build` and reference-resolution targets. The neighboring
-`HelloWorld.csproj` records the SDK integration trial: ordinary restore works,
-and workload `IsOSPlatform` checks now use the captured global
-`MSBuildGraphHostOS` rather than ambient OS queries. Process tests cover the
-default, explicit overrides, immutable configuration, and ordinary-build
-compatibility. The selected OS is recorded in the Ninja graph; see
-[captured construction platform](hardened-static-graph.md#captured-construction-platform).
+- [x] Admit audited zero-I/O duplicate-item, executable-reference, project-
+  configuration, framework-XML, and nearest-framework policy tasks.
+- [x] Preserve supplied/global-property executable compatibility and NuGet's
+  alias, platform, fallback, and diagnostic semantics.
+- [x] Reject `.winmd` paths through hardened `ValidateNoWinMDReferences` without
+  opening assemblies; retain ordinary WinMD inspection outside hardened mode.
+- [x] Run `Message` during construction with empty declarations, not as an action.
+- [x] Accept explicit fail-fast `ContinueOnError` values and skip only provably
+  disabled `OnError` handlers; reject active failure-recovery paths.
+- [x] Omit optional telemetry/preview banners and select fail-fast `CoreBuild`,
+  without changing ordinary cleanup or post-build failure behavior.
+- [x] Represent Common's structural directory requirements without `MakeDir`
+  actions; require coverage by declared output files.
 
-Read-only array indexing is now supported during evaluation and target
-construction, including Roslyn's language-version expression
-`$(_TargetFrameworkVersionWithoutV.Split('.')[0])`. Process cases cover
-computed indices, chained string operations, character arrays, invalid
-indices, and rejection of unapproved array methods.
+Nonempty failure-time post-build events (`Always`/`OnOutputUpdated`) fail with
+MSB3670. General recovery, unrelated empty directories, and specialized hosting
+are not silently dropped. Requested ClickOnce/Appx/native-reference/isolated-COM
+discovery remains unsupported; inactive native-manifest placeholders are not probed.
 
-Platform SDK discovery is now a
-[Restore-stage input](hardened-static-graph.md#restore-time-platform-sdk-discovery),
-not another pure-function allowance:
+### Formatting and generated sources
 
-```sh
-dotnet restore src/Samples/ActionGraphHelloWorld/HelloWorld.csproj \
-  -p:MSBuildRestoreGraphInputs=true
-```
+- [x] Split editorconfig into pure `FormatAnalyzerConfig` and overwrite-only
+  `WriteAnalyzerConfig`, sharing ordinary serialization and rejecting timestamps.
+- [x] Derive `AssemblyVersion` from the supplied NuGet version through zero-I/O
+  `GetAssemblyVersion`, preserving overrides and invalid-version diagnostics.
+- [x] Publish framework/assembly attributes as declared file actions with static
+  compiler-input bookkeeping; hardened framework publication is fail-fast.
+- [x] Compute source-root mappings and GitHub/GitLab/Azure Repos/Bitbucket URLs
+  from prepared metadata, without source-control or source-directory queries.
+- [x] Share SourceLink serialization through pure `FormatSourceLink` and
+  overwrite-only `WriteSourceLink`.
 
-`Microsoft.Common.PlatformSDK.targets` preserves the shared property logic
-while substituting saved results only for machine searches and path probes.
-The import records absent SDKs and validates discovery inputs; it does not
-freeze final SDK properties. Process tests cover both metadata layouts,
-construction after removing the discovered directories, independently
-changing pure overrides, missing/stale imports, and per-framework Restore.
-Writer tests cover literal escaping and unchanged-file timestamps.
+Generated text matches ordinary bytes where policy is unchanged. Empty SourceLink
+mappings clear the compiler property and emit no action; stale JSON remains
+unreferenced, not inspected/deleted. Source-generation checks cover escaping,
+provider versions, metadata validation, stale replacement, and independent errors.
 
-The prototype deliberately uses unrestricted ordinary Restore as its trusted
-preparation stage. `MSBuildRestoreGraphInputs=true` captures SDK discovery,
-unmanaged-registration-cache presence, framework
-references, and SourceLink repository information, and initializes Roslyn's
-analyzer semaphore. Preparation runs during ordinary Restore rather than
-depending on hardened mode; cache, repository, and analyzer hooks also
-participate in each framework's restore-graph traversal. SDK process
-cases cover opt-in/off behavior, empty and populated caches, unchanged
-snapshot timestamps, and single/multi-targeting without downloading packages.
-Hardened Restore graph construction remains deferred; hardened Build evaluation
-still has no ambient-discovery fallback.
+### Deterministic compiler actions
 
-Framework and repository snapshots are not replayed during ordinary
-umbrella-flag Restore, even when legacy manifest switches are also enabled.
-They live outside Common's automatic project-extension import wildcards.
-Direct Restore does not require `MSBuildIsRestoring=true`. Focused SDK,
-SourceLink, and Roslyn cases cover capture opt-in/off, fresh capture over stale
-snapshots, unchanged timestamps, and replay without rediscovery or graph-time
-analyzer-marker initialization.
+- [x] Compose pure `FormatCsc` with independent `CompileCsc`, reusing option
+  formatting without ordinary Csc's server, IDE host, or discovery paths.
+- [x] Capture compiler/analyzer dependency closures during Restore as `cscinputs`;
+  keep later tool/documentation/module inputs explicit.
+- [x] Require deterministic compilation and automatic stable path maps consistent
+  with SourceLink, covering project, generated-source, and output paths.
+- [x] Declare analyzers/generators, dependencies, configs, and additional files;
+  run real generators without an audit allowlist or opt-in gate.
+- [x] Retain ToolTask diagnostics, cancellation, and private response-file scratch;
+  use a controlled compiler environment and no server or task-local output cache.
+- [x] Prove relocated PE/reference-assembly/portable-PDB byte equality and inspect
+  PDB documents, CodeView paths, and `CallerFilePath`; cover embedded debug info.
 
-Hardened `TargetDir` computation now uses
-`MSBuild.NormalizePath(MSBuildProjectDirectory, OutDir)` with an explicit
-absolute base instead of `System.IO.Path.GetFullPath`. It preserves escaping
-and trailing separators; ordinary builds retain the previous expression.
-Process cases use the shipped property declarations and cover relative and
-absolute output directories, parent traversal, quotes, dollars, and literal
-percent/semicolon characters.
+Native PDBs, arbitrary response files, data-dependent generated-files directories,
+rulesets, SARIF, app-config, machine signing, and execution-mode overrides remain
+outside the initial profile. Inputs use explicit paths, not SDK/LIB/default
+response-file searches. Plugin I/O enforcement is deferred like other task I/O.
 
-The hardened SDK now uses an
-[explicit reference-search profile](hardened-static-graph.md#explicit-reference-resolution-sources).
-Early Common props disable installation-wide searches, automatic output and
-raw-filename fallbacks, and Visual Studio directory-layout discovery. Common
-targets skip `GetToolsDirectory32` and the assembly-folder configuration probe;
-the intrinsic remains prohibited. A zero-I/O validation task rejects unsafe
-explicit search overrides before reference-resolution dependencies run.
-Process tests exercise shipped Common and SDK search declarations, present
-and absent assembly-folder configuration, explicit search roots, rejection
-before graph publication, and unchanged ordinary-build search sources.
+### Dependency and runtime manifests
 
-A fresh ordinary Restore followed by hardened Build now passes platform
-discovery, `TargetDir` computation, the unmanaged-cache import, and assembly-folder
-initialization. The SDK omits optional target-framework telemetry and the
-preview-SDK banner during hardened graph construction because neither
-produces build artifacts; ordinary Restore and Build retain their behavior.
-The coordinated SDK's ordinary Restore prepares the required imports/marker
-inputs, and fresh hardened Build gets past snapshot replay.
-It also gets past NuGet classification and SDK duplicate-item validation.
-Explicit fail-fast `ContinueOnError` values (including `false` and
-`ErrorAndStop`) are accepted; continue-on-error modes and active `OnError`
-handlers remain unsupported.
+- [x] Use hardened `WriteDepsFile`, sharing the ordinary dependency model/writer
+  without object/timestamp caches, ambient roots, or project-output fallback probes.
+- [x] Read runtime binary versions after their producers; use managed metadata
+  and native PE version resources portably, not OS-specific `FileVersionInfo`.
+- [x] Preserve renamed project outputs, satellites, resolved destinations, and
+  relative logical manifest paths with static `FileWrites`.
+- [x] Use `WriteRuntimeConfig` with the shared framework/template/host-option model,
+  declared assets/template reads, and exact main/optional dev outputs.
+- [x] Preserve Debug Hot Reload dev configuration; validate both documents before
+  writing either, with UTF-8/no-BOM and LF output.
 
-`Message` is now an audited zero-I/O task, with explicit empty declarations at
-Common's call sites. Ordinary and critical messages are logged during graph
-construction, not emitted as Ninja actions; diagnostic file paths are location
-metadata, not file inputs. Invalid importance and missing declarations fail
-without publishing a graph or executing file actions.
+Versionless/other native formats use `0.0.0.0`; missing files and malformed or
+conflicting versions fail. Optional default-template presence is selected by fresh
+engine evaluation, not frozen by Restore. Explicit/generated templates are required
+inputs with producer edges; no task-side missing-file fallback exists.
+Relative probing paths are normalized; absolute/invalid probes fail rather than
+embedding machine-specific package roots. Multi-file writes are not transactional.
+Ordinary Build/Publish/designer behavior stays on its original path.
 
-Common's `CoreBuild` now selects an explicit fail-fast graph profile. Its
-ordinary failure handlers remain unchanged, but hardened mode neither records
-partial writes in the clean-file ledger nor runs failure-time post-build
-events. Nonempty post-build events using `Always` or `OnOutputUpdated` fail
-with MSB3670. The validator skips only provably disabled `OnError` handlers;
-potentially active handlers still prevent graph publication.
+These actions still read declared NuGet JSON at execution. Moving every consumed
+field to prepared facts remains an explicit follow-up, not a completed milestone.
 
-The action host now prepares declared file-output parents after validating
-the invocation and before executing the task. Common's participating directory
-preparation sites accumulate zero-I/O requirements instead of running
-`MakeDir` during construction. Each requested directory must be covered by a
-declared file output beneath it before the graph can be published. Unrelated
-empty-directory effects remain unsupported, even if the directory already
-exists. There are no directory actions or stamps; ordinary `MakeDir` behavior
-is unchanged.
+### Project references and publication
 
-`MSBuild` calls with statically known parameters now use normal binding,
-configuration requests and output mappings during construction. Empty project
-lists remain no-ops. Nonempty lists expand child targets into the shared graph,
-not independent nested-build actions. Tests cover distinct configurations,
-additional/removed global properties, caller/source metadata, rebased paths,
-`Returns`/legacy `Outputs` and duplicate rules, diamond producer reuse, skipped
-target reexecution, and failure without partial publication. Root and child
-requests must retain the same destination, hosts, host OS and selected action
-environment. Unavailable parameters remain rejected, as do unaudited custom
-tasks named `MSBuild`, even with explicit empty declarations.
+- [x] Return child paths/metadata through intrinsic requests with ordinary binding;
+  absent/empty `Targets` preserves default-target returns.
+- [x] Preserve configured identity, framework selection, metadata defaults,
+  sequential new-item assignments, and ordinary existing-item update semantics.
+- [x] Resolve explicit paths with pure `ResolveReferencePaths`, without assembly
+  reads, existence probes, name lookup, version unification, or dependency discovery.
+- [x] Supply absolute child `ReferenceAssembly`/`DebugSymbolsFile` metadata;
+  compile against references and publish implementations/symbols.
+- [x] Publish main/reference/PDB and copy-local files with content-only `CopyFiles`;
+  derive `MainAssembly`, `ReferenceAssembly`, `FileWrites`, and shareable paths statically.
+- [x] Preserve private/framework/copy-local metadata, destination subdirectories,
+  source metadata, and product/symbol/common-output opt-outs.
 
-SDK `ValidateExecutableReferences` now runs as an audited zero-I/O construction
-task with explicit empty declarations at its SDK call site. It parses supplied
-reference metadata and reads the current request's global-property dictionary,
-without opening referenced project files. Executable compatibility checks and
-global `SelfContained`/`RuntimeIdentifier` propagation are unchanged. Packaged
-smoke checks cover both metadata XML forms, global versus local properties,
-specific `NETSDK1150`/`NETSDK1151` errors, and ordinary-build behavior.
+Simple/display names fail even with `HintPath`; permitted search settings do not
+enable lookup. Callers supply the complete reference closure. Missing requested
+projects fail through intrinsic requests, not existence-based skipping.
+Copy requires exact vectors/declarations, unique outputs disjoint from inputs,
+and no old-output, timestamp/MVID, link, retry, or attribute-propagation behavior.
+Explicit unsupported copy modes fail. Literal percent escapes survive path and
+metadata forwarding. DLL/PDB producer bytes and ordinary deps JSON are checked.
 
-The SDK's WinMD target selects a separate audited zero-I/O
-`ValidateNoWinMDReferences` task during hardened construction. It checks
-case-insensitive `.winmd` filename extensions and reports `NETSDK1130` without
-opening any reference files. Ordinary builds retain
-`CheckForUnsupportedWinMDReferences`, including its assembly inspection to
-refine diagnostics to `NETSDK1149`. Packaged smoke imports the shipped target
-to check empty and managed-only lists, lookalike names, multiple WinMD errors,
-and unchanged ordinary-mode assembly inspection.
+### Incrementality, cleanup, and semantic fidelity
 
-Roslyn's hardened editorconfig target now separates zero-I/O formatting from
-overwrite-only file publication. `FormatAnalyzerConfig` shares the ordinary
-serializer, resolves paths against the captured project directory, and rejects
-filesystem timestamp metadata. `WriteAnalyzerConfig` writes exact UTF-8 text
-without a BOM or a prior-output comparison. Ordinary builds retain the original
-`GenerateMSBuildEditorConfig` task. Packaged smoke checks construction without
-source files, exact bytes including semicolons and embedded newlines, stale
-output replacement, retained compiler-input bookkeeping, and explicit metadata
-rejection without partial graph publication.
+- [x] Omit assembly-info/compile/runtime-config hash caches and copy-up-to-date
+  markers while retaining their semantic prerequisites and caller inputs.
+- [x] Omit automatic incremental cleanup and clean-ledger capture/replay/updates;
+  leave stale/unowned files untouched and keep product bookkeeping available.
+- [x] Preserve target-time property escaping until normal binding, including
+  literal semicolons/percent text and chained assignments.
+- [x] Preserve omitted/empty scalar constructor defaults during action capture;
+  reject empty required scalars as ordinary MSBuild does.
+- [x] Compare ordinary/independent generated source and default main/dev JSON,
+  including absence of an invalid empty `rollForward`, and start the SDK program.
 
-The framework attribute target now selects fail-fast declared-output
-publication in hardened mode, leaving ordinary write-race warnings unchanged.
-Packaged smoke checks graph-only construction, independent file publication,
-compiler-input bookkeeping, and the different failure policies.
+Stale/malformed/obstructing caches and ledgers do not become construction inputs.
+Cleaning and safe obsolete-output pruning are not implemented. Explicit
+Clean/Rebuild and arbitrary semantic Delete remain unsupported.
 
-SDK `GetAssemblyVersion` now runs as an audited zero-I/O construction task.
-It derives a four-part assembly version from the supplied NuGet version string;
-it does not inspect an assembly or discover a version. Existing version
-overrides and invalid-input diagnostics are unchanged. Packaged smoke checks
-prerelease/build metadata, four-part versions, override precedence, static
-attribute conditions and metadata, version-dependent output paths, independent
-publication, ordinary compatibility, and rejection without graph publication.
-
-The assembly-info, compile-input, and runtime-config wrappers now omit their
-`Hash` computations, timestamp-cache writes, cache-only input registrations,
-and cleanup bookkeeping during hardened construction. Their semantic
-prerequisites still run; ordinary builds retain their existing caches.
-`Hash` itself is not admitted merely to preserve this incremental bookkeeping.
-Packaged smoke verifies cache-free construction from clean and stale outputs,
-including obstructing cache directories, retained resource/reference/platform
-preparation and caller inputs, independent assembly-info publication with
-ordinary-identical bytes, and ordinary cache creation.
-
-Roslyn's `MapSourceRoots` and the packaged GitHub, GitLab, Azure Repos, and
-Bitbucket SourceLink URL tasks now run as audited zero-I/O construction tasks.
-They derive mapped paths and URLs from prepared metadata and captured project
-context, without requiring source directories or querying source control.
-Hardened SourceLink generation shares the ordinary JSON serializer through
-`FormatSourceLink` and publishes its exact text through overwrite-only
-`WriteSourceLink`. Compiler and cleanup paths are static. Empty mappings clear
-the compiler property and emit no file action, leaving stale JSON unreferenced.
-Ordinary builds retain their comparison and deletion behavior.
-Packaged smoke checks all four providers, explicit URL preservation, relative
-and nested roots, duplicate merging, deterministic/non-deterministic paths,
-legacy host versions, exact ordinary-compatible bytes, empty/stale outputs,
-invalid metadata rejection without partial graphs, and fatal publication errors.
-
-Hardened C# compilation now composes zero-I/O `FormatCsc` and independent
-`CompileCsc`, reusing Csc option formatting without its server/IDE/tool discovery.
-Restore captures the compiler and analyzer dependency closure as explicit
-`cscinputs` imports. Compilation requires determinism and automatic path mapping
-consistent with SourceLink, covering project, generated-source and output paths.
-Analyzers/generators and dependencies are declared inputs under their nominal
-compiler-input-only contract, with enforcement deferred and no per-plugin gate.
-Packaged smoke independently executes generated-source and Regex-generator
-compilation after MSBuild exits. Relocated checkouts produce identical PE,
-reference-assembly and portable-PDB bytes; regressions inspect PDB document,
-CodeView and CallerFilePath values. Embedded debug information, ordinary Csc,
-rejected construction modes and independent compiler failures are covered.
-The action retains ToolTask diagnostics, cancellation and temporary response-file
-scratch without compiler servers or task-local output caches. Native PDBs,
-arbitrary response files, data-dependent generated-files directories, rulesets,
-SARIF, app-config and machine signing modes remain outside this initial profile.
-
-Hardened SDK Build now selects `WriteDepsFile`, reusing the dependency model and
-JSON writer without ordinary GenerateDepsFile's object/timestamp caches,
-ambient reference-root discovery or project-output fallback probes. Assets
-and conditional self-contained RID JSON are declared reads; runtime binary
-versions remain execution-time reads after their producers. Main identity,
-satellite paths and resolved destinations are metadata, with relative logical
-paths required in JSON. Explicit project-reference outputs work even when the
-project and assembly names differ. The output is written without reading its
-previous contents, and `FileWrites` stays statically available.
-
-The portable version policy reads managed metadata on every OS and fixed
-embedded version resources for native PE files, rejecting conflicting resources.
-Missing version information and other native formats use `0.0.0.0`; missing
-files and unsupported/malformed versions fail explicitly. No OS-specific
-FileVersionInfo, installation resources or timestamp cache participates.
-Ordinary GenerateDepsFile, Publish and designer target selection are unchanged.
-The standalone package stages the pinned SDK-driver dependencies beside the
-task assembly for independent loading without ambient probing. Packaged smoke
-checks a compiler-produced dependency, relocation, byte-compatible ordinary
-JSON, stale replacement, static bookkeeping and missing-input failure.
-
-Hardened runtime configuration now uses `WriteRuntimeConfig`, sharing the
-ordinary framework/template/host-option model and serializer. Assets and the
-selected template are declared reads, without the ordinary build-engine cache
-or optional-template execution probe. Main and optional dev paths are exact
-outputs with static `FileWrites`; Debug's Hot Reload dev file is retained.
-Both documents are prepared and validated before either is written, without
-reading previous outputs. This is not atomic multi-file publication on I/O
-failure. Output uses UTF-8 without BOM and fixed LF newlines.
-
-The engine evaluates optional default-template presence afresh; it is not a
-persisted Restore fact. Explicit template paths, including earlier target
-assignments and generated templates, are required inputs and retain producer
-ordering. The action has no missing-template fallback. Relative probing paths
-are normalized to forward slashes without trailing separators, including raw
-template overrides. Absolute/invalid probes fail instead of publishing
-machine-specific NuGet-cache paths. Ordinary Build, Publish and designer paths
-retain their prior behavior. Packaged tests cover main/dev and Release output,
-framework-dependent/self-contained configuration, existing/missing/generated
-templates, late selection, relocation, stale replacement and independent errors.
-
-Common's main assembly, reference-assembly and PDB publication now selects
-content-only `CopyFiles` actions. Equal-length explicit source/destination
-vectors must match their declarations; outputs must be unique and disjoint
-from inputs. Source fan-out is supported. Paths use captured project context,
-and the host prepares output parents. The task copies bytes without source
-timestamp/attribute propagation, old-output reads, size/timestamp/MVID skips,
-retries, link modes or execution-time MSBuild returns. Explicit link and
-read-only override requests fail rather than being silently ignored.
-
-`MainAssembly`, `ReferenceAssembly` and `FileWrites` are static, with source
-item metadata and copy opt-outs retained. Hardened mode omits the
-copy-up-to-date marker, its fingerprint action, cleanup registration and
-project-reference protocol metadata; it is incremental bookkeeping, not
-product data. Ordinary Copy/CopyRefAssembly and marker behavior are unchanged.
-Packaged tests cover compiler-to-copy ordering, relocated/ordinary byte
-equivalence from identical inputs, stale replacement, renamed reference
-outputs, static metadata, disabled products/symbols, rejected modes and fatal
-independent publication errors. Copy-local implementation/symbol publication
-uses the same task as described below; other Copy families remain unadmitted.
-
-Automatic cleanup is now ordinary-only: hardened Build omits IncrementalClean,
-prior/current clean-ledger collection and `_CleanRecordFileWrites`, including
-their cleanup-only dependencies. Restore no longer snapshots the ledger and
-Build does not import obsolete clean snapshots. Product FileWrites and
-semantic producers remain intact. Packaged cases verify missing/stale/obstructing
-ledgers, independent product publication without cleanup actions, preserved
-stale/unowned files and ordinary deletion/ledger reconciliation. Restore
-process tests cover single/multiple frameworks without a clean snapshot.
-
-Cleaning current graph outputs and safely pruning obsolete owned outputs belong
-to the executor. Neither is implemented here; pruning needs persistent ownership
-records rather than arbitrary directory deletion. Explicit MSBuild Clean/Rebuild
-and arbitrary semantic Delete actions remain unsupported.
-
-With directory import paths and construction host OS supplied explicitly to both Restore and Build,
-the fresh SDK full-`Build` probe now gets past `GetTargetFrameworks`,
-executable-reference validation, WinMD validation, editorconfig generation,
-framework attribute generation, assembly version derivation, source-root mapping,
-SourceLink generation and compiler preparation. There are no remaining hash,
-deferred-hash, source-root mapping, SourceLink, compiler, deps, runtime-config,
-assembly/reference/PDB copy or deferred `MainAssembly` diagnostics in this probe.
-The bounded SDK hello-world Build now emits ten independent actions without
-writing product payloads. Packaged smoke verifies construction even with an
-obstructing ledger directory and a malformed obsolete clean snapshot.
-Target-time property assignment now preserves escaped values, matching ordinary
-MSBuild until item/task binding. Regressions cover literal semicolons, literal
-percent escapes, actual list separators and chained property assignments.
-The framework-attribute fixture uses the shipped C# text-producing target and
-compares independent publication with ordinary source bytes.
-Independent SDK execution now completes all ten actions, including compilation
-and final assembly/reference/PDB and runtime-manifest publication. Packaged smoke
-executes that graph, checks its final outputs and runs the resulting program on
-the external runtime; the direct packaged-compiler smoke remains separate.
-Action capture preserves ordinary empty-scalar omission rather than assigning
-empty strings. Independent tasks retain null and constructor defaults, nonempty
-escaped values still bind, and empty required scalars fail during construction
-just as in ordinary builds. Process regressions compare ordinary and independent
-output bytes. Default runtime configuration now matches ordinary generation
-without an invalid empty `rollForward` setting; main/dev JSON equality and SDK
-program startup are passing smoke cases.
-Other diagnostic invocations need explicit declarations as their target
-closures are admitted. The SDK's satellite-assembly target also retains an
-unadapted `MakeDir`; the structural-directory profile currently covers
-Common's preparation sites, not every SDK or custom directory operation.
-Other copy families remain outside the admitted profile. Earlier task-rejection
-chains should not be treated as independently reachable blockers now that this
-bounded graph constructs successfully.
-Broader reference and compiler option profiles still need audited
-action-graph adaptation. Broader SDK `Build` profiles remain unsupported; ambient
-discovery has not been allowed as a fallback. The bounded project-reference
-closure below completes this execution milestone; broadening the `Build`
-lifecycle remains separate work.
-
-Use existing SDK overlays for a single-framework C# hello-world profile:
-
-```text
-construction -> generated source -> compiler -> final output copy
-```
-
-Complete restore/fetch before fresh graph generation. Supply exact compiler,
-reference, analyzer, generator, and other tool inputs. Start with a supported
-compile closure, then extend toward `Build` without weakening the contract.
-Use a two-project fixture with static child returns and configured-project
-identity; child artifacts flow through file edges, not nested engine calls.
-
-The bounded single-project and SDK executable/library Build graphs and startup
-are implemented. The packaged cross-project action fixture independently
-executes child and root producers, and the real SDK fixture verifies Restore
-preparation and construction across the closure without prebuilding binaries.
-Broader SDK project-reference profiles remain unsupported. Project configuration
-and child framework XML formatting
-are now audited zero-I/O construction tasks. Child `GetTargetFrameworks` metadata
-matches ordinary execution, including item-definition defaults and sequential
-metadata assignments on new items; updates of existing items retain their
-ordinary pre-update metadata view. Missing requested project files fail through
-intrinsic engine requests (`MSB3202`) instead of ordinary existence-based skipping.
-
-The standalone toolset now builds NuGet tasks and their managed dependency closure
-from the VMR's NuGet projects, constrained to their existing .NET 10 target.
-Targets and managed binaries come from the same source tree, and the same
-dependency files are staged beside independently hosted SDK tasks. NuGet's
-nearest-framework task is admitted with explicit zero-I/O declarations, retaining
-ordinary alias, platform and fallback selection and diagnostics. Its compatibility
-marker is recognized by namespace/name as specified by the task contract; no
-engine admission allowlist or duplicate selection algorithm is used. Only the
-hardened Common invocation passes declaration parameters, so ordinary calls still
-work with older NuGet task assemblies.
-
-Hardened `GetNativeManifest` skips the ordinary output existence query when no
-manifest generation is requested, rather than adopting a stale placeholder.
-Requested ClickOnce, Appx, native-reference and isolated-COM discovery remains
-unsupported; ordinary behavior is unchanged.
-
-Intrinsic project requests use ordinary parameter binding, without file-action
-capture. In particular, empty `Targets` leaves the parameter unset, preserving
-default-target outputs. Capturing it as an empty array previously constructed
-child actions but silently dropped their returned artifacts.
-
-Hardened `ResolveAssemblyReferences` now selects zero-I/O `ResolveReferencePaths`
-over prepared references and explicit project outputs. It normalizes paths
-against captured project context and preserves metadata without opening
-assemblies, checking existence or discovering dependencies. Simple/display
-assembly names fail even with `HintPath`; search tokens, wildcards and invalid
-paths also fail before graph publication. The existing `AssemblySearchPaths`
-guard remains, but its permitted settings do not enable lookup. Stock RAR
-remains ordinary-only, with no ambient discovery or name-resolution fallback.
-Callers must supply the complete reference closure; dependency discovery,
-version unification and related-file/satellite discovery are not implemented.
-
-Child protocol metadata supplies an absolute compile `ReferenceAssembly` and,
-when symbols are published, `DebugSymbolsFile`. Compilation uses the reference
-assembly while runtime publication consumes the implementation DLL and symbols.
-Copy-local uses explicit content-only `CopyFiles` actions, preserves destination
-subdirectories and static `FileWritesShareable`, honors private/framework/copy
-metadata and the common-output opt-out, and rejects link/read-only modes.
-Ordinary RAR, copying and project metadata remain unchanged.
-
-Packaged smoke constructs the SDK executable/library graph from absent binaries,
-executes all twenty actions after MSBuild exits, and starts the executable with
-its renamed library. Copied DLL/PDB bytes match their producers; the dependency
-manifest matches ordinary Build. Shipped-target cases cover generated paths,
-compile/runtime separation, metadata and opt-outs, stale replacement, invalid
-names/options without partial publication, and fatal independent copy failure.
-The ordinary comparison uses a fresh compiler process, not a potentially
-incompatible shared server.
-
-**Bounded execution milestone complete:** Ninja builds the two-project closure
-from clean outputs after MSBuild exits. Broader dependency, platform and
-parallelism profiles remain separate work.
+- [ ] Broaden compiler, reference, dependency, platform, and SDK Build profiles.
+- [ ] Adapt other Copy families and satellite-target directory preparation.
+- [ ] Admit other diagnostic call sites only with explicit audited declarations.
 
 ## 6. Exercise dotnet/runtime
 
-After SDK compilation works, select one bounded managed library under
-`src/runtime/src/libraries` and construct its compile closure. Complete
-restore and prerequisite tool/reference builds beforehand. Use real source
-generation and compiler actions, then expand to managed project-reference
-closures. Treat native runtime/CMake integration as a separate later boundary,
-not a prerequisite for the first managed-library result.
-
-The first real probe selects `System.Collections.Immutable` with
+The next product milestone is `System.Collections.Immutable` with
 `TargetFramework=net10.0` and `BuildTargetFramework=net10.0`. This is runtime's
-`NetCoreAppMinimum`; `NetCoreAppPrevious` is empty in this checkout. An isolated
-`ArtifactsDir` keeps the experiment separate from existing runtime products.
-The evaluated closure still includes the matching reference project and ILLink
-tool/analyzer projects; the older target does not make these dependencies optional.
+`NetCoreAppMinimum`; `NetCoreAppPrevious` is empty in this checkout.
+An isolated `ArtifactsDir` separates the experiment from existing runtime products.
+The real closure includes its matching reference project and ILLink tool/analyzer
+projects; choosing the older framework does not make those dependencies optional.
 
-Source-built package-SDK resolution gets ordinary Restore through the
-pinned Arcade import. The initial preparation probe failed with `NETSDK1247`,
-before assets or a graph were produced: the framework-reference fetch profile
-rejected both the retained `TargetFrameworks` declaration and compiler/API-tool
-`PackageReference` items. Prepared package selection below replaces the package
-rejection and enables asset selection in hardened manifest mode. Configured
-inner builds and their broader tool profiles have not been reprobed or enabled.
-The next slice must prepare each configured
-inner build's resolved package/framework/compiler inputs while preserving child
-framework selection and generated-tool producer edges. It must not prebuild the
-selected library, remove its real references/analyzers, or disable validation.
-Runtime graph construction, Ninja execution, and library tests remain unproven.
+- [x] Select the bounded managed-library profile and isolate its artifacts.
+- [x] Get ordinary Restore through pinned Arcade package-SDK resolution.
+- [x] Implement raw NuGet facts, pure views, and bounded SDK package selection.
+- [ ] Prepare selected configured inner builds despite retained `TargetFrameworks`,
+  preserving child framework negotiation and per-configuration inputs.
+- [ ] Capture/replay package-SDK import bindings without Build-time searches/downloads.
+- [ ] Reprobe and support the actual compiler/API-tool and analyzer requirements,
+  keeping generated tools connected to their producers.
+- [ ] Construct a fresh real-library graph without product binaries.
+- [ ] Execute independently with Ninja and verify output/ordinary compatibility.
+- [ ] Add focused library behavior checks with their genuine test prerequisites.
+
+The earlier preparation probe failed with NETSDK1247 on retained multi-targeting
+and compiler/API-tool package references. Bounded package support removes the
+package rejection, but the configured runtime closure has not been reprobed or
+enabled. No runtime library graph, compilation, or independent execution is proven.
+Do not prebuild the selected library, remove real references/analyzers, or weaken
+validation to complete this milestone. Native/CoreCLR/CMake integration is later.
 
 ### NuGet fact capture
 
-The first preparation piece is
-[`WriteNuGetInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteNuGetInputs.cs).
-Ordinary graph-input preparation captures the complete `project.assets.json`
-to `$(MSBuildProjectExtensionsPath)nugetinputs/$(MSBuildProjectFile).g.props`.
-[`_CaptureNuGetInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/sdk/Sdk.targets)
-also runs through the existing configured-project preparation traversal.
-`NuGetInputsPath` can select a different output path; the source is
-`ProjectAssetsFile`. The target can be explicitly requested after ordinary
-Restore to exercise capture independently of the still-bounded framework profile.
+- [x] Capture the complete ordered assets JSON through
+  [`WriteNuGetInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteNuGetInputs.cs)
+  during ordinary Restore/configured-project preparation.
+- [x] Preserve unknown fields, framework/RID data, dependency/asset metadata,
+  exact number text, null/empty distinctions, case, Unicode, and MSBuild escaping.
+- [x] Read afresh and diagnose missing/malformed data without replacing prior facts.
 
-The import contains `_NuGetInputsFormatVersion`, `_NuGetInputsSourceFile` and
-ordered `_NuGetInput` items. Each identity is `$` followed by JSON Pointer
-segments (`~0` for `~`, `~1` for `/`, numeric array indexes). `Kind` records the
-JSON value type and `Value` records scalar contents. Containers are explicit,
-so null, empty string, empty array and empty object remain distinct. Number
-text, object/array order, case-sensitive keys, unknown fields and literal
-MSBuild syntax survive XML/MSBuild escaping. No package or project output is
-opened while encoding the JSON.
+The default import is `obj/nugetinputs/<project>.g.props`; `NuGetInputsPath`
+overrides it and `ProjectAssetsFile` selects the source. Raw format 1 uses
+`_NuGetInputsFormatVersion`, `_NuGetInputsSourceFile`, and ordered `_NuGetInput`
+items. Identities are `$` plus JSON Pointer segments; `Kind`/`Value` encode nodes,
+with explicit containers. Package/project binaries are not opened for raw capture.
 
-This is the data representation, not a snapshot of asset-selection results.
-The prepared SDK policy below consumes it during hardened construction, while
-the explicit raw-capture path remains usable without discovery context.
-Configured-inner-build framework preparation and migration of other JSON
-consumers remain subsequent work. In particular,
-the declared-I/O dependency/runtime-configuration writers still read their
-declared JSON inputs; the eventual design must replace all consumed NuGet JSON
-data with item/property facts, not stop at selected package-task results.
-
-Focused task coverage checks frameworks/RIDs, future project outputs, package
-and analyzer records, order, types, exact numbers, escaping, BOM input, changed
-contents at unchanged timestamps, and missing/malformed input diagnostics
-without publishing replacement data. Packaged smoke checks preparation
-throughout the SDK project-reference closure, ordinary Restore opt-out, and
-an explicit import into a fresh hardened fixture after deleting the source
-JSON. That fixture is not SDK package consumption or a runtime-library graph.
+These are underlying data, not cached outputs of one policy task. All consumed
+NuGet JSON must eventually use this representation; deps/runtime-config actions
+still reading JSON are an acknowledged intermediate state.
 
 ### NuGet fact consumption
 
-[`ReadNuGetAssets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ReadNuGetAssets.cs)
-is a separate zero-I/O construction task over the prepared items. It validates
-fact format 1, assets versions 3/4, the ordered tree, JSON Pointer escaping,
-scalar types and the requested target's library definitions before returning
-any items. Missing targets, malformed facts and unsupported versions fail with
-`NETSDK1253`; there is no discovery or parser fallback.
+- [x] Validate facts and project an explicitly named assets target through pure
+  [`ReadNuGetAssets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ReadNuGetAssets.cs).
+- [x] Preserve package/project separation, future artifact paths, aliases, locale,
+  RID, placeholders, inventory, and source-fact metadata.
+- [x] Reject invalid facts/targets with NETSDK1253 and no partial outputs.
 
-The caller supplies the exact assets target key, such as `net11.0` or
-`net11.0/linux-x64`; legacy framework-name keys such as
-`.NETCoreApp,Version=v11.0` also work unchanged. The task does not infer aliases, choose a
-nearest framework or merge compile/runtime targets. It returns libraries,
-compile/runtime/native/resource/runtime-target/content/analyzer asset groups,
-dependency ranges and the selected libraries' file inventory. Metadata retains
-the source fact pointer, library identity/type, aliases, locale, RID and content
-attributes. Relative paths, placeholders and project entries remain data, not
-resolved binaries. Unknown fields remain available in the original facts.
-
-Explicitly importing
 [`Microsoft.NET.NuGetInputs.targets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.NuGetInputs.targets)
-loads `NuGetInputsPath` and exposes `_ReadNuGetAssets`. Set `NuGetAssetsTarget`
-to the exact target key; its four outputs are `_NuGetTargetLibrary`,
-`_NuGetTargetAsset`, `_NuGetTargetDependency` and `_NuGetLibraryFile`.
-The SDK now imports this file in hardened inner builds, but `_ReadNuGetAssets`
-still requires an explicit request and exact target key. This raw view neither
-probes package folders nor applies `ResolvePackageAssets` policy such as analyzer
-version filtering, placeholder exclusion or copy-local selection.
+imports the facts in hardened inner builds. Explicit `_ReadNuGetAssets` requests
+take exact `NuGetAssetsTarget` keys and return libraries, assets, dependencies,
+and file inventory. The view supports assets versions 3/4 and legacy framework
+keys; it does not negotiate targets, probe folders, or apply package-selection policy.
 
-The view deliberately does not reconstruct a `LockFile` through NuGet's
-[in-memory reader](../../../../nuget-client/src/NuGet.Core/NuGet.ProjectModel/JsonPackageSpecReader.Utf8JsonStreamReader.cs):
-that reader still obtains ambient macro/environment and
-user-settings context while parsing project restore metadata. Any such
-discovery belongs in Restore, with explicit inputs for later policy.
-
-Focused coverage exercises both assets versions, exact framework/RID isolation,
-metadata/identity escaping, empty targets and invalid fact trees without partial
-results. The packaged fixture deletes both original and synthetic assets JSON,
-constructs the shipped view with nonexistent package paths and future project
-placeholders, and independently publishes ordinary-equivalent values. Missing
-targets and invalid fact formats publish neither a graph nor action invocations.
-These checks establish the raw view alone, separately from the SDK policy below.
+Fact projection avoids NuGet's in-memory project-spec reader because that reader
+still consults ambient macro/environment and user-settings context. A packaged
+fixture constructs/publishes the view with JSON and package files absent.
 
 ### Prepared SDK package selection
 
-Hardened SDK `ResolvePackageAssets` now calls
-[`ResolveNuGetAssets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ResolveNuGetAssets.cs)
-with empty I/O declarations. It validates the raw facts and projects consumed
-fields directly into NuGet model objects through
-[`NuGetAssets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/NuGetAssets.cs),
-without invoking NuGet's ambient project-spec reader. The ordinary task's
-selection policy is shared through an injected model/resolver and direct item
-sink, not a binary cache or an in-memory cache-file round-trip.
+- [x] Select pure
+  [`ResolveNuGetAssets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ResolveNuGetAssets.cs)
+  in hardened `ResolvePackageAssets`, sharing ordinary policy via direct NuGet
+  model projection and an injected resolver/item sink.
+- [x] Capture selected package locations, related-file presence/absence, normalized
+  locales, and compiler API identity during Restore instead of probing during Build.
+- [x] Retain standard reference/analyzer/copy-local/transitive-project composition,
+  package-framework replacement, and implicit-reference/version policy.
+- [x] Run an offline package fixture with distinct compile/runtime assemblies and
+  a genuine compatible C# generator; reject wrong-language/incompatible candidates.
 
-Ordinary graph-input preparation extends the same manifest with context version
-`_NuGetPackageContextVersion=1` and `_NuGetCompilerApiVersion`. The raw fact
-format remains 1. `_NuGetPackageLocation` records each package's normalized
-identity, `PackageDirectory` and selected `PackageRoot`; ordered candidate
-folders alone would not establish the selected root. `_NuGetRelatedFile` records
-explicit presence/absence of related PDB/XML paths. `_NuGetLocale` records the
-original locale, normalized name and validity. Build's
-[`PreparedPackageResolver`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/PreparedPackageResolver.cs)
-requires these facts instead of searching packages, probing related files or
-consulting installed cultures. Missing, duplicate or invalid context fails
-without selected outputs. Explicit raw capture can still opt out of context
-with `MSBuildRestoreGraphInputs=false`.
+Raw fact format remains 1. Separate context version `_NuGetPackageContextVersion=1`
+adds `_NuGetCompilerApiVersion`, `_NuGetPackageLocation` (`PackageDirectory`,
+`PackageRoot`), `_NuGetRelatedFile`, and `_NuGetLocale`. Missing/duplicate/invalid
+context fails rather than falling back to discovery. Explicit raw capture can
+omit discovery context with `MSBuildRestoreGraphInputs=false`.
 
-The existing SDK targets compose `ResolvedCompileFileDefinitions`,
-`ResolvedAnalyzers`, runtime/native/resource copy-local items and transitive
-project references into `Reference`, `Analyzer` and `ReferenceCopyLocalPaths`.
-Compile/reference and runtime implementation paths remain distinct. Restore
-also selects package analyzers before capturing their tool-dependency closure.
-The package/framework replacement checks, implicit-version application and
-implicit-reference override checks run as audited zero-I/O computations;
-ordinary policy and task selection are unchanged.
+Selection runs after deleting JSON/packages. Full graph publication restores
+declared external inputs first: required-file validation is not weakened to prove
+selection's purity. Eleven Ninja actions compile with the reference assembly,
+run the generator, publish the implementation, and start the consumer. Runtime
+implementation bytes and ordinary dependency/runtime-config bytes are checked.
 
-The supported preparation profile is still a single target framework with
-`Microsoft.NETCore.App`, no RID and no retained multi-targeting declaration.
-Content preprocessing, additional framework references, simple framework-assembly
-references and package/framework or duplicate file conflicts that require
-ordinary assembly inspection fail with `NETSDK1254`. Ordinary package resolution,
-its binary cache, and discovery behavior remain unchanged.
+The supported preparation profile remains single-framework `Microsoft.NETCore.App`,
+without RID or retained multi-targeting. Unsupported content preprocessing,
+additional frameworks, simple framework-assembly names, and conflicts requiring
+assembly inspection fail with NETSDK1254. Ordinary package discovery/cache behavior
+is unchanged. See the [package fixture](../../../../../genbuild/tests/PackageReferences.csproj).
 
-The offline [package fixture](../../../../../genbuild/tests/PackageReferences.csproj)
-and [smoke target](../../../../../genbuild/tests/Smoke.proj) remove assets JSON
-and the isolated package directory before selection, then independently publish
-the selected paths. They restore external inputs before full Build graph
-publication: the engine still validates declared input files, and dependency/
-runtime-config actions still declare JSON reads. No consumer is prebuilt.
-Eleven independent actions compile against the reference assembly, run only the
-compatible C# generator, publish the runtime implementation and start the
-consumer on an SDK-free external runtime. Dependency/runtime-config JSON matches
-ordinary Build, and runtime assembly bytes match the package implementation.
-Missing location/context cases publish neither graph nor action invocations.
-This proves bounded SDK PackageReference execution, not configured runtime
-library support or completion of the remaining JSON-consumer migration.
+- [ ] Extend preparation for the real configured runtime closure above.
+- [ ] Migrate remaining NuGet JSON consumers to facts without changing output semantics.
+- [ ] Broaden package policy only through explicit supported profiles.
 
 ## After the prototype
 
-General sandbox enforcement is deliberately deferred. Current admission trusts
-task contracts and analyzers'/generators' nominal compiler-input-only contract;
-it does not require a per-plugin audit/allowlist, and the action host is not a
-security sandbox. This delay does not weaken DeclaredIO's determinism and
-machine-independence requirements. Future enforcement must cover declared-only
-reads, output/private-scratch writes, transitive tool/plugin access, network and
-ambient context, and fail explicitly on violations. It must preserve the
-distinction between engine graph-input discovery and zero-I/O task execution.
-See [sandbox requirements](hardened-static-graph.md#sandbox-enforcement-deferred);
-confinement complements, rather than replaces, determinism and relocation checks.
+- [ ] Add general sandbox enforcement for task/tool/plugin reads, output/private-
+  scratch writes, aliases/symlinks, network, and ambient context. Violations must
+  fail, not expand declarations. The action host is not a security sandbox.
+- [ ] Add executor-owned cleaning and persistent ownership for safe obsolete-
+  output pruning; never infer ownership from arbitrary directory contents.
+- [ ] Integrate content caching and lazy artifact materialization independently
+  of task implementations and Ninja's timestamp rules.
+- [ ] Add [named products](hardened-named-products.md): catalog validation,
+  producer-closure selection, and Ninja roots.
+- [ ] Address generalized fetch, richer file effects/failure control, deferred
+  values, graph relocation, and persistent analysis as separate work.
 
-[Named products](hardened-named-products.md) can add catalog validation,
-producer-closure selection, and Ninja roots. Content caching and lazy artifact
-materialization need separate standalone integration; Ninja timestamps are
-not that cache. Generalized fetch, richer file effects and failure control,
-deferred values, relocation, and persistent analysis remain separate work.
+Deferred enforcement does not defer determinism or machine independence.
+Preserve the distinction between engine graph-input discovery, zero-I/O
+construction, and independently executed file transformations. See the
+[sandbox requirements](hardened-static-graph.md#sandbox-enforcement-deferred).
