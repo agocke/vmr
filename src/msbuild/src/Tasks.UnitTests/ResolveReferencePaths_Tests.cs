@@ -3,6 +3,7 @@
 
 using System.IO;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Shared;
 using Microsoft.Build.UnitTests;
 using Microsoft.Build.Utilities;
 using Shouldly;
@@ -41,6 +42,37 @@ public sealed class ResolveReferencePaths_Tests(ITestOutputHelper output)
         task.CopyLocalFiles.Length.ShouldBe(2);
         reference.ItemSpec.ShouldBe("missing/renamed.dll");
         reference.GetMetadata("CopyLocal").ShouldBeEmpty();
+        Directory.Exists(Path.Combine(root, "missing")).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("%3B")]
+    [InlineData("%24(Value)")]
+    [InlineData("%25")]
+    public void PreservesLiteralEscapesInPathsAndProjectMetadata(string literal)
+    {
+        using TestEnvironment env = TestEnvironment.Create(output);
+        string root = Path.Combine(env.CreateFolder().Path, "checkout" + literal);
+        string project = $"../Project{literal}/Project.csproj";
+        TaskItem reference = new(EscapingUtilities.Escape($"missing/renamed{literal}.dll"));
+        reference.SetMetadata("ReferenceAssembly", EscapingUtilities.Escape($"missing/ref/renamed{literal}.dll"));
+        reference.SetMetadata("DebugSymbolsFile", EscapingUtilities.Escape($"missing/renamed{literal}.pdb"));
+        reference.SetMetadata("ReferenceSourceTarget", "ProjectReference");
+        reference.SetMetadata("OriginalProjectReferenceItemSpec", EscapingUtilities.Escape(project));
+        ResolveReferencePaths task = CreateTask(root, reference);
+
+        task.Execute().ShouldBeTrue();
+
+        string assembly = Path.Combine(root, "missing", $"renamed{literal}.dll");
+        string symbols = Path.Combine(root, "missing", $"renamed{literal}.pdb");
+        ITaskItem resolved = task.ResolvedFiles.ShouldHaveSingleItem();
+        resolved.ItemSpec.ShouldBe(assembly);
+        resolved.GetMetadata("ReferenceAssembly").ShouldBe(Path.Combine(root, "missing", "ref", $"renamed{literal}.dll"));
+        resolved.GetMetadata("DebugSymbolsFile").ShouldBe(symbols);
+        resolved.GetMetadata("ProjectReferenceOriginalItemSpec").ShouldBe(project);
+        task.RelatedFiles.ShouldHaveSingleItem().ItemSpec.ShouldBe(symbols);
+        task.CopyLocalFiles.ShouldBe(new[] { resolved, task.RelatedFiles[0] });
+        reference.ItemSpec.ShouldBe($"missing/renamed{literal}.dll");
         Directory.Exists(Path.Combine(root, "missing")).ShouldBeFalse();
     }
 

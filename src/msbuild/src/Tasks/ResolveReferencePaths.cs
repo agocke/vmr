@@ -53,7 +53,7 @@ public sealed class ResolveReferencePaths : TaskExtension, IMultiThreadableTask
                 return false;
             }
 
-            TaskItem reference = new(source) { ItemSpec = path };
+            TaskItem reference = new(source) { ItemSpec = EscapingUtilities.Escape(path) };
             if (!TryGetBoolean(reference, "FrameworkFile", false, out bool frameworkFile)
                 || !TryGetBoolean(reference, "CopyLocal", !frameworkFile, out bool copy)
                 || !TryGetBoolean(reference, "Private", copy, out copy))
@@ -69,7 +69,7 @@ public sealed class ResolveReferencePaths : TaskExtension, IMultiThreadableTask
             if (string.Equals(reference.GetMetadata("ReferenceSourceTarget"), "ProjectReference", StringComparison.OrdinalIgnoreCase)
                 && reference.GetMetadata("ProjectReferenceOriginalItemSpec").Length == 0)
             {
-                reference.SetMetadata("ProjectReferenceOriginalItemSpec", reference.GetMetadata("OriginalProjectReferenceItemSpec"));
+                reference.SetMetadata("ProjectReferenceOriginalItemSpec", EscapingUtilities.Escape(reference.GetMetadata("OriginalProjectReferenceItemSpec")));
             }
 
             string referenceAssembly = reference.GetMetadata("ReferenceAssembly");
@@ -79,7 +79,7 @@ public sealed class ResolveReferencePaths : TaskExtension, IMultiThreadableTask
                 {
                     return false;
                 }
-                reference.SetMetadata("ReferenceAssembly", referencePath);
+                reference.SetMetadata("ReferenceAssembly", EscapingUtilities.Escape(referencePath));
             }
 
             resolved.Add(reference);
@@ -96,8 +96,8 @@ public sealed class ResolveReferencePaths : TaskExtension, IMultiThreadableTask
                     return false;
                 }
 
-                reference.SetMetadata("DebugSymbolsFile", symbolsPath);
-                TaskItem symbols = new(reference) { ItemSpec = symbolsPath };
+                reference.SetMetadata("DebugSymbolsFile", EscapingUtilities.Escape(symbolsPath));
+                TaskItem symbols = new(reference) { ItemSpec = EscapingUtilities.Escape(symbolsPath) };
                 related.Add(symbols);
                 if (copy)
                 {
