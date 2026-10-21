@@ -55,7 +55,7 @@ captures only I/O results in Restore; property derivation remains shared.
   </PropertyGroup>
 
   <Target Name="_WritePlatformSDKRestoreImport"
-          BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework;_CaptureHardenedGraphInputs"
           AfterTargets="Restore"
           Condition="('$(MSBuildRestoreGraphInputs)' == 'true' or '$(MSBuildRestorePlatformSDK)' == 'true') and '$(MSBuildHardenedGraph)' != 'true'">
     <ItemGroup>

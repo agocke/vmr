@@ -986,7 +986,7 @@ namespace FrameworkReferenceTest
             var project = CreateFrameworkManifestTestProject();
             var asset = TestAssetsManager.CreateTestProject(project, identifier: captureGraphInputs.ToString());
             string projectFolder = Path.Combine(asset.TestRoot, project.Name);
-            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name);
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name, captureGraphInputs);
 
             new MSBuildCommand(asset, "Restore")
                 .ExecuteWithoutRestore($"-p:MSBuildRestoreGraphInputs={captureGraphInputs}")
@@ -1001,7 +1001,7 @@ namespace FrameworkReferenceTest
             var project = CreateFrameworkManifestTestProject();
             var asset = TestAssetsManager.CreateTestProject(project);
             string projectFolder = Path.Combine(asset.TestRoot, project.Name);
-            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name);
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name, captureGraphInputs: true);
 
             new MSBuildCommand(asset, "Restore")
                 .ExecuteWithoutRestore("-p:MSBuildRestoreGraphInputs=true")
@@ -1031,7 +1031,7 @@ namespace FrameworkReferenceTest
                 MetadataNames = { "ReferenceSourceTarget" },
             };
 
-            references.ExecuteWithoutRestore("-p:EnableFrameworkReferenceFetchManifest=true")
+            references.ExecuteWithoutRestore("-p:EnableFrameworkReferenceFetchManifest=true", $"-p:FrameworkReferenceFetchManifestPath={manifestPath}")
                 .Should().Pass();
             references.GetValuesWithMetadata().Should().NotBeEmpty()
                 .And.OnlyContain(reference => reference.metadata["ReferenceSourceTarget"] == "FrameworkReferenceManifest");
@@ -1330,8 +1330,10 @@ namespace FrameworkReferenceTest
             return project;
         }
 
-        private static string GetFrameworkReferenceFetchManifestPath(string projectFolder, string projectName)
-            => Path.Combine(projectFolder, "obj", "frameworkreferences", $"{projectName}.csproj.g.props");
+        private static string GetFrameworkReferenceFetchManifestPath(string projectFolder, string projectName, bool captureGraphInputs = false)
+            => captureGraphInputs
+                ? Path.Combine(projectFolder, "obj", "frameworkreferences", "Debug", "AnyCPU", ToolsetInfo.CurrentTargetFramework, $"{projectName}.csproj.g.props")
+                : Path.Combine(projectFolder, "obj", "frameworkreferences", $"{projectName}.csproj.g.props");
 
         private static void AddUnsupportedFrameworkReferenceFetchManifestInput(
             string projectPath,

@@ -58,7 +58,7 @@
     <MakeDir Directories="$(_LegacyCleanFile)" />
     <WriteLinesToFile File="$(_LegacyCleanFile).hardened.props" Lines="not an MSBuild project" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)HelloWorld.csproj&quot; $(_SdkArguments) -bl:&quot;$(_TestDirectory)restore-{}.binlog&quot;" />
-    <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props') or !Exists('$(_TestDirectory)obj/nugetinputs/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture NuGet and framework-reference inputs using the app's targets." />
+    <Error Condition="!Exists('$(_TestDirectory)obj/project.assets.json') or !Exists('$(_TestDirectory)obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props') or !Exists('$(_TestDirectory)obj/nugetinputs/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props')" Text="SDK restore must produce assets and capture NuGet and framework-reference inputs using the app's targets." />
     <CallTarget Targets="TestNuGetInputs" />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)HelloWorld.csproj&quot; $(_SdkArguments) -p:MSBuildEmitActionGraph=&quot;$(_SdkGraph)&quot; -bl:&quot;$(_TestDirectory)sdk-build-{}.binlog&quot;" />
     <Error Condition="!Exists('$(_SdkGraph)') or !Exists('$(_SdkGraph).actions') or Exists('$(_TestDirectory)obj/Debug/net11.0/HelloWorld.dll') or Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.dll') or Exists('$(_TestDirectory)obj/Debug/net11.0/.NETCoreApp,Version=v11.0.AssemblyAttributes.cs')"
@@ -68,10 +68,14 @@
     </ReadLinesFromFile>
     <Error Condition="'$(_LegacyCleanSnapshot)' != 'not an MSBuild project' or $([System.IO.File]::ReadAllText('$(_SdkGraph)').Contains('FileListAbsolute.txt'))"
            Text="Restore and graph construction must ignore obsolete clean snapshots and ledger state." />
-    <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+    <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
       <Output TaskParameter="Result" ItemName="_CompileReference" />
     </XmlPeek>
     <Error Condition="'@(_CompileReference)' == ''" Text="Restore did not capture compiler reference inputs." />
+    <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestRuntimeFramework/@Include">
+      <Output TaskParameter="Result" ItemName="_PreparedRuntimeFramework" />
+    </XmlPeek>
+    <Error Condition="'@(_PreparedRuntimeFramework)' != 'Microsoft.NETCore.App'" Text="Preparation must capture only the runtime frameworks selected by the project's targeting packs." />
     <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f &quot;$(_SdkGraph)&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.dll') or !Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.pdb') or !Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.deps.json') or !Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.runtimeconfig.json')"
            Text="Independent SDK graph execution must publish its assembly, symbols and runtime manifests." />
@@ -80,6 +84,7 @@
     </Exec>
     <Error Condition="'@(_SdkProgramOutput)' != 'Hello from genbuild.'" Text="The program built by the SDK action graph did not run correctly on the external runtime." />
     <CallTarget Targets="TestProjectReferences" />
+    <CallTarget Targets="TestConfiguredPreparation" />
     <CallTarget Targets="TestPackageReferences" />
     <WriteLinesToFile File="$(_TestDirectory)compile.rsp" Lines="@(_CompileReference->'-r:&quot;%(Identity)&quot;');&quot;$(_TestDirectory)HelloWorld.cs&quot;" Overwrite="true" />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_TestDirectory)HelloWorld.dll&quot; @&quot;$(_TestDirectory)compile.rsp&quot;" />
@@ -89,6 +94,82 @@
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
     <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, Restore-only package-SDK resolution, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-reference execution and startup, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestConfiguredPreparation">
+    <PropertyGroup>
+      <_ConfiguredRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'configured-preparation'))</_ConfiguredRoot>
+      <_ConfiguredHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_ConfiguredHostOS>
+      <_ConfiguredHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_ConfiguredHostOS>
+      <_ConfiguredHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_ConfiguredHostOS>
+      <_ConfiguredHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_ConfiguredHostOS>
+      <_ConfiguredArguments>-p:DirectoryBuildPropsPath=&quot;$(_ConfiguredRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_ConfiguredRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_ConfiguredRoot)Directory.Packages.props&quot; -p:MSBuildGraphHostOS=$(_ConfiguredHostOS) -p:PreparationMarker=parent -p:ParentOnlyProperty=parent</_ConfiguredArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_ConfiguredRoot)Parent;$(_ConfiguredRoot)Child" />
+    <WriteLinesToFile File="$(_ConfiguredRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_ConfiguredRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_ConfiguredRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ConfiguredPreparation.csproj;$(MSBuildThisFileDirectory)ConfiguredPreparation.csproj"
+          DestinationFiles="$(_ConfiguredRoot)Parent/Parent.csproj;$(_ConfiguredRoot)Child/Child.csproj" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/App/Program.cs;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs"
+          DestinationFiles="$(_ConfiguredRoot)Parent/Program.cs;$(_ConfiguredRoot)Child/Greeting.cs" />
+    <WriteLinesToFile File="$(_ConfiguredRoot)Parent/Debug.inputs" Lines="parent debug" Overwrite="true" />
+    <WriteLinesToFile File="$(_ConfiguredRoot)Parent/Release.inputs" Lines="parent release" Overwrite="true" />
+    <WriteLinesToFile File="$(_ConfiguredRoot)Child/Release.inputs" Lines="child release" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:TargetFramework=net11.0 -p:Configuration=Debug -bl:&quot;$(_ConfiguredRoot)debug-restore.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:TargetFramework=net10.0 -p:Configuration=Debug -bl:&quot;$(_ConfiguredRoot)net10-restore.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:TargetFramework=net11.0 -p:Configuration=Release -bl:&quot;$(_ConfiguredRoot)release-restore.binlog&quot;" />
+    <ItemGroup>
+      <_ConfiguredSnapshot Include="$(_ConfiguredRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props;$(_ConfiguredRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net10.0/Parent.csproj.g.props;$(_ConfiguredRoot)Parent/obj/frameworkreferences/Release/AnyCPU/net11.0/Parent.csproj.g.props;$(_ConfiguredRoot)Child/obj/frameworkreferences/Release/AnyCPU/net10.0/Child.csproj.g.props" />
+      <_ConfiguredSnapshot Include="$(_ConfiguredRoot)Parent/obj/nugetinputs/Debug/AnyCPU/net11.0/Parent.csproj.g.props;$(_ConfiguredRoot)Parent/obj/nugetinputs/Debug/AnyCPU/net10.0/Parent.csproj.g.props;$(_ConfiguredRoot)Parent/obj/nugetinputs/Release/AnyCPU/net11.0/Parent.csproj.g.props;$(_ConfiguredRoot)Child/obj/nugetinputs/Release/AnyCPU/net10.0/Child.csproj.g.props" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(_ConfiguredSnapshot.Identity)')" Text="Missing configured preparation snapshot: %(_ConfiguredSnapshot.Identity)" />
+    <Error Condition="Exists('$(_ConfiguredRoot)Parent/bin') or Exists('$(_ConfiguredRoot)Child/bin') or Exists('$(_ConfiguredRoot)Child/obj/cscinputs/Debug') or Exists('$(_ConfiguredRoot)Child/obj/cscinputs/Release/AnyCPU/net11.0')"
+           Text="Preparation must not build products or force the parent's configuration/framework onto its child." />
+    <XmlPeek XmlInputPath="$(_ConfiguredRoot)Parent/obj/cscinputs/Debug/AnyCPU/net11.0/Parent.csproj.g.props" Query="/Project/ItemGroup/_CscPreparedToolInput/@Include">
+      <Output TaskParameter="Result" ItemName="_ConfiguredDebugInput" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_ConfiguredRoot)Parent/obj/cscinputs/Release/AnyCPU/net11.0/Parent.csproj.g.props" Query="/Project/ItemGroup/_CscPreparedToolInput/@Include">
+      <Output TaskParameter="Result" ItemName="_ConfiguredReleaseInput" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_ConfiguredRoot)Child/obj/cscinputs/Release/AnyCPU/net10.0/Child.csproj.g.props" Query="/Project/ItemGroup/_CscPreparedToolInput/@Include">
+      <Output TaskParameter="Result" ItemName="_ConfiguredChildInput" />
+    </XmlPeek>
+    <PropertyGroup>
+      <_ConfiguredDebugInputs>@(_ConfiguredDebugInput)</_ConfiguredDebugInputs>
+      <_ConfiguredReleaseInputs>@(_ConfiguredReleaseInput)</_ConfiguredReleaseInputs>
+      <_ConfiguredChildInputs>@(_ConfiguredChildInput)</_ConfiguredChildInputs>
+    </PropertyGroup>
+    <Error Condition="!$(_ConfiguredDebugInputs.Contains('Debug.inputs')) or $(_ConfiguredDebugInputs.Contains('Release.inputs')) or !$(_ConfiguredReleaseInputs.Contains('Release.inputs')) or !$(_ConfiguredChildInputs.Contains('Release.inputs'))"
+           Text="Compiler inputs must remain distinct across configured preparations." />
+    <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:Configuration=Debug -bl:&quot;$(_ConfiguredRoot)outer-build-rejected.binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ConfiguredOuterExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_ConfiguredOuterOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_ConfiguredOuterLog>@(_ConfiguredOuterOutput)</_ConfiguredOuterLog>
+    </PropertyGroup>
+    <Error Condition="'$(_ConfiguredOuterExit)' == '0' or !$(_ConfiguredOuterLog.Contains('NETSDK1247')) or Exists('$(_ConfiguredRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/Parent.csproj.g.props') or Exists('$(_ConfiguredRoot)Parent/obj/genbuild/build.ninja')"
+           Text="Outer preparation must require a selected framework and publish neither outer snapshots nor a graph." />
+    <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:TargetFramework=net11.0 -p:Configuration=Debug -p:ForcePreparationBuild=true -bl:&quot;$(_ConfiguredRoot)product-build-rejected.binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ConfiguredProductBuildExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_ConfiguredProductBuildOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_ConfiguredProductBuildLog>@(_ConfiguredProductBuildOutput)</_ConfiguredProductBuildLog>
+    </PropertyGroup>
+    <Error Condition="'$(_ConfiguredProductBuildExit)' == '0' or !$(_ConfiguredProductBuildLog.Contains('Graph-input preparation cannot build project outputs')) or Exists('$(_ConfiguredRoot)Parent/bin') or Exists('$(_ConfiguredRoot)Child/bin')"
+           Text="Preparation must explicitly reject attempts to prebuild product or tool outputs." />
+    <Exec Command="$(_App) build &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:TargetFramework=net11.0 -p:Configuration=Debug -p:MSBuildEmitActionGraph=&quot;$(_ConfiguredRoot)build.ninja&quot; -bl:&quot;$(_ConfiguredRoot)build.binlog&quot;" />
+    <Error Condition="Exists('$(_ConfiguredRoot)Parent/bin/Debug/net11.0/Parent.dll') or Exists('$(_ConfiguredRoot)Child/bin/Release/net10.0/Child.dll')"
+           Text="Configured graph construction must not compile products." />
+    <Exec WorkingDirectory="$(_ConfiguredRoot)Parent" Command="ninja -f &quot;$(_ConfiguredRoot)build.ninja&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_ConfiguredRoot)Parent/bin/Debug/net11.0/Parent.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ConfiguredProgramOutput" />
+    </Exec>
+    <Error Condition="'$(_ConfiguredProgramOutput)' != 'Hello from a project reference.' or !Exists('$(_ConfiguredRoot)Child/bin/Release/net10.0/Child.dll')"
+           Text="Configured preparation must support independent compilation with the negotiated child." />
   </Target>
   <Target Name="TestPackageReferences">
     <PropertyGroup>
@@ -102,13 +183,13 @@
     <WriteLinesToFile File="$(_PackageRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_PackageRoot)seed" />
     <Exec Command="$(_App) restore &quot;$(_PackageRoot)seed/HelloWorld.csproj&quot; $(_PackageSeedArguments) -bl:&quot;$(_PackageRoot)seed.binlog&quot;" />
-    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/frameworkreferences/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
       <Output TaskParameter="Result" ItemName="_PackageCompilerReference" />
     </XmlPeek>
-    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/nugetinputs/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_NuGetInput[@Include='%2524/project/restore/packagesPath']/Value/text()">
+    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/nugetinputs/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_NuGetInput[@Include='%2524/project/restore/packagesPath']/Value/text()">
       <Output TaskParameter="Result" PropertyName="_PackageSeedCache" />
     </XmlPeek>
-    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/frameworkreferences/HelloWorld.csproj.g.props" Query="(/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/NuGetPackageVersion/text())[1]">
+    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="(/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/NuGetPackageVersion/text())[1]">
       <Output TaskParameter="Result" PropertyName="_PackageFrameworkVersion" />
     </XmlPeek>
     <ItemGroup>
@@ -126,8 +207,8 @@
     <ZipDirectory SourceDirectory="$(_PackageRoot)package" DestinationFile="$(_PackageRoot)feed/GenBuild.Smoke.Package.1.0.0.nupkg" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)PackageReferences.csproj;$(MSBuildThisFileDirectory)PackageProgram.cs" DestinationFolder="$(_PackageRoot)app" />
     <Exec Command="$(_App) restore &quot;$(_PackageRoot)app/PackageReferences.csproj&quot; $(_PackageArguments) -bl:&quot;$(_PackageRoot)restore.binlog&quot;" />
-    <Error Condition="Exists('$(_PackageRoot)app/bin') or !Exists('$(_PackageRoot)app/obj/nugetinputs/PackageReferences.csproj.g.props')" Text="Package preparation must capture context without compiling the consumer." />
-    <XmlPeek XmlInputPath="$(_PackageRoot)app/obj/nugetinputs/PackageReferences.csproj.g.props" Query="/Project/PropertyGroup/_NuGetPackageContextVersion/text()">
+    <Error Condition="Exists('$(_PackageRoot)app/bin') or !Exists('$(_PackageRoot)app/obj/nugetinputs/Debug/AnyCPU/net11.0/PackageReferences.csproj.g.props')" Text="Package preparation must capture context without compiling the consumer." />
+    <XmlPeek XmlInputPath="$(_PackageRoot)app/obj/nugetinputs/Debug/AnyCPU/net11.0/PackageReferences.csproj.g.props" Query="/Project/PropertyGroup/_NuGetPackageContextVersion/text()">
       <Output TaskParameter="Result" PropertyName="_PackageContextVersion" />
     </XmlPeek>
     <Error Condition="'$(_PackageContextVersion)' != '1'" Text="Restore must capture the package-discovery context." />
@@ -161,7 +242,7 @@
     </Exec>
     <Error Condition="'@(_PackageProgramOutput)' != 'runtime package implementation + package generator ran'"
            Text="Independent compilation must use the package generator and publish its runtime implementation." />
-    <Exec Command="$(_App) restore &quot;$(_PackageRoot)app/PackageReferences.csproj&quot; $(_PackageArguments) -t:Build -p:UseSharedCompilation=false -p:OutputPath=&quot;$(_PackageRoot)ordinary/bin/&quot; -p:IntermediateOutputPath=&quot;$(_PackageRoot)ordinary/obj/&quot; -bl:&quot;$(_PackageRoot)ordinary.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_PackageRoot)app/PackageReferences.csproj&quot; $(_PackageArguments) -p:MSBuildRestoreGraphInputs=false -t:Build -p:UseSharedCompilation=false -p:OutputPath=&quot;$(_PackageRoot)ordinary/bin/&quot; -p:IntermediateOutputPath=&quot;$(_PackageRoot)ordinary/obj/&quot; -bl:&quot;$(_PackageRoot)ordinary.binlog&quot;" />
     <Error Condition="$([System.IO.File]::ReadAllText('$(_PackageRoot)app/bin/Debug/net11.0/PackageReferences.deps.json')) != $([System.IO.File]::ReadAllText('$(_PackageRoot)ordinary/bin/PackageReferences.deps.json')) or $([System.IO.File]::ReadAllText('$(_PackageRoot)app/bin/Debug/net11.0/PackageReferences.runtimeconfig.json')) != $([System.IO.File]::ReadAllText('$(_PackageRoot)ordinary/bin/PackageReferences.runtimeconfig.json'))"
            Text="Package dependency and runtime manifests must preserve ordinary Build semantics." />
     <GetFileHash Files="$(_PackageRoot)packages/genbuild.smoke.package/1.0.0/lib/net11.0/PackageApi.dll;$(_PackageRoot)app/bin/Debug/net11.0/PackageApi.dll;$(_PackageRoot)ordinary/bin/PackageApi.dll">
@@ -283,7 +364,7 @@
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/Library/Actions.proj;$(MSBuildThisFileDirectory)ProjectReference/Library/Library.csproj;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs" DestinationFolder="$(_ProjectReferenceRoot)Library" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/App/App.csproj;$(MSBuildThisFileDirectory)ProjectReference/App/Program.cs" DestinationFolder="$(_ProjectReferenceRoot)App" />
     <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)App/App.csproj&quot; $(_ProjectReferenceArguments) -bl:&quot;$(_ProjectReferenceRoot)restore.binlog&quot;" />
-    <Error Condition="!Exists('$(_ProjectReferenceRoot)App/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)Library/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)App/obj/frameworkreferences/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/frameworkreferences/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/cscinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/cscinputs/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/nugetinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/nugetinputs/Library.csproj.g.props')"
+    <Error Condition="!Exists('$(_ProjectReferenceRoot)App/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)Library/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)App/obj/frameworkreferences/Debug/AnyCPU/net11.0/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/frameworkreferences/Debug/AnyCPU/net11.0/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/cscinputs/Debug/AnyCPU/net11.0/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/cscinputs/Debug/AnyCPU/net11.0/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/nugetinputs/Debug/AnyCPU/net11.0/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/nugetinputs/Debug/AnyCPU/net11.0/Library.csproj.g.props')"
            Text="SDK Restore must prepare NuGet/framework/compiler inputs throughout the project-reference closure." />
     <Error Condition="Exists('$(_ProjectReferenceRoot)App/bin') or Exists('$(_ProjectReferenceRoot)Library/bin') or Exists('$(_ProjectReferenceRoot)App/obj/Debug/net11.0/App.dll') or Exists('$(_ProjectReferenceRoot)Library/obj/Debug/net11.0/Renamed.Library.dll')"
            Text="Project-reference preparation must not prebuild referenced assemblies." />
@@ -341,7 +422,7 @@
     <Error Condition="'@(_SdkProjectReferenceProgramOutput)' != 'Hello from a project reference.'"
            Text="The independently built SDK executable must load and call its renamed project-reference implementation." />
     <Copy SourceFiles="$(_ProjectReferenceRoot)App/bin/Debug/net11.0/App.deps.json" DestinationFiles="$(_ProjectReferenceRoot)independent.deps.json" />
-    <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)App/App.csproj&quot; -t:Build $(_ProjectReferenceArguments) -p:UseSharedCompilation=false -bl:&quot;$(_ProjectReferenceRoot)sdk-ordinary.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)App/App.csproj&quot; -t:Build $(_ProjectReferenceArguments) -p:MSBuildRestoreGraphInputs=false -p:UseSharedCompilation=false -bl:&quot;$(_ProjectReferenceRoot)sdk-ordinary.binlog&quot;" />
     <GetFileHash Files="$(_ProjectReferenceRoot)independent.deps.json;$(_ProjectReferenceRoot)App/bin/Debug/net11.0/App.deps.json">
       <Output TaskParameter="Items" ItemName="_SdkProjectReferenceDepsHash" />
     </GetFileHash>
@@ -573,7 +654,7 @@
     <MakeDir Directories="@(_CopyRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)CopyOutputs.proj;$(MSBuildThisFileDirectory)Csc.proj" DestinationFolder="%(_CopyRoot.Identity)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_CopyRoot.Identity)Program.cs" />
-    <Copy SourceFiles="$(_TestDirectory)copies/obj/frameworkreferences/HelloWorld.csproj.g.props" DestinationFiles="%(_CopyRoot.Identity)FrameworkInputs.props" />
+    <Copy SourceFiles="$(_TestDirectory)copies/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_CopyRoot.Identity)FrameworkInputs.props" />
     <WriteLinesToFile File="%(_CopyRoot.Identity)CopyOutputs.targets" Lines="&lt;Project&gt;;@(_CopyOutputTarget);&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)copies/%(_CopyCase.Identity)/project/CopyOutputs.proj&quot; -p:TestCase=%(_CopyCase.Mode)" />
     <MakeDir Directories="$(_TestDirectory)copies/stale/project/out/ref;$(_TestDirectory)copies/stale/project/obj/copy.marker" />
@@ -791,7 +872,7 @@
     <MakeDir Directories="@(_DepsRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Deps.proj;$(MSBuildThisFileDirectory)Csc.proj" DestinationFolder="%(_DepsRoot.Identity)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_DepsRoot.Identity)Program.cs" />
-    <Copy SourceFiles="$(_TestDirectory)deps/obj/frameworkreferences/HelloWorld.csproj.g.props" DestinationFiles="%(_DepsRoot.Identity)FrameworkInputs.props" />
+    <Copy SourceFiles="$(_TestDirectory)deps/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_DepsRoot.Identity)FrameworkInputs.props" />
     <WriteLinesToFile File="%(_DepsRoot.Identity)Deps.targets" Lines="&lt;Project&gt;;$(_DepsTargetXml);&lt;/Project&gt;" Overwrite="true" />
     <WriteLinesToFile File="%(_DepsRoot.Identity)Version.cs"
                       Lines="[assembly: System.Reflection.AssemblyVersion(&quot;3.4.5.6&quot;)];[assembly: System.Reflection.AssemblyFileVersion(&quot;7.8.9.10&quot;)]" Overwrite="true" />
@@ -853,7 +934,7 @@
     <MakeDir Directories="@(_CscRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.proj" DestinationFiles="%(_CscRoot.Identity)Csc.proj" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_CscRoot.Identity)Program.cs" />
-    <Copy SourceFiles="$(_TestDirectory)csc/obj/frameworkreferences/HelloWorld.csproj.g.props" DestinationFiles="%(_CscRoot.Identity)FrameworkInputs.props" />
+    <Copy SourceFiles="$(_TestDirectory)csc/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_CscRoot.Identity)FrameworkInputs.props" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/%(_CscCase.Identity)/project/Csc.proj&quot;" />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/Csc.proj&quot;" />
     <Error Condition="Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Generated.cs') or Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Hello.dll')"

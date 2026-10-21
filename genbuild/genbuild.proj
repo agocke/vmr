@@ -78,6 +78,9 @@
       <_SourceLinkBuild Include="$(GenBuildRoot)src/sourcelink/src/%(SourceLink.Source)/build/**/*">
         <Package>%(SourceLink.Identity)</Package>
       </_SourceLinkBuild>
+      <_SourceLinkMultiTargetingBuild Include="$(GenBuildRoot)src/sourcelink/src/%(SourceLink.Source)/buildMultiTargeting/**/*">
+        <Package>%(SourceLink.Identity)</Package>
+      </_SourceLinkMultiTargetingBuild>
       <_SourceLinkTask Include="$(_SourceLinkOutput)%(SourceLink.Identity)/$(Configuration)/net10.0/**/*">
         <Package>%(SourceLink.Identity)</Package>
       </_SourceLinkTask>
@@ -92,6 +95,7 @@
     <Copy SourceFiles="@(_PruneData)" DestinationFiles="@(_PruneData->'$(GenBuildToolsetDirectory)PrunePackageData/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_RoslynTask)" DestinationFolder="$(GenBuildToolsetDirectory)Roslyn/" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_SourceLinkBuild)" DestinationFiles="@(_SourceLinkBuild->'$(GenBuildToolsetDirectory)Sdks/%(Package)/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_SourceLinkMultiTargetingBuild)" DestinationFiles="@(_SourceLinkMultiTargetingBuild->'$(GenBuildToolsetDirectory)Sdks/%(Package)/buildMultiTargeting/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_SourceLinkTask)" DestinationFiles="@(_SourceLinkTask->'$(GenBuildToolsetDirectory)Sdks/%(Package)/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <ItemGroup>
       <_NetAnalyzerBuild Include="$(_NetAnalyzers)Build/**/*" />

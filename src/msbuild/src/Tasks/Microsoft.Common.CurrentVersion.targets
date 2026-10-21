@@ -5993,7 +5993,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     -->
   <Target
       Name="_WriteHardenedUnmanagedRegistrationCacheImport"
-      BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
+      BeforeTargets="_GenerateProjectRestoreGraphPerFramework;_CaptureHardenedGraphInputs"
       AfterTargets="Restore"
       Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
 
@@ -6005,15 +6005,44 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
   </Target>
 
-  <Target Name="_PrepareHardenedGraphInputs"
-          DependsOnTargets="$(MSBuildPrepareGraphInputsDependsOn)" />
+  <Target Name="_PrepareHardenedGraphInputs">
+    <!-- Restore each selected configuration without forcing its framework onto dependencies. -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="Restore"
+             Properties="MSBuildRestoreGraphInputs=false;EnableFrameworkReferenceFetchManifest=false"
+             RemoveProperties="TargetFramework"
+             BuildInParallel="false" />
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="_CaptureHardenedGraphInputs"
+             Properties="_MSBuildCapturingGraphInputs=true"
+             BuildInParallel="false" />
+  </Target>
+
+  <Target Name="_RejectProductBuildDuringGraphPreparation"
+          BeforeTargets="PrepareForBuild;CoreCompile"
+          Condition="'$(MSBuildHardenedGraph)' != 'true' and
+                     ('$(MSBuildRestoreGraphInputs)' == 'true' or '$(_MSBuildPreparingGraphInputs)' == 'true')">
+    <Error Text="Graph-input preparation cannot build project outputs for '$(MSBuildProjectFullPath)'. Generated tools must retain their producers in the hardened Build graph." />
+  </Target>
+
+  <!-- Capture framework inputs before project-reference preparation composes package references. -->
+  <Target Name="_CaptureHardenedGraphInputs"
+          DependsOnTargets="$(MSBuildPrepareGraphInputsDependsOn);PrepareProjectReferences">
+    <MSBuild Projects="@(_MSBuildProjectReferenceExistent)"
+             Targets="_PrepareHardenedGraphInputs"
+             Properties="%(_MSBuildProjectReferenceExistent.SetConfiguration);%(_MSBuildProjectReferenceExistent.SetPlatform);%(_MSBuildProjectReferenceExistent.SetTargetFramework)"
+             RemoveProperties="%(_MSBuildProjectReferenceExistent.GlobalPropertiesToRemove);$(_GlobalPropertiesToRemoveFromProjectReferences);_MSBuildCapturingGraphInputs"
+             Condition="'%(_MSBuildProjectReferenceExistent.BuildReference)' == 'true' and '$(BuildProjectReferences)' == 'true'"
+             BuildInParallel="false" />
+  </Target>
 
   <Target Name="_PrepareHardenedGraphInputsForRestoreClosure"
           AfterTargets="Restore"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
-    <MSBuild Projects="@(_RestoreProjectPathItems)"
+    <!-- A distinct request imports newly restored package targets before capturing configured inputs. -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
              Targets="_PrepareHardenedGraphInputs"
-             Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)"
+             Properties="_MSBuildPreparingGraphInputs=true"
              BuildInParallel="false" />
   </Target>
 

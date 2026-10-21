@@ -7,12 +7,16 @@
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.WriteCscInputs" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
 
   <PropertyGroup>
-    <_CscInputManifestPath>$(MSBuildProjectExtensionsPath)cscinputs/$(MSBuildProjectFile).g.props</_CscInputManifestPath>
+    <_CscInputManifestPath>$(MSBuildProjectExtensionsPath)cscinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</_CscInputManifestPath>
   </PropertyGroup>
   <Import Project="$(_CscInputManifestPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
-  <Target Name="_CaptureCscToolInputs"
+  <Target Name="_CaptureStandaloneCscToolInputsAfterRestore"
           AfterTargets="Restore"
+          DependsOnTargets="_CaptureCscToolInputs"
+          Condition="'$(UsingMicrosoftNETSdk)' != 'true' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
+
+  <Target Name="_CaptureCscToolInputs"
           DependsOnTargets="ResolvePackageAssets;ResolveTargetingPackAssets"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
     <ItemGroup>
@@ -22,7 +26,7 @@
       <_CscToolInput Include="$(_BuildTasksDirectory)bincore/**/*;@(AnalyzerDependency)" />
       <_CscToolInput Include="%(_CscAnalyzerDirectory.Identity)**/*" />
     </ItemGroup>
-    <MakeDir Directories="$(MSBuildProjectExtensionsPath)cscinputs" />
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_CscInputManifestPath)'))" />
     <WriteCscInputs Inputs="@(_CscToolInput)" OutputFile="$(_CscInputManifestPath)" />
   </Target>
 

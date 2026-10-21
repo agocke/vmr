@@ -412,21 +412,48 @@ projects; choosing the older framework does not make those dependencies optional
 - [x] Select the bounded managed-library profile and isolate its artifacts.
 - [x] Get ordinary Restore through pinned Arcade package-SDK resolution.
 - [x] Implement raw NuGet facts, pure views, and bounded SDK package selection.
-- [ ] Prepare selected configured inner builds despite retained `TargetFrameworks`,
+- [x] Prepare selected configured inner builds despite retained `TargetFrameworks`,
   preserving child framework negotiation and per-configuration inputs.
 - [ ] Capture/replay package-SDK import bindings without Build-time searches/downloads.
-- [ ] Reprobe and support the actual compiler/API-tool and analyzer requirements,
+- [x] Reprobe the real closure and identify the live-tool prebuild dependency.
+- [ ] Support the actual compiler/API-tool and analyzer requirements,
   keeping generated tools connected to their producers.
 - [ ] Construct a fresh real-library graph without product binaries.
 - [ ] Execute independently with Ninja and verify output/ordinary compatibility.
 - [ ] Add focused library behavior checks with their genuine test prerequisites.
 
-The earlier preparation probe failed with NETSDK1247 on retained multi-targeting
-and compiler/API-tool package references. Bounded package support removes the
-package rejection, but the configured runtime closure has not been reprobed or
-enabled. No runtime library graph, compilation, or independent execution is proven.
-Do not prebuild the selected library, remove real references/analyzers, or weaken
-validation to complete this milestone. Native/CoreCLR/CMake integration is later.
+Configured preparation is exercised by the
+[packaged fixture](../../../../../genbuild/tests/ConfiguredPreparation.csproj):
+a Debug/net11 parent selects its Release/net10 child while retaining both projects'
+`TargetFrameworks`. Separate Debug/net10 and Release/net11 preparations preserve
+framework, NuGet and compiler snapshots. The resulting parent/child graph
+compiles independently and starts without prebuilt project binaries.
+Outer preparation still fails, and metadata-only outer evaluations used for
+framework negotiation do not import inner-build snapshots.
+
+Each selected configuration gets an ordinary Restore without an inherited global
+`TargetFramework`, followed by a distinct capture evaluation that imports the
+newly restored package targets. Local snapshot capture precedes
+`PrepareProjectReferences`; its negotiated items, including additional/removed
+global-property metadata, drive recursive child preparation. This avoids treating
+NuGet's path-only restore closure as the configured Build closure.
+SDK snapshots distinguish `Configuration/Platform/TargetFramework`; other
+input-affecting global properties require separate intermediate paths.
+Framework runtime facts are captured after targeting-pack resolution filters out
+unused frameworks. Standard preparation rejects `PrepareForBuild`/`CoreCompile`
+instead of prebuilding products or tools.
+
+The real `System.Collections.Immutable` probe now passes the retained-multi-targeting
+guard, but its closure is not enabled. Runtime's
+[`FilterImplicitAssemblyReferences`](../../../../runtime/Directory.Build.targets)
+runs after `ResolveTargetingPackAssets` and depends on `ResolveProjectReferences`.
+Framework capture therefore tries to build live `ILLink.Tasks`, which preparation
+now rejects explicitly. Keep its producer and analyzer dependencies intact while
+adapting this hook; do not suppress them or satisfy them with prebuilt outputs.
+The probe uses `RestoreUseStaticGraphEvaluation=false` because the static Restore
+launcher still assumes an installed SDK layout.
+No runtime library graph, compilation, or independent execution is proven.
+Native/CoreCLR/CMake integration is later.
 
 ### NuGet fact capture
 
@@ -437,8 +464,10 @@ validation to complete this milestone. Native/CoreCLR/CMake integration is later
   exact number text, null/empty distinctions, case, Unicode, and MSBuild escaping.
 - [x] Read afresh and diagnose missing/malformed data without replacing prior facts.
 
-The default import is `obj/nugetinputs/<project>.g.props`; `NuGetInputsPath`
-overrides it and `ProjectAssetsFile` selects the source. Raw format 1 uses
+SDK graph preparation defaults to
+`obj/nugetinputs/<Configuration>/<Platform>/<TargetFramework>/<project>.g.props`;
+explicit raw capture without the graph-input flag retains the unqualified path.
+`NuGetInputsPath` overrides it and `ProjectAssetsFile` selects the source. Raw format 1 uses
 `_NuGetInputsFormatVersion`, `_NuGetInputsSourceFile`, and ordered `_NuGetInput`
 items. Identities are `$` plus JSON Pointer segments; `Kind`/`Value` encode nodes,
 with explicit containers. Package/project binaries are not opened for raw capture.
@@ -490,8 +519,9 @@ selection's purity. Eleven Ninja actions compile with the reference assembly,
 run the generator, publish the implementation, and start the consumer. Runtime
 implementation bytes and ordinary dependency/runtime-config bytes are checked.
 
-The supported preparation profile remains single-framework `Microsoft.NETCore.App`,
-without RID or retained multi-targeting. Unsupported content preprocessing,
+The supported preparation profile selects one `Microsoft.NETCore.App` framework
+per configured project, allowing retained multi-targeting declarations but not
+outer cross-targeting or RID preparation. Unsupported content preprocessing,
 additional frameworks, simple framework-assembly names, and conflicts requiring
 assembly inspection fail with NETSDK1254. Ordinary package discovery/cache behavior
 is unchanged. See the [package fixture](../../../../../genbuild/tests/PackageReferences.csproj).

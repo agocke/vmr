@@ -2,12 +2,13 @@
 <Project>
   <PropertyGroup>
     <!-- Keep replay outside Common's automatic project-extension imports so Restore can skip stale snapshots. -->
-    <SourceControlFetchManifestPath Condition="'$(SourceControlFetchManifestPath)' == ''">$(MSBuildProjectExtensionsPath)sourcelink/$(MSBuildProjectFile).g.targets</SourceControlFetchManifestPath>
+    <SourceControlFetchManifestPath Condition="'$(SourceControlFetchManifestPath)' == ''">$(MSBuildProjectExtensionsPath)sourcelink/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.targets</SourceControlFetchManifestPath>
     <SourceControlFetchManifestPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(SourceControlFetchManifestPath)'))</SourceControlFetchManifestPath>
   </PropertyGroup>
 
   <Import Project="$(SourceControlFetchManifestPath)"
           Condition="'$(EnableSourceControlFetchManifest)' == 'true' and
+                     ('$(MSBuildHardenedGraph)' != 'true' or '$(IsCrossTargetingBuild)' != 'true') and
                      '$(EnableSourceControlManagerQueries)' == 'true' and
                      '$(_SourceLinkFetchManifestImported)' != 'true' and
                      ('$(MSBuildHardenedGraph)' == 'true' or '$(MSBuildRestoreGraphInputs)' != 'true') and
@@ -85,7 +86,7 @@
   <Target Name="_GenerateSourceControlFetchManifest"
           DependsOnTargets="_CollectSourceControlFetchManifest;_TranslateSourceControlFetchManifestUrls"
           AfterTargets="Restore"
-          BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework;_CaptureHardenedGraphInputs"
           Condition="'$(MSBuildHardenedGraph)' != 'true' and
                      ('$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableSourceControlFetchManifest)' == 'true') and
                      '$(EnableSourceControlManagerQueries)' == 'true'">

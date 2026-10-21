@@ -52,6 +52,14 @@ Restore and Build must remain separate invocations. `build` generates
 Ninja executes them. Additional arguments are forwarded to MSBuild.
 Use `-p:MSBuildEmitActionGraph=/absolute/path/build.ninja` to change the graph path.
 
+Projects may retain `TargetFrameworks` when both invocations select an inner
+build with the same `-p:TargetFramework=...` and `-p:Configuration=...`.
+Preparation follows normal project-reference framework/configuration negotiation
+and property metadata. SDK framework, NuGet, compiler and SourceLink snapshots
+are separated by `Configuration/Platform/TargetFramework` beneath their respective
+intermediate directories. Other input-affecting global properties still require
+distinct intermediate paths.
+
 ## Smoke checks
 
 Install Ninja and build the app first. Then run from the VMR root, replacing
@@ -73,6 +81,10 @@ execution through final artifact publication and program startup on the external
 runtime. A clean SDK executable/library closure also constructs and executes
 without prebuilding references, including renamed library outputs, copy-local
 symbols and ordinary-equivalent dependency manifests.
+A configured fixture retains parent/child multi-targeting declarations, prepares
+multiple parent frameworks/configurations, and independently builds a Debug/net11
+parent with its negotiated Release/net10 child. Outer preparation and attempts
+to prebuild tools/products fail explicitly.
 An offline package fixture also selects distinct reference/runtime assemblies
 and a compatible package generator, then independently compiles and starts the
 consumer. Package selection runs with assets JSON and package directories
@@ -98,15 +110,19 @@ ordinary Restore, including versions pinned in `global.json`. The driver
 disables that resolver during hardened Build; package-SDK import bindings still
 need explicit capture and replay rather than package-cache searches or downloads.
 
-Framework-reference preparation currently accepts only the bounded
-single-framework profile, now including package references. A real
-`System.Collections.Immutable` trial targeting runtime's `net10.0` minimum
-framework resolves the pinned Arcade SDK, then stops during Restore with
-`NETSDK1247`: the project retains its multi-targeting declaration and includes
-compiler/API-tool package references. The package-reference rejection has since
-been replaced by prepared selection, but configured-inner-build preparation,
-package-SDK import replay and broader compiler/tool profiles remain necessary.
-No runtime library graph, compilation or independent execution is established.
+Framework-reference preparation accepts one selected framework per configured
+project, including package/project references and retained `TargetFrameworks`.
+Outer cross-targeting and RID preparation remain unsupported.
+The real `System.Collections.Immutable` trial targeting runtime's `net10.0`
+minimum now gets past the multi-targeting guard. Runtime's
+`FilterImplicitAssemblyReferences` hook depends on `ResolveProjectReferences`
+after targeting-pack resolution and tries to build live `ILLink.Tasks`.
+Preparation rejects that prebuild explicitly; the producer dependencies remain
+intact. Generated-tool/reference preparation, package-SDK import replay and
+broader compiler/tool profiles remain necessary. The trial uses ordinary
+Restore (`RestoreUseStaticGraphEvaluation=false`): the static Restore launcher
+still assumes an installed SDK layout. No runtime library graph, compilation
+or independent execution is established.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,
@@ -123,7 +139,7 @@ and compiler API identity; package generators join the prepared compiler closure
 Standard reference, analyzer and copy-local item composition is retained.
 Content preprocessing, additional frameworks, simple framework-assembly names
 and file conflicts requiring ordinary assembly inspection fail explicitly.
-Multi-targeting and RID preparation remain unsupported. Dependency/runtime-config
+Outer cross-targeting and RID preparation remain unsupported. Dependency/runtime-config
 actions still read declared assets JSON during execution; migrating those
 consumers to facts remains required by the eventual design.
 See [prepared SDK package selection](../src/msbuild/documentation/specs/proposed/hardened-static-graph-implementation.md#prepared-sdk-package-selection)

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks Condition="'$(MSBuildProjectName)' == 'Parent'">net11.0;net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(MSBuildProjectName)' == 'Child'">net10.0</TargetFrameworks>
+    <OutputType Condition="'$(MSBuildProjectName)' == 'Parent'">Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" Condition="'$(MSBuildProjectName)' == 'Parent'" />
+    <Compile Include="Greeting.cs" Condition="'$(MSBuildProjectName)' == 'Child'" />
+    <AnalyzerDependency Include="$(MSBuildProjectDirectory)/$(Configuration).inputs" />
+    <ProjectReference Include="../Child/Child.csproj" Condition="'$(MSBuildProjectName)' == 'Parent'"
+                      AdditionalProperties="Configuration=Release;PreparationMarker=child"
+                      GlobalPropertiesToRemove="ParentOnlyProperty" />
+  </ItemGroup>
+  <Target Name="CheckPreparedChildConfiguration"
+          BeforeTargets="_CaptureNuGetInputs"
+          Condition="'$(_MSBuildPreparingGraphInputs)' == 'true' and '$(MSBuildProjectName)' == 'Child'">
+    <Error Condition="'$(TargetFramework)' != 'net10.0' or '$(Configuration)' != 'Release' or '$(PreparationMarker)' != 'child' or '$(ParentOnlyProperty)' != ''"
+           Text="Preparation must preserve negotiated child frameworks and project-reference global-property metadata." />
+  </Target>
+  <Target Name="AttemptProductBuildInPreparation"
+          BeforeTargets="_CaptureNuGetInputs"
+          Condition="'$(ForcePreparationBuild)' == 'true'">
+    <CallTarget Targets="PrepareForBuild" />
+  </Target>
+</Project>

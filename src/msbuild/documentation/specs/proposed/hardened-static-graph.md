@@ -253,14 +253,20 @@ captured nor replayed, and obsolete `$(CleanFile).hardened.props` files are igno
 With the coordinated SDK, SourceLink, and Roslyn overlays, the same Restore
 flag also prepares framework-reference and repository snapshots and initializes
 the analyzer semaphore used as a stable compilation input. The framework
-snapshot remains limited to the supported single-framework, implicit
-`Microsoft.NETCore.App` profile without package/project/explicit assembly
-references or runtime identifiers.
+snapshot remains limited to one selected implicit `Microsoft.NETCore.App`
+framework per configured project, with package/project references but without
+explicit assembly references or runtime identifiers. Retained `TargetFrameworks`
+is supported when an inner `TargetFramework` is selected; outer preparation is not.
 
 Framework snapshots live in
 `$(MSBuildProjectExtensionsPath)frameworkreferences/$(MSBuildProjectFile).g.props`;
 repository snapshots live in
 `$(MSBuildProjectExtensionsPath)sourcelink/$(MSBuildProjectFile).g.targets`.
+For SDK graph-input preparation and hardened replay, both defaults insert
+`$(Configuration)/$(Platform)/$(TargetFramework)/` beneath the snapshot directory;
+explicit legacy manifest switches retain the unqualified defaults. NuGet and
+compiler inputs use the same configuration-qualified layout. Other input-affecting
+global properties require distinct intermediate paths.
 Dedicated directories prevent automatic Common project-extension imports from
 replaying stale snapshots during Restore. Capture ignores existing snapshots
 and refreshes them from current inputs, preserving timestamps when unchanged.
@@ -274,6 +280,11 @@ The earlier `MSBuildRestorePlatformSDK=true` flag remains supported for
 SDK-only capture; prefer `MSBuildRestoreGraphInputs=true` to prepare all known
 graph inputs. Explicit legacy framework-reference and SourceLink manifest
 switches remain supported; they are not required for umbrella-flag capture.
+Configured preparation restores each selected project without forcing its global
+framework onto dependencies, then captures with a fresh evaluation and follows
+normal project-reference framework/configuration/property negotiation.
+It explicitly rejects standard product/tool build targets during preparation;
+generated-tool dependencies must remain connected to their graph producers.
 
 ### Explicit reference-resolution sources
 

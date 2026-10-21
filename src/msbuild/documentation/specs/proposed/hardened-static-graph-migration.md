@@ -196,6 +196,9 @@ execution path.
 
 Restore captures the pinned compiler and analyzer dependency closure in
 `$(MSBuildProjectExtensionsPath)cscinputs/$(MSBuildProjectFile).g.props`.
+SDK graph preparation/replay inserts
+`$(Configuration)/$(Platform)/$(TargetFramework)/` beneath `cscinputs/`, matching
+the framework, NuGet and SourceLink snapshot identity.
 Build imports those explicit files; it does not enumerate external tool
 directories. Keep this manifest outside Common's automatic project-extension
 wildcards so it is imported only at its explicit preparation boundary.

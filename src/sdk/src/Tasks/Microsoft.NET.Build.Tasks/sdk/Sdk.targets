@@ -13,12 +13,15 @@ Copyright (c) .NET Foundation. All rights reserved.
   <!-- Restore captures with MSBuildRestoreGraphInputs; hardened evaluation only enables replay. -->
   <PropertyGroup>
     <EnableFrameworkReferenceFetchManifest Condition="'$(EnableFrameworkReferenceFetchManifest)' == '' and '$(MSBuildHardenedGraph)' == 'true'">true</EnableFrameworkReferenceFetchManifest>
-    <FrameworkReferenceFetchManifestPath Condition="('$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true') and '$(FrameworkReferenceFetchManifestPath)' == ''">$(MSBuildProjectExtensionsPath)frameworkreferences/$(MSBuildProjectFile).g.props</FrameworkReferenceFetchManifestPath>
+    <_GraphInputsConfiguration Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(MSBuildHardenedGraph)' == 'true'">$(Configuration)/$(Platform)/$(TargetFramework)/</_GraphInputsConfiguration>
+    <_DisableNuGetRestoreTargetFrameworksOverride Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">true</_DisableNuGetRestoreTargetFrameworksOverride>
+    <FrameworkReferenceFetchManifestPath Condition="('$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true') and '$(FrameworkReferenceFetchManifestPath)' == ''">$(MSBuildProjectExtensionsPath)frameworkreferences/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</FrameworkReferenceFetchManifestPath>
     <FrameworkReferenceFetchManifestPath Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(FrameworkReferenceFetchManifestPath)'))</FrameworkReferenceFetchManifestPath>
   </PropertyGroup>
 
   <Import Project="$(FrameworkReferenceFetchManifestPath)"
           Condition="'$(EnableFrameworkReferenceFetchManifest)' == 'true' and
+                     ('$(MSBuildHardenedGraph)' != 'true' or '$(TargetFramework)' != '') and
                      '$(MSBuildIsRestoring)' != 'true' and
                      ('$(MSBuildHardenedGraph)' == 'true' or '$(MSBuildRestoreGraphInputs)' != 'true')" />
 
@@ -96,7 +99,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       <_NuGetInputFile Condition="'$(ProjectAssetsFile)' == ''">$(MSBuildProjectExtensionsPath)project.assets.json</_NuGetInputFile>
       <_NuGetInputFile Condition="'$(ProjectAssetsFile)' != ''">$(ProjectAssetsFile)</_NuGetInputFile>
       <_NuGetInputFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(_NuGetInputFile)'))</_NuGetInputFile>
-      <NuGetInputsPath Condition="'$(NuGetInputsPath)' == ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(MSBuildProjectFile).g.props</NuGetInputsPath>
+      <NuGetInputsPath Condition="'$(NuGetInputsPath)' == ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</NuGetInputsPath>
       <NuGetInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(NuGetInputsPath)'))</NuGetInputsPath>
     </PropertyGroup>
     <WriteNuGetInputs InputFile="$(_NuGetInputFile)" OutputFile="$(NuGetInputsPath)"
@@ -107,11 +110,6 @@ Copyright (c) .NET Foundation. All rights reserved.
   <Target Name="_PrepareNuGetAnalyzersForGraph"
           BeforeTargets="_CaptureCscToolInputs"
           DependsOnTargets="ResolveLockFileAnalyzers"
-          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
-
-  <Target Name="_CaptureNuGetInputsAfterRestore"
-          AfterTargets="Restore"
-          DependsOnTargets="_CaptureNuGetInputs"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
 
   <Target Name="_ComputeFrameworkReferenceFetchManifestProfile"
@@ -128,7 +126,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       <_FrameworkReferenceFetchManifestReferences>@(Reference, ', ')</_FrameworkReferenceFetchManifestReferences>
       <_FrameworkReferenceFetchManifestProfileSupported
         Condition="'$(IsCrossTargetingBuild)' != 'true' and
-                   '$(TargetFrameworks)' == '' and
+                   '$(TargetFramework)' != '' and
                    '@(FrameworkReference->Count())' == '1' and
                    '@(_SupportedFrameworkReferenceFetchManifestFrameworkReference->Count())' == '1' and
                    '@(Reference->Count())' == '0' and
@@ -151,7 +149,7 @@ Copyright (c) .NET Foundation. All rights reserved.
           DependsOnTargets="_ComputeFrameworkReferenceFetchManifestProfile"
           Condition="'$(_FrameworkReferenceFetchManifestProfileSupported)' != 'true'">
     <NETSdkError
-      Condition="'$(IsCrossTargetingBuild)' == 'true' or '$(TargetFrameworks)' != ''"
+      Condition="'$(IsCrossTargetingBuild)' == 'true' or '$(TargetFramework)' == ''"
       ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
       FormatArguments="TargetFrameworks;$([MSBuild]::Escape('$(TargetFrameworks)'))"
       ContinueOnError="ErrorAndContinue" />
@@ -186,8 +184,8 @@ Copyright (c) .NET Foundation. All rights reserved.
           DependsOnTargets="_InvalidateUnsupportedFrameworkReferenceFetchManifest;_ReportUnsupportedFrameworkReferenceFetchManifestProfile"
           BeforeTargets="ProcessFrameworkReferences;Restore"
           Condition="'$(MSBuildHardenedGraph)' != 'true' and
-                     ('$(MSBuildRestoreGraphInputs)' == 'true' or
-                      ('$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))" />
+                     (('$(MSBuildRestoreGraphInputs)' == 'true' and '$(IsCrossTargetingBuild)' == 'true') or
+                      ('$(MSBuildRestoreGraphInputs)' != 'true' and '$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))" />
 
   <Target Name="_ValidateImportedFrameworkReferenceFetchManifestProfile"
           DependsOnTargets="_ReportUnsupportedFrameworkReferenceFetchManifestProfile"

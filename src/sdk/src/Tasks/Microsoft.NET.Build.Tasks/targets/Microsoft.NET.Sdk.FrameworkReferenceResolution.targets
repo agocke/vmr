@@ -33,10 +33,10 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Target Name="_GenerateFrameworkReferenceFetchManifest"
           AfterTargets="Restore"
-          DependsOnTargets="_ValidateFrameworkReferenceFetchManifestProfileForRestore;_CollectFrameworkReferenceFetchManifestRuntimeFrameworks;ResolveTargetingPackAssets;_GetAppHostPaths"
+          DependsOnTargets="_InvalidateUnsupportedFrameworkReferenceFetchManifest;_ReportUnsupportedFrameworkReferenceFetchManifestProfile;ResolveTargetingPackAssets;_CollectFrameworkReferenceFetchManifestRuntimeFrameworks;_GetAppHostPaths"
           Condition="'$(MSBuildHardenedGraph)' != 'true' and
-                     ('$(MSBuildRestoreGraphInputs)' == 'true' or
-                      ('$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))">
+                     (('$(MSBuildRestoreGraphInputs)' == 'true' and '$(_MSBuildPreparingGraphInputs)' == 'true') or
+                      ('$(MSBuildRestoreGraphInputs)' != 'true' and '$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))">
     <WriteFrameworkReferenceFetchManifest
       OutputFile="$(FrameworkReferenceFetchManifestPath)"
       TargetFramework="$(TargetFramework)"
