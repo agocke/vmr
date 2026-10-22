@@ -756,6 +756,9 @@ namespace Microsoft.Build.Evaluation
                         Graph.Hardened.HardenedActionGraph.GetHostOS(
                             _data.GlobalPropertiesDictionary.GetProperty(Graph.Hardened.HardenedActionGraph.HostOSProperty)?.EvaluatedValue,
                             _projectRootElement.ProjectFileLocation);
+                        Graph.Hardened.HardenedActionGraph.GetHostArchitecture(
+                            _data.GlobalPropertiesDictionary.GetProperty(Graph.Hardened.HardenedActionGraph.HostArchitectureProperty)?.EvaluatedValue,
+                            _projectRootElement.ProjectFileLocation);
                     }
 
                     string repositoryRoot = _data.GlobalPropertiesDictionary.GetProperty(
@@ -1056,7 +1059,7 @@ namespace Microsoft.Build.Evaluation
                         XmlUtilities.VerifyThrowProjectValidElementName(propertyName, currentProjectOrImport.Location);
                         ProjectErrorUtilities.VerifyThrowInvalidProject(
                             string.IsNullOrEmpty(_data.GetProperty("MSBuildEmitActionGraph")?.EvaluatedValue) ||
-                            !MSBuildNameIgnoreCaseComparer.Default.Equals(propertyName, Graph.Hardened.HardenedActionGraph.HostOSProperty),
+                            !Graph.Hardened.HardenedActionGraph.IsHostContextProperty(propertyName),
                             currentProjectOrImport.TreatAsLocalPropertyLocation,
                             "HardenedGraphUnsupportedConstruct",
                             $"TreatAsLocalProperty for immutable construction input '{propertyName}'",

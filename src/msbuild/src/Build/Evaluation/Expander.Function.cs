@@ -10,6 +10,7 @@ using System.IO;
 #endif
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.Build.BackEnd.Logging;
 using Microsoft.Build.Evaluation.Expander;
 using Microsoft.Build.Framework;
@@ -560,6 +561,18 @@ internal partial class Expander<P, I>
                                 properties.GetProperty(Graph.Hardened.HardenedActionGraph.HostOSProperty)?.EvaluatedValue,
                                 elementLocation);
                             functionResult = string.Equals(hostOS, platform, StringComparison.OrdinalIgnoreCase);
+                            wellKnownFunctionSuccess = true;
+                        }
+                        else if (constructingGraph &&
+                            _receiverType == typeof(RuntimeInformation) &&
+                            string.Equals(_methodMethodName, nameof(RuntimeInformation.ProcessArchitecture), StringComparison.OrdinalIgnoreCase))
+                        {
+                            ProjectErrorUtilities.VerifyThrowInvalidProject(
+                                args.Length == 0,
+                                elementLocation, "InvalidFunctionMethodUnavailable", _methodMethodName, _receiverType.FullName);
+                            functionResult = Graph.Hardened.HardenedActionGraph.GetHostArchitecture(
+                                properties.GetProperty(Graph.Hardened.HardenedActionGraph.HostArchitectureProperty)?.EvaluatedValue,
+                                elementLocation);
                             wellKnownFunctionSuccess = true;
                         }
                         else

@@ -215,27 +215,40 @@ evaluation context must discard its filesystem cache after source changes.
 
 ### Captured construction platform
 
-The command-line launcher captures the host OS once as the global property
-`MSBuildGraphHostOS`. It defaults to the launcher's OS and may be supplied
-explicitly with `-p:MSBuildGraphHostOS=linux`; supported values are `windows`,
-`linux`, `osx`, and `freebsd`, case-insensitively. Programmatic callers must
-supply this global input before evaluating a graph-emission project.
-Environment and project properties do not replace the global input.
+Machine information is predefined construction context, like predefined
+variables, rather than a requirement to thread machine properties through
+project authoring. The command-line launcher captures its host OS and process
+architecture once as the global properties `MSBuildGraphHostOS` and
+`MSBuildGraphHostArchitecture`. Defaults come from the launcher automatically;
+explicit overrides such as `-p:MSBuildGraphHostOS=linux` and
+`-p:MSBuildGraphHostArchitecture=arm64` select a different fixed context.
+OS values are `windows`, `linux`, `osx`, and `freebsd`; architecture values must
+name a member of `System.Runtime.InteropServices.Architecture`, such as `x64`
+or `arm64`. Names are case-insensitive; numeric and compound values are rejected.
+Programmatic callers supply both global inputs before evaluating a
+graph-emission project. Environment and project properties do not replace them.
 `TreatAsLocalProperty`, target assignments, and task output mappings cannot
-make it mutable.
+make them mutable, and child projects cannot change the context.
 
 During hardened evaluation and target construction, `[MSBuild]::IsOSPlatform`
-compares its argument with this captured value instead of querying the OS.
-Ordinary builds retain the existing runtime query. The emitter records the
-canonical value as `msbuild_construction_host_os` in the Ninja file, so changing
-it changes graph identity even when no action parameter depends on it. Future
-construction-cache keys must include this input; no such cache is implemented
-yet.
+compares its argument with the captured OS.
+`[System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture`
+returns the captured `Architecture` enum, preserving ordinary enum formatting
+and chains such as `.ToString().ToLowerInvariant()`. Neither reads live machine
+state during construction. Other `RuntimeInformation` members are not newly
+allowed; ordinary builds retain their existing runtime queries.
+The emitter records canonical `msbuild_construction_host_os` and
+`msbuild_construction_host_architecture` values in the Ninja file, so changing
+either changes graph identity even when no action parameter depends on it.
+Future construction-cache keys must include this context; no such cache is
+implemented yet.
 
-This is the construction host, not the action execution platform or the
-artifact's target platform. An override does not virtualize filesystem/path
-semantics, change executors, or supply a different toolchain. Remote execution
-and cross-platform toolchain selection remain separate configuration work.
+This describes the construction process, not the underlying OS architecture,
+action execution platform, or artifact's target platform. Target architecture
+remains an independent project input. An override does not virtualize
+filesystem/path semantics, change executors, or supply a different toolchain.
+Remote execution and cross-platform toolchain selection remain separate
+configuration work.
 
 ### Restore-time platform SDK discovery
 

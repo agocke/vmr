@@ -67,6 +67,15 @@ props file on projects with different nearest imports. Missing files through the
 root mean no import, not ambient ancestor discovery. Explicit path overrides remain
 available. See the [directory-import contract](hardened-static-graph.md#repository-bounded-directory-imports).
 
+Machine information also has a predefined-context path, not arbitrary ambient
+discovery. The launcher captures OS and process architecture before evaluation.
+Existing `IsOSPlatform` and `RuntimeInformation.ProcessArchitecture` expressions
+read that immutable context during evaluation and target construction; runtime's
+`.ToString().ToLowerInvariant()` architecture expression needs no authoring
+rewrite. Keep target architecture separate, and do not generalize this support
+to every environment or machine query. See the
+[machine-context contract](hardened-static-graph.md#captured-construction-platform).
+
 For example, `GetAssemblyVersion` does not inspect an assembly. It parses the
 supplied NuGet version string into a four-part version:
 

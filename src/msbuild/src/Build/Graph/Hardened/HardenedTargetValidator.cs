@@ -632,7 +632,7 @@ internal sealed class HardenedTargetValidator
             return;
         }
 
-        if (MSBuildNameIgnoreCaseComparer.Default.Equals(property.Name, HardenedActionGraph.HostOSProperty))
+        if (HardenedActionGraph.IsHostContextProperty(property.Name))
         {
             ReportUnsupported(property.Location,
                 $"assignment to immutable construction input '{property.Name}'",
@@ -1049,7 +1049,7 @@ internal sealed class HardenedTargetValidator
             }
 
             if (output is ProjectTaskOutputPropertyInstance &&
-                MSBuildNameIgnoreCaseComparer.Default.Equals(destination, HardenedActionGraph.HostOSProperty))
+                HardenedActionGraph.IsHostContextProperty(destination))
             {
                 ReportUnsupported(output.Location,
                     $"task output to immutable construction input '{destination}'",

@@ -273,8 +273,11 @@ checklist replaces the earlier sequence of individual task-rejection probes.
   SourceLink repository metadata, and the analyzer semaphore during Restore.
 - [x] Participate in configured-project/framework Restore traversal; keep saved
   imports outside Common's automatic project-extension import wildcards.
-- [x] Capture construction host OS in `MSBuildGraphHostOS`; normalize `TargetDir`
-  against the explicit project directory rather than ambient CWD.
+- [x] Capture construction host OS and process architecture in immutable globals
+  `MSBuildGraphHostOS` and `MSBuildGraphHostArchitecture`; expose existing OS and
+  architecture expressions as reads of that predefined context and include both
+  in graph identity. Normalize `TargetDir` against the explicit project directory
+  rather than ambient CWD.
 - [x] Support read-only array indexing needed by SDK/Roslyn expressions while
   retaining the property-function allowlist.
 - [x] Classify supported NuGet `PackageReference` style from explicit inputs,
@@ -526,13 +529,14 @@ References, analyzers and tool producer dependencies are not suppressed.
 The probe uses `RestoreUseStaticGraphEvaluation=false` because the static Restore
 launcher still assumes an installed SDK layout.
 With `MSBuildGraphRepositoryRoot` set to the VMR root in both invocations, a fresh
-hardened graph now passes Common's directory-props lookup and reaches runtime's
-`eng/OSArch.props`. Its unconditional `RuntimeInformation.ProcessArchitecture`
-query is the next prohibited ambient observation, even when target architecture
-is supplied. Build-host architecture needs an explicit input, distinct from target
-architecture; permitting the ambient query is not the fix. Preparation and the
-failed graph attempt both produce zero DLLs. Package-SDK import replay and
-generated-tool binding have not yet been reached.
+hardened graph now passes Common's directory-props lookup and runtime's
+`eng/OSArch.props`. Its unchanged `RuntimeInformation.ProcessArchitecture` query
+reads the launcher's captured process-architecture context, distinct from target
+architecture. The next failure is the root `Directory.Build.props` import of
+`Microsoft.DotNet.Arcade.Sdk`: hardened Build keeps package-cache SDK discovery
+disabled, and explicit package-SDK bindings still need capture and replay.
+Preparation and the failed graph attempt both produce zero DLLs. Generated-tool
+binding has not yet been reached.
 No runtime library graph, compilation, or independent execution is proven.
 Native/CoreCLR/CMake integration is later.
 

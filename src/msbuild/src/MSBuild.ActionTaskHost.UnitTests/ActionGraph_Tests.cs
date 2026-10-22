@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Text.Json;
 using System.Xml.Linq;
@@ -450,6 +451,8 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     [InlineData("override", "unaudited tasks")]
     [InlineData("destination", "child project changing")]
     [InlineData("remove-host", "MSBuildGraphHostOS")]
+    [InlineData("remove-architecture", "MSBuildGraphHostArchitecture")]
+    [InlineData("override-architecture", "host context")]
     [InlineData("child-failure", "DeclaredIO")]
     public void InvalidProjectReferenceClosurePublishesNothing(string mode, string expected)
     {
@@ -465,6 +468,14 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         else if (mode == "remove-host")
         {
             call.SetAttributeValue("RemoveProperties", "MSBuildGraphHostOS");
+        }
+        else if (mode == "remove-architecture")
+        {
+            call.SetAttributeValue("RemoveProperties", "MSBuildGraphHostArchitecture");
+        }
+        else if (mode == "override-architecture")
+        {
+            call.SetAttributeValue("Properties", "MSBuildGraphHostArchitecture=arm64");
         }
 
         XElement root = new("Project",
@@ -496,7 +507,8 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         }
 
         string graph = Path.Combine(directory, "build.ninja");
-        Generate(project, graph, out string log).ShouldBeFalse();
+        Generate(project, graph, out string log,
+            mode == "override-architecture" ? "-p:MSBuildGraphHostArchitecture=x64" : "").ShouldBeFalse();
 
         log.ShouldContain(expected, Case.Insensitive);
         File.Exists(graph).ShouldBeFalse();
@@ -1208,6 +1220,160 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
 
         success.ShouldBeTrue();
         output.ShouldContain("False");
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("x64", "X64", "1", "arm64")]
+    [InlineData("ArM64", "Arm64", "3", "x64")]
+    [InlineData("arm", "Arm", "2", "x64")]
+    public void UsesCapturedHostArchitectureDuringEvaluationAndConstruction(
+        string hostArchitecture, string enumName, string numericValue, string targetArchitecture)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        const string expression =
+            "$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)|"
+            + "$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())|"
+            + "$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString('D'))";
+        XDocument contents = XDocument.Load(project);
+        XElement root = contents.Root!;
+        root.AddFirst(new XElement("PropertyGroup",
+            new XElement("MSBuildGraphHostArchitecture", "ignored-project-value"),
+            new XElement("TargetArchitecture", targetArchitecture),
+            new XElement("Evaluated", expression)));
+        XElement target = root.Element("Target")!;
+        target.AddFirst(new XElement("PropertyGroup", new XElement("Constructed", expression)));
+        target.Element("GraphValueTask")!.AddAfterSelf(new XElement("ItemGroup",
+            new XElement("Values",
+                new XElement("Tag", "$(Evaluated)|$(Constructed)|$(MSBuildGraphHostArchitecture)|$(TargetArchitecture)"))));
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, $"-p:MSBuildGraphHostArchitecture={hostArchitecture}").ShouldBeTrue();
+
+        File.ReadAllText(graph).ShouldContain("msbuild_construction_host_architecture = " + enumName.ToLowerInvariant());
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
+        Ninja(graph, out bool success);
+
+        success.ShouldBeTrue();
+        string expected = $"{enumName}|{enumName.ToLowerInvariant()}|{numericValue}";
+        File.ReadAllText(Path.Combine(directory, "first.txt"))
+            .ShouldBe($"literal%3B;value|{expected}|{expected}|{hostArchitecture}|{targetArchitecture}");
+    }
+
+    [UnixOnlyFact]
+    public void CapturedHostArchitectureParticipatesInGraphIdentityWithoutBeingRead()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        string graph = Path.Combine(directory, "build.ninja");
+        string detectedArchitecture = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
+
+        Generate(project, graph).ShouldBeTrue();
+        string defaultGraph = File.ReadAllText(graph);
+        defaultGraph.ShouldContain("msbuild_construction_host_architecture = " + detectedArchitecture);
+        Generate(project, graph, $"-p:MSBuildGraphHostArchitecture={detectedArchitecture}").ShouldBeTrue();
+        File.ReadAllText(graph).ShouldBe(defaultGraph);
+
+        string differentArchitecture = detectedArchitecture == "x64" ? "arm64" : "x64";
+        Generate(project, graph, $"-p:MSBuildGraphHostArchitecture={differentArchitecture}").ShouldBeTrue();
+
+        string overriddenGraph = File.ReadAllText(graph);
+        overriddenGraph.ShouldNotBe(defaultGraph);
+        overriddenGraph.ShouldContain("msbuild_construction_host_architecture = " + differentArchitecture);
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("Missing")]
+    [InlineData("Empty")]
+    [InlineData("Unknown")]
+    [InlineData("Numeric")]
+    [InlineData("UndefinedNumeric")]
+    [InlineData("Compound")]
+    [InlineData("TreatAsLocal")]
+    [InlineData("TargetProperty")]
+    [InlineData("TaskOutput")]
+    [InlineData("OSArchitectureEvaluation")]
+    [InlineData("OSArchitectureConstruction")]
+    [InlineData("FrameworkDescription")]
+    public void RejectsInvalidOrMutableHostArchitecture(string invalid)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        string contents = File.ReadAllText(project);
+        contents = invalid switch
+        {
+            "Missing" => contents.Replace("<Target Name=\"Build\"", "<PropertyGroup><MSBuildGraphHostArchitecture>x64</MSBuildGraphHostArchitecture></PropertyGroup><Target Name=\"Build\""),
+            "TreatAsLocal" => contents.Replace("<Project>", "<Project TreatAsLocalProperty=\"msbuildgraphhostarchitecture\">"),
+            "TargetProperty" => contents.Replace("<GraphValueTask", "<PropertyGroup><msbuildgraphhostarchitecture>arm64</msbuildgraphhostarchitecture></PropertyGroup><GraphValueTask"),
+            "TaskOutput" => contents.Replace("ItemName=\"Values\"", "PropertyName=\"msbuildgraphhostarchitecture\""),
+            "OSArchitectureEvaluation" => contents.Replace("<Target Name=\"Build\"", "<PropertyGroup><Bad>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)</Bad></PropertyGroup><Target Name=\"Build\""),
+            "OSArchitectureConstruction" => contents.Replace("<GraphValueTask", "<PropertyGroup><Bad>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)</Bad></PropertyGroup><GraphValueTask"),
+            "FrameworkDescription" => contents.Replace("<Target Name=\"Build\"", "<PropertyGroup><Bad>$([System.Runtime.InteropServices.RuntimeInformation]::FrameworkDescription)</Bad></PropertyGroup><Target Name=\"Build\""),
+            _ => contents,
+        };
+        File.WriteAllText(project, contents);
+        string graph = Path.Combine(directory, "build.ninja");
+        string arguments = invalid switch
+        {
+            "Empty" => "-p:MSBuildGraphHostArchitecture=",
+            "Unknown" => "-p:MSBuildGraphHostArchitecture=unknown",
+            "Numeric" => "-p:MSBuildGraphHostArchitecture=1",
+            "UndefinedNumeric" => "-p:MSBuildGraphHostArchitecture=999",
+            "Compound" => "-p:MSBuildGraphHostArchitecture=X64%2CArm64",
+            _ => "-p:MSBuildGraphHostArchitecture=x64",
+        };
+
+        if (invalid == "Missing")
+        {
+            Dictionary<string, string> properties = new()
+            {
+                ["MSBuildEmitActionGraph"] = graph,
+                ["MSBuildGraphHostOS"] = "linux",
+            };
+            Evaluation.ProjectCollection collection = env.CreateProjectCollection().Collection;
+            Exceptions.InvalidProjectFileException exception = Should.Throw<Exceptions.InvalidProjectFileException>(
+                () => new Evaluation.Project(project, properties, toolsVersion: null, collection));
+            exception.Message.ShouldContain("MSBuildGraphHostArchitecture");
+        }
+        else
+        {
+            Generate(project, graph, arguments).ShouldBeFalse();
+        }
+
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyFact]
+    public void OrdinaryEvaluationStillQueriesTheActualHostArchitecture()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string project = env.CreateFile(".proj").Path;
+        File.WriteAllText(project, """
+            <Project>
+              <PropertyGroup>
+                <ActualHostArchitecture>architecture=$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())!</ActualHostArchitecture>
+              </PropertyGroup>
+            </Project>
+            """);
+        string actualArchitecture = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
+        string overriddenArchitecture = actualArchitecture == "x64" ? "arm64" : "x64";
+
+        string output = RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" --hardened-graph:false -p:MSBuildGraphHostArchitecture={overriddenArchitecture} -getProperty:ActualHostArchitecture -nr:false",
+            out bool success, outputHelper: _output);
+
+        success.ShouldBeTrue();
+        output.ShouldContain($"architecture={actualArchitecture}!");
     }
 
     [UnixOnlyTheory]

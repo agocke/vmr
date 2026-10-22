@@ -62,6 +62,15 @@ environment, or imported authoring. Explicit directory-import path overrides
 remain supported. This is evaluation-time source discovery, not a Restore
 snapshot or permission for arbitrary ancestor searches during construction.
 
+Build automatically supplies a fixed machine context: `MSBuildGraphHostOS`
+and `MSBuildGraphHostArchitecture`. Existing `IsOSPlatform` and
+`RuntimeInformation.ProcessArchitecture` expressions read those captured values,
+including normal enum formatting, rather than querying the machine again.
+Explicit global overrides are supported, but project authoring cannot mutate the
+context. These values describe the construction process, not target architecture
+or a remote executor, and both participate in graph identity. See the
+[machine-context contract](../src/msbuild/documentation/specs/proposed/hardened-static-graph.md#captured-construction-platform).
+
 Projects may retain `TargetFrameworks` when both invocations select an inner
 build with the same `-p:TargetFramework=...` and `-p:Configuration=...`.
 Preparation follows normal project-reference framework/configuration negotiation
@@ -175,11 +184,13 @@ The trial uses ordinary
 Restore (`RestoreUseStaticGraphEvaluation=false`): the static Restore launcher
 still assumes an installed SDK layout. With the VMR root explicitly supplied to
 both invocations, a fresh hardened graph passes Common's directory-props lookup
-and reaches runtime authoring. It currently stops at `eng/OSArch.props`' unconditional
-`RuntimeInformation.ProcessArchitecture` query. Build-host architecture must become
-an explicit input, separate from target architecture. Package-SDK replay and tool
-scheduling have not yet been reached. No runtime library graph, compilation or
-independent execution is established.
+and passes `eng/OSArch.props`' existing process-architecture query using the
+predefined context. It currently stops at runtime's root `Directory.Build.props`
+import of `Microsoft.DotNet.Arcade.Sdk`: package-SDK import bindings are not yet
+captured and replayed, and hardened Build correctly leaves package-cache SDK
+discovery disabled. Preparation and the failed graph attempt both produce zero
+DLLs. Tool scheduling has not yet been reached. No runtime library graph,
+compilation or independent execution is established.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,

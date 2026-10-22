@@ -2724,6 +2724,12 @@ namespace Microsoft.Build.CommandLine
                                 RuntimeInformation.IsOSPlatform(OSPlatform.Create("FREEBSD")) ? "freebsd" :
                                 "unknown");
                         }
+
+                        if (!globalProperties.ContainsKey("MSBuildGraphHostArchitecture"))
+                        {
+                            globalProperties.Add("MSBuildGraphHostArchitecture",
+                                RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant());
+                        }
                     }
 
                     if (commandLineSwitches.IsParameterizedSwitchSet(CommandLineSwitches.ParameterizedSwitch.IsolateProjects))

@@ -6,9 +6,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Build.Collections;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
@@ -25,6 +27,7 @@ namespace Microsoft.Build.Graph.Hardened;
 internal sealed class HardenedActionGraph
 {
     internal const string HostOSProperty = "MSBuildGraphHostOS";
+    internal const string HostArchitectureProperty = "MSBuildGraphHostArchitecture";
     internal const string RequiredOutputDirectoryItem = "_MSBuildRequiredOutputDirectory";
 
     private static readonly HashSet<string> s_intrinsicFunctions = new(StringComparer.OrdinalIgnoreCase)
@@ -58,6 +61,24 @@ internal sealed class HardenedActionGraph
         return hostOS;
     }
 
+    internal static Architecture GetHostArchitecture(string? value, IElementLocation location)
+    {
+        if (!Enum.TryParse(value, ignoreCase: true, out Architecture architecture) ||
+            !string.Equals(value, Enum.GetName(typeof(Architecture), architecture), StringComparison.OrdinalIgnoreCase))
+        {
+            ProjectErrorUtilities.ThrowInvalidProject(
+                location, "HardenedGraphUnsupportedConstruct",
+                "missing or unsupported global MSBuildGraphHostArchitecture; supply a named System.Runtime.InteropServices.Architecture value",
+                "action graph construction");
+        }
+
+        return architecture;
+    }
+
+    internal static bool IsHostContextProperty(string name)
+        => MSBuildNameIgnoreCaseComparer.Default.Equals(name, HostOSProperty) ||
+           MSBuildNameIgnoreCaseComparer.Default.Equals(name, HostArchitectureProperty);
+
     internal static bool IsAllowedFunction(Type receiver, string member)
     {
         string name = receiver.FullName ?? "";
@@ -71,6 +92,8 @@ internal sealed class HardenedActionGraph
             name is "System.String" or "System.Math" or "System.MathF" or "System.Convert" or
                 "System.Decimal" or "System.Version" or "System.Guid" or "System.DateTime" or
                 "System.DateTimeOffset" or "System.TimeSpan" or "System.IO.Path" ||
+            (receiver == typeof(RuntimeInformation) &&
+                string.Equals(member, nameof(RuntimeInformation.ProcessArchitecture), StringComparison.OrdinalIgnoreCase)) ||
             (receiver == typeof(IntrinsicFunctions) && s_intrinsicFunctions.Contains(member));
     }
 
@@ -79,6 +102,7 @@ internal sealed class HardenedActionGraph
     private readonly string _dotnet;
     private readonly string _directory;
     private readonly string _hostOS;
+    private readonly Architecture _hostArchitecture;
     private readonly Dictionary<string, string> _environment;
     private readonly List<ActionInvocation> _actions;
     private readonly Dictionary<string, ElementLocation> _requiredOutputDirectories;
@@ -92,6 +116,9 @@ internal sealed class HardenedActionGraph
         Require(project.GlobalProperties.ContainsKey(HostOSProperty),
             $"{HostOSProperty} not supplied as a global construction input");
         _hostOS = GetHostOS(project.GlobalProperties[HostOSProperty], _location);
+        Require(project.GlobalProperties.ContainsKey(HostArchitectureProperty),
+            $"{HostArchitectureProperty} not supplied as a global construction input");
+        _hostArchitecture = GetHostArchitecture(project.GlobalProperties[HostArchitectureProperty], _location);
         Require(project.GlobalProperties.ContainsKey("MSBuildEmitActionGraph"),
             "MSBuildEmitActionGraph set inside a project instead of as a global property");
         Require(Path.IsPathRooted(project.GetPropertyValue("MSBuildEmitActionGraph")),
@@ -113,8 +140,9 @@ internal sealed class HardenedActionGraph
             Require(FileUtilities.PathsEqual(_destination, parent._destination) &&
                 FileUtilities.PathsEqual(_host, parent._host) &&
                 FileUtilities.PathsEqual(_dotnet, parent._dotnet) &&
-                _hostOS == parent._hostOS,
-                "a child project changing action graph destination, hosts, or host OS");
+                _hostOS == parent._hostOS &&
+                _hostArchitecture == parent._hostArchitecture,
+                "a child project changing action graph destination, hosts, or host context");
             Require(_environment.Count == parent._environment.Count,
                 "a child project changing the action environment");
             foreach (KeyValuePair<string, string> variable in _environment)
@@ -271,7 +299,8 @@ internal sealed class HardenedActionGraph
 
         string manifestDirectory = _destination + ".actions";
         StringBuilder ninja = new("ninja_required_version = 1.10\n");
-        ninja.Append("msbuild_construction_host_os = ").Append(_hostOS).Append("\n\n");
+        ninja.Append("msbuild_construction_host_os = ").Append(_hostOS).Append('\n');
+        ninja.Append("msbuild_construction_host_architecture = ").Append(_hostArchitecture.ToString().ToLowerInvariant()).Append("\n\n");
         List<string> previousOutputs = [];
         List<string> allOutputs = [];
         List<(string Path, byte[] Contents)> manifests = [];
