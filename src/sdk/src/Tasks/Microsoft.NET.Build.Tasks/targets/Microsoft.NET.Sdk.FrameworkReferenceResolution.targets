@@ -37,12 +37,19 @@ Copyright (c) .NET Foundation. All rights reserved.
           Condition="'$(MSBuildHardenedGraph)' != 'true' and
                      (('$(MSBuildRestoreGraphInputs)' == 'true' and '$(_MSBuildPreparingGraphInputs)' == 'true') or
                       ('$(MSBuildRestoreGraphInputs)' != 'true' and '$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))">
+    <!-- Project-declared references stay in authoring and use path-only resolution during hardened Build. -->
+    <ItemGroup>
+      <_FrameworkReferenceFetchManifestCompileReference Include="@(Reference)"
+                                                       Condition="'%(Reference.FrameworkReferenceName)' == '@(FrameworkReference)'" />
+      <_FrameworkReferenceFetchManifestAnalyzer Include="@(Analyzer)"
+                                               Condition="'%(Analyzer.FrameworkReferenceName)' == '@(FrameworkReference)'" />
+    </ItemGroup>
     <WriteFrameworkReferenceFetchManifest
       OutputFile="$(FrameworkReferenceFetchManifestPath)"
       TargetFramework="$(TargetFramework)"
       FrameworkReferences="@(FrameworkReference)"
-      CompileReferences="@(Reference)"
-      Analyzers="@(Analyzer->WithMetadataValue('ExternallyResolved', 'true'))"
+      CompileReferences="@(_FrameworkReferenceFetchManifestCompileReference)"
+      Analyzers="@(_FrameworkReferenceFetchManifestAnalyzer)"
       RuntimeFrameworks="@(_FrameworkReferenceFetchManifestRuntimeFramework)"
       ResolvedFrameworkReferences="@(ResolvedFrameworkReference)"
       AppHostSourcePath="$(AppHostSourcePath)"

@@ -86,6 +86,7 @@
     <CallTarget Targets="TestProjectReferences" />
     <CallTarget Targets="TestConfiguredPreparation" />
     <CallTarget Targets="TestRuntimeReferences" />
+    <CallTarget Targets="TestExplicitReferences" />
     <CallTarget Targets="TestRuntimeTrimming" />
     <CallTarget Targets="TestPackageReferences" />
     <WriteLinesToFile File="$(_TestDirectory)compile.rsp" Lines="@(_CompileReference->'-r:&quot;%(Identity)&quot;');&quot;$(_TestDirectory)HelloWorld.cs&quot;" Overwrite="true" />
@@ -224,6 +225,86 @@
     </Exec>
     <Error Condition="'$(_RuntimeReferencesOutput)' != 'Hello from a project reference.'"
            Text="The independently built program must consume its project replacement." />
+  </Target>
+  <Target Name="TestExplicitReferences">
+    <PropertyGroup>
+      <_ExplicitRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'explicit-references'))</_ExplicitRoot>
+      <_ExplicitHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_ExplicitHostOS>
+      <_ExplicitHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_ExplicitHostOS>
+      <_ExplicitHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_ExplicitHostOS>
+      <_ExplicitHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_ExplicitHostOS>
+      <_ExplicitArguments>-p:DirectoryBuildPropsPath=&quot;$(_ExplicitRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_ExplicitRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_ExplicitRoot)Directory.Packages.props&quot; -p:MSBuildGraphHostOS=$(_ExplicitHostOS)</_ExplicitArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_ExplicitRoot)Parent;$(_ExplicitRoot)Tool" />
+    <WriteLinesToFile File="$(_ExplicitRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_ExplicitRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_ExplicitRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ExplicitReferences.csproj;$(MSBuildThisFileDirectory)ExplicitReferences.csproj"
+          DestinationFiles="$(_ExplicitRoot)Parent/Parent.csproj;$(_ExplicitRoot)Tool/Tool.csproj" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ExplicitReferences.cs;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs"
+          DestinationFiles="$(_ExplicitRoot)Parent/Program.cs;$(_ExplicitRoot)Tool/Greeting.cs" />
+    <Exec Command="$(_App) restore &quot;$(_ExplicitRoot)Parent/Parent.csproj&quot; $(_ExplicitArguments) -p:DisableImplicitFrameworkReferences=true -p:FrameworkReferenceFetchManifestPath=&quot;$(_ExplicitRoot)empty-framework.g.props&quot; -bl:&quot;$(_ExplicitRoot)empty-framework-rejected.binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_EmptyFrameworkExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_EmptyFrameworkOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_EmptyFrameworkLog>@(_EmptyFrameworkOutput)</_EmptyFrameworkLog>
+    </PropertyGroup>
+    <Error Condition="'$(_EmptyFrameworkExit)' == '0' or !$(_EmptyFrameworkLog.Contains('NETSDK1247')) or
+                      $(_EmptyFrameworkLog.Contains('MSB4018')) or Exists('$(_ExplicitRoot)empty-framework.g.props')"
+           Text="An empty framework-reference list must report its unsupported profile without a diagnostic-task exception." />
+    <Exec Command="$(_App) restore &quot;$(_ExplicitRoot)Parent/Parent.csproj&quot; $(_ExplicitArguments) -bl:&quot;$(_ExplicitRoot)restore.binlog&quot;" />
+    <Error Condition="Exists('$(_ExplicitRoot)Parent/bin') or Exists('$(_ExplicitRoot)Tool/bin')"
+           Text="Preparing explicit references must not require referenced binaries or prebuild their producers." />
+    <XmlPeek XmlInputPath="$(_ExplicitRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_ExplicitPackReference" />
+    </XmlPeek>
+    <PropertyGroup>
+      <_ExplicitPackNames>@(_ExplicitPackReference->'%(Filename)%(Extension)')</_ExplicitPackNames>
+    </PropertyGroup>
+    <Error Condition="'@(_ExplicitPackReference)' == '' or $(_ExplicitPackNames.Contains('Tool.dll'))"
+           Text="Framework facts must contain only targeting-pack candidates, not project-declared file references." />
+    <WriteLinesToFile File="$(_ExplicitRoot)legacy.g.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_ExplicitRoot)Parent/Parent.csproj&quot; $(_ExplicitArguments) -p:MSBuildRestoreGraphInputs=false -p:EnableFrameworkReferenceFetchManifest=true -p:FrameworkReferenceFetchManifestPath=&quot;$(_ExplicitRoot)legacy.g.props&quot; -p:ExplicitReference=Tool -bl:&quot;$(_ExplicitRoot)legacy-rejected.binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_LegacyExplicitExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_LegacyExplicitOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_LegacyExplicitLog>@(_LegacyExplicitOutput)</_LegacyExplicitLog>
+    </PropertyGroup>
+    <Error Condition="'$(_LegacyExplicitExit)' == '0' or !$(_LegacyExplicitLog.Contains('NETSDK1247')) or Exists('$(_ExplicitRoot)legacy.g.props')"
+           Text="Legacy manifest-only Restore must still reject named references and invalidate stale snapshots." />
+    <ItemGroup>
+      <_RejectedExplicitReference Include="name" Reference="Tool" />
+      <_RejectedExplicitReference Include="missing" Reference="missing/Tool.dll" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_ExplicitRoot)Parent/Parent.csproj&quot; $(_ExplicitArguments) -p:ExplicitReference=&quot;%(_RejectedExplicitReference.Reference)&quot; -p:RejectedReference=true -p:MSBuildEmitActionGraph=&quot;$(_ExplicitRoot)%(_RejectedExplicitReference.Identity).ninja&quot; -bl:&quot;$(_ExplicitRoot)%(_RejectedExplicitReference.Identity).binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" ItemName="_RejectedExplicitExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_RejectedExplicitOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_RejectedExplicitLog>@(_RejectedExplicitOutput)</_RejectedExplicitLog>
+    </PropertyGroup>
+    <Error Condition="!$(_RejectedExplicitLog.Contains('MSB3671')) or !$(_RejectedExplicitLog.Contains('MSB4286'))"
+           Text="Explicit-reference failures must diagnose assembly names and missing declared inputs." />
+    <Error Condition="'%(_RejectedExplicitExit.Identity)' == '0' or
+                      Exists('$(_ExplicitRoot)%(_RejectedExplicitReference.Identity).ninja') or Exists('$(_ExplicitRoot)%(_RejectedExplicitReference.Identity).ninja.actions')"
+           Text="Invalid explicit references must fail without name/HintPath fallbacks or partial graph publication." />
+    <Exec Command="$(_App) build &quot;$(_ExplicitRoot)Parent/Parent.csproj&quot; $(_ExplicitArguments) -p:MSBuildEmitActionGraph=&quot;$(_ExplicitRoot)build.ninja&quot; -bl:&quot;$(_ExplicitRoot)build.binlog&quot;" />
+    <Error Condition="Exists('$(_ExplicitRoot)Parent/bin/Debug/net11.0/Parent.dll') or Exists('$(_ExplicitRoot)Tool/bin/Debug/net11.0/Tool.dll')"
+           Text="Explicit-reference graph construction must not execute producers." />
+    <Exec WorkingDirectory="$(_ExplicitRoot)Parent" Command="ninja -f &quot;$(_ExplicitRoot)build.ninja&quot;" />
+    <Error Condition="!Exists('$(_ExplicitRoot)Parent/bin/Debug/net11.0/Tool.dll') or !Exists('$(_ExplicitRoot)Parent/bin/Debug/net11.0/Tool.pdb')"
+           Text="Independent execution must preserve explicit reference copy-local metadata and symbols." />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_ExplicitRoot)Parent/bin/Debug/net11.0/Parent.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ExplicitProgramOutput" />
+    </Exec>
+    <Error Condition="'$(_ExplicitProgramOutput)' != 'Hello from a project reference.'"
+           Text="Independent compilation must preserve explicit reference aliases and use the declared producer." />
   </Target>
   <Target Name="TestRuntimeTrimming">
     <PropertyGroup>

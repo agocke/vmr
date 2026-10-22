@@ -254,9 +254,13 @@ With the coordinated SDK, SourceLink, and Roslyn overlays, the same Restore
 flag also prepares framework-reference and repository snapshots and initializes
 the analyzer semaphore used as a stable compilation input. The framework
 snapshot remains limited to one selected implicit `Microsoft.NETCore.App`
-framework per configured project, with package/project references but without
-explicit assembly references or runtime identifiers. Retained `TargetFrameworks`
-is supported when an inner `TargetFramework` is selected; outer preparation is not.
+framework per configured project, with package/project references and explicit
+assembly paths but without runtime identifiers. The
+[SDK profile](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/sdk/Sdk.targets)
+leaves project-declared references in authoring; hardened resolution rejects
+assembly names even with `HintPath`. Legacy manifest-only mode still rejects
+`Reference` items. Retained `TargetFrameworks` is supported when an inner
+`TargetFramework` is selected; outer preparation is not.
 
 Framework snapshots live in
 `$(MSBuildProjectExtensionsPath)frameworkreferences/$(MSBuildProjectFile).g.props`;
@@ -286,10 +290,40 @@ normal project-reference framework/configuration/property negotiation.
 It explicitly rejects standard product/tool build targets during preparation;
 generated-tool dependencies must remain connected to their graph producers.
 Framework preparation captures targeting-pack reference and analyzer candidates
-before project-dependent filtering. Runtime filters those candidates immediately
+owned by the selected `FrameworkReferenceName`, excluding unrelated project/package
+items, before project-dependent filtering. Runtime filters those candidates immediately
 before final assembly-reference resolution, when project output metadata is
 available; it must not pull `ResolveProjectReferences` into pack discovery.
 Snapshot replay must participate in that filtering, not bypass it.
+
+### Framework inventories and final reference selection
+
+A framework snapshot records the selected targeting pack's candidate inventory,
+not the final compiler reference set. Restore may acquire packs and capture their
+membership, paths, and metadata. It must not freeze the winning references across
+framework, package, project-output, and explicit-file candidates.
+
+Graph construction combines those candidates and applies reference-selection
+policy using prepared facts and project authoring. For example, when a newer
+`System.Collections.Immutable` package supplies the selected compatible compile
+asset, the compiler receives the other net11 framework references plus that
+package asset, not both versions of `System.Collections.Immutable.dll`.
+Keeping an explicit file reference out of the framework inventory does not exempt
+it from final selection. Generated candidates retain their producer dependencies.
+
+The existing SDK splits these responsibilities:
+[`ProcessFrameworkReferences` and `ResolveTargetingPackAssets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets)
+select packs and obtain their inventories and conflict-policy information;
+`ResolvePackageFileConflicts` performs framework/package arbitration. Migrate
+that arbitration separately from its filesystem discovery, rather than running
+it during Restore and snapshotting its winners.
+
+The prototype has not completed this selection stage. Replay currently inserts
+pack candidates into `ReferencePath`, and
+[`_HandlePackageFileConflicts`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.ConflictResolution.targets)
+is skipped while using a framework manifest. Runtime's project-replacement filter
+supports a bounded case, not general framework/package arbitration. Completing
+the latter requires the necessary conflict facts and zero-I/O graph-time selection.
 
 ### Explicit reference-resolution sources
 

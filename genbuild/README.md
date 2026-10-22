@@ -92,6 +92,10 @@ producer and executes independently. A separate ordinary-build fixture uses a
 recording linker to check runtime's distinct pre-trim/final assembly and symbol
 paths, unchanged-build reuse, and recovery of missing final symbols. It tests
 target authoring, not real linker semantics or generated-task binding.
+An explicit-reference fixture keeps a future tool assembly out of framework
+facts, preserves aliases and copy-local symbols, and compiles/starts independently.
+Assembly-name/HintPath fallback and missing paths fail without graph publication;
+legacy manifest rejection and empty-framework diagnostics are also checked.
 An offline package fixture also selects distinct reference/runtime assemblies
 and a compatible package generator, then independently compiles and starts the
 consumer. Package selection runs with assets JSON and package directories
@@ -118,18 +122,29 @@ disables that resolver during hardened Build; package-SDK import bindings still
 need explicit capture and replay rather than package-cache searches or downloads.
 
 Framework-reference preparation accepts one selected framework per configured
-project, including package/project references and retained `TargetFrameworks`.
+project, including package/project references, explicit assembly paths and retained
+`TargetFrameworks`. Framework snapshots contain only pack-owned reference/analyzer
+candidates; project-declared references stay in authoring for path-only resolution.
+These are inventories, not final compiler reference sets. Final selection belongs
+in graph construction; general framework/package arbitration is still missing
+because snapshot replay skips the ordinary SDK package-conflict target. Runtime's
+project-replacement filter covers only a bounded case.
+See the [reference-selection contract](../src/msbuild/documentation/specs/proposed/hardened-static-graph.md#framework-inventories-and-final-reference-selection).
+Legacy manifest-only mode retains its narrower rejection of `Reference` items.
 Outer cross-targeting and RID preparation remain unsupported.
 The real `System.Collections.Immutable` trial targeting runtime's `net10.0`
 minimum now gets past the multi-targeting guard. Runtime's
 `FilterImplicitAssemblyReferences` now runs before final assembly-reference
 resolution rather than during targeting-pack discovery. Preparation reaches
-`ILLink.Tasks` without building any product binaries, then fails with `NETSDK1247`
-on the explicit package-supplied MSBuild references authored by
-`PackageDownloadAndReference`. The producer dependencies remain intact.
+`ILLink.Tasks` without building any product binaries and accepts its explicit
+package-supplied MSBuild references authored by `PackageDownloadAndReference`.
+Preparation now fails with `NETSDK1247` on the empty `FrameworkReference` list in
+`ILLink.CodeFixProvider` and `ILLink.RoslynAnalyzer`: their `netstandard2.0`
+package-backed profile is not the supported implicit `Microsoft.NETCore.App`
+profile. The producer dependencies remain intact.
 Runtime library trimming compiles directly to `PreTrim/` and links to separate
 final paths, without moving or rewriting compiler outputs. Generated-tool task
-binding and declared-I/O adaptations, explicit-reference preparation,
+binding and declared-I/O adaptations, package-backed framework preparation,
 package-SDK import replay and broader compiler/tool profiles remain necessary.
 The trial uses ordinary
 Restore (`RestoreUseStaticGraphEvaluation=false`): the static Restore launcher
@@ -149,8 +164,9 @@ ambient JSON reader, package probing or binary asset cache. Restore additionally
 records selected package locations, related-file presence, locale normalization
 and compiler API identity; package generators join the prepared compiler closure.
 Standard reference, analyzer and copy-local item composition is retained.
-Content preprocessing, additional frameworks, simple framework-assembly names
-and file conflicts requiring ordinary assembly inspection fail explicitly.
+Content preprocessing, additional frameworks and simple framework-assembly names
+fail explicitly. File conflicts requiring ordinary assembly inspection remain
+unsupported; package selection does not provide general framework/package arbitration.
 Outer cross-targeting and RID preparation remain unsupported. Dependency/runtime-config
 actions still read declared assets JSON during execution; migrating those
 consumers to facts remains required by the eventual design.

@@ -120,6 +120,23 @@ Runtime's reference filter runs before final assembly-reference resolution and
 handles both ordinary `Reference` candidates and replayed `ReferencePath` items.
 Pack analyzers are captured and replayed too; project-produced analyzers replace
 conflicting pack candidates without opening their binaries.
+Capture only pack-owned references/analyzers, identified by `FrameworkReferenceName`.
+Project-declared explicit assembly paths stay in authoring for `ResolveReferencePaths`;
+do not mix them into framework snapshots or inspect their binaries in preparation.
+Graph preparation does not add assembly-name or `HintPath` resolution, and legacy
+manifest-only mode retains its existing `Reference` rejection.
+
+Framework inventories are candidates, not a final compiler reference list.
+Combine them with package, project-output, and explicit-file candidates during
+graph construction, and apply conflict policy there. Capture any external facts
+that policy needs; do not move arbitration into Restore or snapshot its winners.
+For a compatible newer package replacement, remove the framework's corresponding
+assembly from the compiler set while retaining the other framework members.
+Current replay inserts pack candidates into `ReferencePath` and skips the ordinary
+SDK package-conflict target. Runtime's project-replacement filter is only a bounded
+adaptation; general framework/package selection still needs a zero-I/O replacement.
+See the [selection contract](hardened-static-graph.md#framework-inventories-and-final-reference-selection).
+
 For runtime library trimming, the compiler writes directly to `PreTrim/`, and
 the linker produces distinct final paths for normal publication. Do not move
 compiler outputs away or let both actions write the same path. XML-combining

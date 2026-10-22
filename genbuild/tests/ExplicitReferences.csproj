@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <OutputType Condition="'$(MSBuildProjectName)' == 'Parent'">Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <DeclaredReferencePath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../Tool/bin/$(Configuration)/$(TargetFramework)/Tool.dll'))</DeclaredReferencePath>
+    <ExplicitReference Condition="'$(ExplicitReference)' == ''">$(DeclaredReferencePath)</ExplicitReference>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" Condition="'$(MSBuildProjectName)' == 'Parent'" />
+    <Compile Include="Greeting.cs" Condition="'$(MSBuildProjectName)' == 'Tool'" />
+    <ProjectReference Include="../Tool/Tool.csproj" ReferenceOutputAssembly="false" Private="false"
+                      Condition="'$(MSBuildProjectName)' == 'Parent'" />
+    <Reference Include="$(ExplicitReference)" Condition="'$(MSBuildProjectName)' == 'Parent'"
+               HintPath="$(DeclaredReferencePath)" Aliases="Tool" Private="true" ExternallyResolved="true"
+               ReferenceSourceTarget="ExplicitFile" ReferenceMarker="literal%3Bvalue"
+               DebugSymbolsFile="$([System.IO.Path]::ChangeExtension('$(DeclaredReferencePath)', '.pdb'))" />
+  </ItemGroup>
+  <Target Name="CheckExplicitReference" AfterTargets="ResolveReferences"
+          Condition="'$(MSBuildProjectName)' == 'Parent' and '$(RejectedReference)' != 'true'">
+    <ItemGroup>
+      <_ExplicitReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'Tool'" />
+    </ItemGroup>
+    <Error Condition="'@(_ExplicitReference->Count())' != '1' or
+                      '%(_ExplicitReference.Identity)' != '$(DeclaredReferencePath)' or
+                      '%(_ExplicitReference.ReferenceSourceTarget)' != 'ExplicitFile' or
+                      '%(_ExplicitReference.Aliases)' != 'Tool' or
+                      '%(_ExplicitReference.Private)' != 'true' or
+                      '%(_ExplicitReference.ReferenceMarker)' != 'literal;value'"
+           Text="Explicit file references must remain separate from pack facts and retain their paths and metadata." />
+  </Target>
+</Project>

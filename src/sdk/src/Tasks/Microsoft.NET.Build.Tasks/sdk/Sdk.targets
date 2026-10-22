@@ -123,13 +123,16 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <PropertyGroup>
       <_FrameworkReferenceFetchManifestFrameworkReferences>@(FrameworkReference, ', ')</_FrameworkReferenceFetchManifestFrameworkReferences>
+      <!-- Task string-array binding drops empty arguments; keep the empty list representable in diagnostics. -->
+      <_FrameworkReferenceFetchManifestFrameworkReferences Condition="'@(FrameworkReference)' == ''">[]</_FrameworkReferenceFetchManifestFrameworkReferences>
       <_FrameworkReferenceFetchManifestReferences>@(Reference, ', ')</_FrameworkReferenceFetchManifestReferences>
       <_FrameworkReferenceFetchManifestProfileSupported
         Condition="'$(IsCrossTargetingBuild)' != 'true' and
                    '$(TargetFramework)' != '' and
                    '@(FrameworkReference->Count())' == '1' and
                    '@(_SupportedFrameworkReferenceFetchManifestFrameworkReference->Count())' == '1' and
-                   '@(Reference->Count())' == '0' and
+                   ('@(Reference->Count())' == '0' or
+                    '$(MSBuildRestoreGraphInputs)' == 'true' or '$(MSBuildHardenedGraph)' == 'true') and
                    '$(RuntimeIdentifier)' == '' and
                    '$(RuntimeIdentifiers)' == ''">true</_FrameworkReferenceFetchManifestProfileSupported>
     </PropertyGroup>
@@ -161,7 +164,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       FormatArguments="FrameworkReference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestFrameworkReferences)'))"
       ContinueOnError="ErrorAndContinue" />
     <NETSdkError
-      Condition="'@(Reference)' != ''"
+      Condition="'@(Reference)' != '' and
+                 '$(MSBuildRestoreGraphInputs)' != 'true' and '$(MSBuildHardenedGraph)' != 'true'"
       ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
       FormatArguments="Reference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestReferences)'))"
       ContinueOnError="ErrorAndContinue" />

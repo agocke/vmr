@@ -420,6 +420,11 @@ projects; choosing the older framework does not make those dependencies optional
   retaining candidate analyzers and tool producer dependencies.
 - [x] Give runtime library compilation and trimming distinct assembly/symbol
   outputs without moving or overwriting compiler outputs.
+- [x] Prepare explicit restored assembly references separately from pack facts,
+  leaving path-only resolution and tool producer dependencies intact.
+- [ ] Capture conflict-policy facts and implement final framework/package/project/file
+  reference selection during graph construction, including package-over-framework replacement.
+- [ ] Extend framework preparation to package-backed `netstandard2.0` tool/analyzer projects.
 - [ ] Support the actual compiler/API-tool and analyzer requirements,
   keeping generated tools connected to their producers.
 - [ ] Construct a fresh real-library graph without product binaries.
@@ -468,11 +473,33 @@ symbols, disabled symbol rewriting, untrimmed builds, unchanged-build reuse,
 and missing-final-PDB recovery. This does not establish real ILLink execution
 or generated-task binding in the action graph.
 
-The real preparation probe produces no DLLs and reaches `ILLink.Tasks`, then
-fails with `NETSDK1247` on its explicit MSBuild framework/utility references
-from [`PackageDownloadAndReference`](../../../../runtime/eng/PackageDownloadAndReference.targets).
-Support those explicit restored paths without mixing them into pack discovery;
-do not suppress references, analyzers, or tool producer dependencies.
+The real preparation probe produces no DLLs and passes `ILLink.Tasks`' explicit
+MSBuild framework/utility references from
+[`PackageDownloadAndReference`](../../../../runtime/eng/PackageDownloadAndReference.targets).
+Framework capture selects pack-owned references/analyzers by `FrameworkReferenceName`;
+project-declared references remain in authoring for the existing path-only resolver.
+The [explicit-reference fixture](../../../../../genbuild/tests/ExplicitReferences.csproj)
+prepares a missing future tool path without prebuilding, preserves aliases and
+copy-local symbols, then compiles/starts independently. Assembly names fail even
+with `HintPath`; missing paths fail external-input validation without publishing
+a graph. Legacy manifest-only mode retains its `Reference` rejection.
+Empty framework lists report unsupported-profile diagnostics rather than a
+diagnostic-task exception.
+
+These fixtures establish candidate capture, path handling, and bounded runtime
+project replacements, not general framework/package reference arbitration.
+Replay inserts pack candidates into `ReferencePath` while the ordinary SDK
+`_HandlePackageFileConflicts` target is skipped. Implement zero-I/O graph-time
+selection from the required facts, with a fixture proving that a selected
+compatible package asset replaces the same assembly from the framework without
+discarding unrelated framework members. Restore must not snapshot that winning
+set; see the [selection contract](hardened-static-graph.md#framework-inventories-and-final-reference-selection).
+
+The real probe now fails with `NETSDK1247` on the empty `FrameworkReference` list
+of `ILLink.CodeFixProvider` and `ILLink.RoslynAnalyzer`. Those projects target
+`netstandard2.0` using package-backed references, outside the supported single
+implicit `Microsoft.NETCore.App` profile. Extend preparation for that profile
+without suppressing references, analyzers, or tool producer dependencies.
 The probe uses `RestoreUseStaticGraphEvaluation=false` because the static Restore
 launcher still assumes an installed SDK layout.
 No runtime library graph, compilation, or independent execution is proven.
