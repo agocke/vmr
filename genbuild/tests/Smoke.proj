@@ -89,6 +89,7 @@
     <CallTarget Targets="TestExplicitReferences" />
     <CallTarget Targets="TestRuntimeTrimming" />
     <CallTarget Targets="TestPackageReferences" />
+    <CallTarget Targets="TestFrameworkPackageReferences" />
     <WriteLinesToFile File="$(_TestDirectory)compile.rsp" Lines="@(_CompileReference->'-r:&quot;%(Identity)&quot;');&quot;$(_TestDirectory)HelloWorld.cs&quot;" Overwrite="true" />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_TestDirectory)HelloWorld.dll&quot; @&quot;$(_TestDirectory)compile.rsp&quot;" />
     <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_TestDirectory)HelloWorld.runtimeconfig.json" />
@@ -443,6 +444,91 @@
     </Exec>
     <Error Condition="'$(_PackageMissingLocationExit)' == '0' or '$(_PackageInvalidContextExit)' == '0' or Exists('$(_PackageRoot)missing-location.ninja') or Exists('$(_PackageRoot)missing-location.ninja.actions') or Exists('$(_PackageRoot)invalid-context.ninja') or Exists('$(_PackageRoot)invalid-context.ninja.actions')"
            Text="Missing locations and invalid package context must fail without publishing partial graphs." />
+  </Target>
+  <Target Name="TestPreparedConflicts">
+    <PropertyGroup>
+      <_PreparedConflictsRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'prepared-conflicts'))</_PreparedConflictsRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_PreparedConflictsRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)PreparedConflicts.proj" DestinationFolder="$(_PreparedConflictsRoot)" />
+    <ItemGroup>
+      <_PreparedConflictCase Include="file-version;file-facts;preferred;override;aliases;producer;platform" />
+      <_InvalidConflictCase Include="format;missing;invalid-version;ambiguous" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_PreparedConflictsRoot)PreparedConflicts.proj&quot; -p:TestCase=%(_PreparedConflictCase.Identity) -p:MSBuildEmitActionGraph=&quot;$(_PreparedConflictsRoot)%(_PreparedConflictCase.Identity).ninja&quot; -bl:&quot;$(_PreparedConflictsRoot)%(_PreparedConflictCase.Identity).binlog&quot;" />
+    <Error Condition="Exists('$(_PreparedConflictsRoot)absent') or Exists('$(_PreparedConflictsRoot)%(_PreparedConflictCase.Identity).txt')"
+           Text="Conflict selection must not read or produce the absent candidate binaries or execute actions." />
+    <Exec Command="$(_App) build &quot;$(_PreparedConflictsRoot)PreparedConflicts.proj&quot; -p:TestCase=%(_InvalidConflictCase.Identity) -p:MSBuildEmitActionGraph=&quot;$(_PreparedConflictsRoot)%(_InvalidConflictCase.Identity).ninja&quot; -flp:&quot;LogFile=$(_PreparedConflictsRoot)%(_InvalidConflictCase.Identity).log;Verbosity=quiet&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_InvalidConflictExit" />
+    </Exec>
+    <Error Condition="'$(_InvalidConflictExit)' == '0' or Exists('$(_PreparedConflictsRoot)%(_InvalidConflictCase.Identity).ninja') or
+                      !$([System.IO.File]::ReadAllText('$(_PreparedConflictsRoot)%(_InvalidConflictCase.Identity).log').Contains('NETSDK1255'))"
+           Text="Missing, malformed or unresolved conflict facts must fail explicitly without publishing a graph." />
+  </Target>
+  <Target Name="TestFrameworkPackageReferences" DependsOnTargets="TestPreparedConflicts">
+    <PropertyGroup>
+      <_ArbitrationRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'framework-packages'))</_ArbitrationRoot>
+      <_ArbitrationSeedArguments>-p:DirectoryBuildPropsPath=&quot;$(_ArbitrationRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_ArbitrationRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_ArbitrationRoot)Directory.Packages.props&quot; -p:RestoreSources=&quot;$(_ArbitrationRoot)feed&quot;</_ArbitrationSeedArguments>
+      <_ArbitrationArguments>$(_ArbitrationSeedArguments) -p:RestorePackagesPath=&quot;$(_ArbitrationRoot)packages&quot;</_ArbitrationArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_ArbitrationRoot)seed;$(_ArbitrationRoot)feed" />
+    <WriteLinesToFile File="$(_ArbitrationRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_ArbitrationRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_ArbitrationRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_ArbitrationRoot)seed" />
+    <Exec Command="$(_App) restore &quot;$(_ArbitrationRoot)seed/HelloWorld.csproj&quot; $(_ArbitrationSeedArguments) -bl:&quot;$(_ArbitrationRoot)seed.binlog&quot;" />
+    <XmlPeek XmlInputPath="$(_ArbitrationRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_ArbitrationCompilerReference" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_ArbitrationRoot)seed/obj/nugetinputs/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_NuGetInput[@Include='%2524/project/restore/packagesPath']/Value/text()">
+      <Output TaskParameter="Result" PropertyName="_ArbitrationSeedCache" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_ArbitrationRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="(/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/NuGetPackageVersion/text())[1]">
+      <Output TaskParameter="Result" PropertyName="_ArbitrationFrameworkVersion" />
+    </XmlPeek>
+    <ItemGroup>
+      <_ArbitrationFrameworkArchive Include="$(_ArbitrationSeedCache)/microsoft.netcore.app.ref/$(_ArbitrationFrameworkVersion)/*.nupkg;$(_ArbitrationSeedCache)/microsoft.aspnetcore.app.ref/$(_ArbitrationFrameworkVersion)/*.nupkg" />
+      <_ArbitrationLibraryReference Include="@(_ArbitrationCompilerReference)" Condition="'%(_ArbitrationCompilerReference.Filename)' != 'System.Collections.Immutable'" />
+      <_ArbitrationCase Include="12.0.0" ExpectedOutput="newer package selected" />
+      <_ArbitrationCase Include="10.0.0" ExpectedOutput="framework selected" />
+    </ItemGroup>
+    <Error Condition="'@(_ArbitrationFrameworkArchive->Count())' != '2'" Text="Matching framework archives must be available for the offline arbitration fixture." />
+    <Copy SourceFiles="@(_ArbitrationFrameworkArchive)" DestinationFolder="$(_ArbitrationRoot)feed" />
+    <WriteLinesToFile File="$(_ArbitrationRoot)compile.rsp" Lines="@(_ArbitrationLibraryReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
+    <MakeDir Directories="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/package/ref/net11.0;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/package/lib/net11.0;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app" />
+    <WriteLinesToFile File="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/Version.cs"
+                      Lines="[assembly: System.Reflection.AssemblyVersion(&quot;%(_ArbitrationCase.Identity).0&quot;)];[assembly: System.Reflection.AssemblyFileVersion(&quot;%(_ArbitrationCase.Identity).0&quot;)]" Overwrite="true" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -deterministic+ -out:&quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/package/lib/net11.0/System.Collections.Immutable.dll&quot; -refout:&quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/package/ref/net11.0/System.Collections.Immutable.dll&quot; @&quot;$(_ArbitrationRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)FrameworkPackageLibrary.cs&quot; &quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/Version.cs&quot;" />
+    <WriteLinesToFile File="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/package/System.Collections.Immutable.nuspec"
+                      Lines="&lt;package&gt;&lt;metadata&gt;&lt;id&gt;System.Collections.Immutable&lt;/id&gt;&lt;version&gt;%(_ArbitrationCase.Identity)&lt;/version&gt;&lt;authors&gt;genbuild&lt;/authors&gt;&lt;description&gt;Reference arbitration fixture&lt;/description&gt;&lt;/metadata&gt;&lt;/package&gt;" Overwrite="true" />
+    <ZipDirectory SourceDirectory="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/package" DestinationFile="$(_ArbitrationRoot)feed/System.Collections.Immutable.%(_ArbitrationCase.Identity).nupkg" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)FrameworkPackageReferences.csproj;$(MSBuildThisFileDirectory)FrameworkPackageProgram.cs"
+          DestinationFiles="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/App.csproj;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/Program.cs" />
+    <Exec Command="$(_App) restore &quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/App.csproj&quot; $(_ArbitrationArguments) -p:ReplacementVersion=%(_ArbitrationCase.Identity) -bl:&quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/restore.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/App.csproj&quot; -t:ResolveReferences -p:MSBuildRestoreGraphInputs=false $(_ArbitrationArguments) -p:ReplacementVersion=%(_ArbitrationCase.Identity) -bl:&quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/ordinary-selection.binlog&quot;" />
+    <ItemGroup>
+      <_ArbitrationCacheFile Include="$(_ArbitrationRoot)packages/**/*" />
+    </ItemGroup>
+    <Move SourceFiles="@(_ArbitrationCacheFile)" DestinationFiles="@(_ArbitrationCacheFile->'$(_ArbitrationRoot)unavailable/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <RemoveDir Directories="$(_ArbitrationRoot)packages" />
+    <Move SourceFiles="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/obj/project.assets.json" DestinationFiles="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/assets.saved" />
+    <Exec Command="$(_App) build &quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/App.csproj&quot; $(_ArbitrationArguments) -p:ReplacementVersion=%(_ArbitrationCase.Identity) -p:TestCase=selection -p:MSBuildEmitActionGraph=&quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/selection.ninja&quot; -bl:&quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/selection.binlog&quot;" />
+    <Error Condition="Exists('$(_ArbitrationRoot)packages') or Exists('$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/obj/project.assets.json') or Exists('$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/bin/Debug/net11.0/App.dll')"
+           Text="Reference selection must work from facts without package files, JSON or product binaries." />
+    <Move SourceFiles="@(_ArbitrationCacheFile->'$(_ArbitrationRoot)unavailable/%(RecursiveDir)%(Filename)%(Extension)')" DestinationFiles="@(_ArbitrationCacheFile)" />
+    <Move SourceFiles="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/assets.saved" DestinationFiles="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/obj/project.assets.json" />
+    <Exec Command="$(_App) build &quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/App.csproj&quot; $(_ArbitrationArguments) -p:ReplacementVersion=%(_ArbitrationCase.Identity) -p:MSBuildEmitActionGraph=&quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/build.ninja&quot; -bl:&quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/build.binlog&quot;" />
+    <Error Condition="Exists('$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/bin/Debug/net11.0/App.dll')"
+           Text="Arbitrated graph construction must not compile products." />
+    <Exec WorkingDirectory="$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app" Command="ninja -f &quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/build.ninja&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_ArbitrationRoot)%(_ArbitrationCase.Identity)/app/bin/Debug/net11.0/App.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_ArbitrationProgramOutput" />
+    </Exec>
+    <Error Condition="'@(_ArbitrationProgramOutput)' != '@(_ArbitrationCase->'%(ExpectedOutput)')'"
+           Text="Independent execution must use the package replacement or the retained framework according to SDK policy." />
+    <Error Condition="!Exists('$(_ArbitrationRoot)12.0.0/app/bin/Debug/net11.0/System.Collections.Immutable.dll') or Exists('$(_ArbitrationRoot)10.0.0/app/bin/Debug/net11.0/System.Collections.Immutable.dll')"
+           Text="Runtime publication must agree with package/framework conflict policy." />
   </Target>
   <Target Name="TestNuGetInputs">
     <PropertyGroup>

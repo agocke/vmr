@@ -38,7 +38,6 @@ public sealed class ResolveNuGetAssets : TaskBase
     public ITaskItem[] ExpectedPlatformPackages { get; set; } = [];
     public ITaskItem[] SatelliteResourceLanguages { get; set; } = [];
     public ITaskItem[] PackageReferences { get; set; } = [];
-    public ITaskItem[] FrameworkCompileReferences { get; set; } = [];
     public ITaskItem[] ExistingAnalyzers { get; set; } = [];
     public string DefaultImplicitPackages { get; set; } = "";
 
@@ -125,16 +124,6 @@ public sealed class ResolveNuGetAssets : TaskBase
                 Log.LogError(Strings.UnsupportedNuGetAssetsInput,
                     "content preprocessing or additional framework references", TargetFramework);
                 return;
-            }
-            HashSet<string> frameworkNames = new(
-                FrameworkCompileReferences.Select(item => Path.GetFileName(item.ItemSpec)), StringComparer.OrdinalIgnoreCase);
-            foreach (ITaskItem item in selection.CompileTimeAssemblies.Concat(selection.RuntimeAssemblies))
-            {
-                if (frameworkNames.Contains(Path.GetFileName(item.ItemSpec)))
-                {
-                    Log.LogError(Strings.UnsupportedNuGetAssetsInput, "framework/package assembly conflict", item.ItemSpec);
-                    return;
-                }
             }
             RejectConflicts(selection.CompileTimeAssemblies, item => Path.GetFileName(item.ItemSpec));
             RejectConflicts(selection.Analyzers.Concat(ExistingAnalyzers), item => Path.GetFileName(item.ItemSpec));

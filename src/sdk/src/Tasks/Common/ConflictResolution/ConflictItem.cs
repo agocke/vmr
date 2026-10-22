@@ -41,6 +41,8 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
         // (e.g. ResolvePackageFileConflicts), or via the Platform-item constructor which does no file
         // access. When non-null, SourcePath is absolutized through it before any file I/O.
         private readonly TaskEnvironment? _taskEnvironment;
+        private readonly Func<Version?>? _preparedAssemblyVersion;
+        private readonly Func<Version?>? _preparedFileVersion;
 
         public ConflictItem(ITaskItem originalItem, ConflictItemType itemType, TaskEnvironment? taskEnvironment)
         {
@@ -52,6 +54,15 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
         public ConflictItem(ITaskItem originalItem, ConflictItemType itemType)
             : this(originalItem, itemType, taskEnvironment: null)
         {
+        }
+
+        internal ConflictItem(ITaskItem originalItem, ConflictItemType itemType,
+            Func<Version?> assemblyVersion, Func<Version?> fileVersion)
+            : this(originalItem, itemType)
+        {
+            _preparedAssemblyVersion = assemblyVersion;
+            _preparedFileVersion = fileVersion;
+            _exists = true;
         }
 
         public ConflictItem(string fileName, string packageId, Version? assemblyVersion, Version? fileVersion)
@@ -83,7 +94,9 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
                     }
                     else
                     {
-                        _assemblyVersion = FileUtilities.TryGetAssemblyVersion(SourcePathForFileAccess ?? string.Empty);
+                        _assemblyVersion = _preparedAssemblyVersion != null
+                            ? _preparedAssemblyVersion()
+                            : FileUtilities.TryGetAssemblyVersion(SourcePathForFileAccess ?? string.Empty);
                     }
 
                     // assemblyVersion may be null but don't try to recalculate it
@@ -147,7 +160,9 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
                     }
                     else
                     {
-                        _fileVersion = FileUtilities.GetFileVersion(SourcePathForFileAccess);
+                        _fileVersion = _preparedFileVersion != null
+                            ? _preparedFileVersion()
+                            : FileUtilities.GetFileVersion(SourcePathForFileAccess);
                     }
 
                     // fileVersion may be null but don't try to recalculate it

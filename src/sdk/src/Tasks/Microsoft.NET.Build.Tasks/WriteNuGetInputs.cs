@@ -33,7 +33,7 @@ public sealed class WriteNuGetInputs : TaskBase
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(InputFile));
             content = GenerateManifest(document.RootElement);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException or BuildErrorException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException or BuildErrorException or BadImageFormatException)
         {
             Log.LogError(Strings.ErrorReadingAssetsFile, $"{InputFile}: {ex.Message}");
             return;
@@ -66,6 +66,7 @@ public sealed class WriteNuGetInputs : TaskBase
             if (CapturePackageContext)
             {
                 writer.WriteElementString("_NuGetPackageContextVersion", "1");
+                writer.WriteElementString("_NuGetConflictFactsVersion", "1");
                 writer.WriteElementString("_NuGetCompilerApiVersion", Escape(CompilerApiVersion));
             }
             writer.WriteEndElement();
@@ -112,6 +113,7 @@ public sealed class WriteNuGetInputs : TaskBase
         }
         HashSet<string> relatedFiles = new(StringComparer.Ordinal);
         HashSet<string> locales = new(StringComparer.Ordinal);
+        HashSet<string> versionFiles = new(StringComparer.Ordinal);
         foreach (LockFileTarget target in lockFile.Targets)
         {
             foreach (LockFileTargetLibrary library in target.Libraries)
@@ -120,9 +122,21 @@ public sealed class WriteNuGetInputs : TaskBase
                 {
                     continue;
                 }
-                foreach (LockFileItem asset in library.CompileTimeAssemblies.Concat(library.RuntimeAssemblies))
+                foreach (LockFileItem asset in library.CompileTimeAssemblies.Concat(library.RuntimeAssemblies)
+                    .Concat(library.NativeLibraries).Concat(library.ResourceAssemblies).Concat(library.RuntimeTargets))
                 {
-                    if (asset.IsPlaceholderFile() || !asset.Properties.TryGetValue("related", out string? related))
+                    if (asset.IsPlaceholderFile())
+                    {
+                        continue;
+                    }
+                    string assetPath = resolver.ResolvePackageAssetPath(library, asset.Path);
+                    if (versionFiles.Add(assetPath))
+                    {
+                        var versions = RuntimeFileVersions.Read(assetPath);
+                        WriteContextItem(writer, "_NuGetConflictFile", assetPath,
+                            ("AssemblyVersion", versions.AssemblyVersion ?? ""), ("FileVersion", versions.FileVersion));
+                    }
+                    if (!asset.Properties.TryGetValue("related", out string? related))
                     {
                         continue;
                     }

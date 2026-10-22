@@ -592,6 +592,11 @@ The following are names of parameters or literal values and should not be transl
         <target state="translated">NETSDK1018: Geçersiz NuGet sürüm dizesi: '{0}'.</target>
         <note>{StrBegins="NETSDK1018: "}</note>
       </trans-unit>
+      <trans-unit id="InvalidReferenceConflictFacts">
+        <source>NETSDK1255: Prepared reference conflict inputs are invalid or unsupported: {0} Capture external conflict facts during Restore and supply version metadata for generated candidates.</source>
+        <target state="new">NETSDK1255: Prepared reference conflict inputs are invalid or unsupported: {0} Capture external conflict facts during Restore and supply version metadata for generated candidates.</target>
+        <note>{StrBegins="NETSDK1255: "}{Locked="{0}"}</note>
+      </trans-unit>
       <trans-unit id="InvalidResourceUpdate">
         <source>NETSDK1075: Update handle is invalid. This instance may not be used for further updates.</source>
         <target state="translated">NETSDK1075: Güncelleştirme tanıtıcısı geçersiz. Bu örnek başka güncelleştirmeler için kullanılamaz.</target>

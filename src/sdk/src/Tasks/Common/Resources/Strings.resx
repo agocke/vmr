@@ -1094,5 +1094,9 @@ You may need to build the project on another operating system or architecture, o
     <value>NETSDK1254: Prepared package resolution does not support '{0}' with value '{1}'. Supply supported package assets and explicit preparation context.</value>
     <comment>{StrBegins="NETSDK1254: "}{Locked="{0}"}{Locked="{1}"}</comment>
   </data>
-  <!-- The latest message added is UnsupportedNuGetAssetsInput. Please update this value with each PR to catch parallel PRs both adding a new message -->
+  <data name="InvalidReferenceConflictFacts" xml:space="preserve">
+    <value>NETSDK1255: Prepared reference conflict inputs are invalid or unsupported: {0} Capture external conflict facts during Restore and supply version metadata for generated candidates.</value>
+    <comment>{StrBegins="NETSDK1255: "}{Locked="{0}"}</comment>
+  </data>
+  <!-- The latest message added is InvalidReferenceConflictFacts. Please update this value with each PR to catch parallel PRs both adding a new message -->
 </root>

@@ -19,6 +19,7 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
 
         //  Callback for unresolved conflicts, currently just used as a test hook
         public Action<TConflictItem>? UnresolvedConflictHandler { get; set; }
+        internal Action<TConflictItem, TConflictItem>? UnresolvedConflictPairHandler { get; set; }
 
         public ConflictResolver(PackageRank packageRank, PackageOverrideResolver<TConflictItem> packageOverrideResolver, Logger log)
         {
@@ -155,6 +156,7 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
                 foreach (var unresolvedConflictItem in _unresolvedConflictItems[itemKey].Skip(1))
                 {
                     UnresolvedConflictHandler?.Invoke(unresolvedConflictItem);
+                    UnresolvedConflictPairHandler?.Invoke(firstItem, unresolvedConflictItem);
 
                     //  Call ResolveConflict to generate the right log message about the unresolved conflict
                     ResolveConflict(firstItem, unresolvedConflictItem, logUnresolvedConflicts: true);

@@ -52,6 +52,9 @@ Copyright (c) .NET Foundation. All rights reserved.
       Analyzers="@(_FrameworkReferenceFetchManifestAnalyzer)"
       RuntimeFrameworks="@(_FrameworkReferenceFetchManifestRuntimeFramework)"
       ResolvedFrameworkReferences="@(ResolvedFrameworkReference)"
+      PlatformManifests="@(PlatformManifestsFromTargetingPacks)"
+      PackageOverrides="@(_TargetingPackConflictOverride)"
+      PreferredPackages="$(PackageConflictPreferredPackages)"
       AppHostSourcePath="$(AppHostSourcePath)"
       AppHostRuntimeIdentifier="$(AppHostRuntimeIdentifier)" />
   </Target>
@@ -323,6 +326,18 @@ Copyright (c) .NET Foundation. All rights reserved.
                 Condition="'%(_FrameworkReferenceManifestAnalyzer.TargetFramework)' == '$(TargetFramework)' and
                            '%(_FrameworkReferenceManifestAnalyzer.FrameworkReference)' == '@(FrameworkReference)'"
                 RemoveMetadata="TargetFramework;FrameworkReference" />
+      <PackageConflictOverrides Include="@(_FrameworkReferenceManifestPackageOverride)"
+                                Condition="'%(_FrameworkReferenceManifestPackageOverride.TargetFramework)' == '$(TargetFramework)' and
+                                           '%(_FrameworkReferenceManifestPackageOverride.FrameworkReference)' == '@(FrameworkReference)'"
+                                RemoveMetadata="TargetFramework;FrameworkReference" />
+      <_PreparedPlatformConflictItem Include="@(_FrameworkReferenceManifestPlatformItem)"
+                                     Condition="'%(_FrameworkReferenceManifestPlatformItem.TargetFramework)' == '$(TargetFramework)' and
+                                                '%(_FrameworkReferenceManifestPlatformItem.FrameworkReference)' == '@(FrameworkReference)'"
+                                     RemoveMetadata="TargetFramework;FrameworkReference" />
+      <_PreparedPreferredPackage Include="@(_FrameworkReferenceManifestPreferredPackage)"
+                                 Condition="'%(_FrameworkReferenceManifestPreferredPackage.TargetFramework)' == '$(TargetFramework)' and
+                                            '%(_FrameworkReferenceManifestPreferredPackage.FrameworkReference)' == '@(FrameworkReference)'"
+                                 RemoveMetadata="TargetFramework;FrameworkReference" />
       <_SelectedFrameworkReferenceManifestAppHost Include="@(_FrameworkReferenceManifestAppHost)"
                                                   Condition="'%(_FrameworkReferenceManifestAppHost.TargetFramework)' == '$(TargetFramework)' and
                                                              '%(_FrameworkReferenceManifestAppHost.FrameworkReference)' == '@(FrameworkReference)'"
@@ -332,6 +347,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     <PropertyGroup Condition="'@(_SelectedFrameworkReferenceManifestAppHost)' != ''">
       <AppHostSourcePath Condition="'$(AppHostSourcePath)' == ''">@(_SelectedFrameworkReferenceManifestAppHost)</AppHostSourcePath>
       <AppHostRuntimeIdentifier Condition="'$(AppHostRuntimeIdentifier)' == ''">@(_SelectedFrameworkReferenceManifestAppHost->'%(RuntimeIdentifier)')</AppHostRuntimeIdentifier>
+    </PropertyGroup>
+    <PropertyGroup>
+      <PackageConflictPreferredPackages>@(_PreparedPreferredPackage)</PackageConflictPreferredPackages>
     </PropertyGroup>
   </Target>
 
@@ -521,6 +539,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="PlatformManifests" ItemName="PlatformManifestsFromTargetingPacks" />
       <Output TaskParameter="PackageConflictPreferredPackages" PropertyName="PackageConflictPreferredPackages" />
       <Output TaskParameter="PackageConflictOverrides" ItemName="PackageConflictOverrides" />
+      <Output TaskParameter="PackageConflictOverrides" ItemName="_TargetingPackConflictOverride" />
       <Output TaskParameter="UsedRuntimeFrameworks" ItemName="_UsedRuntimeFramework" />
 
     </ResolveTargetingPackAssets>

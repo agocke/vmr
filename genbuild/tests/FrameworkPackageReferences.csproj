@@ -1,0 +1,41 @@
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ReplacementVersion Condition="'$(ReplacementVersion)' == ''">12.0.0</ReplacementVersion>
+    <DefineConstants Condition="'$(ReplacementVersion)' == '12.0.0'">$(DefineConstants);PACKAGE_WINS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <PackageReference Include="System.Collections.Immutable" Version="$(ReplacementVersion)" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup Condition="'$(TestCase)' == 'selection'">
+    <BuildDependsOn>BuildOnlySettings;InspectReferences</BuildDependsOn>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+  </PropertyGroup>
+  <Target Name="CheckReferences" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <_SelectedImmutable Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'System.Collections.Immutable'" />
+      <_UnrelatedReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'System.Runtime'" />
+      <_SelectedCopy Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Filename)' == 'System.Collections.Immutable'" />
+    </ItemGroup>
+    <Error Condition="'@(_SelectedImmutable->Count())' != '1' or '@(_UnrelatedReference->Count())' != '1'"
+           Text="Reference arbitration must select one immutable assembly and retain unrelated framework members." />
+    <Error Condition="('$(ReplacementVersion)' == '12.0.0' and '%(_SelectedImmutable.NuGetPackageId)' != 'System.Collections.Immutable') or
+                      ('$(ReplacementVersion)' != '12.0.0' and '%(_SelectedImmutable.NuGetPackageId)' != 'Microsoft.NETCore.App.Ref')"
+           Text="Reference arbitration must use SDK version policy, not always prefer packages or frameworks." />
+    <Error Condition="('$(ReplacementVersion)' == '12.0.0' and '@(_SelectedCopy->Count())' != '1') or
+                      ('$(ReplacementVersion)' != '12.0.0' and '@(_SelectedCopy)' != '')"
+           Text="Copy-local selection must agree with SDK platform conflict policy." />
+  </Target>
+  <Target Name="InspectReferences" DependsOnTargets="ResolveReferences">
+    <WriteLinesToFile File="$(TargetDir)selected-references.txt" Lines="@(ReferencePath)"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="$(TargetDir)selected-references.txt" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)selected-references.txt" Lines="@(ReferencePath)"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="$(IntermediateOutputPath)selected-references.txt" />
+  </Target>
+</Project>

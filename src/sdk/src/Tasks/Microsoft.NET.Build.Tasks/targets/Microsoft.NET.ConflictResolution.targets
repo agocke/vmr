@@ -16,6 +16,43 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <UsingTask TaskName="ResolvePackageFileConflicts" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="CheckForDuplicateItemMetadata" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="ResolvePreparedConflicts" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+
+  <Target Name="_HandlePreparedReferenceConflicts"
+          AfterTargets="ResolveAssemblyReferences"
+          Condition="'$(MSBuildHardenedGraph)' == 'true'">
+    <ItemGroup>
+      <_PreparedRuntimeConflictItem Include="@(RuntimeCopyLocalItems);@(NativeCopyLocalItems);@(ResourceCopyLocalItems);@(RuntimeTargetsCopyLocalItems)"
+                                   Exclude="@(ReferenceCopyLocalPaths)" />
+    </ItemGroup>
+    <ResolvePreparedConflicts FrameworkFactsVersion="$(_FrameworkReferenceConflictFactsVersion)"
+                              PackageFactsVersion="$(_NuGetConflictFactsVersion)"
+                              ProjectDirectory="$(MSBuildProjectDirectory)"
+                              FileFacts="@(_NuGetConflictFile)"
+                              PlatformItems="@(_PreparedPlatformConflictItem)"
+                              References="@(ReferencePath)"
+                              Analyzers="@(Analyzer)"
+                              ReferenceCopyLocalPaths="@(ReferenceCopyLocalPaths)"
+                              OtherRuntimeItems="@(_PreparedRuntimeConflictItem)"
+                              PackageOverrides="@(PackageConflictOverrides)"
+                              PreferredPackages="$(PackageConflictPreferredPackages)"
+                              DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="ReferencesWithoutConflicts" ItemName="_PreparedReferenceWithoutConflicts" />
+      <Output TaskParameter="AnalyzersWithoutConflicts" ItemName="_PreparedAnalyzerWithoutConflicts" />
+      <Output TaskParameter="ReferenceCopyLocalPathsWithoutConflicts" ItemName="_PreparedCopyLocalWithoutConflicts" />
+      <Output TaskParameter="Conflicts" ItemName="_ConflictPackageFiles" />
+    </ResolvePreparedConflicts>
+    <ItemGroup>
+      <ReferencePath Remove="@(ReferencePath)" />
+      <ReferencePath Include="@(_PreparedReferenceWithoutConflicts)" />
+      <_ResolveAssemblyReferenceResolvedFiles Remove="@(_ResolveAssemblyReferenceResolvedFiles)" />
+      <_ResolveAssemblyReferenceResolvedFiles Include="@(_PreparedReferenceWithoutConflicts)" />
+      <Analyzer Remove="@(Analyzer)" />
+      <Analyzer Include="@(_PreparedAnalyzerWithoutConflicts)" />
+      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" />
+      <ReferenceCopyLocalPaths Include="@(_PreparedCopyLocalWithoutConflicts)" />
+    </ItemGroup>
+  </Target>
 
   <!--
     _HandlePackageFileConflicts

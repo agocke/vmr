@@ -324,7 +324,6 @@ Copyright (c) .NET Foundation. All rights reserved.
       PackageLocations="@(_NuGetPackageLocation)"
       RelatedFiles="@(_NuGetRelatedFile)"
       Locales="@(_NuGetLocale)"
-      FrameworkCompileReferences="@(_FrameworkReferenceManifestCompileReference)"
       ExistingAnalyzers="@(Analyzer)"
       ProjectAssetsFile="$(_NuGetInputsSourceFile)"
       ProjectPath="$(MSBuildProjectFullPath)"

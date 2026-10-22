@@ -1,0 +1,71 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <_Left>$(MSBuildProjectDirectory)/absent/framework/Library.dll</_Left>
+    <_Right>$(MSBuildProjectDirectory)/absent/package/Library.dll</_Right>
+    <_ExpectedReference>$(_Right)</_ExpectedReference>
+    <_ExpectedCount>1</_ExpectedCount>
+    <_FactsVersion>1</_FactsVersion>
+    <_FactsVersion Condition="'$(TestCase)' == 'format'">2</_FactsVersion>
+    <_PreferredPackages Condition="'$(TestCase)' == 'preferred'">Replacement</_PreferredPackages>
+  </PropertyGroup>
+  <UsingTask TaskName="ResolvePreparedConflicts" AssemblyFile="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/tools/net11.0/Microsoft.NET.Build.Tasks.dll" />
+  <ItemGroup>
+    <_Reference Include="$(_Left)" NuGetPackageId="Framework" NuGetPackageVersion="1.0.0"
+                AssemblyVersion="1.0.0.0" FileVersion="1.0.0.0" Private="true" CopyLocal="true"
+                DebugSymbolsFile="$(MSBuildProjectDirectory)/absent/framework/Library.pdb" />
+    <_Reference Include="$(_Right)" NuGetPackageId="Replacement" NuGetPackageVersion="1.0.0"
+                AssemblyVersion="1.0.0.0" FileVersion="1.0.0.0" Private="true"
+                HintPath="literal%3Bmetadata" DebugSymbolsFile="$(MSBuildProjectDirectory)/absent/package/Library.pdb"
+                Condition="'$(TestCase)' != 'producer' and '$(TestCase)' != 'platform'" />
+    <_Platform Include="Library.dll" PackageId="Framework" AssemblyVersion="1.0.0.0" FileVersion="1.0.0.0"
+               Condition="'$(TestCase)' == 'platform'" />
+    <_Reference Update="$(_Right)" FileVersion="2.0.0.0" Condition="'$(TestCase)' == 'file-version'" />
+    <_Reference Update="$(_Right)" AssemblyVersion="2.0.0.0" Condition="'$(TestCase)' == 'override'" />
+    <_Override Include="Framework" OverriddenPackages="Replacement|1.0.0" Condition="'$(TestCase)' == 'override'" />
+    <_Reference Update="$(_Right)" AssemblyVersion="" FileVersion=""
+                Condition="'$(TestCase)' == 'file-facts' or '$(TestCase)' == 'missing' or '$(TestCase)' == 'aliases'" />
+    <_FileFact Include="$(_Right)" AssemblyVersion="1.0.0.0" FileVersion="2.0.0.0"
+               Condition="'$(TestCase)' == 'file-facts'" />
+    <_Reference Update="@(_Reference)" Private="false" Condition="'$(TestCase)' == 'aliases'" />
+    <_Reference Update="$(_Right)" Aliases="Replacement" Condition="'$(TestCase)' == 'aliases'" />
+    <_Reference Update="$(_Left)" AssemblyVersion="" FileVersion="" Condition="'$(TestCase)' == 'producer'" />
+    <_Reference Update="$(_Right)" AssemblyVersion="not-a-version" Condition="'$(TestCase)' == 'invalid-version'" />
+    <_Copy Include="@(_Reference)" Condition="'$(TestCase)' != 'aliases'" />
+    <_Copy Include="@(_Reference->'%(DebugSymbolsFile)')" Condition="'$(TestCase)' != 'aliases'" />
+  </ItemGroup>
+  <PropertyGroup>
+    <_ExpectedReference Condition="'$(TestCase)' == 'override' or '$(TestCase)' == 'producer' or '$(TestCase)' == 'platform'">$(_Left)</_ExpectedReference>
+    <_ExpectedReference Condition="'$(TestCase)' == 'aliases'">@(_Reference)</_ExpectedReference>
+    <_ExpectedCount Condition="'$(TestCase)' == 'aliases'">2</_ExpectedCount>
+    <_ExpectedCopies Condition="'$(TestCase)' != 'aliases'">$(_ExpectedReference);$([System.IO.Path]::ChangeExtension('$(_ExpectedReference)', '.pdb'))</_ExpectedCopies>
+  </PropertyGroup>
+  <Target Name="Build">
+    <ResolvePreparedConflicts FrameworkFactsVersion="$(_FactsVersion)" PackageFactsVersion="1"
+                              ProjectDirectory="$(MSBuildProjectDirectory)" FileFacts="@(_FileFact)"
+                              PlatformItems="@(_Platform)"
+                              References="@(_Reference)" ReferenceCopyLocalPaths="@(_Copy)"
+                              PreferredPackages="$(_PreferredPackages)" PackageOverrides="@(_Override)"
+                              DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="ReferencesWithoutConflicts" ItemName="_Selected" />
+      <Output TaskParameter="ReferenceCopyLocalPathsWithoutConflicts" ItemName="_SelectedCopy" />
+    </ResolvePreparedConflicts>
+    <Error Condition="'@(_Selected)' != '$(_ExpectedReference)' or '@(_Selected->Count())' != '$(_ExpectedCount)'"
+           Text="Prepared conflict selection must follow file versions, preferences, overrides and alias scopes without reading binaries."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(TestCase)' != 'aliases' and '$(TestCase)' != 'platform' and
+                      ('@(_SelectedCopy->Count())' != '2' or
+                       '@(_SelectedCopy)' != '$(_ExpectedCopies)')"
+           Text="Only the winning direct reference and its symbols may remain copy-local." DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(TestCase)' == 'platform' and
+                      ('@(_SelectedCopy)' != '' or '%(_Selected.Private)' != 'False' or '%(_Selected.CopyLocal)' != 'false')"
+           Text="A compile reference supplied by the runtime platform must remain a compile input but not a local assembly or symbol copy."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(TestCase)' != 'override' and '$(TestCase)' != 'producer' and
+                      ('%(_Selected.HintPath)' != 'literal;metadata' or
+                       ('$(TestCase)' == 'aliases' and '%(_Selected.Aliases)' != 'Replacement')) and '%(_Selected.Identity)' == '$(_Right)'"
+           Text="Selection must preserve escaped authoring metadata and aliases without using HintPath as an identity."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(MSBuildProjectDirectory)/$(TestCase).txt" Lines="@(_Selected);@(_SelectedCopy)"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="$(MSBuildProjectDirectory)/$(TestCase).txt" />
+  </Target>
+</Project>

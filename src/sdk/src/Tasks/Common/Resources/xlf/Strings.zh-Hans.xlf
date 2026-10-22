@@ -592,6 +592,11 @@ The following are names of parameters or literal values and should not be transl
         <target state="translated">NETSDK1018: 无效的 NuGet 版本字符串:“{0}”。</target>
         <note>{StrBegins="NETSDK1018: "}</note>
       </trans-unit>
+      <trans-unit id="InvalidReferenceConflictFacts">
+        <source>NETSDK1255: Prepared reference conflict inputs are invalid or unsupported: {0} Capture external conflict facts during Restore and supply version metadata for generated candidates.</source>
+        <target state="new">NETSDK1255: Prepared reference conflict inputs are invalid or unsupported: {0} Capture external conflict facts during Restore and supply version metadata for generated candidates.</target>
+        <note>{StrBegins="NETSDK1255: "}{Locked="{0}"}</note>
+      </trans-unit>
       <trans-unit id="InvalidResourceUpdate">
         <source>NETSDK1075: Update handle is invalid. This instance may not be used for further updates.</source>
         <target state="translated">NETSDK1075: 更新句柄无效。此实例不能用于进一步更新。</target>

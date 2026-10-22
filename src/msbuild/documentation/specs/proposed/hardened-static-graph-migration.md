@@ -132,9 +132,14 @@ graph construction, and apply conflict policy there. Capture any external facts
 that policy needs; do not move arbitration into Restore or snapshot its winners.
 For a compatible newer package replacement, remove the framework's corresponding
 assembly from the compiler set while retaining the other framework members.
-Current replay inserts pack candidates into `ReferencePath` and skips the ordinary
-SDK package-conflict target. Runtime's project-replacement filter is only a bounded
-adaptation; general framework/package selection still needs a zero-I/O replacement.
+Current replay uses `ResolvePreparedConflicts` after runtime filtering and explicit
+path normalization, sharing SDK conflict policy without binary reads. Persist package
+assembly/file versions and pack platform/override/preference data, not the resulting
+winner list. Preserve aliased compile references and keep runtime copies/symbols
+consistent with selection. Noncolliding generated references need no version facts;
+colliding generated or explicit references need declared versions or external facts.
+Missing facts and unresolved distinct-artifact ties fail, rather than probing files.
+Package/package duplicates remain outside the bounded package-selection profile.
 See the [selection contract](hardened-static-graph.md#framework-inventories-and-final-reference-selection).
 
 For runtime library trimming, the compiler writes directly to `PreTrim/`, and

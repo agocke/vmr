@@ -10,6 +10,14 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
     [MSBuildMultiThreadableTask]
     public class ResolvePackageFileConflicts : TaskBase, IMultiThreadableTask
     {
+        public ResolvePackageFileConflicts()
+        {
+        }
+
+        internal ResolvePackageFileConflicts(Logger log) : base(log)
+        {
+        }
+
         public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
 
         private HashSet<ITaskItem?> referenceConflicts = new();
@@ -62,9 +70,6 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
         protected override void ExecuteCore()
         {
             var log = Log;
-            var packageRanks = new PackageRank(PreferredPackages);
-            var packageOverrides = new PackageOverrideResolver<ConflictItem>(PackageOverrides);
-
             //  Treat assemblies from FrameworkList.xml as platform assemblies that also get considered at compile time
             IEnumerable<ConflictItem>? compilePlatformItems = null;
             if (TargetFrameworkDirectories != null && TargetFrameworkDirectories.Any())
@@ -78,10 +83,41 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
                 }).ToArray();
             }
 
-            // resolve conflicts at compile time
-            var referenceItems = GetConflictTaskItems(References, ConflictItemType.Reference).ToArray();
+            var platformItems = PlatformManifests?.SelectMany(pm =>
+            {
+                if (string.IsNullOrEmpty(pm.ItemSpec))
+                {
+                    log.LogError(string.Format(CultureInfo.CurrentCulture, Strings.CouldNotLoadPlatformManifest, pm.ItemSpec));
+                    return Enumerable.Empty<ConflictItem>();
+                }
 
-            using (var compileConflictScope = new ConflictResolver<ConflictItem>(packageRanks, packageOverrides, log))
+                AbsolutePath manifestPath = TaskEnvironment.GetAbsolutePath(pm.ItemSpec);
+                return PlatformManifestReader.LoadConflictItems(manifestPath, log);
+            }) ?? Enumerable.Empty<ConflictItem>();
+
+            ResolveConflicts(compilePlatformItems, platformItems,
+                (item, type) => new ConflictItem(item, type, TaskEnvironment));
+        }
+
+        internal void ResolveConflicts(IEnumerable<ConflictItem>? compilePlatformItems,
+            IEnumerable<ConflictItem> platformItems,
+            Func<ITaskItem, ConflictItemType, ConflictItem> createItem,
+            Action<ConflictItem, ConflictItem>? unresolvedConflict = null)
+        {
+            var log = Log;
+            var packageRanks = new PackageRank(PreferredPackages);
+            var packageOverrides = new PackageOverrideResolver<ConflictItem>(PackageOverrides);
+
+            IEnumerable<ConflictItem> GetConflictItems(ITaskItem[]? items, ConflictItemType type)
+                => items?.Select(item => createItem(item, type)) ?? Enumerable.Empty<ConflictItem>();
+
+            // resolve conflicts at compile time
+            var referenceItems = GetConflictItems(References, ConflictItemType.Reference).ToArray();
+
+            using (var compileConflictScope = new ConflictResolver<ConflictItem>(packageRanks, packageOverrides, log)
+            {
+                UnresolvedConflictPairHandler = unresolvedConflict
+            })
             {
                 compileConflictScope.ResolveConflicts(referenceItems,
                     ci => ItemUtilities.GetReferenceFileName(ci.OriginalItem),
@@ -99,9 +135,12 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
             compilePlatformWinners.ExceptWith(allConflicts);
 
             // resolve analyzer conflicts
-            var analyzerItems = GetConflictTaskItems(Analyzers, ConflictItemType.Analyzer).ToArray();
+            var analyzerItems = GetConflictItems(Analyzers, ConflictItemType.Analyzer).ToArray();
 
-            using (var analyzerConflictScope = new ConflictResolver<ConflictItem>(packageRanks, packageOverrides, log))
+            using (var analyzerConflictScope = new ConflictResolver<ConflictItem>(packageRanks, packageOverrides, log)
+            {
+                UnresolvedConflictPairHandler = unresolvedConflict
+            })
             {
                 analyzerConflictScope.ResolveConflicts(analyzerItems, ci => ci.FileName, HandleAnalyzerConflict);
             }
@@ -109,19 +148,22 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
             // resolve conflicts that clash in output
             IEnumerable<ConflictItem> copyLocalItems;
             IEnumerable<ConflictItem> otherRuntimeItems;
-            using (var runtimeConflictScope = new ConflictResolver<ConflictItem>(packageRanks, packageOverrides, log))
+            using (var runtimeConflictScope = new ConflictResolver<ConflictItem>(packageRanks, packageOverrides, log)
+            {
+                UnresolvedConflictPairHandler = unresolvedConflict
+            })
             {
                 runtimeConflictScope.ResolveConflicts(referenceItems,
                     ci => ItemUtilities.GetReferenceTargetPath(ci.OriginalItem),
                     HandleRuntimeConflict);
 
-                copyLocalItems = GetConflictTaskItems(ReferenceCopyLocalPaths, ConflictItemType.CopyLocal).ToArray();
+                copyLocalItems = GetConflictItems(ReferenceCopyLocalPaths, ConflictItemType.CopyLocal).ToArray();
 
                 runtimeConflictScope.ResolveConflicts(copyLocalItems,
                     ci => ItemUtilities.GetTargetPath(ci.OriginalItem),
                     HandleRuntimeConflict);
 
-                otherRuntimeItems = GetConflictTaskItems(OtherRuntimeItems, ConflictItemType.Runtime).ToArray();
+                otherRuntimeItems = GetConflictItems(OtherRuntimeItems, ConflictItemType.Runtime).ToArray();
 
                 runtimeConflictScope.ResolveConflicts(otherRuntimeItems,
                     ci => ItemUtilities.GetTargetPath(ci.OriginalItem),
@@ -131,20 +173,11 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
 
             // resolve conflicts with platform (eg: shared framework) items
             // we only commit the platform items since its not a conflict if other items share the same filename.
-            using (var platformConflictScope = new ConflictResolver<ConflictItem>(packageRanks, packageOverrides, log))
+            using (var platformConflictScope = new ConflictResolver<ConflictItem>(packageRanks, packageOverrides, log)
             {
-                var platformItems = PlatformManifests?.SelectMany(pm =>
-                {
-                    if (string.IsNullOrEmpty(pm.ItemSpec))
-                    {
-                        log.LogError(string.Format(CultureInfo.CurrentCulture, Strings.CouldNotLoadPlatformManifest, pm.ItemSpec));
-                        return Enumerable.Empty<ConflictItem>();
-                    }
-
-                    AbsolutePath manifestPath = TaskEnvironment.GetAbsolutePath(pm.ItemSpec);
-                    return PlatformManifestReader.LoadConflictItems(manifestPath, log);
-                }) ?? Enumerable.Empty<ConflictItem>();
-
+                UnresolvedConflictPairHandler = unresolvedConflict
+            })
+            {
                 if (compilePlatformItems != null)
                 {
                     platformItems = platformItems.Concat(compilePlatformItems);
@@ -238,11 +271,6 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
             }
 
             return item;
-        }
-
-        private IEnumerable<ConflictItem> GetConflictTaskItems(ITaskItem[]? items, ConflictItemType itemType)
-        {
-            return (items != null) ? items.Select(i => new ConflictItem(i, itemType, TaskEnvironment)) : Enumerable.Empty<ConflictItem>();
         }
 
         private void HandleCompileConflict(ConflictItem winner, ConflictItem loser)

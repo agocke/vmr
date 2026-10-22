@@ -422,8 +422,9 @@ projects; choosing the older framework does not make those dependencies optional
   outputs without moving or overwriting compiler outputs.
 - [x] Prepare explicit restored assembly references separately from pack facts,
   leaving path-only resolution and tool producer dependencies intact.
-- [ ] Capture conflict-policy facts and implement final framework/package/project/file
-  reference selection during graph construction, including package-over-framework replacement.
+- [x] Capture conflict-policy facts and implement bounded graph-time framework/package
+  selection, including package-over-framework replacement and the reverse.
+- [ ] Broaden package/package conflict support and generated-reference version contracts.
 - [ ] Extend framework preparation to package-backed `netstandard2.0` tool/analyzer projects.
 - [ ] Support the actual compiler/API-tool and analyzer requirements,
   keeping generated tools connected to their producers.
@@ -486,14 +487,14 @@ a graph. Legacy manifest-only mode retains its `Reference` rejection.
 Empty framework lists report unsupported-profile diagnostics rather than a
 diagnostic-task exception.
 
-These fixtures establish candidate capture, path handling, and bounded runtime
-project replacements, not general framework/package reference arbitration.
-Replay inserts pack candidates into `ReferencePath` while the ordinary SDK
-`_HandlePackageFileConflicts` target is skipped. Implement zero-I/O graph-time
-selection from the required facts, with a fixture proving that a selected
-compatible package asset replaces the same assembly from the framework without
-discarding unrelated framework members. Restore must not snapshot that winning
-set; see the [selection contract](hardened-static-graph.md#framework-inventories-and-final-reference-selection).
+Bounded framework/package arbitration now runs during graph construction after
+runtime filtering and path normalization. It reuses SDK conflict policy over
+prepared version/platform/override/preference facts; Restore does not snapshot
+the winners. An offline fixture proves newer-package replacement and retention
+of the framework against an older package, including unrelated references,
+runtime copies, independent compilation and startup. See
+[prepared reference conflicts](#prepared-reference-conflicts) and the
+[selection contract](hardened-static-graph.md#framework-inventories-and-final-reference-selection).
 
 The real probe now fails with `NETSDK1247` on the empty `FrameworkReference` list
 of `ILLink.CodeFixProvider` and `ILLink.RoslynAnalyzer`. Those projects target
@@ -572,13 +573,51 @@ implementation bytes and ordinary dependency/runtime-config bytes are checked.
 The supported preparation profile selects one `Microsoft.NETCore.App` framework
 per configured project, allowing retained multi-targeting declarations but not
 outer cross-targeting or RID preparation. Unsupported content preprocessing,
-additional frameworks, simple framework-assembly names, and conflicts requiring
-assembly inspection fail with NETSDK1254. Ordinary package discovery/cache behavior
+additional frameworks, simple framework-assembly names, and package/package compile,
+analyzer or runtime duplicates fail with NETSDK1254. Framework/package conflicts
+are handled separately below. Ordinary package discovery/cache behavior
 is unchanged. See the [package fixture](../../../../../genbuild/tests/PackageReferences.csproj).
 
 - [ ] Extend preparation for the real configured runtime closure above.
 - [ ] Migrate remaining NuGet JSON consumers to facts without changing output semantics.
 - [ ] Broaden package policy only through explicit supported profiles.
+
+### Prepared reference conflicts
+
+- [x] Capture external version and pack conflict facts without selecting winners.
+- [x] Reuse ordinary SDK conflict policy in zero-I/O graph construction.
+- [x] Verify newer-package and older-package cases against ordinary SDK selection,
+  then compile and start independently through Ninja.
+- [x] Reject missing, malformed and unresolved facts without publishing a graph.
+
+`_FrameworkReferenceConflictFactsVersion=1` adds parsed platform items, pack-owned
+override rules and ordered preferred packages to framework snapshots.
+`_NuGetConflictFactsVersion=1` adds `_NuGetConflictFile` assembly/file versions for
+non-placeholder package assets. Capture uses the existing portable binary-version
+reader; unusual native/version-resource profiles are not established by these
+managed-assembly fixtures. Older snapshots require a fresh Restore.
+
+[`ResolvePreparedConflicts`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ResolvePreparedConflicts.cs)
+shares the ordinary `ResolvePackageFileConflicts` orchestration and winner policy
+through injected, lazy prepared version providers. The hardened target runs after
+`ResolveAssemblyReferences` has normalized paths, and updates references, analyzers,
+copy-local files and `_ConflictPackageFiles`. It keeps direct-reference copies and
+symbols aligned with selection, without treating a reference and its own RAR copy
+as different competing artifacts. Explicit `HintPath` metadata round-trips but
+never changes the validated reference identity.
+
+The [offline fixture](../../../../../genbuild/tests/FrameworkPackageReferences.csproj)
+selects a synthetic version-12 `System.Collections.Immutable` package over net11's
+framework member, and retains the framework over a version-10 package. Selection
+works with package files and assets JSON removed; full graph publication restores
+and validates declared inputs before Ninja execution. Ordinary SDK reference and
+copy-local selection agrees in both cases. The
+[pure fixture](../../../../../genbuild/tests/PreparedConflicts.proj)
+covers file versions, preferences, override thresholds, aliases, noncolliding
+future producers, platform-only runtime provision and direct-reference symbols.
+Missing/invalid facts and unresolved distinct-artifact ties report NETSDK1255.
+Generated or explicit candidates involved in collisions need declared version
+metadata or prepared external facts; no construction-time inspection is added.
 
 ## After the prototype
 

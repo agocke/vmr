@@ -6,6 +6,8 @@ using System.Text;
 using System.Xml;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+using Microsoft.NET.Build.Tasks.ConflictResolution;
 
 namespace Microsoft.NET.Build.Tasks;
 
@@ -29,6 +31,12 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
 
     public ITaskItem[] ResolvedFrameworkReferences { get; set; } = [];
 
+    public ITaskItem[] PlatformManifests { get; set; } = [];
+
+    public ITaskItem[] PackageOverrides { get; set; } = [];
+
+    public string[] PreferredPackages { get; set; } = [];
+
     public string? AppHostSourcePath { get; set; }
 
     public string? AppHostRuntimeIdentifier { get; set; }
@@ -36,6 +44,10 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
     protected override void ExecuteCore()
     {
         string content = GenerateManifest();
+        if (Log.HasLoggedErrors)
+        {
+            return;
+        }
         if (File.Exists(OutputFile) && File.ReadAllText(OutputFile) == content)
         {
             return;
@@ -58,6 +70,7 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
             writer.WriteStartElement("Project");
             writer.WriteStartElement("PropertyGroup");
             WriteProperty(writer, "_FrameworkReferenceFetchManifestVersion", "1");
+            WriteProperty(writer, "_FrameworkReferenceConflictFactsVersion", "1");
             WriteProperty(writer, "_UsingFrameworkReferenceManifest", "true");
             writer.WriteStartElement("SkipResolvePackageAssets");
             writer.WriteAttributeString("Condition", "'$(MSBuildHardenedGraph)' != 'true'");
@@ -70,6 +83,24 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
             writer.WriteStartElement("ItemGroup");
             WriteSortedItems(writer, "_FrameworkReferenceManifestCompileReference", CompileReferences, frameworkReference, writeReferenceAssembly: true);
             WriteSortedItems(writer, "_FrameworkReferenceManifestAnalyzer", Analyzers, frameworkReference);
+            WriteSortedItems(writer, "_FrameworkReferenceManifestPackageOverride", PackageOverrides, frameworkReference);
+            foreach (string package in PreferredPackages)
+            {
+                WriteItem(writer, "_FrameworkReferenceManifestPreferredPackage",
+                    new TaskItem(Escape(package)), frameworkReference);
+            }
+            foreach (ITaskItem manifest in PlatformManifests)
+            {
+                foreach (ConflictItem fact in PlatformManifestReader.LoadConflictItems(
+                    TaskEnvironment.Fallback.GetAbsolutePath(manifest.ItemSpec), Log))
+                {
+                    TaskItem item = new(Escape(fact.FileName!));
+                    item.SetMetadata("PackageId", Escape(fact.PackageId ?? ""));
+                    item.SetMetadata("AssemblyVersion", fact.AssemblyVersion?.ToString() ?? "");
+                    item.SetMetadata("FileVersion", fact.FileVersion?.ToString() ?? "");
+                    WriteItem(writer, "_FrameworkReferenceManifestPlatformItem", item, frameworkReference);
+                }
+            }
 
             foreach (ITaskItem runtimeFramework in RuntimeFrameworks)
             {

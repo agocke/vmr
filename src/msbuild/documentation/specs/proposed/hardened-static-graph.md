@@ -318,12 +318,22 @@ select packs and obtain their inventories and conflict-policy information;
 that arbitration separately from its filesystem discovery, rather than running
 it during Restore and snapshotting its winners.
 
-The prototype has not completed this selection stage. Replay currently inserts
-pack candidates into `ReferencePath`, and
-[`_HandlePackageFileConflicts`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.ConflictResolution.targets)
-is skipped while using a framework manifest. Runtime's project-replacement filter
-supports a bounded case, not general framework/package arbitration. Completing
-the latter requires the necessary conflict facts and zero-I/O graph-time selection.
+The prototype now implements bounded framework/package selection through
+[`ResolvePreparedConflicts`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ResolvePreparedConflicts.cs).
+Restore captures package asset assembly/file versions and the targeting pack's
+platform manifests, override rules and preferred-package ordering. Graph construction
+invokes the shared SDK conflict policy after runtime filtering and explicit path
+normalization, updating compile/analyzer/copy-local items and dependency conflict
+records. It does not reopen manifests or binaries, probe existence, or use `HintPath`
+as a second identity. Runtime-provided references can remain compile inputs without
+being copied, and a losing direct reference's symbols are not published.
+
+Noncolliding producer outputs require no version facts. Collisions can use declared
+version metadata or prepared external facts; missing/invalid facts and unresolved
+distinct-artifact ties fail with NETSDK1255 rather than falling back to discovery.
+The ordinary SDK conflict target remains unchanged for non-hardened builds.
+Package/package compile, analyzer and runtime duplicates still fail in the bounded
+package-selection profile; this is not a general replacement for RAR.
 
 ### Explicit reference-resolution sources
 

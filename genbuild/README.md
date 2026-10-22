@@ -100,6 +100,10 @@ An offline package fixture also selects distinct reference/runtime assemblies
 and a compatible package generator, then independently compiles and starts the
 consumer. Package selection runs with assets JSON and package directories
 removed; full graph publication retains external-input validation.
+Framework/package fixtures compare ordinary SDK selection in both directions,
+then construct from facts with packages/JSON absent and compile/start through
+Ninja. Pure policy checks cover file versions, package preferences/overrides,
+aliases, future producers, symbol copies and invalid/ambiguous facts.
 Compiler actions run analyzers and the Regex generator, consume generated
 sources, and produce byte-identical assemblies, reference assemblies and
 portable PDBs across relocated checkouts.
@@ -126,9 +130,12 @@ project, including package/project references, explicit assembly paths and retai
 `TargetFrameworks`. Framework snapshots contain only pack-owned reference/analyzer
 candidates; project-declared references stay in authoring for path-only resolution.
 These are inventories, not final compiler reference sets. Final selection belongs
-in graph construction; general framework/package arbitration is still missing
-because snapshot replay skips the ordinary SDK package-conflict target. Runtime's
-project-replacement filter covers only a bounded case.
+in graph construction: a zero-I/O adapter now reuses SDK conflict policy after
+runtime filtering and path normalization. Restore captures package binary versions
+and pack platform/override/preference facts, not winners. A newer package can
+replace a framework member; an older package can lose without discarding unrelated
+framework references. Colliding generated/explicit files need declared version
+metadata or prepared external facts; missing facts and unresolved ties fail.
 See the [reference-selection contract](../src/msbuild/documentation/specs/proposed/hardened-static-graph.md#framework-inventories-and-final-reference-selection).
 Legacy manifest-only mode retains its narrower rejection of `Reference` items.
 Outer cross-targeting and RID preparation remain unsupported.
@@ -162,11 +169,14 @@ selects a separate zero-I/O `ResolveNuGetAssets` task. It reuses SDK package
 policy over a direct model projection and direct item sink, without NuGet's
 ambient JSON reader, package probing or binary asset cache. Restore additionally
 records selected package locations, related-file presence, locale normalization
-and compiler API identity; package generators join the prepared compiler closure.
+and compiler API identity, plus version facts for package assets; package generators
+join the prepared compiler closure.
 Standard reference, analyzer and copy-local item composition is retained.
 Content preprocessing, additional frameworks and simple framework-assembly names
-fail explicitly. File conflicts requiring ordinary assembly inspection remain
-unsupported; package selection does not provide general framework/package arbitration.
+fail explicitly. Framework/package conflicts use graph-time prepared policy;
+package/package compile, analyzer and runtime duplicates remain outside the
+bounded package-selection profile. Construction never falls back to inspecting
+assemblies.
 Outer cross-targeting and RID preparation remain unsupported. Dependency/runtime-config
 actions still read declared assets JSON during execution; migrating those
 consumers to facts remains required by the eventual design.
