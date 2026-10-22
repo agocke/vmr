@@ -32,7 +32,6 @@ public class GivenAWriteFrameworkReferenceFetchManifest
                 BuildEngine = new MockBuildEngine(),
                 OutputFile = outputFile,
                 TargetFramework = "net11.0",
-                FrameworkReferences = [new TaskItem("Microsoft.NETCore.App")],
                 CompileReferences = [compileReference],
                 RuntimeFrameworks = [runtimeFramework],
                 ResolvedFrameworkReferences = [resolvedFrameworkReference],
@@ -51,7 +50,7 @@ public class GivenAWriteFrameworkReferenceFetchManifest
             compileCandidate.Attribute("Include")!.Value.Should().Be(compileReference.ItemSpec);
             compileCandidate.Element("ReferenceAssembly")!.Value.Should().Be(compileReference.ItemSpec);
             compileCandidate.Element("TargetFramework")!.Value.Should().Be("net11.0");
-            compileCandidate.Element("FrameworkReference")!.Value.Should().Be("Microsoft.NETCore.App");
+            compileCandidate.Element("FrameworkReferenceName")!.Value.Should().Be("Microsoft.NETCore.App");
             compileCandidate.Element("NuGetPackageId")!.Value.Should().Be("Microsoft.NETCore.App.Ref");
 
             XElement appHostCandidate = itemGroup.Element("_FrameworkReferenceManifestAppHost")!;

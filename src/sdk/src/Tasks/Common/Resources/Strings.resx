@@ -1063,11 +1063,11 @@ You may need to build the project on another operating system or architecture, o
     <comment>{StrBegins="NETSDK1246: "}</comment>
   </data>
   <data name="FrameworkReferenceFetchManifestUnsupportedInput" xml:space="preserve">
-    <value>NETSDK1247: Framework-reference fetch manifest generation does not support the MSBuild input '{0}' with value '{1}'. The current profile supports one target framework with one implicit Microsoft.NETCore.App FrameworkReference and no PackageReference, Reference, RuntimeIdentifier, or RuntimeIdentifiers inputs. Remove the unsupported input or disable hardened graph validation.</value>
-    <comment>{StrBegins="NETSDK1247: "}{Locked="Microsoft.NETCore.App"}{Locked="FrameworkReference"}{Locked="PackageReference"}{Locked="Reference"}{Locked="RuntimeIdentifier"}{Locked="RuntimeIdentifiers"} {0} is an MSBuild item or property name and should not be translated. {1} is its value and should not be translated.</comment>
+    <value>NETSDK1247: Framework-reference input capture does not support the MSBuild input '{0}' with value '{1}'. Use a configured single-target build without runtime identifiers. Explicit references require graph-input preparation.</value>
+    <comment>{StrBegins="NETSDK1247: "}{Locked="{0}"}{Locked="{1}"}</comment>
   </data>
   <data name="FrameworkReferenceFetchManifestUnsupportedProfile" xml:space="preserve">
-    <value>NETSDK1248: Framework-reference fetch manifest generation stopped because the project contains unsupported dependency inputs. Resolve the preceding NETSDK1247 errors or disable hardened graph validation.</value>
+    <value>NETSDK1248: Framework-reference input capture stopped because the project contains unsupported inputs. Resolve the preceding NETSDK1247 errors.</value>
     <comment>{StrBegins="NETSDK1248: "}{Locked="NETSDK1247"}</comment>
   </data>
   <data name="UnsupportedDepsFileParameter" xml:space="preserve">

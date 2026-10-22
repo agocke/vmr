@@ -1214,8 +1214,6 @@ namespace FrameworkReferenceTest
         }
 
         [TestMethod]
-        [DataRow("FrameworkReference", "Microsoft.AspNetCore.App")]
-        [DataRow("FrameworkReference", "Microsoft.NETCore.App")]
         [DataRow("PackageReference", "Unsupported.Package")]
         [DataRow("ProjectReference", "missing-project.csproj")]
         [DataRow("Reference", "Unsupported.Assembly")]
@@ -1287,7 +1285,6 @@ namespace FrameworkReferenceTest
             new RestoreCommand(testAsset).Execute().Should().Pass();
             File.Exists(manifestPath).Should().BeTrue();
 
-            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "FrameworkReference", "Microsoft.AspNetCore.App");
             AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "PackageReference", "Unsupported.Package");
             AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "ProjectReference", "missing-project.csproj");
             AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "Reference", "Unsupported.Assembly");
@@ -1298,8 +1295,6 @@ namespace FrameworkReferenceTest
                 .Execute()
                 .Should()
                 .Fail()
-                .And
-                .HaveStdOutContaining("Microsoft.AspNetCore.App")
                 .And
                 .HaveStdOutContaining("Unsupported.Package")
                 .And

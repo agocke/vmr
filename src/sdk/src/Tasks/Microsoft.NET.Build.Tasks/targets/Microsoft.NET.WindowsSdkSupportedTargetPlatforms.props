@@ -22,13 +22,5 @@ Copyright (c) .NET Foundation. All rights reserved.
         <WindowsSdkSupportedTargetPlatformVersion Include="7.0" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'Windows'">
-        <!-- Normalize the last part of TFM to .0 when ending with .1 as that indicates the use of the CsWinRT 3.0 version. -->
-      <_NormalizedWindowsSdkSupportedTargetPlatformVersion Include="@(WindowsSdkSupportedTargetPlatformVersion)">
-        <NormalizedSupportedTargetPlatformVersion
-            Condition="$([System.Text.RegularExpressions.Regex]::IsMatch(%(Identity), '^((\d+\.){3})1$'))"
-              >$([System.Text.RegularExpressions.Regex]::Replace(%(Identity), '^((\d+\.){3})1$', '${1}0'))</NormalizedSupportedTargetPlatformVersion>
-      </_NormalizedWindowsSdkSupportedTargetPlatformVersion>
-      <SdkSupportedTargetPlatformVersion Include="@(_NormalizedWindowsSdkSupportedTargetPlatformVersion)" />
-    </ItemGroup>
+    <Import Project="Microsoft.NET.WindowsSdkNormalization.props" Condition="'$(TargetPlatformIdentifier)' == 'Windows'" />
 </Project>

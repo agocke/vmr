@@ -1,0 +1,13 @@
+<!-- Licensed to the .NET Foundation under one or more agreements.
+     The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+  <ItemGroup>
+    <!-- A final .1 denotes CsWinRT 3.0; normalize that platform version to .0. -->
+    <_NormalizedWindowsSdkSupportedTargetPlatformVersion Include="@(WindowsSdkSupportedTargetPlatformVersion)">
+      <NormalizedSupportedTargetPlatformVersion
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch(%(Identity), '^((\d+\.){3})1$'))"
+          >$([System.Text.RegularExpressions.Regex]::Replace(%(Identity), '^((\d+\.){3})1$', '${1}0'))</NormalizedSupportedTargetPlatformVersion>
+    </_NormalizedWindowsSdkSupportedTargetPlatformVersion>
+    <SdkSupportedTargetPlatformVersion Include="@(_NormalizedWindowsSdkSupportedTargetPlatformVersion)" />
+  </ItemGroup>
+</Project>

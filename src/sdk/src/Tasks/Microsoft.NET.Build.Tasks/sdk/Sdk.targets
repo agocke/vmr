@@ -114,23 +114,11 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Target Name="_ComputeFrameworkReferenceFetchManifestProfile"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true'">
-    <ItemGroup>
-      <_SupportedFrameworkReferenceFetchManifestFrameworkReference
-        Include="@(FrameworkReference)"
-        Condition="'%(FrameworkReference.Identity)' == 'Microsoft.NETCore.App' and
-                   '%(FrameworkReference.IsImplicitlyDefined)' == 'true'" />
-    </ItemGroup>
-
     <PropertyGroup>
-      <_FrameworkReferenceFetchManifestFrameworkReferences>@(FrameworkReference, ', ')</_FrameworkReferenceFetchManifestFrameworkReferences>
-      <!-- Task string-array binding drops empty arguments; keep the empty list representable in diagnostics. -->
-      <_FrameworkReferenceFetchManifestFrameworkReferences Condition="'@(FrameworkReference)' == ''">[]</_FrameworkReferenceFetchManifestFrameworkReferences>
       <_FrameworkReferenceFetchManifestReferences>@(Reference, ', ')</_FrameworkReferenceFetchManifestReferences>
       <_FrameworkReferenceFetchManifestProfileSupported
         Condition="'$(IsCrossTargetingBuild)' != 'true' and
                    '$(TargetFramework)' != '' and
-                   '@(FrameworkReference->Count())' == '1' and
-                   '@(_SupportedFrameworkReferenceFetchManifestFrameworkReference->Count())' == '1' and
                    ('@(Reference->Count())' == '0' or
                     '$(MSBuildRestoreGraphInputs)' == 'true' or '$(MSBuildHardenedGraph)' == 'true') and
                    '$(RuntimeIdentifier)' == '' and
@@ -155,13 +143,6 @@ Copyright (c) .NET Foundation. All rights reserved.
       Condition="'$(IsCrossTargetingBuild)' == 'true' or '$(TargetFramework)' == ''"
       ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
       FormatArguments="TargetFrameworks;$([MSBuild]::Escape('$(TargetFrameworks)'))"
-      ContinueOnError="ErrorAndContinue" />
-    <NETSdkError
-      Condition="'$(IsCrossTargetingBuild)' != 'true' and
-                 ('@(FrameworkReference->Count())' != '1' or
-                  '@(_SupportedFrameworkReferenceFetchManifestFrameworkReference->Count())' != '1')"
-      ResourceName="FrameworkReferenceFetchManifestUnsupportedInput"
-      FormatArguments="FrameworkReference;$([MSBuild]::Escape('$(_FrameworkReferenceFetchManifestFrameworkReferences)'))"
       ContinueOnError="ErrorAndContinue" />
     <NETSdkError
       Condition="'@(Reference)' != '' and

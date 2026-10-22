@@ -425,7 +425,8 @@ projects; choosing the older framework does not make those dependencies optional
 - [x] Capture conflict-policy facts and implement bounded graph-time framework/package
   selection, including package-over-framework replacement and the reverse.
 - [ ] Broaden package/package conflict support and generated-reference version contracts.
-- [ ] Extend framework preparation to package-backed `netstandard2.0` tool/analyzer projects.
+- [x] Remove framework-reference cardinality/identity restrictions; support ordinary
+  package-backed `netstandard2.0` and multiple selected targeting packs.
 - [ ] Support the actual compiler/API-tool and analyzer requirements,
   keeping generated tools connected to their producers.
 - [ ] Construct a fresh real-library graph without product binaries.
@@ -484,8 +485,17 @@ prepares a missing future tool path without prebuilding, preserves aliases and
 copy-local symbols, then compiles/starts independently. Assembly names fail even
 with `HintPath`; missing paths fail external-input validation without publishing
 a graph. Legacy manifest-only mode retains its `Reference` rejection.
-Empty framework lists report unsupported-profile diagnostics rather than a
-diagnostic-task exception.
+Empty framework-reference lists produce valid empty pack inventories.
+
+The [framework-basics fixture](../../../../../genbuild/tests/FrameworkBasics.csproj)
+compiles a package-backed `netstandard2.0` library for a net11 executable and a
+net10 library using Core and ASP.NET targeting packs. Ordinary package targets
+provide explicit `Private=false` references; no framework reference is synthesized
+and no package-authored references enter the pack snapshot. All selected packs
+contribute items scoped to the configured target framework. Changed framework-reference
+identity sets fail with NETSDK1255 and require a fresh Restore.
+Windows SDK normalization is imported only for Windows platform authoring, preserving
+ordinary normalization without validating unused Windows-only expressions elsewhere.
 
 Bounded framework/package arbitration now runs during graph construction after
 runtime filtering and path normalization. It reuses SDK conflict policy over
@@ -496,13 +506,16 @@ runtime copies, independent compilation and startup. See
 [prepared reference conflicts](#prepared-reference-conflicts) and the
 [selection contract](hardened-static-graph.md#framework-inventories-and-final-reference-selection).
 
-The real probe now fails with `NETSDK1247` on the empty `FrameworkReference` list
-of `ILLink.CodeFixProvider` and `ILLink.RoslynAnalyzer`. Those projects target
-`netstandard2.0` using package-backed references, outside the supported single
-implicit `Microsoft.NETCore.App` profile. Extend preparation for that profile
-without suppressing references, analyzers, or tool producer dependencies.
+The real probe now completes preparation of `System.Collections.Immutable`'s
+configured closure with zero DLL products, including `ILLink.CodeFixProvider`
+and `ILLink.RoslynAnalyzer`'s normal package-backed `netstandard2.0` references.
+References, analyzers and tool producer dependencies are not suppressed.
 The probe uses `RestoreUseStaticGraphEvaluation=false` because the static Restore
 launcher still assumes an installed SDK layout.
+A fresh hardened graph currently stops in `Microsoft.Common.props` on the upward
+`Directory.Build.props` search (`GetDirectoryNameOfFileAbove`), before package-SDK
+import replay and generated-tool binding are reached. Import locations must become
+explicit inputs or prepared facts, not construction-time searches.
 No runtime library graph, compilation, or independent execution is proven.
 Native/CoreCLR/CMake integration is later.
 
@@ -570,10 +583,11 @@ selection's purity. Eleven Ninja actions compile with the reference assembly,
 run the generator, publish the implementation, and start the consumer. Runtime
 implementation bytes and ordinary dependency/runtime-config bytes are checked.
 
-The supported preparation profile selects one `Microsoft.NETCore.App` framework
-per configured project, allowing retained multi-targeting declarations but not
-outer cross-targeting or RID preparation. Unsupported content preprocessing,
-additional frameworks, simple framework-assembly names, and package/package compile,
+Preparation selects one target framework per configured project, with zero, one
+or multiple `FrameworkReference` items. Package-backed frameworks use their ordinary
+build imports. Retained multi-targeting declarations are allowed, but outer
+cross-targeting and RID preparation are not. Unsupported content preprocessing,
+simple framework-assembly names, and package/package compile,
 analyzer or runtime duplicates fail with NETSDK1254. Framework/package conflicts
 are handled separately below. Ordinary package discovery/cache behavior
 is unchanged. See the [package fixture](../../../../../genbuild/tests/PackageReferences.csproj).

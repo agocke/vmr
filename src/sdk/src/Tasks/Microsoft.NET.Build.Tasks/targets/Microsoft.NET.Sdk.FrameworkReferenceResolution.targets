@@ -40,14 +40,13 @@ Copyright (c) .NET Foundation. All rights reserved.
     <!-- Project-declared references stay in authoring and use path-only resolution during hardened Build. -->
     <ItemGroup>
       <_FrameworkReferenceFetchManifestCompileReference Include="@(Reference)"
-                                                       Condition="'%(Reference.FrameworkReferenceName)' == '@(FrameworkReference)'" />
+                                                       Condition="'%(Reference.FrameworkReferenceName)' != ''" />
       <_FrameworkReferenceFetchManifestAnalyzer Include="@(Analyzer)"
-                                               Condition="'%(Analyzer.FrameworkReferenceName)' == '@(FrameworkReference)'" />
+                                               Condition="'%(Analyzer.FrameworkReferenceName)' != ''" />
     </ItemGroup>
     <WriteFrameworkReferenceFetchManifest
       OutputFile="$(FrameworkReferenceFetchManifestPath)"
       TargetFramework="$(TargetFramework)"
-      FrameworkReferences="@(FrameworkReference)"
       CompileReferences="@(_FrameworkReferenceFetchManifestCompileReference)"
       Analyzers="@(_FrameworkReferenceFetchManifestAnalyzer)"
       RuntimeFrameworks="@(_FrameworkReferenceFetchManifestRuntimeFramework)"
@@ -307,40 +306,32 @@ Copyright (c) .NET Foundation. All rights reserved.
           Condition="'$(_UsingFrameworkReferenceManifest)' == 'true'">
     <ItemGroup>
       <ResolvedFrameworkReference Include="@(_FrameworkReferenceManifestFrameworkReference)"
-                                  Condition="'%(_FrameworkReferenceManifestFrameworkReference.TargetFramework)' == '$(TargetFramework)' and
-                                             '%(_FrameworkReferenceManifestFrameworkReference.Identity)' == '@(FrameworkReference)'"
+                                  Condition="'%(_FrameworkReferenceManifestFrameworkReference.TargetFramework)' == '$(TargetFramework)'"
                                   RemoveMetadata="TargetFramework" />
       <RuntimeFramework Include="@(_FrameworkReferenceManifestRuntimeFramework)"
-                        Condition="'%(_FrameworkReferenceManifestRuntimeFramework.TargetFramework)' == '$(TargetFramework)' and
-                                   '%(_FrameworkReferenceManifestRuntimeFramework.FrameworkReference)' == '@(FrameworkReference)'"
+                        Condition="'%(_FrameworkReferenceManifestRuntimeFramework.TargetFramework)' == '$(TargetFramework)'"
                         RemoveMetadata="TargetFramework;FrameworkReference" />
       <ReferencePath Include="@(_FrameworkReferenceManifestCompileReference)"
-                     Condition="'%(_FrameworkReferenceManifestCompileReference.TargetFramework)' == '$(TargetFramework)' and
-                                '%(_FrameworkReferenceManifestCompileReference.FrameworkReference)' == '@(FrameworkReference)'"
+                     Condition="'%(_FrameworkReferenceManifestCompileReference.TargetFramework)' == '$(TargetFramework)'"
                      RemoveMetadata="TargetFramework;FrameworkReference">
         <Private>false</Private>
         <ExternallyResolved>true</ExternallyResolved>
         <ReferenceSourceTarget>FrameworkReferenceManifest</ReferenceSourceTarget>
       </ReferencePath>
       <Analyzer Include="@(_FrameworkReferenceManifestAnalyzer)"
-                Condition="'%(_FrameworkReferenceManifestAnalyzer.TargetFramework)' == '$(TargetFramework)' and
-                           '%(_FrameworkReferenceManifestAnalyzer.FrameworkReference)' == '@(FrameworkReference)'"
+                Condition="'%(_FrameworkReferenceManifestAnalyzer.TargetFramework)' == '$(TargetFramework)'"
                 RemoveMetadata="TargetFramework;FrameworkReference" />
       <PackageConflictOverrides Include="@(_FrameworkReferenceManifestPackageOverride)"
-                                Condition="'%(_FrameworkReferenceManifestPackageOverride.TargetFramework)' == '$(TargetFramework)' and
-                                           '%(_FrameworkReferenceManifestPackageOverride.FrameworkReference)' == '@(FrameworkReference)'"
+                                Condition="'%(_FrameworkReferenceManifestPackageOverride.TargetFramework)' == '$(TargetFramework)'"
                                 RemoveMetadata="TargetFramework;FrameworkReference" />
       <_PreparedPlatformConflictItem Include="@(_FrameworkReferenceManifestPlatformItem)"
-                                     Condition="'%(_FrameworkReferenceManifestPlatformItem.TargetFramework)' == '$(TargetFramework)' and
-                                                '%(_FrameworkReferenceManifestPlatformItem.FrameworkReference)' == '@(FrameworkReference)'"
+                                     Condition="'%(_FrameworkReferenceManifestPlatformItem.TargetFramework)' == '$(TargetFramework)'"
                                      RemoveMetadata="TargetFramework;FrameworkReference" />
       <_PreparedPreferredPackage Include="@(_FrameworkReferenceManifestPreferredPackage)"
-                                 Condition="'%(_FrameworkReferenceManifestPreferredPackage.TargetFramework)' == '$(TargetFramework)' and
-                                            '%(_FrameworkReferenceManifestPreferredPackage.FrameworkReference)' == '@(FrameworkReference)'"
+                                 Condition="'%(_FrameworkReferenceManifestPreferredPackage.TargetFramework)' == '$(TargetFramework)'"
                                  RemoveMetadata="TargetFramework;FrameworkReference" />
       <_SelectedFrameworkReferenceManifestAppHost Include="@(_FrameworkReferenceManifestAppHost)"
-                                                  Condition="'%(_FrameworkReferenceManifestAppHost.TargetFramework)' == '$(TargetFramework)' and
-                                                             '%(_FrameworkReferenceManifestAppHost.FrameworkReference)' == '@(FrameworkReference)'"
+                                                  Condition="'%(_FrameworkReferenceManifestAppHost.TargetFramework)' == '$(TargetFramework)'"
                                                   RemoveMetadata="TargetFramework;FrameworkReference" />
     </ItemGroup>
 

@@ -118,11 +118,10 @@ public sealed class ResolveNuGetAssets : TaskBase
             }
 
             if (selection.ContentFilesToPreprocess.Length != 0 ||
-                selection.FrameworkAssemblies.Length != 0 ||
-                selection.FrameworkReferences.Any(item => item.ItemSpec != "Microsoft.NETCore.App"))
+                selection.FrameworkAssemblies.Length != 0)
             {
                 Log.LogError(Strings.UnsupportedNuGetAssetsInput,
-                    "content preprocessing or additional framework references", TargetFramework);
+                    "content preprocessing or assembly-name framework references", TargetFramework);
                 return;
             }
             RejectConflicts(selection.CompileTimeAssemblies, item => Path.GetFileName(item.ItemSpec));

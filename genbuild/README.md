@@ -85,6 +85,10 @@ A configured fixture retains parent/child multi-targeting declarations, prepares
 multiple parent frameworks/configurations, and independently builds a Debug/net11
 parent with its negotiated Release/net10 child. Outer preparation and attempts
 to prebuild tools/products fail explicitly.
+A framework-basics fixture builds a package-backed `netstandard2.0` library for a
+net11 executable and a net10 library using both Core and ASP.NET targeting packs.
+It preserves ordinary package-authored references, checks stale framework inputs,
+and compiles independently without prebuilt project binaries.
 A runtime-authoring fixture captures unfiltered targeting-pack references and
 analyzers without building dependencies, then filters them against project
 replacements during construction. Its graph retains a build-order-only tool
@@ -95,7 +99,7 @@ target authoring, not real linker semantics or generated-task binding.
 An explicit-reference fixture keeps a future tool assembly out of framework
 facts, preserves aliases and copy-local symbols, and compiles/starts independently.
 Assembly-name/HintPath fallback and missing paths fail without graph publication;
-legacy manifest rejection and empty-framework diagnostics are also checked.
+legacy manifest rejection and valid empty-framework inventories are also checked.
 An offline package fixture also selects distinct reference/runtime assemblies
 and a compatible package generator, then independently compiles and starts the
 consumer. Package selection runs with assets JSON and package directories
@@ -125,10 +129,14 @@ ordinary Restore, including versions pinned in `global.json`. The driver
 disables that resolver during hardened Build; package-SDK import bindings still
 need explicit capture and replay rather than package-cache searches or downloads.
 
-Framework-reference preparation accepts one selected framework per configured
-project, including package/project references, explicit assembly paths and retained
-`TargetFrameworks`. Framework snapshots contain only pack-owned reference/analyzer
-candidates; project-declared references stay in authoring for path-only resolution.
+Framework-reference preparation accepts a selected target framework per configured
+project, including zero, one or multiple `FrameworkReference` items, package/project
+references, explicit assembly paths and retained `TargetFrameworks`.
+Normal SDK authoring decomposes selected targeting packs into reference/analyzer
+items and runtime/conflict facts. Package-backed frameworks such as `netstandard2.0`
+keep their explicit references in package authoring, without synthetic framework
+references. Framework snapshots contain only pack-owned reference/analyzer
+candidates; project/package-declared references stay in authoring for path-only resolution.
 These are inventories, not final compiler reference sets. Final selection belongs
 in graph construction: a zero-I/O adapter now reuses SDK conflict policy after
 runtime filtering and path normalization. Restore captures package binary versions
@@ -138,6 +146,7 @@ framework references. Colliding generated/explicit files need declared version
 metadata or prepared external facts; missing facts and unresolved ties fail.
 See the [reference-selection contract](../src/msbuild/documentation/specs/proposed/hardened-static-graph.md#framework-inventories-and-final-reference-selection).
 Legacy manifest-only mode retains its narrower rejection of `Reference` items.
+Changing the framework-reference identity set requires a fresh Restore.
 Outer cross-targeting and RID preparation remain unsupported.
 The real `System.Collections.Immutable` trial targeting runtime's `net10.0`
 minimum now gets past the multi-targeting guard. Runtime's
@@ -145,18 +154,19 @@ minimum now gets past the multi-targeting guard. Runtime's
 resolution rather than during targeting-pack discovery. Preparation reaches
 `ILLink.Tasks` without building any product binaries and accepts its explicit
 package-supplied MSBuild references authored by `PackageDownloadAndReference`.
-Preparation now fails with `NETSDK1247` on the empty `FrameworkReference` list in
-`ILLink.CodeFixProvider` and `ILLink.RoslynAnalyzer`: their `netstandard2.0`
-package-backed profile is not the supported implicit `Microsoft.NETCore.App`
-profile. The producer dependencies remain intact.
+Preparation now completes, including the ordinary package-backed `netstandard2.0`
+references of `ILLink.CodeFixProvider` and `ILLink.RoslynAnalyzer`, without producing
+DLLs. The producer dependencies remain intact.
 Runtime library trimming compiles directly to `PreTrim/` and links to separate
 final paths, without moving or rewriting compiler outputs. Generated-tool task
-binding and declared-I/O adaptations, package-backed framework preparation,
+binding and declared-I/O adaptations,
 package-SDK import replay and broader compiler/tool profiles remain necessary.
 The trial uses ordinary
 Restore (`RestoreUseStaticGraphEvaluation=false`): the static Restore launcher
-still assumes an installed SDK layout. No runtime library graph, compilation
-or independent execution is established.
+still assumes an installed SDK layout. A fresh hardened graph currently stops at
+`Microsoft.Common.props`' upward `Directory.Build.props` search, before package-SDK
+replay or tool scheduling is reached. No runtime library graph, compilation or
+independent execution is established.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,
@@ -172,7 +182,7 @@ records selected package locations, related-file presence, locale normalization
 and compiler API identity, plus version facts for package assets; package generators
 join the prepared compiler closure.
 Standard reference, analyzer and copy-local item composition is retained.
-Content preprocessing, additional frameworks and simple framework-assembly names
+Content preprocessing and simple framework-assembly names
 fail explicitly. Framework/package conflicts use graph-time prepared policy;
 package/package compile, analyzer and runtime duplicates remain outside the
 bounded package-selection profile. Construction never falls back to inspecting
@@ -183,9 +193,10 @@ consumers to facts remains required by the eventual design.
 See [prepared SDK package selection](../src/msbuild/documentation/specs/proposed/hardened-static-graph-implementation.md#prepared-sdk-package-selection)
 for the encoding, boundaries and execution proof.
 
-The bounded single-framework SDK C# profile emits full Build graphs for
-hello-world and an executable/library closure, executes independently, and
-starts on the external runtime. Other copy families and broader reference
+The bounded configured SDK C# build emits full Build graphs for
+hello-world, executable/library closures, package-backed .NET Standard libraries
+and multiple targeting packs, executes independently, and starts executables on
+the external runtime. Other copy families and broader reference
 profiles still need adaptations.
 SDK duplicate-item and executable-reference validation run as zero-I/O
 construction tasks. `GetAssemblyVersion` also runs during construction: it

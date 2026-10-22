@@ -19,6 +19,8 @@ public sealed class ResolvePreparedConflicts : TaskBase
     public string ProjectDirectory { get; set; } = "";
     public ITaskItem[] FileFacts { get; set; } = [];
     public ITaskItem[] PlatformItems { get; set; } = [];
+    public ITaskItem[] FrameworkReferences { get; set; } = [];
+    public ITaskItem[] PreparedFrameworkReferences { get; set; } = [];
     public ITaskItem[] References { get; set; } = [];
     public ITaskItem[] Analyzers { get; set; } = [];
     public ITaskItem[] ReferenceCopyLocalPaths { get; set; } = [];
@@ -44,6 +46,11 @@ public sealed class ResolvePreparedConflicts : TaskBase
             if (FrameworkFactsVersion != "1" || PackageFactsVersion != "1" || !Path.IsPathRooted(ProjectDirectory))
             {
                 throw new FormatException("Missing or unsupported conflict facts or absolute project directory.");
+            }
+            HashSet<string> frameworks = new(FrameworkReferences.Select(item => item.ItemSpec), StringComparer.OrdinalIgnoreCase);
+            if (!frameworks.SetEquals(PreparedFrameworkReferences.Select(item => item.ItemSpec)))
+            {
+                throw new FormatException("FrameworkReference inputs changed since Restore; prepare the selected configuration again.");
             }
             Dictionary<string, ITaskItem> files = new(StringComparer.Ordinal);
             foreach (ITaskItem fact in FileFacts)

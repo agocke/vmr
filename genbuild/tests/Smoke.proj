@@ -85,6 +85,7 @@
     <Error Condition="'@(_SdkProgramOutput)' != 'Hello from genbuild.'" Text="The program built by the SDK action graph did not run correctly on the external runtime." />
     <CallTarget Targets="TestProjectReferences" />
     <CallTarget Targets="TestConfiguredPreparation" />
+    <CallTarget Targets="TestFrameworkBasics" />
     <CallTarget Targets="TestRuntimeReferences" />
     <CallTarget Targets="TestExplicitReferences" />
     <CallTarget Targets="TestRuntimeTrimming" />
@@ -98,6 +99,53 @@
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
     <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, Restore-only package-SDK resolution, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-reference execution and startup, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestFrameworkBasics">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)WindowsSdkVersions.proj" Properties="GenBuildToolsetDirectory=$(_AppDirectory)/toolset/" />
+    <PropertyGroup>
+      <_FrameworkBasicsRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'framework-basics'))</_FrameworkBasicsRoot>
+      <_FrameworkBasicsHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_FrameworkBasicsHostOS>
+      <_FrameworkBasicsHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_FrameworkBasicsHostOS>
+      <_FrameworkBasicsHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_FrameworkBasicsHostOS>
+      <_FrameworkBasicsHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_FrameworkBasicsHostOS>
+      <_FrameworkBasicsArguments>-p:DirectoryBuildPropsPath=&quot;$(_FrameworkBasicsRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_FrameworkBasicsRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_FrameworkBasicsRoot)Directory.Packages.props&quot; -p:MSBuildGraphHostOS=$(_FrameworkBasicsHostOS)</_FrameworkBasicsArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_FrameworkBasicsRoot)App;$(_FrameworkBasicsRoot)Library;$(_FrameworkBasicsRoot)Multiple" />
+    <WriteLinesToFile File="$(_FrameworkBasicsRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_FrameworkBasicsRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_FrameworkBasicsRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)FrameworkBasics.csproj;$(MSBuildThisFileDirectory)FrameworkBasics.csproj;$(MSBuildThisFileDirectory)FrameworkBasics.csproj"
+          DestinationFiles="$(_FrameworkBasicsRoot)App/App.csproj;$(_FrameworkBasicsRoot)Library/Library.csproj;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/App/Program.cs;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs;$(MSBuildThisFileDirectory)FrameworkBasicsComponent.cs"
+          DestinationFiles="$(_FrameworkBasicsRoot)App/Program.cs;$(_FrameworkBasicsRoot)Library/Greeting.cs;$(_FrameworkBasicsRoot)Multiple/Component.cs" />
+    <Exec Command="$(_App) restore &quot;$(_FrameworkBasicsRoot)App/App.csproj&quot; $(_FrameworkBasicsArguments) -bl:&quot;$(_FrameworkBasicsRoot)restore.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj&quot; $(_FrameworkBasicsArguments) -bl:&quot;$(_FrameworkBasicsRoot)multiple-restore.binlog&quot;" />
+    <XmlPeek XmlInputPath="$(_FrameworkBasicsRoot)Library/obj/frameworkreferences/Debug/AnyCPU/netstandard2.0/Library.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_FrameworkBasicsLibraryPack" />
+    </XmlPeek>
+    <Error Condition="'@(_FrameworkBasicsLibraryPack)' != '' or Exists('$(_FrameworkBasicsRoot)Library/bin') or Exists('$(_FrameworkBasicsRoot)App/bin') or Exists('$(_FrameworkBasicsRoot)Multiple/bin')"
+           Text="Preparation must not snapshot package-authored references as pack inventory or prebuild products." />
+    <Exec Command="$(_App) build &quot;$(_FrameworkBasicsRoot)App/App.csproj&quot; $(_FrameworkBasicsArguments) -p:MSBuildEmitActionGraph=&quot;$(_FrameworkBasicsRoot)build.ninja&quot; -bl:&quot;$(_FrameworkBasicsRoot)build.binlog&quot;" />
+    <Exec Command="$(_App) build &quot;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj&quot; $(_FrameworkBasicsArguments) -p:MSBuildEmitActionGraph=&quot;$(_FrameworkBasicsRoot)multiple.ninja&quot; -bl:&quot;$(_FrameworkBasicsRoot)multiple-build.binlog&quot;" />
+    <Exec Command="$(_App) build &quot;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj&quot; $(_FrameworkBasicsArguments) -p:DisableImplicitFrameworkReferences=true -p:MSBuildEmitActionGraph=&quot;$(_FrameworkBasicsRoot)stale.ninja&quot; -flp:&quot;LogFile=$(_FrameworkBasicsRoot)stale.log;Verbosity=quiet&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_FrameworkBasicsStaleExit" />
+    </Exec>
+    <Error Condition="'$(_FrameworkBasicsStaleExit)' == '0' or Exists('$(_FrameworkBasicsRoot)stale.ninja') or
+                      !$([System.IO.File]::ReadAllText('$(_FrameworkBasicsRoot)stale.log').Contains('NETSDK1255'))"
+           Text="Changed framework inputs must require a fresh Restore instead of replaying stale inventory or discovering packs." />
+    <Error Condition="Exists('$(_FrameworkBasicsRoot)App/bin/Debug/net11.0/App.dll') or Exists('$(_FrameworkBasicsRoot)Library/bin/Debug/netstandard2.0/Library.dll') or Exists('$(_FrameworkBasicsRoot)Multiple/bin/Debug/net10.0/Multiple.dll')"
+           Text="Framework decomposition must preserve graph-only construction and future project producers." />
+    <Exec WorkingDirectory="$(_FrameworkBasicsRoot)App" Command="ninja -f &quot;$(_FrameworkBasicsRoot)build.ninja&quot;" />
+    <Exec WorkingDirectory="$(_FrameworkBasicsRoot)Multiple" Command="ninja -f &quot;$(_FrameworkBasicsRoot)multiple.ninja&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_FrameworkBasicsRoot)App/bin/Debug/net11.0/App.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_FrameworkBasicsOutput" />
+    </Exec>
+    <Error Condition="'$(_FrameworkBasicsOutput)' != 'Hello from a project reference.' or
+                      !Exists('$(_FrameworkBasicsRoot)Multiple/bin/Debug/net10.0/Multiple.dll') or
+                      Exists('$(_FrameworkBasicsRoot)App/bin/Debug/net11.0/netstandard.dll')"
+           Text="Independent execution must compile the package-backed library and combined targeting-pack inputs without copying reference facades." />
   </Target>
   <Target Name="TestConfiguredPreparation">
     <PropertyGroup>
@@ -244,17 +292,12 @@
           DestinationFiles="$(_ExplicitRoot)Parent/Parent.csproj;$(_ExplicitRoot)Tool/Tool.csproj" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ExplicitReferences.cs;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs"
           DestinationFiles="$(_ExplicitRoot)Parent/Program.cs;$(_ExplicitRoot)Tool/Greeting.cs" />
-    <Exec Command="$(_App) restore &quot;$(_ExplicitRoot)Parent/Parent.csproj&quot; $(_ExplicitArguments) -p:DisableImplicitFrameworkReferences=true -p:FrameworkReferenceFetchManifestPath=&quot;$(_ExplicitRoot)empty-framework.g.props&quot; -bl:&quot;$(_ExplicitRoot)empty-framework-rejected.binlog&quot;"
-          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
-      <Output TaskParameter="ExitCode" PropertyName="_EmptyFrameworkExit" />
-      <Output TaskParameter="ConsoleOutput" ItemName="_EmptyFrameworkOutput" />
-    </Exec>
-    <PropertyGroup>
-      <_EmptyFrameworkLog>@(_EmptyFrameworkOutput)</_EmptyFrameworkLog>
-    </PropertyGroup>
-    <Error Condition="'$(_EmptyFrameworkExit)' == '0' or !$(_EmptyFrameworkLog.Contains('NETSDK1247')) or
-                      $(_EmptyFrameworkLog.Contains('MSB4018')) or Exists('$(_ExplicitRoot)empty-framework.g.props')"
-           Text="An empty framework-reference list must report its unsupported profile without a diagnostic-task exception." />
+    <Exec Command="$(_App) restore &quot;$(_ExplicitRoot)Parent/Parent.csproj&quot; $(_ExplicitArguments) -p:DisableImplicitFrameworkReferences=true -p:FrameworkReferenceFetchManifestPath=&quot;$(_ExplicitRoot)empty-framework.g.props&quot; -bl:&quot;$(_ExplicitRoot)empty-framework.binlog&quot;" />
+    <XmlPeek XmlInputPath="$(_ExplicitRoot)empty-framework.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_EmptyFrameworkPack" />
+    </XmlPeek>
+    <Error Condition="'@(_EmptyFrameworkPack)' != ''"
+           Text="An empty framework-reference list is valid and must not capture project-declared references as pack facts." />
     <Exec Command="$(_App) restore &quot;$(_ExplicitRoot)Parent/Parent.csproj&quot; $(_ExplicitArguments) -bl:&quot;$(_ExplicitRoot)restore.binlog&quot;" />
     <Error Condition="Exists('$(_ExplicitRoot)Parent/bin') or Exists('$(_ExplicitRoot)Tool/bin')"
            Text="Preparing explicit references must not require referenced binaries or prebuild their producers." />

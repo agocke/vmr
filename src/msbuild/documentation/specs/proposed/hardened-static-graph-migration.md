@@ -126,6 +126,15 @@ do not mix them into framework snapshots or inspect their binaries in preparatio
 Graph preparation does not add assembly-name or `HintPath` resolution, and legacy
 manifest-only mode retains its existing `Reference` rejection.
 
+Do not confuse a selected target framework with one `FrameworkReference` item.
+Ordinary SDK authoring can contribute zero or multiple framework references.
+Capture all selected packs as underlying items/properties, allow empty inventories,
+and leave package-authored explicit references in their normal imports.
+For example, `netstandard2.0` gets references from `NETStandard.Library` build
+targets without a synthetic framework reference or a separate preparation path.
+Reject stale framework-reference identity sets rather than silently replaying
+inventory prepared for different inputs.
+
 Framework inventories are candidates, not a final compiler reference list.
 Combine them with package, project-output, and explicit-file candidates during
 graph construction, and apply conflict policy there. Capture any external facts

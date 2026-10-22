@@ -30,6 +30,8 @@ Copyright (c) .NET Foundation. All rights reserved.
                               ProjectDirectory="$(MSBuildProjectDirectory)"
                               FileFacts="@(_NuGetConflictFile)"
                               PlatformItems="@(_PreparedPlatformConflictItem)"
+                              FrameworkReferences="@(FrameworkReference)"
+                              PreparedFrameworkReferences="@(_FrameworkReferenceManifestFrameworkReference)"
                               References="@(ReferencePath)"
                               Analyzers="@(Analyzer)"
                               ReferenceCopyLocalPaths="@(ReferenceCopyLocalPaths)"

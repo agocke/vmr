@@ -252,11 +252,14 @@ captured nor replayed, and obsolete `$(CleanFile).hardened.props` files are igno
 
 With the coordinated SDK, SourceLink, and Roslyn overlays, the same Restore
 flag also prepares framework-reference and repository snapshots and initializes
-the analyzer semaphore used as a stable compilation input. The framework
-snapshot remains limited to one selected implicit `Microsoft.NETCore.App`
-framework per configured project, with package/project references and explicit
-assembly paths but without runtime identifiers. The
-[SDK profile](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/sdk/Sdk.targets)
+the analyzer semaphore used as a stable compilation input. The selected target
+framework can have zero, one or multiple `FrameworkReference` items; ordinary SDK
+authoring decomposes their targeting packs into item/property facts. Package-backed
+frameworks such as `netstandard2.0` retain normal package-authored explicit reference
+items and need no synthetic framework reference or special preparation path.
+Package/project references and explicit assembly paths are supported, but runtime
+identifiers are not. The
+[SDK preparation targets](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/sdk/Sdk.targets)
 leaves project-declared references in authoring; hardened resolution rejects
 assembly names even with `HintPath`. Legacy manifest-only mode still rejects
 `Reference` items. Retained `TargetFrameworks` is supported when an inner
@@ -298,10 +301,14 @@ Snapshot replay must participate in that filtering, not bypass it.
 
 ### Framework inventories and final reference selection
 
-A framework snapshot records the selected targeting pack's candidate inventory,
+A framework snapshot records the selected targeting packs' candidate inventories,
 not the final compiler reference set. Restore may acquire packs and capture their
 membership, paths, and metadata. It must not freeze the winning references across
 framework, package, project-output, and explicit-file candidates.
+An empty pack inventory is valid. References introduced by package build targets
+remain ordinary authoring, not pack inventory. Replay checks the current
+framework-reference identity set against the prepared set and requires fresh Restore
+if they differ.
 
 Graph construction combines those candidates and applies reference-selection
 policy using prepared facts and project authoring. For example, when a newer

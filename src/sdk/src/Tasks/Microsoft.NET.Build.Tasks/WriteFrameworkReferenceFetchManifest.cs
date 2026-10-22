@@ -20,9 +20,6 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
     [Required]
     public string TargetFramework { get; set; } = null!;
 
-    [Required]
-    public ITaskItem[] FrameworkReferences { get; set; } = [];
-
     public ITaskItem[] CompileReferences { get; set; } = [];
 
     public ITaskItem[] Analyzers { get; set; } = [];
@@ -59,7 +56,6 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
 
     private string GenerateManifest()
     {
-        string frameworkReference = FrameworkReferences[0].ItemSpec;
         var content = new StringBuilder();
         using (XmlWriter writer = XmlWriter.Create(content, new XmlWriterSettings
         {
@@ -81,13 +77,13 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
             writer.WriteEndElement();
 
             writer.WriteStartElement("ItemGroup");
-            WriteSortedItems(writer, "_FrameworkReferenceManifestCompileReference", CompileReferences, frameworkReference, writeReferenceAssembly: true);
-            WriteSortedItems(writer, "_FrameworkReferenceManifestAnalyzer", Analyzers, frameworkReference);
-            WriteSortedItems(writer, "_FrameworkReferenceManifestPackageOverride", PackageOverrides, frameworkReference);
+            WriteSortedItems(writer, "_FrameworkReferenceManifestCompileReference", CompileReferences, writeReferenceAssembly: true);
+            WriteSortedItems(writer, "_FrameworkReferenceManifestAnalyzer", Analyzers);
+            WriteSortedItems(writer, "_FrameworkReferenceManifestPackageOverride", PackageOverrides);
             foreach (string package in PreferredPackages)
             {
                 WriteItem(writer, "_FrameworkReferenceManifestPreferredPackage",
-                    new TaskItem(Escape(package)), frameworkReference);
+                    new TaskItem(Escape(package)));
             }
             foreach (ITaskItem manifest in PlatformManifests)
             {
@@ -98,7 +94,7 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
                     item.SetMetadata("PackageId", Escape(fact.PackageId ?? ""));
                     item.SetMetadata("AssemblyVersion", fact.AssemblyVersion?.ToString() ?? "");
                     item.SetMetadata("FileVersion", fact.FileVersion?.ToString() ?? "");
-                    WriteItem(writer, "_FrameworkReferenceManifestPlatformItem", item, frameworkReference);
+                    WriteItem(writer, "_FrameworkReferenceManifestPlatformItem", item);
                 }
             }
 
@@ -107,8 +103,7 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
                 WriteItem(
                     writer,
                     "_FrameworkReferenceManifestRuntimeFramework",
-                    runtimeFramework,
-                    frameworkReference);
+                    runtimeFramework);
             }
 
             foreach (ITaskItem resolvedFrameworkReference in ResolvedFrameworkReferences)
@@ -116,8 +111,7 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
                 WriteItem(
                     writer,
                     "_FrameworkReferenceManifestFrameworkReference",
-                    resolvedFrameworkReference,
-                    resolvedFrameworkReference.ItemSpec);
+                    resolvedFrameworkReference);
             }
 
             if (!string.IsNullOrEmpty(AppHostSourcePath))
@@ -125,7 +119,6 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
                 writer.WriteStartElement("_FrameworkReferenceManifestAppHost");
                 writer.WriteAttributeString("Include", Escape(AppHostSourcePath));
                 WriteMetadata(writer, "TargetFramework", TargetFramework);
-                WriteMetadata(writer, "FrameworkReference", frameworkReference);
                 WriteMetadata(writer, "RuntimeIdentifier", AppHostRuntimeIdentifier);
                 writer.WriteEndElement();
             }
@@ -141,7 +134,6 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
         XmlWriter writer,
         string itemType,
         ITaskItem[] items,
-        string frameworkReference,
         bool writeReferenceAssembly = false)
     {
         ITaskItem[] sortedItems = (ITaskItem[])items.Clone();
@@ -157,12 +149,10 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
 
         foreach (ITaskItem item in sortedItems)
         {
-            string sourceFrameworkReference = item.GetMetadata("FrameworkReferenceName");
             WriteItem(
                 writer,
                 itemType,
                 item,
-                string.IsNullOrEmpty(sourceFrameworkReference) ? frameworkReference : sourceFrameworkReference,
                 writeReferenceAssembly);
         }
     }
@@ -171,7 +161,6 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
         XmlWriter writer,
         string itemType,
         ITaskItem item,
-        string frameworkReference,
         bool writeReferenceAssembly = false)
     {
         writer.WriteStartElement(itemType);
@@ -206,7 +195,6 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
         }
 
         WriteMetadata(writer, "TargetFramework", TargetFramework);
-        WriteMetadata(writer, "FrameworkReference", frameworkReference);
         writer.WriteEndElement();
     }
 

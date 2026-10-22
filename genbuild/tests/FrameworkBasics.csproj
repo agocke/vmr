@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework Condition="'$(MSBuildProjectName)' == 'Library'">netstandard2.0</TargetFramework>
+    <TargetFramework Condition="'$(MSBuildProjectName)' == 'App'">net11.0</TargetFramework>
+    <TargetFramework Condition="'$(MSBuildProjectName)' == 'Multiple'">net10.0</TargetFramework>
+    <OutputType Condition="'$(MSBuildProjectName)' == 'App'">Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" Condition="'$(MSBuildProjectName)' == 'App'" />
+    <Compile Include="Greeting.cs" Condition="'$(MSBuildProjectName)' == 'Library'" />
+    <Compile Include="Component.cs" Condition="'$(MSBuildProjectName)' == 'Multiple'" />
+    <ProjectReference Include="../Library/Library.csproj" Condition="'$(MSBuildProjectName)' == 'App'" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" Condition="'$(MSBuildProjectName)' == 'Multiple'" />
+  </ItemGroup>
+  <Target Name="CheckFrameworkReferences" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <_PackageReference Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == 'NETStandard.Library'" />
+      <_WebReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'Microsoft.AspNetCore.Components'" />
+      <_CoreReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'System.Runtime'" />
+    </ItemGroup>
+    <Error Condition="'$(MSBuildProjectName)' == 'Library' and
+                      ('@(FrameworkReference)' != '' or '@(_PackageReference)' == '' or '%(_PackageReference.Private)' != 'false')"
+           Text="Normal netstandard references must come from package-authored file items, not a synthetic framework reference." />
+    <Error Condition="'$(MSBuildProjectName)' == 'Multiple' and ('@(_WebReference->Count())' != '1' or '@(_CoreReference->Count())' != '1')"
+           Text="All selected targeting packs must contribute references as ordinary MSBuild items." />
+  </Target>
+</Project>
