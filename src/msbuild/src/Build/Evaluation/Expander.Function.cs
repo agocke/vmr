@@ -117,6 +117,8 @@ internal partial class Expander<P, I>
 
         private readonly LoggingContext _loggingContext;
 
+        private readonly Graph.Hardened.DirectoryImportResolver _directoryImports;
+
         /// <summary>
         /// Construct a function that will be executed during property evaluation.
         /// </summary>
@@ -134,7 +136,8 @@ internal partial class Expander<P, I>
             string remainder,
             PropertiesUseTracker propertiesUseTracker,
             IFileSystem fileSystem,
-            LoggingContext loggingContext)
+            LoggingContext loggingContext,
+            Graph.Hardened.DirectoryImportResolver directoryImports = null)
         {
             _methodMethodName = methodName;
             if (arguments == null)
@@ -164,6 +167,7 @@ internal partial class Expander<P, I>
             _propertiesUseTracker = propertiesUseTracker;
             _fileSystem = fileSystem;
             _loggingContext = loggingContext;
+            _directoryImports = directoryImports;
         }
 
         /// <summary>
@@ -203,16 +207,23 @@ internal partial class Expander<P, I>
         /// <param name="propertiesUseTracker">Tracks property reads performed while evaluating the function.</param>
         /// <param name="fileSystem">File system abstraction used by file and directory property functions.</param>
         /// <param name="loggingContext">Logging context for the operation; may be <see langword="null"/>.</param>
+        /// <param name="directoryImports">Bounded directory import lookup available only during project evaluation.</param>
         internal static Function ExtractPropertyFunction(
             string expressionFunction,
             IElementLocation elementLocation,
             object propertyValue,
             PropertiesUseTracker propertiesUseTracker,
             IFileSystem fileSystem,
-            LoggingContext loggingContext)
+            LoggingContext loggingContext,
+            Graph.Hardened.DirectoryImportResolver directoryImports = null)
         {
             // Used to aggregate all the components needed for a Function
-            FunctionBuilder functionBuilder = new FunctionBuilder { FileSystem = fileSystem, LoggingContext = loggingContext };
+            FunctionBuilder functionBuilder = new FunctionBuilder
+            {
+                FileSystem = fileSystem,
+                LoggingContext = loggingContext,
+                DirectoryImports = directoryImports,
+            };
 
             // By default the expression root is the whole function expression
             ReadOnlySpan<char> expressionRoot = expressionFunction == null ? ReadOnlySpan<char>.Empty : expressionFunction.AsSpan();
@@ -367,7 +378,12 @@ internal partial class Expander<P, I>
         internal object Execute(object objectInstance, IPropertyProvider<P> properties, ExpanderOptions options, IElementLocation elementLocation)
         {
             bool constructingGraph = !string.IsNullOrEmpty(properties.GetProperty("MSBuildEmitActionGraph")?.EvaluatedValue);
+            bool directoryLookup = _directoryImports is not null &&
+                _receiverType == typeof(IntrinsicFunctions) &&
+                (string.Equals(_methodMethodName, nameof(IntrinsicFunctions.GetDirectoryNameOfFileAbove), StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(_methodMethodName, nameof(IntrinsicFunctions.GetPathOfFileAbove), StringComparison.OrdinalIgnoreCase));
             if (constructingGraph &&
+                !directoryLookup &&
                 !Graph.Hardened.HardenedActionGraph.IsAllowedFunction(_receiverType, _methodMethodName))
             {
                 ProjectErrorUtilities.ThrowInvalidProject(elementLocation, "HardenedGraphProhibitedFunction",
@@ -421,7 +437,8 @@ internal partial class Expander<P, I>
                         options,
                         elementLocation,
                         _propertiesUseTracker,
-                        _fileSystem);
+                        _fileSystem,
+                        _directoryImports);
 
                     if (argument is string argumentValue)
                     {
@@ -486,7 +503,7 @@ internal partial class Expander<P, I>
                 if (_receiverType == typeof(IntrinsicFunctions))
                 {
                     // Special case a few methods that take extra parameters that can't be passed in by the user
-                    if (_methodMethodName.Equals("GetPathOfFileAbove") && args.Length == 1)
+                    if (_methodMethodName.Equals("GetPathOfFileAbove", StringComparison.OrdinalIgnoreCase) && args.Length == 1)
                     {
                         // Append the IElementLocation as a parameter to GetPathOfFileAbove if the user only
                         // specified the file name.  This is syntactic sugar so they don't have to always
@@ -497,9 +514,27 @@ internal partial class Expander<P, I>
                     }
                 }
 
+                string directoryStart = null;
+                string directoryFile = null;
+                bool returnFile = string.Equals(_methodMethodName, nameof(IntrinsicFunctions.GetPathOfFileAbove), StringComparison.OrdinalIgnoreCase);
+                if (directoryLookup)
+                {
+                    ProjectErrorUtilities.VerifyThrowInvalidProject(
+                        ParseArgs.TryGetArgs(args, out string first, out string second),
+                        elementLocation, "InvalidFunctionMethodUnavailable", _methodMethodName, _receiverType.FullName);
+                    directoryStart = returnFile ? second : first;
+                    directoryFile = returnFile ? first : second;
+                    directoryLookup = constructingGraph || Graph.Hardened.DirectoryImportResolver.IsDirectoryFileName(directoryFile);
+                }
+
                 // If we've been asked to construct an instance, then we
                 // need to locate an appropriate constructor and invoke it
-                if (String.Equals("new", _methodMethodName, StringComparison.OrdinalIgnoreCase))
+                if (directoryLookup)
+                {
+                    functionResult = _directoryImports.Resolve(
+                        directoryStart, directoryFile, returnFile, elementLocation);
+                }
+                else if (String.Equals("new", _methodMethodName, StringComparison.OrdinalIgnoreCase))
                 {
                     if (!WellKnownFunctions.TryExecuteWellKnownConstructorNoThrow(_receiverType, out functionResult, args))
                     {
@@ -605,7 +640,8 @@ internal partial class Expander<P, I>
                     options,
                     elementLocation,
                     _propertiesUseTracker,
-                    _fileSystem);
+                    _fileSystem,
+                    _directoryImports);
             }
 
             // Exceptions coming from the actual function called are wrapped in a TargetInvocationException

@@ -181,6 +181,38 @@ actions, `DirectoriesCreated` mappings, empty-directory products, or tree
 artifacts. Directory-creation errors in hardened execution are fail-fast;
 ordinary `PrepareForBuild` retains `ContinueOnError=true`.
 
+### Repository-bounded directory imports
+
+Standard directory imports are engine-managed source discovery, not external
+facts to snapshot during Restore. During project evaluation, the engine supports
+`GetDirectoryNameOfFileAbove` and `GetPathOfFileAbove` for exactly
+`Directory.Build.props`, `Directory.Build.targets`, and `Directory.Packages.props`.
+The existing Common and NuGet authoring therefore retains its nearest-file
+selection, import order, enable switches, and explicit path overrides.
+
+Supply `MSBuildGraphRepositoryRoot` as an absolute global property to both
+preparation and hardened Build. The evaluator captures this global input before
+project authoring; an environment value, an authored property, or an authored
+replacement through `TreatAsLocalProperty` cannot supply or change the boundary.
+It is not inferred from the current directory, Git, or an imported props file.
+The search start must also be absolute and inside the root. Search includes the
+root itself and returns an empty result if no file exists through that directory,
+without probing any parent above it. Lexical paths and resolved symlinks must stay
+inside the boundary. This constrains automatic discovery, not every explicit
+import path.
+
+The same opt-in boundary applies during ordinary preparation so it evaluates the
+same directory authoring. Ordinary evaluation without the global input is
+unchanged. Other ancestor-search filenames retain ordinary behavior outside
+graph construction but remain prohibited in hardened Build. Target construction
+does not receive this evaluation-only capability; general filesystem property
+functions are not newly allowed.
+
+Imports remain live source inputs to fresh evaluation, not captured evaluated
+properties or task outputs. This feature does not implement persistent tracking
+of negative lookup probes or automatic graph regeneration. Callers reusing an
+evaluation context must discard its filesystem cache after source changes.
+
 ### Captured construction platform
 
 The command-line launcher captures the host OS once as the global property

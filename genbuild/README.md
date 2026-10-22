@@ -52,6 +52,16 @@ Restore and Build must remain separate invocations. `build` generates
 Ninja executes them. Additional arguments are forwarded to MSBuild.
 Use `-p:MSBuildEmitActionGraph=/absolute/path/build.ninja` to change the graph path.
 
+For normal `Directory.Build.props`, `Directory.Build.targets`, and
+`Directory.Packages.props` discovery, pass
+`-p:MSBuildGraphRepositoryRoot=/absolute/path/to/repository` to both Restore and
+Build. The engine selects the nearest file, checking the repository root
+inclusively and returning no match rather than searching its parent. The root
+must be an explicit absolute global property; it is not inferred from Git, the
+environment, or imported authoring. Explicit directory-import path overrides
+remain supported. This is evaluation-time source discovery, not a Restore
+snapshot or permission for arbitrary ancestor searches during construction.
+
 Projects may retain `TargetFrameworks` when both invocations select an inner
 build with the same `-p:TargetFramework=...` and `-p:Configuration=...`.
 Preparation follows normal project-reference framework/configuration negotiation
@@ -163,9 +173,12 @@ binding and declared-I/O adaptations,
 package-SDK import replay and broader compiler/tool profiles remain necessary.
 The trial uses ordinary
 Restore (`RestoreUseStaticGraphEvaluation=false`): the static Restore launcher
-still assumes an installed SDK layout. A fresh hardened graph currently stops at
-`Microsoft.Common.props`' upward `Directory.Build.props` search, before package-SDK
-replay or tool scheduling is reached. No runtime library graph, compilation or
+still assumes an installed SDK layout. With the VMR root explicitly supplied to
+both invocations, a fresh hardened graph passes Common's directory-props lookup
+and reaches runtime authoring. It currently stops at `eng/OSArch.props`' unconditional
+`RuntimeInformation.ProcessArchitecture` query. Build-host architecture must become
+an explicit input, separate from target architecture. Package-SDK replay and tool
+scheduling have not yet been reached. No runtime library graph, compilation or
 independent execution is established.
 
 Ordinary graph-input preparation now captures the complete assets JSON as

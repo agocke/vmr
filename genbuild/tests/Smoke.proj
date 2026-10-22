@@ -21,6 +21,7 @@
     </Exec>
     <Error Condition="'$(_InvalidExitCode)' == '0'" Text="Invalid commands must fail." />
     <CallTarget Targets="TestNuGetSdkResolution" />
+    <CallTarget Targets="TestDirectoryImports" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -99,6 +100,47 @@
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
     <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, Restore-only package-SDK resolution, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-reference execution and startup, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestDirectoryImports">
+    <PropertyGroup>
+      <_DirectoryImportsRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'directory-imports'))</_DirectoryImportsRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_DirectoryImportsRoot)WithFiles/child/App;$(_DirectoryImportsRoot)NoFiles/child/App" />
+    <WriteLinesToFile File="$(_DirectoryImportsRoot)Directory.Build.props"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;DirectoryImportProps&gt;outside&lt;/DirectoryImportProps&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_DirectoryImportsRoot)Directory.Build.targets"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;DirectoryImportTargets&gt;outside&lt;/DirectoryImportTargets&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_DirectoryImportsRoot)Directory.Packages.props"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;DirectoryImportPackages&gt;outside&lt;/DirectoryImportPackages&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_DirectoryImportsRoot)WithFiles/Directory.Build.props"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;DirectoryImportProps&gt;root&lt;/DirectoryImportProps&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_DirectoryImportsRoot)WithFiles/child/Directory.Build.props"
+                      Lines="&lt;Project&gt;&lt;Import Project=&quot;../Directory.Build.props&quot; /&gt;&lt;PropertyGroup&gt;&lt;DirectoryImportProps&gt;nearest&lt;/DirectoryImportProps&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_DirectoryImportsRoot)WithFiles/Directory.Build.targets"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;DirectoryImportTargets&gt;root-targets&lt;/DirectoryImportTargets&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_DirectoryImportsRoot)WithFiles/Directory.Packages.props"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;DirectoryImportPackages&gt;root-packages&lt;/DirectoryImportPackages&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_DirectoryImportProject Include="$(_DirectoryImportsRoot)WithFiles/child/App/App.csproj"
+                               Root="$(_DirectoryImportsRoot)WithFiles/" Props="nearest" Targets="root-targets" Packages="root-packages" />
+      <_DirectoryImportProject Include="$(_DirectoryImportsRoot)NoFiles/child/App/App.csproj"
+                               Root="$(_DirectoryImportsRoot)NoFiles/" />
+      <_DirectoryImportProject Update="@(_DirectoryImportProject)">
+        <Arguments>-p:MSBuildGraphRepositoryRoot=&quot;%(_DirectoryImportProject.Root)&quot; -p:ExpectedDirectoryImportProps=&quot;%(_DirectoryImportProject.Props)&quot; -p:ExpectedDirectoryImportTargets=&quot;%(_DirectoryImportProject.Targets)&quot; -p:ExpectedDirectoryImportPackages=&quot;%(_DirectoryImportProject.Packages)&quot;</Arguments>
+      </_DirectoryImportProject>
+    </ItemGroup>
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)DirectoryImports.csproj" DestinationFiles="%(_DirectoryImportProject.Identity)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.cs" DestinationFiles="%(_DirectoryImportProject.Root)child/App/HelloWorld.cs" />
+    <Exec Command="$(_App) restore &quot;%(_DirectoryImportProject.Identity)&quot; %(_DirectoryImportProject.Arguments) -bl:&quot;%(_DirectoryImportProject.Root)restore.binlog&quot;" />
+    <Exec Command="$(_App) build &quot;%(_DirectoryImportProject.Identity)&quot; %(_DirectoryImportProject.Arguments) -p:MSBuildEmitActionGraph=&quot;%(_DirectoryImportProject.Root)build.ninja&quot; -bl:&quot;%(_DirectoryImportProject.Root)build.binlog&quot;" />
+    <Error Condition="Exists('%(_DirectoryImportProject.Root)child/App/bin/Debug/net11.0/App.dll')"
+           Text="Directory import resolution must not execute product actions during preparation or graph construction." />
+    <Exec WorkingDirectory="%(_DirectoryImportProject.Root)child/App" Command="ninja -f &quot;%(_DirectoryImportProject.Root)build.ninja&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;%(_DirectoryImportProject.Root)child/App/bin/Debug/net11.0/App.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_DirectoryImportOutput" />
+    </Exec>
+    <Error Condition="'@(_DirectoryImportOutput->Count())' != '2' or '%(_DirectoryImportOutput.Identity)' != 'Hello from genbuild.'"
+           Text="Repository-bounded directory imports must produce independently executable SDK graphs." />
   </Target>
   <Target Name="TestFrameworkBasics">
     <MSBuild Projects="$(MSBuildThisFileDirectory)WindowsSdkVersions.proj" Properties="GenBuildToolsetDirectory=$(_AppDirectory)/toolset/" />

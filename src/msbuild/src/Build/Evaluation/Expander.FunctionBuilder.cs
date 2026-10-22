@@ -90,6 +90,8 @@ internal partial class Expander<P, I>
 
         public LoggingContext LoggingContext { get; set; }
 
+        public Graph.Hardened.DirectoryImportResolver DirectoryImports { get; set; }
+
         /// <summary>
         /// List of properties which have been used but have not been initialized yet.
         /// </summary>
@@ -107,7 +109,8 @@ internal partial class Expander<P, I>
                 Remainder,
                 PropertiesUseTracker,
                 FileSystem,
-                LoggingContext);
+                LoggingContext,
+                DirectoryImports);
         }
     }
 }

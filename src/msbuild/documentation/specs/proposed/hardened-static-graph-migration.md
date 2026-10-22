@@ -52,9 +52,20 @@ and [WriteLinesToFile](../../../src/Tasks/FileIO/WriteLinesToFile.cs).
 ## Distinguish discovery from value derivation
 
 A value can affect the graph without coming from Restore. Pure transformations
-of supplied values belong in construction; discovery that reads files, tools,
-source-control state, or the environment belongs in preparation and must supply
-explicit inputs to the fresh Build.
+of supplied values belong in construction; task discovery that reads files,
+tools, source-control state, or the environment belongs in preparation and must
+supply explicit inputs to the fresh Build.
+
+Engine-managed source discovery is different: projects, imports, and permitted
+source globs remain evaluation inputs. For normal directory imports, pass an
+absolute global `MSBuildGraphRepositoryRoot` to both Restore and hardened Build.
+The built-in lookup selects the nearest `Directory.Build.props`,
+`Directory.Build.targets`, or `Directory.Packages.props` through that root,
+inclusively, and never searches its parent. Keep normal layered authoring rather
+than flattening evaluated properties into Restore snapshots or forcing one root
+props file on projects with different nearest imports. Missing files through the
+root mean no import, not ambient ancestor discovery. Explicit path overrides remain
+available. See the [directory-import contract](hardened-static-graph.md#repository-bounded-directory-imports).
 
 For example, `GetAssemblyVersion` does not inspect an assembly. It parses the
 supplied NuGet version string into a four-part version:

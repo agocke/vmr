@@ -757,6 +757,15 @@ namespace Microsoft.Build.Evaluation
                             _data.GlobalPropertiesDictionary.GetProperty(Graph.Hardened.HardenedActionGraph.HostOSProperty)?.EvaluatedValue,
                             _projectRootElement.ProjectFileLocation);
                     }
+
+                    string repositoryRoot = _data.GlobalPropertiesDictionary.GetProperty(
+                        Graph.Hardened.DirectoryImportResolver.RepositoryRootProperty)?.EvaluatedValue;
+                    if (repositoryRoot is not null ||
+                        !string.IsNullOrEmpty(_data.GetProperty("MSBuildEmitActionGraph")?.EvaluatedValue))
+                    {
+                        _expander.DirectoryImports = new Graph.Hardened.DirectoryImportResolver(
+                            repositoryRoot, _evaluationContext.FileSystem);
+                    }
                 }
 
                 Assumed.NotEqual(_data.EvaluationId, BuildEventContext.InvalidEvaluationId, "Evaluation should produce an evaluation ID");

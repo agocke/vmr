@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="HelloWorld.cs" />
+  </ItemGroup>
+  <Target Name="CheckDirectoryImports" BeforeTargets="CoreCompile">
+    <Error Condition="'$(DirectoryImportProps)' != '$(ExpectedDirectoryImportProps)' or
+                      '$(DirectoryImportTargets)' != '$(ExpectedDirectoryImportTargets)' or
+                      '$(DirectoryImportPackages)' != '$(ExpectedDirectoryImportPackages)'"
+           Text="Directory imports must preserve nearest-file selection and stop at the declared repository root." />
+  </Target>
+</Project>

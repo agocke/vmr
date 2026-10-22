@@ -80,6 +80,8 @@ internal partial class Expander<P, I>
     /// </summary>
     internal EvaluationContext EvaluationContext { get; }
 
+    internal Graph.Hardened.DirectoryImportResolver DirectoryImports { get; set; }
+
     private Expander(IPropertyProvider<P> properties, LoggingContext loggingContext)
     {
         _properties = properties;
@@ -185,7 +187,10 @@ internal partial class Expander<P, I>
     /// <returns></returns>
     internal Expander<P, I> WithLoggingContext(LoggingContext loggingContext)
     {
-        return new Expander<P, I>(_properties, _items, _metadata, _fileSystem, EvaluationContext, loggingContext);
+        return new Expander<P, I>(_properties, _items, _metadata, _fileSystem, EvaluationContext, loggingContext)
+        {
+            DirectoryImports = DirectoryImports,
+        };
     }
 
     /// <summary>
@@ -254,7 +259,7 @@ internal partial class Expander<P, I>
         Assumed.NotNull(elementLocation);
 
         string result = MetadataExpander.ExpandMetadataLeaveEscaped(expression, _metadata, options, elementLocation, _loggingContext);
-        result = PropertyExpander.ExpandPropertiesLeaveEscaped(result, _properties, options, elementLocation, _propertiesUseTracker, _fileSystem);
+        result = PropertyExpander.ExpandPropertiesLeaveEscaped(result, _properties, options, elementLocation, _propertiesUseTracker, _fileSystem, DirectoryImports);
         result = ItemExpander.ExpandItemVectorsIntoString(this, result, _items, options, elementLocation);
         result = FileUtilities.MaybeAdjustFilePath(result);
 
@@ -275,7 +280,7 @@ internal partial class Expander<P, I>
         Assumed.NotNull(elementLocation);
 
         string metaExpanded = MetadataExpander.ExpandMetadataLeaveEscaped(expression, _metadata, options, elementLocation);
-        return PropertyExpander.ExpandPropertiesLeaveTypedAndEscaped(metaExpanded, _properties, options, elementLocation, _propertiesUseTracker, _fileSystem);
+        return PropertyExpander.ExpandPropertiesLeaveTypedAndEscaped(metaExpanded, _properties, options, elementLocation, _propertiesUseTracker, _fileSystem, DirectoryImports);
     }
 
     /// <summary>
@@ -323,7 +328,7 @@ internal partial class Expander<P, I>
         Assumed.NotNull(elementLocation);
 
         expression = MetadataExpander.ExpandMetadataLeaveEscaped(expression, _metadata, options, elementLocation);
-        expression = PropertyExpander.ExpandPropertiesLeaveEscaped(expression, _properties, options, elementLocation, _propertiesUseTracker, _fileSystem);
+        expression = PropertyExpander.ExpandPropertiesLeaveEscaped(expression, _properties, options, elementLocation, _propertiesUseTracker, _fileSystem, DirectoryImports);
         expression = FileUtilities.MaybeAdjustFilePath(expression);
 
         List<T> result = new List<T>();

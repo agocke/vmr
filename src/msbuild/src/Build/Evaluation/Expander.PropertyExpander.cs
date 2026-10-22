@@ -52,6 +52,7 @@ internal partial class Expander<P, I>
         private readonly IElementLocation _elementLocation;
         private readonly PropertiesUseTracker _propertiesUseTracker;
         private readonly IFileSystem _fileSystem;
+        private readonly Graph.Hardened.DirectoryImportResolver _directoryImports;
         private readonly bool _isTruncationEnabled;
 
         private PropertyExpander(
@@ -59,13 +60,15 @@ internal partial class Expander<P, I>
             ExpanderOptions options,
             IElementLocation elementLocation,
             PropertiesUseTracker propertiesUseTracker,
-            IFileSystem fileSystem)
+            IFileSystem fileSystem,
+            Graph.Hardened.DirectoryImportResolver directoryImports)
         {
             _properties = properties;
             _options = options;
             _elementLocation = elementLocation;
             _propertiesUseTracker = propertiesUseTracker;
             _fileSystem = fileSystem;
+            _directoryImports = directoryImports;
             _isTruncationEnabled = IsTruncationEnabled(options);
         }
 
@@ -92,7 +95,8 @@ internal partial class Expander<P, I>
             ExpanderOptions options,
             IElementLocation elementLocation,
             PropertiesUseTracker propertiesUseTracker,
-            IFileSystem fileSystem)
+            IFileSystem fileSystem,
+            Graph.Hardened.DirectoryImportResolver directoryImports = null)
         {
             return
                 ConvertToString(
@@ -102,7 +106,8 @@ internal partial class Expander<P, I>
                         options,
                         elementLocation,
                         propertiesUseTracker,
-                        fileSystem));
+                        fileSystem,
+                        directoryImports));
         }
 
         /// <summary>
@@ -128,7 +133,8 @@ internal partial class Expander<P, I>
             ExpanderOptions options,
             IElementLocation elementLocation,
             PropertiesUseTracker propertiesUseTracker,
-            IFileSystem fileSystem)
+            IFileSystem fileSystem,
+            Graph.Hardened.DirectoryImportResolver directoryImports = null)
         {
             if (((options & ExpanderOptions.ExpandProperties) == 0) || String.IsNullOrEmpty(expression))
             {
@@ -144,7 +150,7 @@ internal partial class Expander<P, I>
                 return expression;
             }
 
-            PropertyExpander expander = new(properties, options, elementLocation, propertiesUseTracker, fileSystem);
+            PropertyExpander expander = new(properties, options, elementLocation, propertiesUseTracker, fileSystem, directoryImports);
             return expander.ExpandPropertiesLeaveTypedAndEscaped(expression, markerIndex);
         }
 
@@ -373,9 +379,10 @@ internal partial class Expander<P, I>
             ExpanderOptions options,
             IElementLocation elementLocation,
             PropertiesUseTracker propertiesUseTracker,
-            IFileSystem fileSystem)
+            IFileSystem fileSystem,
+            Graph.Hardened.DirectoryImportResolver directoryImports = null)
         {
-            PropertyExpander expander = new(properties, options, elementLocation, propertiesUseTracker, fileSystem);
+            PropertyExpander expander = new(properties, options, elementLocation, propertiesUseTracker, fileSystem, directoryImports);
             return expander.ExpandPropertyBody(propertyBody, propertyValue);
         }
 
@@ -411,7 +418,8 @@ internal partial class Expander<P, I>
                         propertyValue,
                         _propertiesUseTracker,
                         _fileSystem,
-                        _propertiesUseTracker.LoggingContext);
+                        _propertiesUseTracker.LoggingContext,
+                        _directoryImports);
 
                     // We may not have been able to parse out a function
                     if (function != null)

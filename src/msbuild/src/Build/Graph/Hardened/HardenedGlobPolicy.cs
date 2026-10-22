@@ -117,7 +117,7 @@ internal sealed class HardenedGlobPolicy(string? workspaceRoot)
         return null!;
     }
 
-    private static string NormalizeRoot(string path)
+    internal static string NormalizeRoot(string path)
     {
         string fullPath = Path.GetFullPath(path);
         string pathRoot = Path.GetPathRoot(fullPath) ?? string.Empty;
@@ -145,7 +145,7 @@ internal sealed class HardenedGlobPolicy(string? workspaceRoot)
                FileUtilities.IsSlash(path[root.Length]);
     }
 
-    private static void ValidatePath(
+    internal static void ValidatePath(
         string patternEscaped,
         string declaredPath,
         string workspaceRoot,

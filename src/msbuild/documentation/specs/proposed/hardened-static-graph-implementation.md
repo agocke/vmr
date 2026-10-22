@@ -15,6 +15,8 @@ for task/target adaptation patterns.
 - [x] Build an SDK executable/library closure with generated project references.
 - [x] Select prepared package assets, run a package generator, and publish the
   runtime implementation separately from the compile-time reference assembly.
+- [x] Evaluate standard directory imports with nearest-file lookup bounded by
+  an explicit repository-root global input.
 - [ ] Prepare and build a real `dotnet/runtime` managed-library closure.
 
 The packaged smoke fixtures independently execute ten actions for the basic SDK
@@ -43,6 +45,17 @@ closure. Engine-managed project/import reads and permitted source globs remain
 graph-input discovery; task execution during construction must be zero-I/O.
 Externally discovered data becomes explicit items/properties. Pure derivation
 over those values stays in Build rather than being frozen as selected task results.
+
+Standard directory-import discovery now uses an evaluator-only capability:
+`MSBuildGraphRepositoryRoot` supplies the absolute global boundary for the three
+normal directory filenames. Both Restore and fresh Build preserve nearest-file
+selection, root-inclusive lookup and no-match semantics without looking outside
+that root. The engine does not snapshot evaluated source authoring or broaden
+the target-time function allowlist. Unit cases and packaged SDK fixtures cover
+layered imports, absent files despite poisoned external parents, boundary/link
+rejection, and ordinary evaluation compatibility. Persistent negative-probe
+tracking and automatic graph regeneration remain deferred. See the
+[contract](hardened-static-graph.md#repository-bounded-directory-imports).
 
 Construction binds concrete parameters, records file actions, validates the
 closure, and publishes the bundle without ordinary `BuildTargets` execution.
@@ -512,10 +525,14 @@ and `ILLink.RoslynAnalyzer`'s normal package-backed `netstandard2.0` references.
 References, analyzers and tool producer dependencies are not suppressed.
 The probe uses `RestoreUseStaticGraphEvaluation=false` because the static Restore
 launcher still assumes an installed SDK layout.
-A fresh hardened graph currently stops in `Microsoft.Common.props` on the upward
-`Directory.Build.props` search (`GetDirectoryNameOfFileAbove`), before package-SDK
-import replay and generated-tool binding are reached. Import locations must become
-explicit inputs or prepared facts, not construction-time searches.
+With `MSBuildGraphRepositoryRoot` set to the VMR root in both invocations, a fresh
+hardened graph now passes Common's directory-props lookup and reaches runtime's
+`eng/OSArch.props`. Its unconditional `RuntimeInformation.ProcessArchitecture`
+query is the next prohibited ambient observation, even when target architecture
+is supplied. Build-host architecture needs an explicit input, distinct from target
+architecture; permitting the ambient query is not the fix. Preparation and the
+failed graph attempt both produce zero DLLs. Package-SDK import replay and
+generated-tool binding have not yet been reached.
 No runtime library graph, compilation, or independent execution is proven.
 Native/CoreCLR/CMake integration is later.
 
