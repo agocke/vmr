@@ -416,6 +416,10 @@ projects; choosing the older framework does not make those dependencies optional
   preserving child framework negotiation and per-configuration inputs.
 - [ ] Capture/replay package-SDK import bindings without Build-time searches/downloads.
 - [x] Reprobe the real closure and identify the live-tool prebuild dependency.
+- [x] Separate targeting-pack discovery from runtime reference filtering,
+  retaining candidate analyzers and tool producer dependencies.
+- [x] Give runtime library compilation and trimming distinct assembly/symbol
+  outputs without moving or overwriting compiler outputs.
 - [ ] Support the actual compiler/API-tool and analyzer requirements,
   keeping generated tools connected to their producers.
 - [ ] Construct a fresh real-library graph without product binaries.
@@ -444,12 +448,31 @@ unused frameworks. Standard preparation rejects `PrepareForBuild`/`CoreCompile`
 instead of prebuilding products or tools.
 
 The real `System.Collections.Immutable` probe now passes the retained-multi-targeting
-guard, but its closure is not enabled. Runtime's
+guard and the live-tool prebuild dependency, but its closure is not enabled. Runtime's
 [`FilterImplicitAssemblyReferences`](../../../../runtime/Directory.Build.targets)
-runs after `ResolveTargetingPackAssets` and depends on `ResolveProjectReferences`.
-Framework capture therefore tries to build live `ILLink.Tasks`, which preparation
-now rejects explicitly. Keep its producer and analyzer dependencies intact while
-adapting this hook; do not suppress them or satisfy them with prebuilt outputs.
+runs before `ResolveAssemblyReferences`, after pack candidates and project-output
+metadata are available. Framework capture retains unfiltered reference/analyzer
+candidates; replayed `ReferencePath` items participate in the same runtime filter.
+Project-output and analyzer replacements are selected from metadata, without
+inspecting binaries. The
+[reference fixture](../../../../../genbuild/tests/RuntimeReferences.csproj)
+prepares without project products, constructs a graph retaining the build-order
+tool producer, and compiles/starts independently with a project replacement.
+
+Runtime's [library trimming targets](../../../../runtime/eng/illink.targets)
+now direct compilation to `PreTrim/`, link afterward to separate final paths,
+and restore final publication metadata even when compilation/linking are reused.
+The [authoring fixture](../../../../../genbuild/tests/RuntimeTrimming.csproj)
+uses real C# compilation and a recording linker, covering portable/embedded/no
+symbols, disabled symbol rewriting, untrimmed builds, unchanged-build reuse,
+and missing-final-PDB recovery. This does not establish real ILLink execution
+or generated-task binding in the action graph.
+
+The real preparation probe produces no DLLs and reaches `ILLink.Tasks`, then
+fails with `NETSDK1247` on its explicit MSBuild framework/utility references
+from [`PackageDownloadAndReference`](../../../../runtime/eng/PackageDownloadAndReference.targets).
+Support those explicit restored paths without mixing them into pack discovery;
+do not suppress references, analyzers, or tool producer dependencies.
 The probe uses `RestoreUseStaticGraphEvaluation=false` because the static Restore
 launcher still assumes an installed SDK layout.
 No runtime library graph, compilation, or independent execution is proven.

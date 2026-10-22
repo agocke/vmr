@@ -1,0 +1,67 @@
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <ILLinkTrimAssembly Condition="'$(ILLinkTrimAssembly)' == ''">true</ILLinkTrimAssembly>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <_RequiresILLinkPack>false</_RequiresILLinkPack>
+    <DebugType Condition="'$(DebugType)' == ''">portable</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Greeting.cs" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="$(RuntimeILLinkTargets)" />
+  <!-- Exercise runtime's target ordering with a recording linker, not linker semantics. -->
+  <UsingTask TaskName="ILLink" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <AssemblyPaths ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <RootAssemblyNames ParameterType="Microsoft.Build.Framework.ITaskItem[]" />
+      <OutputDirectory Required="true" />
+      <ExtraArgs />
+      <ToolExe />
+      <ToolPath />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        string input = AssemblyPaths[0].ItemSpec;
+        Directory.CreateDirectory(OutputDirectory);
+        File.WriteAllBytes(Path.Combine(OutputDirectory, Path.GetFileName(input)), File.ReadAllBytes(input));
+        if (ExtraArgs.Contains("-b true"))
+        {
+            string symbols = Path.ChangeExtension(input, ".pdb");
+            File.WriteAllBytes(Path.Combine(OutputDirectory, Path.GetFileName(symbols)), File.ReadAllBytes(symbols));
+        }
+        File.WriteAllText(Path.Combine(OutputDirectory, "linker-ran"), Guid.NewGuid().ToString());
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="CheckCompilerOutputsBeforeLinking" BeforeTargets="ILLinkTrimAssembly"
+          Condition="'$(ILLinkTrimAssembly)' == 'true'">
+    <Error Condition="!Exists('$(ILLinkTrimInputAssembly)') or
+                      ('$(ExpectExistingTrimOutputs)' != 'true' and Exists('$(ILLinkTrimAssemblyPath)'))"
+           Text="Compilation must produce only the pre-trim assembly before linking." />
+    <Error Condition="'$(DebugType)' == 'portable' and '$(ILLinkRewritePDBs)' == 'true' and
+                      (!Exists('$(ILLinkTrimInputSymbols)') or
+                       ('$(ExpectExistingTrimOutputs)' != 'true' and Exists('$(ILLinkTrimAssemblySymbols)')))"
+           Text="Compilation must produce distinct pre-trim symbols before linking." />
+  </Target>
+  <Target Name="CheckPublishedTrimOutputs" AfterTargets="Build">
+    <Error Condition="!Exists('$(TargetPath)') or !Exists('@(IntermediateAssembly)')"
+           Text="Ordinary publication must consume the final assembly path." />
+    <Error Condition="'$(ILLinkTrimAssembly)' == 'true' and
+                      (!Exists('$(ILLinkTrimInputAssembly)') or !Exists('$(IntermediateOutputPath)linker-ran'))"
+           Text="Linking must preserve the compiler output." />
+    <Error Condition="'$(ILLinkTrimAssembly)' != 'true' and
+                      (Exists('$(ILLinkTrimInputAssembly)') or Exists('$(IntermediateOutputPath)linker-ran'))"
+           Text="Untrimmed builds must retain ordinary compiler outputs without invoking the linker." />
+    <Error Condition="'$(DebugType)' == 'portable' and !Exists('$(TargetDir)$(TargetName).pdb')"
+           Text="Ordinary publication must preserve portable symbols with and without linker rewriting." />
+    <Error Condition="'$(ILLinkTrimAssembly)' == 'true' and '$(DebugType)' == 'portable' and
+                      '$(ILLinkRewritePDBs)' == 'true' and !Exists('$(ILLinkTrimInputSymbols)')"
+           Text="Linking must preserve the compiler's portable PDB." />
+  </Target>
+</Project>

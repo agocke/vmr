@@ -85,6 +85,8 @@
     <Error Condition="'@(_SdkProgramOutput)' != 'Hello from genbuild.'" Text="The program built by the SDK action graph did not run correctly on the external runtime." />
     <CallTarget Targets="TestProjectReferences" />
     <CallTarget Targets="TestConfiguredPreparation" />
+    <CallTarget Targets="TestRuntimeReferences" />
+    <CallTarget Targets="TestRuntimeTrimming" />
     <CallTarget Targets="TestPackageReferences" />
     <WriteLinesToFile File="$(_TestDirectory)compile.rsp" Lines="@(_CompileReference->'-r:&quot;%(Identity)&quot;');&quot;$(_TestDirectory)HelloWorld.cs&quot;" Overwrite="true" />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_TestDirectory)HelloWorld.dll&quot; @&quot;$(_TestDirectory)compile.rsp&quot;" />
@@ -170,6 +172,109 @@
     </Exec>
     <Error Condition="'$(_ConfiguredProgramOutput)' != 'Hello from a project reference.' or !Exists('$(_ConfiguredRoot)Child/bin/Release/net10.0/Child.dll')"
            Text="Configured preparation must support independent compilation with the negotiated child." />
+  </Target>
+  <Target Name="TestRuntimeReferences">
+    <PropertyGroup>
+      <_RuntimeReferencesRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'runtime-references'))</_RuntimeReferencesRoot>
+      <_RuntimeReferencesHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_RuntimeReferencesHostOS>
+      <_RuntimeReferencesHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_RuntimeReferencesHostOS>
+      <_RuntimeReferencesHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_RuntimeReferencesHostOS>
+      <_RuntimeReferencesHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_RuntimeReferencesHostOS>
+      <_RuntimeReferencesArguments>-p:DirectoryBuildPropsPath=&quot;$(_RuntimeReferencesRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_RuntimeReferencesRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_RuntimeReferencesRoot)Directory.Packages.props&quot; -p:MSBuildGraphHostOS=$(_RuntimeReferencesHostOS)</_RuntimeReferencesArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_RuntimeReferencesRoot)Parent;$(_RuntimeReferencesRoot)Replacement;$(_RuntimeReferencesRoot)Tool" />
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)../../src/runtime/Directory.Build.targets"
+             Query="/Project/Target[@Name='FilterImplicitAssemblyReferences']">
+      <Output TaskParameter="Result" ItemName="_RuntimeReferenceFilter" />
+    </XmlPeek>
+    <Error Condition="'@(_RuntimeReferenceFilter->Count())' != '1'" Text="Missing runtime reference filter." />
+    <WriteLinesToFile File="$(_RuntimeReferencesRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_RuntimeReferencesRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_RuntimeReferencesRoot)Directory.Build.targets"
+                      Lines="&lt;Project&gt;;@(_RuntimeReferenceFilter);&lt;/Project&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeReferences.csproj;$(MSBuildThisFileDirectory)RuntimeReferences.csproj;$(MSBuildThisFileDirectory)RuntimeReferences.csproj"
+          DestinationFiles="$(_RuntimeReferencesRoot)Parent/Parent.csproj;$(_RuntimeReferencesRoot)Replacement/Replacement.csproj;$(_RuntimeReferencesRoot)Tool/Tool.csproj" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/App/Program.cs;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs"
+          DestinationFiles="$(_RuntimeReferencesRoot)Parent/Program.cs;$(_RuntimeReferencesRoot)Replacement/Greeting.cs;$(_RuntimeReferencesRoot)Tool/Greeting.cs" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeReferencesRoot)Parent/Parent.csproj&quot; $(_RuntimeReferencesArguments) -bl:&quot;$(_RuntimeReferencesRoot)restore.binlog&quot;" />
+    <Error Condition="Exists('$(_RuntimeReferencesRoot)Tool/bin') or Exists('$(_RuntimeReferencesRoot)Replacement/bin')"
+           Text="Targeting-pack discovery must not build project or tool dependencies." />
+    <XmlPeek XmlInputPath="$(_RuntimeReferencesRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_RuntimePackCandidate" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_RuntimeReferencesRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestAnalyzer/@Include">
+      <Output TaskParameter="Result" ItemName="_RuntimePackAnalyzer" />
+    </XmlPeek>
+    <PropertyGroup>
+      <_RuntimePackCandidateNames>@(_RuntimePackCandidate->'%(Filename)')</_RuntimePackCandidateNames>
+    </PropertyGroup>
+    <Error Condition="!$(_RuntimePackCandidateNames.Contains('System.Linq')) or !$(_RuntimePackCandidateNames.Contains('Fixture.Replacement')) or '@(_RuntimePackAnalyzer)' == ''"
+           Text="Preparation must retain raw targeting-pack references and analyzers before project-dependent filtering." />
+    <Exec Command="$(_App) build &quot;$(_RuntimeReferencesRoot)Parent/Parent.csproj&quot; $(_RuntimeReferencesArguments) -t:CheckAnalyzerReplacement -p:TestAnalyzerReplacement=true -p:MSBuildEmitActionGraph=&quot;$(_RuntimeReferencesRoot)analyzer-replacement.ninja&quot; -bl:&quot;$(_RuntimeReferencesRoot)analyzer-replacement.binlog&quot;" />
+    <Exec Command="$(_App) build &quot;$(_RuntimeReferencesRoot)Parent/Parent.csproj&quot; $(_RuntimeReferencesArguments) -p:MSBuildEmitActionGraph=&quot;$(_RuntimeReferencesRoot)build.ninja&quot; -bl:&quot;$(_RuntimeReferencesRoot)build.binlog&quot;" />
+    <Error Condition="Exists('$(_RuntimeReferencesRoot)Tool/bin/Debug/net11.0/Tool.dll') or Exists('$(_RuntimeReferencesRoot)Replacement/bin/Debug/net11.0/Fixture.Replacement.dll')"
+           Text="Construction must retain tool/project producers without executing them." />
+    <Exec WorkingDirectory="$(_RuntimeReferencesRoot)Parent" Command="ninja -f &quot;$(_RuntimeReferencesRoot)build.ninja&quot;" />
+    <Error Condition="!Exists('$(_RuntimeReferencesRoot)Tool/bin/Debug/net11.0/Tool.dll')"
+           Text="Build-order-only tool references must retain their producer actions." />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_RuntimeReferencesRoot)Parent/bin/Debug/net11.0/Parent.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_RuntimeReferencesOutput" />
+    </Exec>
+    <Error Condition="'$(_RuntimeReferencesOutput)' != 'Hello from a project reference.'"
+           Text="The independently built program must consume its project replacement." />
+  </Target>
+  <Target Name="TestRuntimeTrimming">
+    <PropertyGroup>
+      <_RuntimeTrimmingRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'runtime-trimming'))</_RuntimeTrimmingRoot>
+      <_RuntimeILLinkTargets>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/runtime/eng/illink.targets'))</_RuntimeILLinkTargets>
+      <_RuntimeTrimmingArguments>-p:MSBuildRestoreGraphInputs=false -p:RuntimeILLinkTargets=&quot;$(_RuntimeILLinkTargets)&quot; -p:DirectoryBuildPropsPath=&quot;$(_RuntimeTrimmingRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_RuntimeTrimmingRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_RuntimeTrimmingRoot)Directory.Packages.props&quot;</_RuntimeTrimmingArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_RuntimeTrimmingCase Include="portable" Arguments="-p:DebugType=portable" />
+      <_RuntimeTrimmingCase Include="embedded" Arguments="-p:DebugType=embedded" />
+      <_RuntimeTrimmingCase Include="no-symbols" Arguments="-p:DebugType=none" />
+      <_RuntimeTrimmingCase Include="no-rewrite" Arguments="-p:DebugType=portable -p:ILLinkRewritePDBs=false" />
+      <_RuntimeTrimmingCase Include="untrimmed" Arguments="-p:DebugType=portable -p:ILLinkTrimAssembly=false" />
+    </ItemGroup>
+    <MakeDir Directories="$(_RuntimeTrimmingRoot)%(_RuntimeTrimmingCase.Identity)" />
+    <WriteLinesToFile File="$(_RuntimeTrimmingRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_RuntimeTrimmingRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_RuntimeTrimmingRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeTrimming.csproj"
+          DestinationFiles="$(_RuntimeTrimmingRoot)%(_RuntimeTrimmingCase.Identity)/RuntimeTrimming.csproj" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs"
+          DestinationFiles="$(_RuntimeTrimmingRoot)%(_RuntimeTrimmingCase.Identity)/Greeting.cs" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeTrimmingRoot)%(_RuntimeTrimmingCase.Identity)/RuntimeTrimming.csproj&quot; $(_RuntimeTrimmingArguments) %(_RuntimeTrimmingCase.Arguments) -bl:&quot;$(_RuntimeTrimmingRoot)%(_RuntimeTrimmingCase.Identity)-restore.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeTrimmingRoot)%(_RuntimeTrimmingCase.Identity)/RuntimeTrimming.csproj&quot; -t:Build $(_RuntimeTrimmingArguments) %(_RuntimeTrimmingCase.Arguments) -bl:&quot;$(_RuntimeTrimmingRoot)%(_RuntimeTrimmingCase.Identity)-build.binlog&quot;" />
+    <ItemGroup>
+      <_RuntimeTrimmedCase Include="@(_RuntimeTrimmingCase)" Exclude="untrimmed" />
+      <_RuntimeTrimmedCase>
+        <LinkMarker>$([System.IO.File]::ReadAllText('$(_RuntimeTrimmingRoot)%(_RuntimeTrimmedCase.Identity)/obj/Debug/net11.0/linker-ran'))</LinkMarker>
+        <CompilerTimestamp>$([System.IO.File]::GetLastWriteTimeUtc('$(_RuntimeTrimmingRoot)%(_RuntimeTrimmedCase.Identity)/obj/Debug/net11.0/PreTrim/RuntimeTrimming.dll').Ticks)</CompilerTimestamp>
+      </_RuntimeTrimmedCase>
+    </ItemGroup>
+    <Exec Command="$(_App) restore &quot;$(_RuntimeTrimmingRoot)%(_RuntimeTrimmingCase.Identity)/RuntimeTrimming.csproj&quot; -t:Build $(_RuntimeTrimmingArguments) %(_RuntimeTrimmingCase.Arguments) -p:ExpectExistingTrimOutputs=true -bl:&quot;$(_RuntimeTrimmingRoot)%(_RuntimeTrimmingCase.Identity)-incremental.binlog&quot;" />
+    <ItemGroup>
+      <_RuntimeTrimmedCase>
+        <CurrentLinkMarker>$([System.IO.File]::ReadAllText('$(_RuntimeTrimmingRoot)%(_RuntimeTrimmedCase.Identity)/obj/Debug/net11.0/linker-ran'))</CurrentLinkMarker>
+        <CurrentCompilerTimestamp>$([System.IO.File]::GetLastWriteTimeUtc('$(_RuntimeTrimmingRoot)%(_RuntimeTrimmedCase.Identity)/obj/Debug/net11.0/PreTrim/RuntimeTrimming.dll').Ticks)</CurrentCompilerTimestamp>
+      </_RuntimeTrimmedCase>
+    </ItemGroup>
+    <Error Condition="'%(_RuntimeTrimmedCase.LinkMarker)' != '%(_RuntimeTrimmedCase.CurrentLinkMarker)' or
+                      '%(_RuntimeTrimmedCase.CompilerTimestamp)' != '%(_RuntimeTrimmedCase.CurrentCompilerTimestamp)'"
+           Text="An unchanged %(_RuntimeTrimmedCase.Identity) build must reuse both compiler and linker outputs." />
+    <Delete Files="$(_RuntimeTrimmingRoot)portable/obj/Debug/net11.0/RuntimeTrimming.pdb" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeTrimmingRoot)portable/RuntimeTrimming.csproj&quot; -t:Build $(_RuntimeTrimmingArguments) -p:DebugType=portable -p:ExpectExistingTrimOutputs=true -bl:&quot;$(_RuntimeTrimmingRoot)missing-symbols.binlog&quot;" />
+    <PropertyGroup>
+      <_RecoveredLinkMarker>$([System.IO.File]::ReadAllText('$(_RuntimeTrimmingRoot)portable/obj/Debug/net11.0/linker-ran'))</_RecoveredLinkMarker>
+      <_RecoveredCompilerTimestamp>$([System.IO.File]::GetLastWriteTimeUtc('$(_RuntimeTrimmingRoot)portable/obj/Debug/net11.0/PreTrim/RuntimeTrimming.dll').Ticks)</_RecoveredCompilerTimestamp>
+    </PropertyGroup>
+    <Error Condition="'%(_RuntimeTrimmedCase.Identity)' == 'portable' and
+                      ('%(_RuntimeTrimmedCase.CompilerTimestamp)' != '$(_RecoveredCompilerTimestamp)' or
+                       '%(_RuntimeTrimmedCase.LinkMarker)' == '$(_RecoveredLinkMarker)')"
+           Text="Recovering final symbols must rerun linking without rewriting the compiler output." />
   </Target>
   <Target Name="TestPackageReferences">
     <PropertyGroup>

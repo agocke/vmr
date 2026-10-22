@@ -159,11 +159,11 @@
     </ItemGroup>
   </Target>
 
-  <!-- Filter out conflicting implicit assembly references. -->
+  <!-- Filter after project outputs and pack candidates are composed, not during pack discovery. -->
   <Target Name="FilterImplicitAssemblyReferences"
           Condition="'$(DisableImplicitFrameworkReferences)' != 'true'"
-          DependsOnTargets="ResolveProjectReferences"
-          AfterTargets="ResolveTargetingPackAssets">
+          DependsOnTargets="ResolveProjectReferences;ResolveTargetingPackAssets"
+          BeforeTargets="ResolveAssemblyReferences">
     <ItemGroup>
       <_targetingPackReferenceExclusion Include="$(TargetName)" />
       <_targetingPackReferenceExclusionProjects Include="@(_ResolvedProjectReferencePaths->Metadata('Filename'))" />
@@ -178,20 +178,22 @@
     </ItemGroup>
 
     <ItemGroup>
-      <_targetingPackReferenceWithProjectName Include="@(Reference->WithMetadataValue('ExternallyResolved', 'true')->Metadata('Filename'))"
+      <_targetingPackReferenceWithProjectName Include="@(Reference->WithMetadataValue('ExternallyResolved', 'true')->Metadata('Filename'));@(ReferencePath->WithMetadataValue('ExternallyResolved', 'true')->Metadata('Filename'))"
                                               OriginalIdentity="%(Identity)" />
       <_targetingPackIncludedReferenceWithProjectName Include="@(_targetingPackReferenceWithProjectName)"
                                                       Exclude="@(_targetingPackReferenceExclusion);@(_targetingPackReferenceExclusionProjects->WithMetadataValue('ReferenceOutputAssembly', 'true'))" />
       <_targetingPackExcludedReferenceWithProjectName Include="@(_targetingPackReferenceWithProjectName)"
                                                       Exclude="@(_targetingPackIncludedReferenceWithProjectName)" />
       <Reference Remove="@(_targetingPackExcludedReferenceWithProjectName->Metadata('OriginalIdentity'))" />
+      <ReferencePath Remove="@(_targetingPackExcludedReferenceWithProjectName->Metadata('OriginalIdentity'))" />
     </ItemGroup>
 
     <ItemGroup>
+      <_targetingPackAnalyzerExclusionProjects Include="@(Analyzer->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference')->Metadata('Filename'))" />
       <_targetingPackAnalyzerReferenceWithProjectName Include="@(Analyzer->WithMetadataValue('ExternallyResolved', 'true')->Metadata('Filename'))"
                                                       OriginalIdentity="%(Identity)" />
       <_targetingPackIncludedAnalyzerReferenceWithProjectName Include="@(_targetingPackAnalyzerReferenceWithProjectName)"
-                                                              Exclude="@(_targetingPackReferenceExclusion);@(_targetingPackReferenceExclusionProjects->WithMetadataValue('OutputItemType', 'Analyzer'))" />
+                                                              Exclude="@(_targetingPackReferenceExclusion);@(_targetingPackReferenceExclusionProjects->WithMetadataValue('OutputItemType', 'Analyzer'));@(_targetingPackAnalyzerExclusionProjects)" />
       <_targetingPackExcludedAnalyzerReferenceWithProjectName Include="@(_targetingPackAnalyzerReferenceWithProjectName)"
                                                               Exclude="@(_targetingPackIncludedAnalyzerReferenceWithProjectName)" />
       <Analyzer Remove="@(_targetingPackExcludedAnalyzerReferenceWithProjectName->Metadata('OriginalIdentity'))" />

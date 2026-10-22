@@ -42,6 +42,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       TargetFramework="$(TargetFramework)"
       FrameworkReferences="@(FrameworkReference)"
       CompileReferences="@(Reference)"
+      Analyzers="@(Analyzer->WithMetadataValue('ExternallyResolved', 'true'))"
       RuntimeFrameworks="@(_FrameworkReferenceFetchManifestRuntimeFramework)"
       ResolvedFrameworkReferences="@(ResolvedFrameworkReference)"
       AppHostSourcePath="$(AppHostSourcePath)"
@@ -311,6 +312,10 @@ Copyright (c) .NET Foundation. All rights reserved.
         <ExternallyResolved>true</ExternallyResolved>
         <ReferenceSourceTarget>FrameworkReferenceManifest</ReferenceSourceTarget>
       </ReferencePath>
+      <Analyzer Include="@(_FrameworkReferenceManifestAnalyzer)"
+                Condition="'%(_FrameworkReferenceManifestAnalyzer.TargetFramework)' == '$(TargetFramework)' and
+                           '%(_FrameworkReferenceManifestAnalyzer.FrameworkReference)' == '@(FrameworkReference)'"
+                RemoveMetadata="TargetFramework;FrameworkReference" />
       <_SelectedFrameworkReferenceManifestAppHost Include="@(_FrameworkReferenceManifestAppHost)"
                                                   Condition="'%(_FrameworkReferenceManifestAppHost.TargetFramework)' == '$(TargetFramework)' and
                                                              '%(_FrameworkReferenceManifestAppHost.FrameworkReference)' == '@(FrameworkReference)'"

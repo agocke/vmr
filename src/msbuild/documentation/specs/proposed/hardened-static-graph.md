@@ -285,6 +285,11 @@ framework onto dependencies, then captures with a fresh evaluation and follows
 normal project-reference framework/configuration/property negotiation.
 It explicitly rejects standard product/tool build targets during preparation;
 generated-tool dependencies must remain connected to their graph producers.
+Framework preparation captures targeting-pack reference and analyzer candidates
+before project-dependent filtering. Runtime filters those candidates immediately
+before final assembly-reference resolution, when project output metadata is
+available; it must not pull `ResolveProjectReferences` into pack discovery.
+Snapshot replay must participate in that filtering, not bypass it.
 
 ### Explicit reference-resolution sources
 

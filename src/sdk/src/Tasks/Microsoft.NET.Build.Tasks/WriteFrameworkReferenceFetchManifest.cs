@@ -23,6 +23,8 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
 
     public ITaskItem[] CompileReferences { get; set; } = [];
 
+    public ITaskItem[] Analyzers { get; set; } = [];
+
     public ITaskItem[] RuntimeFrameworks { get; set; } = [];
 
     public ITaskItem[] ResolvedFrameworkReferences { get; set; } = [];
@@ -66,27 +68,8 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
             writer.WriteEndElement();
 
             writer.WriteStartElement("ItemGroup");
-            ITaskItem[] compileReferences = (ITaskItem[])CompileReferences.Clone();
-            Array.Sort(
-                compileReferences,
-                static (left, right) =>
-                {
-                    int result = StringComparer.OrdinalIgnoreCase.Compare(left.ItemSpec, right.ItemSpec);
-                    return result != 0
-                        ? result
-                        : StringComparer.Ordinal.Compare(left.ItemSpec, right.ItemSpec);
-                });
-
-            foreach (ITaskItem compileReference in compileReferences)
-            {
-                string sourceFrameworkReference = compileReference.GetMetadata("FrameworkReferenceName");
-                WriteItem(
-                    writer,
-                    "_FrameworkReferenceManifestCompileReference",
-                    compileReference,
-                    string.IsNullOrEmpty(sourceFrameworkReference) ? frameworkReference : sourceFrameworkReference,
-                    writeReferenceAssembly: true);
-            }
+            WriteSortedItems(writer, "_FrameworkReferenceManifestCompileReference", CompileReferences, frameworkReference, writeReferenceAssembly: true);
+            WriteSortedItems(writer, "_FrameworkReferenceManifestAnalyzer", Analyzers, frameworkReference);
 
             foreach (ITaskItem runtimeFramework in RuntimeFrameworks)
             {
@@ -121,6 +104,36 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
         }
 
         return content.ToString();
+    }
+
+    private void WriteSortedItems(
+        XmlWriter writer,
+        string itemType,
+        ITaskItem[] items,
+        string frameworkReference,
+        bool writeReferenceAssembly = false)
+    {
+        ITaskItem[] sortedItems = (ITaskItem[])items.Clone();
+        Array.Sort(
+            sortedItems,
+            static (left, right) =>
+            {
+                int result = StringComparer.OrdinalIgnoreCase.Compare(left.ItemSpec, right.ItemSpec);
+                return result != 0
+                    ? result
+                    : StringComparer.Ordinal.Compare(left.ItemSpec, right.ItemSpec);
+            });
+
+        foreach (ITaskItem item in sortedItems)
+        {
+            string sourceFrameworkReference = item.GetMetadata("FrameworkReferenceName");
+            WriteItem(
+                writer,
+                itemType,
+                item,
+                string.IsNullOrEmpty(sourceFrameworkReference) ? frameworkReference : sourceFrameworkReference,
+                writeReferenceAssembly);
+        }
     }
 
     private void WriteItem(

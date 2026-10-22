@@ -85,6 +85,13 @@ A configured fixture retains parent/child multi-targeting declarations, prepares
 multiple parent frameworks/configurations, and independently builds a Debug/net11
 parent with its negotiated Release/net10 child. Outer preparation and attempts
 to prebuild tools/products fail explicitly.
+A runtime-authoring fixture captures unfiltered targeting-pack references and
+analyzers without building dependencies, then filters them against project
+replacements during construction. Its graph retains a build-order-only tool
+producer and executes independently. A separate ordinary-build fixture uses a
+recording linker to check runtime's distinct pre-trim/final assembly and symbol
+paths, unchanged-build reuse, and recovery of missing final symbols. It tests
+target authoring, not real linker semantics or generated-task binding.
 An offline package fixture also selects distinct reference/runtime assemblies
 and a compatible package generator, then independently compiles and starts the
 consumer. Package selection runs with assets JSON and package directories
@@ -115,11 +122,16 @@ project, including package/project references and retained `TargetFrameworks`.
 Outer cross-targeting and RID preparation remain unsupported.
 The real `System.Collections.Immutable` trial targeting runtime's `net10.0`
 minimum now gets past the multi-targeting guard. Runtime's
-`FilterImplicitAssemblyReferences` hook depends on `ResolveProjectReferences`
-after targeting-pack resolution and tries to build live `ILLink.Tasks`.
-Preparation rejects that prebuild explicitly; the producer dependencies remain
-intact. Generated-tool/reference preparation, package-SDK import replay and
-broader compiler/tool profiles remain necessary. The trial uses ordinary
+`FilterImplicitAssemblyReferences` now runs before final assembly-reference
+resolution rather than during targeting-pack discovery. Preparation reaches
+`ILLink.Tasks` without building any product binaries, then fails with `NETSDK1247`
+on the explicit package-supplied MSBuild references authored by
+`PackageDownloadAndReference`. The producer dependencies remain intact.
+Runtime library trimming compiles directly to `PreTrim/` and links to separate
+final paths, without moving or rewriting compiler outputs. Generated-tool task
+binding and declared-I/O adaptations, explicit-reference preparation,
+package-SDK import replay and broader compiler/tool profiles remain necessary.
+The trial uses ordinary
 Restore (`RestoreUseStaticGraphEvaluation=false`): the static Restore launcher
 still assumes an installed SDK layout. No runtime library graph, compilation
 or independent execution is established.

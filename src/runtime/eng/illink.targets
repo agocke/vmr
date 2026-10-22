@@ -9,7 +9,6 @@
   <PropertyGroup>
     <IsTrimmable Condition="'$(IsTrimmable)' == ''">true</IsTrimmable>
     <PrepareResourcesDependsOn>_EmbedILLinkXmls;$(PrepareResourcesDependsOn)</PrepareResourcesDependsOn>
-    <TargetsTriggeredByCompilation Condition="'$(DesignTimeBuild)' != 'true'">$(TargetsTriggeredByCompilation);ILLinkTrimAssembly</TargetsTriggeredByCompilation>
 
     <ILLinkDirectory Condition="'$(ILLinkDirectory)' == ''">$(MSBuildProjectDirectory)\ILLink\</ILLinkDirectory>
     <ILLinkTrimAssemblyPath>$(IntermediateOutputPath)$(TargetName)$(TargetExt)</ILLinkTrimAssemblyPath>
@@ -33,6 +32,8 @@
 
     <!-- tell illink to rewrite the symbols file -->
     <ILLinkRewritePDBs Condition="'$(ILLinkRewritePDBs)' == ''">true</ILLinkRewritePDBs>
+    <_ILLinkTrimOutputSymbols Condition="'$(ILLinkRewritePDBs)' == 'true' and '$(_DebugSymbolsProduced)' == 'true'">$(ILLinkTrimAssemblySymbols)</_ILLinkTrimOutputSymbols>
+    <_ILLinkTrimSymbolsInput Condition="'$(_ILLinkTrimOutputSymbols)' != ''">$(ILLinkTrimInputSymbols)</_ILLinkTrimSymbolsInput>
 
     <ILLinkResourcesSubstitutionIntermediatePath>$(IntermediateOutputPath)ILLink.Resources.Substitutions.xml</ILLinkResourcesSubstitutionIntermediatePath>
     <GenerateResourcesSubstitutions Condition="'$(GenerateResourcesSubstitutions)' == '' and '$(StringResourcesPath)' != '' and '$(OmitResources)' != 'true'">true</GenerateResourcesSubstitutions>
@@ -193,6 +194,39 @@
     </PropertyGroup>
   </Target>
 
+  <Target Name="_PrepareILLinkCompileOutputs"
+          BeforeTargets="CoreCompile"
+          Condition="'$(ILLinkTrimAssembly)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <ItemGroup>
+      <_ILLinkFinalAssembly Include="@(IntermediateAssembly)" />
+      <IntermediateAssembly Remove="@(IntermediateAssembly)" />
+      <IntermediateAssembly Include="$(ILLinkTrimInputAssembly)" />
+      <_ILLinkFinalSymbols Include="@(_DebugSymbolsIntermediatePath)" />
+      <_DebugSymbolsIntermediatePath Remove="@(_DebugSymbolsIntermediatePath)"
+                                     Condition="'$(ILLinkRewritePDBs)' == 'true'" />
+      <_DebugSymbolsIntermediatePath Include="$(ILLinkTrimInputSymbols)"
+                                     Condition="'$(ILLinkRewritePDBs)' == 'true' and '@(_ILLinkFinalSymbols)' != ''" />
+    </ItemGroup>
+    <PropertyGroup Condition="'@(_ILLinkFinalSymbols)' != ''">
+      <_ILLinkFinalPdbFile>$(PdbFile)</_ILLinkFinalPdbFile>
+      <PdbFile Condition="'$(ILLinkRewritePDBs)' == 'true'">$(ILLinkTrimInputSymbols)</PdbFile>
+      <PdbFile Condition="'$(ILLinkRewritePDBs)' != 'true' and '$(PdbFile)' == ''">@(_ILLinkFinalSymbols)</PdbFile>
+    </PropertyGroup>
+    <MakeDir Directories="$(ILLinkTrimInputPath)" />
+  </Target>
+
+  <Target Name="_RestoreILLinkFinalOutputs">
+    <ItemGroup Condition="'@(_ILLinkFinalAssembly)' != ''">
+      <IntermediateAssembly Remove="@(IntermediateAssembly)" />
+      <IntermediateAssembly Include="@(_ILLinkFinalAssembly)" />
+      <_DebugSymbolsIntermediatePath Remove="@(_DebugSymbolsIntermediatePath)" />
+      <_DebugSymbolsIntermediatePath Include="@(_ILLinkFinalSymbols)" />
+    </ItemGroup>
+    <PropertyGroup Condition="'@(_ILLinkFinalSymbols)' != ''">
+      <PdbFile>$(_ILLinkFinalPdbFile)</PdbFile>
+    </PropertyGroup>
+  </Target>
+
   <!-- Examines the "input assembly" for IL that is unreachable from public API and trims that,
        rewriting the assembly to an "output assembly" -->
   <UsingTask TaskName="ILLink"
@@ -200,8 +234,11 @@
              TaskFactory="TaskHostFactory"
              Condition="'$(ILLinkTasksAssembly)' != ''" />
   <Target Name="ILLinkTrimAssembly"
-          Condition="'$(ILLinkTrimAssembly)' == 'true'"
-          DependsOnTargets="PrepareForAssembliesTrim">
+          AfterTargets="CoreCompile"
+          Condition="'$(ILLinkTrimAssembly)' == 'true' and '$(DesignTimeBuild)' != 'true'"
+          DependsOnTargets="_RestoreILLinkFinalOutputs;PrepareForAssembliesTrim"
+          Inputs="$(ILLinkTrimInputAssembly);$(_ILLinkTrimSymbolsInput);$(MSBuildAllProjects);@(ReferencePathWithRefAssemblies);@(ILLinkDescriptorsLibraryBuildXml);$(ILLinkSubstitutionsLibraryBuildXml);@(ILLinkSuppressionsLibraryBuildXml);$(ILLinkTasksAssembly)"
+          Outputs="$(ILLinkTrimAssemblyPath);$(_ILLinkTrimOutputSymbols)">
     <PropertyGroup>
       <!-- default action for assemblies with IsTrimmable attribute -->
       <ILLinkArgs>$(ILLinkArgs) --trim-mode skip</ILLinkArgs>
@@ -209,8 +246,8 @@
       <ILLinkArgs>$(ILLinkArgs) --action skip</ILLinkArgs>
       <!-- trim the target assembly -->
       <ILLinkArgs>$(ILLinkArgs) --action link $(TargetName)</ILLinkArgs>
-      <ILLinkArgs Condition="'$(ILLinkRewritePDBs)' == 'true' and Exists('$(ILLinkTrimAssemblySymbols)')">$(ILLinkArgs) -b true</ILLinkArgs>
-      <ILLinkArgs Condition="'$(ILLinkRewritePDBs)' == 'true' and Exists('$(ILLinkTrimAssemblySymbols)') and '$(DeterministicSourcePaths)' == 'true'">$(ILLinkArgs) --preserve-symbol-paths</ILLinkArgs>
+      <ILLinkArgs Condition="'$(ILLinkRewritePDBs)' == 'true' and '$(_DebugSymbolsProduced)' == 'true'">$(ILLinkArgs) -b true</ILLinkArgs>
+      <ILLinkArgs Condition="'$(ILLinkRewritePDBs)' == 'true' and '$(_DebugSymbolsProduced)' == 'true' and '$(DeterministicSourcePaths)' == 'true'">$(ILLinkArgs) --preserve-symbol-paths</ILLinkArgs>
       <!-- pass the non-embedded descriptors xml file on the command line -->
       <ILLinkArgs Condition="'@(ILLinkDescriptorsLibraryBuildXml)' != ''">$(ILLinkArgs) -x "@(ILLinkDescriptorsLibraryBuildXml->'%(FullPath)', '" -x "')"</ILLinkArgs>
       <ILLinkArgs Condition="'$(ILLinkSubstitutionsLibraryBuildXml)' != ''">$(ILLinkArgs) --substitutions "$(ILLinkSubstitutionsLibraryBuildXml)"</ILLinkArgs>
@@ -226,19 +263,6 @@
       <ILLinkArgs>$(ILLinkArgs) --nowarn $(LinkerNoWarn)</ILLinkArgs>
       <ILLinkArgs Condition="'$(ILLinkDisableIPConstProp)' == 'true'">$(ILLinkArgs) --disable-opt ipconstprop</ILLinkArgs>
     </PropertyGroup>
-
-    <!-- Move the assembly into a subdirectory for ILLink -->
-    <Move SourceFiles="$(ILLinkTrimAssemblyPath)"
-          DestinationFolder="$(ILLinkTrimInputPath)">
-      <Output TaskParameter="MovedFiles" ItemName="FileWrites" />
-    </Move>
-
-    <!-- Move the PDB into a subdirectory for ILLink if we are rewriting PDBs -->
-    <Move SourceFiles="$(ILLinkTrimAssemblySymbols)"
-          DestinationFolder="$(ILLinkTrimInputPath)"
-          Condition="'$(ILLinkRewritePDBs)' == 'true' and Exists('$(ILLinkTrimAssemblySymbols)')">
-      <Output TaskParameter="MovedFiles" ItemName="FileWrites" />
-    </Move>
 
     <ItemGroup>
       <_DependencyDirectoriesTemp Include="@(ReferencePathWithRefAssemblies->'%(RootDir)%(Directory)')" />
@@ -258,6 +282,9 @@
       <ILLinkTrimInputAssembly Include="$(TargetName)">
         <RootMode>library</RootMode>
       </ILLinkTrimInputAssembly>
+      <FileWrites Include="$(ILLinkTrimInputAssembly);$(ILLinkTrimAssemblyPath)" />
+      <FileWrites Include="$(ILLinkTrimInputSymbols)"
+                  Condition="'$(ILLinkRewritePDBs)' == 'true' and '$(_DebugSymbolsProduced)' == 'true'" />
     </ItemGroup>
 
     <PropertyGroup>

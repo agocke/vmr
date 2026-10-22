@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName Condition="'$(MSBuildProjectName)' == 'Replacement'">Fixture.Replacement</AssemblyName>
+    <OutputType Condition="'$(MSBuildProjectName)' == 'Parent'">Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" Condition="'$(MSBuildProjectName)' == 'Parent'" />
+    <Compile Include="Greeting.cs" Condition="'$(MSBuildProjectName)' != 'Parent'" />
+    <ProjectReference Include="../Replacement/Replacement.csproj" Condition="'$(MSBuildProjectName)' == 'Parent'" />
+    <ProjectReference Include="../Tool/Tool.csproj" ReferenceOutputAssembly="false" Private="false"
+                      Condition="'$(MSBuildProjectName)' == 'Parent'" />
+    <DefaultReferenceExclusion Include="System.Linq" Condition="'$(MSBuildProjectName)' == 'Parent'" />
+  </ItemGroup>
+  <Target Name="AddConflictingPackCandidate" AfterTargets="ResolveTargetingPackAssets"
+          Condition="'$(MSBuildProjectName)' == 'Parent'">
+    <ItemGroup>
+      <Reference Include="$(MSBuildProjectDirectory)/missing-pack/Fixture.Replacement.dll"
+                 ExternallyResolved="true" FrameworkFile="true" Private="false"
+                 FrameworkReferenceName="Microsoft.NETCore.App" />
+    </ItemGroup>
+  </Target>
+  <Target Name="AddAnalyzerReplacementTestData" BeforeTargets="FilterImplicitAssemblyReferences"
+          Condition="'$(TestAnalyzerReplacement)' == 'true' and '$(MSBuildProjectName)' == 'Parent'">
+    <ItemGroup>
+      <Analyzer Include="missing-pack/Tool.dll" ExternallyResolved="true" />
+      <Analyzer Include="../Tool/bin/$(Configuration)/$(TargetFramework)/Tool.dll" ReferenceSourceTarget="ProjectReference" />
+    </ItemGroup>
+  </Target>
+  <Target Name="CheckAnalyzerReplacement" DependsOnTargets="FilterImplicitAssemblyReferences">
+    <ItemGroup>
+      <_ReplacementAnalyzer Include="@(Analyzer)" Condition="'%(Analyzer.Filename)' == 'Tool'" />
+    </ItemGroup>
+    <Error Condition="'@(_ReplacementAnalyzer->Count())' != '1' or
+                      '%(_ReplacementAnalyzer.ReferenceSourceTarget)' != 'ProjectReference'"
+           Text="Project-produced analyzers must replace conflicting pack analyzers without requiring their binaries." />
+  </Target>
+  <Target Name="CheckRuntimeReferenceComposition" AfterTargets="ResolveReferences"
+          Condition="'$(MSBuildProjectName)' == 'Parent'">
+    <ItemGroup>
+      <_ExcludedReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'System.Linq'" />
+      <_ReplacementReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'Fixture.Replacement'" />
+    </ItemGroup>
+    <Error Condition="'@(_ExcludedReference)' != '' or '@(_ReplacementReference->Count())' != '1' or
+                      '%(_ReplacementReference.ReferenceSourceTarget)' != 'ProjectReference'"
+           Text="Runtime reference filtering must apply to replayed pack candidates and preserve their project replacements." />
+    <Error Condition="'@(Analyzer)' == ''" Text="Framework preparation must replay targeting-pack analyzers as well as references." />
+  </Target>
+</Project>

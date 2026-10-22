@@ -115,6 +115,18 @@ an ordered list of candidate folders is not proof of which folder contains a
 package. Project-produced libraries and analyzers must remain future producer
 outputs, not existing-file snapshots.
 
+Keep targeting-pack discovery separate from resolving project/tool producers.
+Runtime's reference filter runs before final assembly-reference resolution and
+handles both ordinary `Reference` candidates and replayed `ReferencePath` items.
+Pack analyzers are captured and replayed too; project-produced analyzers replace
+conflicting pack candidates without opening their binaries.
+For runtime library trimming, the compiler writes directly to `PreTrim/`, and
+the linker produces distinct final paths for normal publication. Do not move
+compiler outputs away or let both actions write the same path. XML-combining
+helpers from `ILLink.Tasks` still run before compilation; moving every use of
+that assembly after compilation would be incorrect. Generated-task binding and
+the helpers'/linker's declared-I/O adaptations are still required.
+
 The [prepared SDK selection path](hardened-static-graph-implementation.md#prepared-sdk-package-selection)
 reuses ordinary policy with a direct fact-to-model projection and direct item
 sink. Restore records selected package locations, related-file presence/absence,
