@@ -167,6 +167,8 @@ namespace Microsoft.Build.Evaluation
         /// </summary>
         private readonly ISdkResolverService _sdkResolverService;
 
+        private Graph.Hardened.SdkImportBindings _sdkImportBindings;
+
         /// <summary>
         /// The current build submission ID.
         /// </summary>
@@ -768,6 +770,21 @@ namespace Microsoft.Build.Evaluation
                     {
                         _expander.DirectoryImports = new Graph.Hardened.DirectoryImportResolver(
                             repositoryRoot, _evaluationContext.FileSystem);
+                    }
+
+                    string sdkBindingsDirectory = _data.GlobalPropertiesDictionary.GetProperty(
+                        Graph.Hardened.SdkImportBindings.DirectoryProperty)?.EvaluatedValue;
+                    if (sdkBindingsDirectory is not null &&
+                        (_hardenedGraphValidation ||
+                         !string.IsNullOrEmpty(_data.GetProperty("MSBuildEmitActionGraph")?.EvaluatedValue) ||
+                         string.Equals(
+                            _data.GlobalPropertiesDictionary.GetProperty("MSBuildRestoreGraphInputs")?.EvaluatedValue,
+                            "true", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _sdkImportBindings = new Graph.Hardened.SdkImportBindings(
+                            sdkBindingsDirectory, _projectRootElement.FullPath,
+                            _interactive, _isRunningInVisualStudio, _evaluationContext.FileSystem,
+                            _projectRootElement.ProjectFileLocation);
                     }
                 }
 
@@ -1987,17 +2004,36 @@ namespace Microsoft.Build.Evaluation
                 // Combine SDK path with the "project" relative path
                 try
                 {
-                    using var assemblyLoadsTracker = AssemblyLoadsTracker.StartTracking(_evaluationLoggingContext, AssemblyLoadingContext.SdkResolution, _sdkResolverService.GetType());
+                    if (_hardenedGraphValidation ||
+                        !string.IsNullOrEmpty(_data.GetProperty("MSBuildEmitActionGraph")?.EvaluatedValue))
+                    {
+                        if (_sdkImportBindings?.TryResolve(sdkReference, solutionPath, importElement.SdkLocation, out sdkResult) != true)
+                        {
+                            sdkResult = new DefaultSdkResolver().Resolve(sdkReference);
+                            ProjectErrorUtilities.VerifyThrowInvalidProject(
+                                sdkResult.Success, importElement.SdkLocation, "HardenedGraphUnsupportedConstruct",
+                                $"missing prepared SDK binding for '{sdkReference}'; run Restore with the same global {Graph.Hardened.SdkImportBindings.DirectoryProperty}",
+                                "SDK import resolution");
+                        }
+                    }
+                    else
+                    {
+                        using var assemblyLoadsTracker = AssemblyLoadsTracker.StartTracking(_evaluationLoggingContext, AssemblyLoadingContext.SdkResolution, _sdkResolverService.GetType());
 
-                    sdkResult = _sdkResolverService.ResolveSdk(
-                        _submissionId,
-                        sdkReference,
-                        _evaluationLoggingContext,
-                        importElement.Location,
-                        solutionPath, projectPath,
-                        _interactive,
-                        _isRunningInVisualStudio,
-                        failOnUnresolvedSdk: !_loadSettings.HasFlag(ProjectLoadSettings.IgnoreMissingImports) || _loadSettings.HasFlag(ProjectLoadSettings.FailOnUnresolvedSdk));
+                        sdkResult = _sdkResolverService.ResolveSdk(
+                            _submissionId,
+                            sdkReference,
+                            _evaluationLoggingContext,
+                            importElement.Location,
+                            solutionPath, projectPath,
+                            _interactive,
+                            _isRunningInVisualStudio,
+                            failOnUnresolvedSdk: !_loadSettings.HasFlag(ProjectLoadSettings.IgnoreMissingImports) || _loadSettings.HasFlag(ProjectLoadSettings.FailOnUnresolvedSdk));
+                        if (sdkResult.Success)
+                        {
+                            _sdkImportBindings?.Save(sdkReference, solutionPath, sdkResult, importElement.SdkLocation);
+                        }
+                    }
                 }
                 catch (Exception e) when (e is SdkResolverException or SdkResolverServiceException)
                 {

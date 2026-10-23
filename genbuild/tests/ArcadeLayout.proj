@@ -1,0 +1,21 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildProjectDirectory)/repo root/</RepoRoot>
+    <DotNetTool>$(ArcadeLayoutDotNetTool)</DotNetTool>
+    <MonoTool>$(MSBuildProjectDirectory)/tools/mono</MonoTool>
+    <NuGetPackageRoot>$(MSBuildProjectDirectory)/packages/</NuGetPackageRoot>
+    <BaseOutputPath Condition="'$(LayoutCase)' == 'override'">$(RepoRoot)custom bin/./discard/../</BaseOutputPath>
+    <BaseIntermediateOutputPath Condition="'$(LayoutCase)' == 'override'">$(RepoRoot)custom obj/./discard/../</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <Import Project="$(ArcadeProjectLayoutPath)" />
+  <Target Name="Restore" />
+  <Target Name="Build">
+    <Error Condition="'$(BaseOutputPath)' == '' or '$(OutputPath)' == '' or '$(BaseIntermediateOutputPath)' == '' or '$(IntermediateOutputPath)' == '' or
+                      !HasTrailingSlash('$(BaseOutputPath)') or !HasTrailingSlash('$(OutputPath)') or !HasTrailingSlash('$(BaseIntermediateOutputPath)') or !HasTrailingSlash('$(IntermediateOutputPath)')"
+           Text="Arcade layout must supply all four directory paths with trailing separators."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(ResultFile)"
+                      Lines="BaseOutputPath=$(BaseOutputPath);OutputPath=$(OutputPath);BaseIntermediateOutputPath=$(BaseIntermediateOutputPath);IntermediateOutputPath=$(IntermediateOutputPath)"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+  </Target>
+</Project>

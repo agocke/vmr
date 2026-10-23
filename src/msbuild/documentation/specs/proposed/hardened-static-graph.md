@@ -213,6 +213,39 @@ properties or task outputs. This feature does not implement persistent tracking
 of negative lookup probes or automatic graph regeneration. Callers reusing an
 evaluation context must discard its filesystem cache after source changes.
 
+### Prepared SDK imports
+
+SDK package selection and location discovery belong to ordinary preparation.
+With `MSBuildRestoreGraphInputs=true` and an absolute global
+`MSBuildGraphSdkBindingsDirectory`, evaluation saves successful resolver results
+as versioned XML binding facts. The standalone driver supplies this directory
+automatically; programmatic callers must supply it to both preparation and the
+fresh graph evaluation. The directory is inherited by project requests.
+
+Bindings are keyed by project, solution, expanded SDK name/version/minimum
+version, interactive mode, and Visual Studio context. They preserve the original
+result reference, resolved version, ordered absolute SDK paths, resolver-supplied
+properties, items and metadata, environment values, and warnings. Literal values
+are XML-encoded without evaluating or expanding MSBuild expressions. Atomic
+replacement avoids publishing a partially written binding.
+
+Hardened evaluation reads the matching binding before loading SDK imports,
+without invoking registered SDK resolver plugins. The existing import machinery
+still evaluates the SDK's actual props and targets and applies resolver-provided
+values in their normal order. It does not flatten evaluated SDK authoring into
+Restore snapshots. A missing binding permits only the default resolver's direct
+lookup in the configured toolset's `Sdks` directory; the standalone app supplies
+that root explicitly. A package merely existing in a NuGet cache is not enough.
+Missing package bindings, malformed data, unsupported formats, mismatched
+contexts, and nonabsolute paths fail without plugin discovery or graph publication.
+
+Changing a package-SDK request requires a new matching Restore. Changes to
+`global.json`, NuGet configuration, or resolver implementations also require
+preparation again; this feature does not implement general content-based
+invalidation of those external discovery inputs. Use a separate binding directory
+for independent preparation profiles. Ordinary evaluation without the opt-in
+capture inputs is unchanged.
+
 ### Captured construction platform
 
 Machine information is predefined construction context, like predefined

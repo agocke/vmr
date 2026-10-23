@@ -76,6 +76,18 @@ rewrite. Keep target architecture separate, and do not generalize this support
 to every environment or machine query. See the
 [machine-context contract](hardened-static-graph.md#captured-construction-platform).
 
+Package-SDK imports need binding facts before SDK authoring can be evaluated.
+Ordinary preparation captures resolver paths and supplied values under the global
+`MSBuildGraphSdkBindingsDirectory`; fresh Build replays them without SDK plugins
+or package-cache discovery. The standalone driver supplies the directory, or both
+invocations can select the same explicit absolute directory for an isolated
+profile. Preserve live SDK imports rather than snapshotting all properties after
+an SDK has run. The packaged fixture changes restored SDK props after preparation,
+removes the feed, and changes NuGet's package location; fresh construction still
+uses the prepared binding and evaluates the changed props. A changed package-SDK
+request fails until restored again. See the
+[SDK-binding contract](hardened-static-graph.md#prepared-sdk-imports).
+
 For example, `GetAssemblyVersion` does not inspect an assembly. It parses the
 supplied NuGet version string into a four-part version:
 

@@ -52,6 +52,18 @@ Restore and Build must remain separate invocations. `build` generates
 Ninja executes them. Additional arguments are forwarded to MSBuild.
 Use `-p:MSBuildEmitActionGraph=/absolute/path/build.ninja` to change the graph path.
 
+The driver supplies `MSBuildGraphSdkBindingsDirectory`, defaulting to
+`obj/genbuild/sdk-bindings` under the entry project's directory. Restore saves
+SDK resolver bindings there, including package SDKs pinned in `global.json`.
+Build replays the paths and resolver-supplied values before loading SDK imports;
+SDK props and targets remain live authoring, not evaluated-property snapshots.
+Plugin/package SDK discovery stays disabled during Build. Only SDKs in the app's
+explicit toolset can be used without a prepared binding. Supply the same absolute
+`-p:MSBuildGraphSdkBindingsDirectory=...` to both commands when isolating another
+preparation profile. Changed package-SDK requests or discovery configuration
+require a fresh Restore. See the
+[SDK-binding contract](../src/msbuild/documentation/specs/proposed/hardened-static-graph.md#prepared-sdk-imports).
+
 For normal `Directory.Build.props`, `Directory.Build.targets`, and
 `Directory.Packages.props` discovery, pass
 `-p:MSBuildGraphRepositoryRoot=/absolute/path/to/repository` to both Restore and
@@ -145,8 +157,8 @@ come from the same source tree; no pinned NuGet task package or nested SDK build
 is used. Compiler and other external tool dependencies remain pinned.
 The source-built NuGet SDK resolver supports package-SDK discovery during
 ordinary Restore, including versions pinned in `global.json`. The driver
-disables that resolver during hardened Build; package-SDK import bindings still
-need explicit capture and replay rather than package-cache searches or downloads.
+disables that resolver during hardened Build, which now replays captured SDK
+bindings rather than searching package caches or downloading SDKs.
 
 Framework-reference preparation accepts a selected target framework per configured
 project, including zero, one or multiple `FrameworkReference` items, package/project
@@ -178,19 +190,29 @@ references of `ILLink.CodeFixProvider` and `ILLink.RoslynAnalyzer`, without prod
 DLLs. The producer dependencies remain intact.
 Runtime library trimming compiles directly to `PreTrim/` and links to separate
 final paths, without moving or rewriting compiler outputs. Generated-tool task
-binding and declared-I/O adaptations,
-package-SDK import replay and broader compiler/tool profiles remain necessary.
+binding and declared-I/O adaptations, explicit version inputs, and broader
+compiler/tool profiles remain necessary.
 The trial uses ordinary
 Restore (`RestoreUseStaticGraphEvaluation=false`): the static Restore launcher
 still assumes an installed SDK layout. With the VMR root explicitly supplied to
 both invocations, a fresh hardened graph passes Common's directory-props lookup
 and passes `eng/OSArch.props`' existing process-architecture query using the
-predefined context. It currently stops at runtime's root `Directory.Build.props`
-import of `Microsoft.DotNet.Arcade.Sdk`: package-SDK import bindings are not yet
-captured and replayed, and hardened Build correctly leaves package-cache SDK
-discovery disabled. Preparation and the failed graph attempt both produce zero
-DLLs. Tool scheduling has not yet been reached. No runtime library graph,
-compilation or independent execution is established.
+predefined context. It now replays the `Microsoft.DotNet.Arcade.Sdk` binding and
+loads its imports with package-SDK discovery disabled. Runtime's root
+`Directory.Build.props` declares its local `RepoRoot` before importing Arcade,
+so `tools/RepoLayout.props` does not search ancestors for `global.json`. This
+layout root is distinct from the VMR-wide directory-import boundary.
+Arcade's source `tools/ProjectLayout.props` now uses `MSBuild.NormalizePath` for
+its output and intermediate base paths. The
+[layout fixture](tests/ArcadeLayout.proj) imports that actual authoring and compares
+ordinary execution with hardened construction and independent Ninja execution.
+For the real probe, an isolated copy of the pinned Arcade SDK carries the changed
+props, selected by the same explicit `ArcadeSdkDir` in Restore and Build; the shared
+NuGet cache is unchanged. With those local authoring inputs, the next blocker is
+runtime's `eng/Versions.props` reading `global.json` through `File.ReadAllText`.
+Preparation and the failed graph attempt both produce zero DLLs. Tool scheduling
+has not yet been reached. No runtime library graph, compilation or independent
+execution is established.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,

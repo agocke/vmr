@@ -51,6 +51,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <RepoRoot Condition="'$(RepoRoot)' == ''">$(MSBuildThisFileDirectory)</RepoRoot>
+
     <!-- Set OutDirName (Arcade specific property that must be set before the Arcade SDK is imported) to change the BaseOutputPath and
          BaseIntermediateOutputPath properties to include the ref subfolder. -->
     <IsReferenceAssemblyProject Condition="$([System.IO.Path]::GetFileName('$(MSBuildProjectDirectory)')) == 'ref'">true</IsReferenceAssemblyProject>

@@ -22,6 +22,7 @@
     <Error Condition="'$(_InvalidExitCode)' == '0'" Text="Invalid commands must fail." />
     <CallTarget Targets="TestNuGetSdkResolution" />
     <CallTarget Targets="TestDirectoryImports" />
+    <CallTarget Targets="TestArcadeLayout" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -99,7 +100,33 @@
       <Output TaskParameter="ConsoleOutput" ItemName="_ProgramOutput" />
     </Exec>
     <Error Condition="'@(_ProgramOutput)' != 'Hello from genbuild.'" Text="The program compiled with the packaged compiler did not run correctly on the external runtime." />
-    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, Restore-only package-SDK resolution, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-reference execution and startup, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
+    <Message Importance="high" Text="genbuild smoke checks passed: CLI failures, prepared package-SDK replay, graph-only construction, independent execution, project-style classification, duplicate-item, executable-reference and WinMD validation, editorconfig and framework attribute generation, assembly version derivation, cache-free assembly generation, source-root mapping and SourceLink publication, SDK restore, cleanup-free Build graph execution and program startup, packaged compiler execution, assembly/reference/PDB copying, dependency-manifest and runtime-config publication, cross-project action graphs, SDK project-reference execution and startup, child framework metadata, source-built NuGet framework selection and native-manifest metadata queries. $(_TestDirectory)" />
+  </Target>
+  <Target Name="TestArcadeLayout">
+    <PropertyGroup>
+      <_ArcadeLayoutRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'arcade-layout'))</_ArcadeLayoutRoot>
+      <_ArcadeProjectLayoutPath>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/ProjectLayout.props'))</_ArcadeProjectLayoutPath>
+      <_ArcadeLayoutArguments>-p:ArcadeProjectLayoutPath=&quot;$(_ArcadeProjectLayoutPath)&quot; -p:ArcadeLayoutDotNetTool=&quot;$(GenBuildTestHost)&quot; -p:Configuration=Release -p:OutDirName=&quot;nested folder/./discard/../layout space&quot;</_ArcadeLayoutArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ArcadeLayoutCase Include="AnyCPU" Platform="AnyCPU" />
+      <_ArcadeLayoutCase Include="x64" Platform="x64" />
+      <_ArcadeLayoutCase Include="override" Platform="x64" />
+      <_ArcadeLayoutCase Update="@(_ArcadeLayoutCase)">
+        <Root>$([MSBuild]::NormalizeDirectory('$(_ArcadeLayoutRoot)', '%(Identity)'))</Root>
+        <Arguments>$(_ArcadeLayoutArguments) -p:Platform=%(_ArcadeLayoutCase.Platform) -p:LayoutCase=%(_ArcadeLayoutCase.Identity)</Arguments>
+      </_ArcadeLayoutCase>
+    </ItemGroup>
+    <MakeDir Directories="%(_ArcadeLayoutCase.Root)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ArcadeLayout.proj" DestinationFiles="%(_ArcadeLayoutCase.Root)ArcadeLayout.proj" />
+    <Exec Command="$(_App) restore &quot;%(_ArcadeLayoutCase.Root)ArcadeLayout.proj&quot; -t:Build %(_ArcadeLayoutCase.Arguments) -p:ResultFile=&quot;%(_ArcadeLayoutCase.Root)ordinary.txt&quot; -bl:&quot;%(_ArcadeLayoutCase.Root)ordinary.binlog&quot;" />
+    <Exec Command="$(_App) build &quot;%(_ArcadeLayoutCase.Root)ArcadeLayout.proj&quot; %(_ArcadeLayoutCase.Arguments) -p:ResultFile=&quot;%(_ArcadeLayoutCase.Root)graph.txt&quot; -p:MSBuildEmitActionGraph=&quot;%(_ArcadeLayoutCase.Root)build.ninja&quot; -bl:&quot;%(_ArcadeLayoutCase.Root)build.binlog&quot;" />
+    <Error Condition="!Exists('%(_ArcadeLayoutCase.Root)build.ninja') or !Exists('%(_ArcadeLayoutCase.Root)build.ninja.actions') or Exists('%(_ArcadeLayoutCase.Root)graph.txt')"
+           Text="Arcade layout graph construction must emit independent actions without writing the layout result (%(_ArcadeLayoutCase.Identity))." />
+    <Exec WorkingDirectory="%(_ArcadeLayoutCase.Root)" Command="ninja -f build.ninja" />
+    <Error Condition="$([System.IO.File]::ReadAllText('%(_ArcadeLayoutCase.Root)ordinary.txt')) != $([System.IO.File]::ReadAllText('%(_ArcadeLayoutCase.Root)graph.txt'))"
+           Text="Source Arcade layout paths, including trailing separators, must match ordinary execution (%(_ArcadeLayoutCase.Identity))." />
+    <Message Importance="high" Text="Source Arcade layout smoke checks passed: AnyCPU, x64, explicit base paths, graph-only construction and ordinary-equivalent Ninja output. $(_ArcadeLayoutRoot)" />
   </Target>
   <Target Name="TestDirectoryImports">
     <PropertyGroup>
@@ -683,7 +710,7 @@
     <WriteLinesToFile File="$(_SdkPackageRoot)package/Sdk/Sdk.props"
                       Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;ResolvedGenBuildTestSdk&gt;local-sdk-package&lt;/ResolvedGenBuildTestSdk&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_SdkPackageRoot)package/Sdk/Sdk.targets"
-                      Lines="&lt;Project&gt;&lt;Target Name=&quot;Restore&quot;&gt;&lt;WriteLinesToFile File=&quot;sdk-restored.txt&quot; Lines=&quot;%24(ResolvedGenBuildTestSdk)&quot; Overwrite=&quot;true&quot; /&gt;&lt;/Target&gt;&lt;/Project&gt;" Overwrite="true" />
+                      Lines="&lt;Project&gt;&lt;Target Name=&quot;Restore&quot;&gt;&lt;WriteLinesToFile File=&quot;sdk-restored.txt&quot; Lines=&quot;%24(ResolvedGenBuildTestSdk)&quot; Overwrite=&quot;true&quot; /&gt;&lt;/Target&gt;&lt;Target Name=&quot;Build&quot;&gt;&lt;WriteLinesToFile File=&quot;%24(MSBuildProjectDirectory)/sdk-built.txt&quot; Lines=&quot;%24(ResolvedGenBuildTestSdk)&quot; Overwrite=&quot;true&quot; DeclaredInputs=&quot;&quot; DeclaredOutputs=&quot;%24(MSBuildProjectDirectory)/sdk-built.txt&quot; /&gt;&lt;/Target&gt;&lt;/Project&gt;" Overwrite="true" />
     <ZipDirectory SourceDirectory="$(_SdkPackageRoot)package" DestinationFile="$(_SdkPackageRoot)feed/GenBuild.Smoke.Sdk.1.0.0.nupkg" />
     <WriteLinesToFile File="$(_SdkPackageRoot)NuGet.Config"
                       Lines="&lt;configuration&gt;&lt;packageSources&gt;&lt;clear /&gt;&lt;add key=&quot;local&quot; value=&quot;feed&quot; /&gt;&lt;/packageSources&gt;&lt;config&gt;&lt;add key=&quot;globalPackagesFolder&quot; value=&quot;packages&quot; /&gt;&lt;/config&gt;&lt;/configuration&gt;" Overwrite="true" />
@@ -695,7 +722,7 @@
       <Output TaskParameter="Lines" PropertyName="_SdkRestoreResult" />
     </ReadLinesFromFile>
     <Error Condition="'$(_SdkRestoreResult)' != 'local-sdk-package' or !Exists('$(_SdkPackageRoot)packages/genbuild.smoke.sdk/1.0.0/Sdk/Sdk.props')" Text="Restore must resolve the globally pinned SDK package from the local feed using the source-built NuGet SDK resolver." />
-    <Exec WorkingDirectory="$(_SdkPackageRoot)" Command="$(_App) build &quot;$(_SdkPackageRoot)Sdk.proj&quot; -p:MSBuildEmitActionGraph=&quot;$(_SdkPackageRoot)build.ninja&quot; -bl:&quot;$(_SdkPackageRoot)build.binlog&quot;"
+    <Exec WorkingDirectory="$(_SdkPackageRoot)" Command="$(_App) build &quot;$(_SdkPackageRoot)Sdk.proj&quot; -p:MSBuildGraphSdkBindingsDirectory=&quot;$(_SdkPackageRoot)missing-bindings&quot; -p:MSBuildEmitActionGraph=&quot;$(_SdkPackageRoot)missing.ninja&quot; -bl:&quot;$(_SdkPackageRoot)missing.binlog&quot;"
           IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
       <Output TaskParameter="ExitCode" PropertyName="_SdkBuildExitCode" />
       <Output TaskParameter="ConsoleOutput" ItemName="_SdkBuildOutput" />
@@ -703,8 +730,33 @@
     <PropertyGroup>
       <_SdkBuildLog>@(_SdkBuildOutput)</_SdkBuildLog>
     </PropertyGroup>
-    <Error Condition="'$(_SdkBuildExitCode)' == '0' or !$(_SdkBuildLog.Contains('MSB4236')) or !$(_SdkBuildLog.Contains('MSBUILDDISABLENUGETSDKRESOLVER')) or Exists('$(_SdkPackageRoot)build.ninja') or Exists('$(_SdkPackageRoot)build.ninja.actions')"
+    <Error Condition="'$(_SdkBuildExitCode)' == '0' or !$(_SdkBuildLog.Contains('missing prepared SDK binding')) or Exists('$(_SdkPackageRoot)missing.ninja') or Exists('$(_SdkPackageRoot)missing.ninja.actions')"
            Text="Hardened Build must reject uncaptured package-SDK imports without running SDK discovery or publishing a partial graph." />
+    <WriteLinesToFile File="$(_SdkPackageRoot)NuGet.Config"
+                      Lines="&lt;configuration&gt;&lt;packageSources&gt;&lt;clear /&gt;&lt;/packageSources&gt;&lt;config&gt;&lt;add key=&quot;globalPackagesFolder&quot; value=&quot;unavailable-packages&quot; /&gt;&lt;/config&gt;&lt;/configuration&gt;" Overwrite="true" />
+    <Delete Files="$(_SdkPackageRoot)feed/GenBuild.Smoke.Sdk.1.0.0.nupkg" />
+    <WriteLinesToFile File="$(_SdkPackageRoot)packages/genbuild.smoke.sdk/1.0.0/Sdk/Sdk.props"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;ResolvedGenBuildTestSdk&gt;live-sdk-authoring&lt;/ResolvedGenBuildTestSdk&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <Exec WorkingDirectory="$(_SdkPackageRoot)" Command="$(_App) build &quot;$(_SdkPackageRoot)Sdk.proj&quot; -p:MSBuildEmitActionGraph=&quot;$(_SdkPackageRoot)build.ninja&quot; -bl:&quot;$(_SdkPackageRoot)build.binlog&quot;" />
+    <Error Condition="!Exists('$(_SdkPackageRoot)build.ninja') or Exists('$(_SdkPackageRoot)sdk-built.txt') or Exists('$(_SdkPackageRoot)unavailable-packages')"
+           Text="Prepared SDK bindings must permit graph-only construction without package-SDK rediscovery." />
+    <Exec WorkingDirectory="$(_SdkPackageRoot)" Command="ninja -f build.ninja" />
+    <ReadLinesFromFile File="$(_SdkPackageRoot)sdk-built.txt">
+      <Output TaskParameter="Lines" PropertyName="_SdkBuildResult" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_SdkBuildResult)' != 'live-sdk-authoring'"
+           Text="SDK bindings must preserve live props/targets authoring and independently executable actions, not snapshot evaluated source values." />
+    <WriteLinesToFile File="$(_SdkPackageRoot)Sdk.proj" Lines="&lt;Project Sdk=&quot;GenBuild.Smoke.Sdk/2.0.0&quot; /&gt;" Overwrite="true" />
+    <Exec WorkingDirectory="$(_SdkPackageRoot)" Command="$(_App) build &quot;$(_SdkPackageRoot)Sdk.proj&quot; -p:MSBuildEmitActionGraph=&quot;$(_SdkPackageRoot)stale.ninja&quot; -bl:&quot;$(_SdkPackageRoot)stale.binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_StaleSdkBindingExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_StaleSdkBindingOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_StaleSdkBindingLog>@(_StaleSdkBindingOutput)</_StaleSdkBindingLog>
+    </PropertyGroup>
+    <Error Condition="'$(_StaleSdkBindingExitCode)' == '0' or !$(_StaleSdkBindingLog.Contains('missing prepared SDK binding')) or Exists('$(_SdkPackageRoot)stale.ninja') or Exists('$(_SdkPackageRoot)stale.ninja.actions')"
+           Text="Changing an SDK request must require a fresh prepared binding, not reuse a previous version or rediscover it." />
   </Target>
   <Target Name="TestProjectReferences">
     <PropertyGroup>

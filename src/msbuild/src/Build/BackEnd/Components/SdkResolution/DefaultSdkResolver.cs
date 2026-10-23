@@ -27,6 +27,12 @@ namespace Microsoft.Build.BackEnd.SdkResolution
         public override int Priority => 10000;
 
         public override SdkResultBase Resolve(SdkReference sdk, SdkResolverContextBase context, SdkResultFactoryBase factory)
+            => Resolve(sdk, factory);
+
+        internal SdkResult Resolve(SdkReference sdk)
+            => (SdkResult)Resolve(sdk, new SdkResultFactory(sdk));
+
+        private static SdkResultBase Resolve(SdkReference sdk, SdkResultFactoryBase factory)
         {
             string sdkPath = Path.Combine(BuildEnvironmentHelper.Instance.MSBuildSDKsPath, sdk.Name, "Sdk");
 
