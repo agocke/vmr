@@ -450,6 +450,10 @@ projects; choosing the older framework does not make those dependencies optional
 - [x] Declare runtime's local repository root before Arcade imports, avoiding layout discovery.
 - [x] Normalize Arcade output/intermediate base paths through MSBuild intrinsics,
   preserving ordinary layout and explicit overrides.
+- [x] Import upstream workload-version deferral to avoid unrelated JSON reads
+  during ordinary library evaluation.
+- [ ] Replace workload-version file reads with explicit inputs before constructing
+  workload actions.
 - [x] Reprobe the real closure and identify the live-tool prebuild dependency.
 - [x] Separate targeting-pack discovery from runtime reference filtering,
   retaining candidate analyzers and tool producer dependencies.
@@ -567,8 +571,19 @@ execution and hardened construction plus Ninja, including AnyCPU/non-AnyCPU
 layouts, nested paths, spaces, parent segments and explicit base-path overrides.
 The real probe uses an isolated copy of the pinned Arcade SDK with only the changed
 props overlaid, selected through the same explicit `ArcadeSdkDir` in Restore and
-Build; the shared NuGet cache is not modified. With those inputs, the next failure
-is runtime's `eng/Versions.props` reading `global.json` through `File.ReadAllText`.
+Build; the shared NuGet cache is not modified.
+[dotnet/runtime#135658](https://github.com/dotnet/runtime/pull/135658), revision
+`b4b0f6e9668046434ee1f3d0f873639fd7fa470d`, is applied unchanged under `src/runtime`.
+It removes the unconditional `global.json` read from `eng/Versions.props` and
+defers the existing version formulas and dependent workload-test inputs to their
+consuming targets. Ordinary configured Restore succeeds; separately invoking
+`CalculateWorkloadSdkVersion` still computes SDK `12.0.100-alpha.1.26463.105`,
+band `12.0.100` and prerelease band `12.0.100-alpha.1`.
+This is an interim unblock for library evaluation, not a hardened workload adapter:
+the deferred target still performs file I/O and needs explicit version inputs
+before it can participate in workload graph construction.
+The next failure is `eng/wasm/WasmToolCache.props`' `File.Exists` probe of `.git`
+while discovering the main-checkout anchor for shared WebAssembly tool caches.
 Preparation and the failed graph attempt both produce zero DLLs.
 Generated-tool binding has not yet been reached.
 No runtime library graph, compilation, or independent execution is proven.

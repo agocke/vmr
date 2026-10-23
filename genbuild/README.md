@@ -208,8 +208,14 @@ its output and intermediate base paths. The
 ordinary execution with hardened construction and independent Ninja execution.
 For the real probe, an isolated copy of the pinned Arcade SDK carries the changed
 props, selected by the same explicit `ArcadeSdkDir` in Restore and Build; the shared
-NuGet cache is unchanged. With those local authoring inputs, the next blocker is
-runtime's `eng/Versions.props` reading `global.json` through `File.ReadAllText`.
+NuGet cache is unchanged.
+[dotnet/runtime#135658](https://github.com/dotnet/runtime/pull/135658) is applied
+locally to defer workload SDK-version calculations until their consumers run,
+removing the unconditional `global.json` read from `eng/Versions.props`.
+This unblocks ordinary library evaluation, not hardened workload construction;
+the workload calculation still needs explicit prepared version inputs eventually.
+The next blocker is `eng/wasm/WasmToolCache.props` probing `.git` through
+`File.Exists` to discover a shared tool-cache anchor.
 Preparation and the failed graph attempt both produce zero DLLs. Tool scheduling
 has not yet been reached. No runtime library graph, compilation or independent
 execution is established.
