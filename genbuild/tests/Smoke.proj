@@ -87,6 +87,7 @@
     <Error Condition="'@(_SdkProgramOutput)' != 'Hello from genbuild.'" Text="The program built by the SDK action graph did not run correctly on the external runtime." />
     <CallTarget Targets="TestProjectReferences" />
     <CallTarget Targets="TestConfiguredPreparation" />
+    <CallTarget Targets="TestDiscoveryPreparation" />
     <CallTarget Targets="TestFrameworkBasics" />
     <CallTarget Targets="TestRuntimeReferences" />
     <CallTarget Targets="TestExplicitReferences" />
@@ -291,6 +292,89 @@
     </Exec>
     <Error Condition="'$(_ConfiguredProgramOutput)' != 'Hello from a project reference.' or !Exists('$(_ConfiguredRoot)Child/bin/Release/net10.0/Child.dll')"
            Text="Configured preparation must support independent compilation with the negotiated child." />
+  </Target>
+  <Target Name="TestDiscoveryPreparation">
+    <PropertyGroup>
+      <_PreparedFactsRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'discovery-preparation'))</_PreparedFactsRoot>
+      <_PreparedFactsHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_PreparedFactsHostOS>
+      <_PreparedFactsHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_PreparedFactsHostOS>
+      <_PreparedFactsHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_PreparedFactsHostOS>
+      <_PreparedFactsHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_PreparedFactsHostOS>
+      <_PreparedFactsArguments>-p:DirectoryBuildPropsPath=&quot;$(_PreparedFactsRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_PreparedFactsRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_PreparedFactsRoot)Directory.Packages.props&quot; -p:MSBuildGraphHostOS=$(_PreparedFactsHostOS)</_PreparedFactsArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_PreparedFactsRoot)App;$(_PreparedFactsRoot)Library" />
+    <WriteLinesToFile File="$(_PreparedFactsRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_PreparedFactsRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_PreparedFactsRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)DiscoveryPreparation.csproj;$(MSBuildThisFileDirectory)DiscoveryPreparation.csproj;$(MSBuildThisFileDirectory)ProjectReference/Metadata.proj;$(MSBuildThisFileDirectory)ProjectReference/App/Program.cs;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs"
+          DestinationFiles="$(_PreparedFactsRoot)App/App.csproj;$(_PreparedFactsRoot)Library/Library.csproj;$(_PreparedFactsRoot)Metadata.proj;$(_PreparedFactsRoot)App/Program.cs;$(_PreparedFactsRoot)Library/Greeting.cs" />
+    <Exec Command="$(_App) restore &quot;$(_PreparedFactsRoot)App/App.csproj&quot; $(_PreparedFactsArguments) -bl:&quot;$(_PreparedFactsRoot)restore.binlog&quot;" />
+    <ItemGroup>
+      <_PreparedFactKind Include="frameworkreferences;nugetinputs;cscinputs;sourcelink">
+        <ManifestExtension>props</ManifestExtension>
+      </_PreparedFactKind>
+      <_PreparedFactKind Condition="'%(_PreparedFactKind.Identity)' == 'sourcelink'">
+        <ManifestExtension>targets</ManifestExtension>
+      </_PreparedFactKind>
+      <_DiscoveredPreparedFramework Include="net11.0;net10.0;netstandard2.0;net462" />
+      <_DiscoveredPreparedFact Include="@(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/frameworkreferences/Debug/AnyCPU/%(Identity)/Library.csproj.g.props');
+                                       @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/nugetinputs/Debug/AnyCPU/%(Identity)/Library.csproj.g.props');
+                                       @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/cscinputs/Debug/AnyCPU/%(Identity)/Library.csproj.g.props');
+                                       @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/sourcelink/Debug/AnyCPU/%(Identity)/Library.csproj.g.targets')" />
+      <_MissingDiscoveredPreparedFact Include="@(_PreparedFactKind)">
+        <Path>$(_PreparedFactsRoot)Library/obj/%(Identity)/Debug/AnyCPU/net10.0/Library.csproj.g.%(ManifestExtension)</Path>
+      </_MissingDiscoveredPreparedFact>
+    </ItemGroup>
+    <Error Condition="!Exists('%(_DiscoveredPreparedFact.Identity)')"
+           Text="Restore must capture inputs for every configured framework request reached during discovery: %(_DiscoveredPreparedFact.Identity)" />
+    <Error Condition="Exists('$(_PreparedFactsRoot)App/bin') or Exists('$(_PreparedFactsRoot)Library/bin') or
+                      Exists('$(_PreparedFactsRoot)Library/obj/cscinputs/Release')"
+           Text="Discovery-inclusive capture must not compile products or synthesize unrequested configurations." />
+    <Exec Command="$(_App) restore &quot;$(_PreparedFactsRoot)Metadata.proj&quot; -t:Build $(_PreparedFactsArguments) -p:MetadataFile=ordinary.txt -bl:&quot;$(_PreparedFactsRoot)ordinary.binlog&quot;" />
+    <Exec Command="$(_App) build &quot;$(_PreparedFactsRoot)Metadata.proj&quot; $(_PreparedFactsArguments) -p:MetadataFile=discovered.txt -p:MSBuildEmitActionGraph=&quot;$(_PreparedFactsRoot)discovered-metadata.ninja&quot; -bl:&quot;$(_PreparedFactsRoot)discovered-metadata.binlog&quot;" />
+    <Error Condition="Exists('$(_PreparedFactsRoot)discovered.txt') or Exists('$(_PreparedFactsRoot)App/bin') or Exists('$(_PreparedFactsRoot)Library/bin')"
+           Text="Metadata graph construction must not execute actions or compile projects." />
+    <Exec WorkingDirectory="$(_PreparedFactsRoot)" Command="ninja -f discovered-metadata.ninja" />
+    <GetFileHash Files="$(_PreparedFactsRoot)ordinary.txt;$(_PreparedFactsRoot)discovered.txt">
+      <Output TaskParameter="Items" ItemName="_PreparedFactsMetadataHash" />
+    </GetFileHash>
+    <ReadLinesFromFile File="$(_PreparedFactsRoot)discovered.txt">
+      <Output TaskParameter="Lines" PropertyName="_PreparedFactsMetadata" />
+    </ReadLinesFromFile>
+    <Error Condition="@(_PreparedFactsMetadataHash->'%(FileHash)'->Distinct()->Count()) != '1' or !$(_PreparedFactsMetadata.Contains('net11.0;net10.0;netstandard2.0;net462'))"
+           Text="Prepared discovery must advertise every framework and match ordinary execution." />
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="TestMissingDiscoveredPreparedFact"
+             Properties="GenBuildApp=$(GenBuildApp);GenBuildTestHost=$(GenBuildTestHost);PreparedFactsRoot=$(_PreparedFactsRoot);PreparedFactPath=%(_MissingDiscoveredPreparedFact.Path);PreparedFactKind=%(_MissingDiscoveredPreparedFact.Identity);PreparedFactsHostOS=$(_PreparedFactsHostOS)" />
+    <Exec Command="$(_App) build &quot;$(_PreparedFactsRoot)App/App.csproj&quot; $(_PreparedFactsArguments) -p:MSBuildEmitActionGraph=&quot;$(_PreparedFactsRoot)build.ninja&quot; -bl:&quot;$(_PreparedFactsRoot)build.binlog&quot;" />
+    <Error Condition="Exists('$(_PreparedFactsRoot)App/bin/Debug/net11.0/App.dll') or Exists('$(_PreparedFactsRoot)Library/bin/Debug/net11.0/Library.dll')"
+           Text="Selected-framework graph construction must not prebuild either project." />
+    <Exec WorkingDirectory="$(_PreparedFactsRoot)App" Command="ninja -f &quot;$(_PreparedFactsRoot)build.ninja&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_PreparedFactsRoot)App/bin/Debug/net11.0/App.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_PreparedFactsProgramOutput" />
+    </Exec>
+    <Error Condition="'$(_PreparedFactsProgramOutput)' != 'Hello from a project reference.' or
+                      Exists('$(_PreparedFactsRoot)Library/bin/Debug/net10.0') or
+                      Exists('$(_PreparedFactsRoot)Library/bin/Debug/netstandard2.0') or
+                      Exists('$(_PreparedFactsRoot)Library/bin/Debug/net462')"
+           Text="Independent execution must compile only the selected closure, not the other frameworks inspected during discovery." />
+  </Target>
+  <Target Name="TestMissingDiscoveredPreparedFact">
+    <PropertyGroup>
+      <_MissingFactGraph>$(PreparedFactsRoot)missing-$(PreparedFactKind).ninja</_MissingFactGraph>
+    </PropertyGroup>
+    <Move SourceFiles="$(PreparedFactPath)" DestinationFiles="$(PreparedFactPath).saved" />
+    <Exec Command="$(_App) build &quot;$(PreparedFactsRoot)Metadata.proj&quot; -p:MSBuildGraphHostOS=$(PreparedFactsHostOS) -p:DirectoryBuildPropsPath=&quot;$(PreparedFactsRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(PreparedFactsRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(PreparedFactsRoot)Directory.Packages.props&quot; -p:MetadataFile=rejected-$(PreparedFactKind).txt -p:MSBuildEmitActionGraph=&quot;$(_MissingFactGraph)&quot; -bl:&quot;$(PreparedFactsRoot)missing-$(PreparedFactKind).binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_MissingFactExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_MissingFactOutput" />
+    </Exec>
+    <Move SourceFiles="$(PreparedFactPath).saved" DestinationFiles="$(PreparedFactPath)" />
+    <PropertyGroup>
+      <_MissingFactLog>@(_MissingFactOutput)</_MissingFactLog>
+    </PropertyGroup>
+    <Error Condition="'$(_MissingFactExitCode)' == '0' or !$(_MissingFactLog.Contains('MSB4019')) or !$(_MissingFactLog.Contains('$(PreparedFactKind)')) or
+                      Exists('$(_MissingFactGraph)') or Exists('$(_MissingFactGraph).actions') or Exists('$(PreparedFactsRoot)rejected-$(PreparedFactKind).txt')"
+           Text="Missing $(PreparedFactKind) facts for a discovered framework must fail its required import without publishing a graph or executing actions." />
   </Target>
   <Target Name="TestRuntimeReferences">
     <PropertyGroup>

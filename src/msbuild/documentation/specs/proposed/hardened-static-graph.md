@@ -46,6 +46,28 @@ evaluation constructs an action graph. Use the same configuration,
 framework/platform selection, and intermediate paths for both invocations.
 Making Restore itself a standalone action graph is deferred.
 
+### Entry requests and expansion
+
+Given explicit entry requests (project, global properties, and targets),
+Restore-time input capture must cover the transitive closure of configured
+requests needed to construct them, including requests used to discover that
+closure. Unsupported requests must be rejected explicitly, not silently omitted.
+
+An outer multi-target build dispatches a separate graph construction for each
+selected target framework. For example, `net8.0;net10.0;net11.0` means three
+selected inner-build requests and three graphs, not one combined graph. Each
+graph contains its own negotiated project-reference closure, which may include
+dependencies targeting other compatible frameworks. An explicitly supplied
+`TargetFramework` selects one such inner build. The prototype currently requires
+selected inner builds; automatic outer-build graph dispatch remains a follow-up.
+
+`Configuration`, `Platform`, and runtime identifiers use their supplied values or
+authored defaults. Enumerating possible values does not itself request a
+cross-product of builds. Further expansion requires explicit authored dispatch.
+Project-reference property overrides and metadata requests remain part of the
+reachable request closure. Inspecting another framework's metadata does not
+implicitly request its compilation.
+
 NuGet JSON data that influences graph construction must be prepared as MSBuild
 item/property facts during Restore. This is the eventual representation for
 **all consumed NuGet JSON data**, not just a snapshot of a task's selected
@@ -55,6 +77,32 @@ operation. Files produced by project references remain future artifact paths
 with producer edges; preparation must not require those binaries to exist.
 The [initial fact capture](hardened-static-graph-implementation.md#nuget-fact-capture)
 does not yet replace every existing JSON consumer.
+
+### Configured framework discovery
+
+The SDK profile captures inputs for the existing
+`GetTargetFrameworksWithPlatformForSingleTargetFramework` requests reached during
+Restore-time project-reference discovery, including frameworks not selected for
+compilation. Those requests preserve ordinary property overrides and removals;
+they do not enumerate additional configurations or recursively request compilation
+of their project references. Selected compilation references retain their
+separate recursive capture path.
+
+Each reached configuration receives ordinary Restore and a fresh capture
+evaluation with restored imports. Metadata requests do not inherit the capture
+evaluation marker, so a subsequent selected-framework capture cannot reuse an
+evaluation created before that project's Restore.
+
+Hardened evaluation requires the explicitly named framework, NuGet, compiler,
+and enabled source-control imports for every reached inner build. Missing
+discovered inputs fail their imports without publishing a partial graph.
+Do not make those imports optional to conceal an incomplete capture closure,
+or add a metadata-only evaluation mode. Capturing a framework's facts does not
+request its compilation.
+
+Hardened SDK evaluation also defaults `EnableFrameworkPathOverride=false`,
+including for .NET Framework metadata probes. The legacy framework-installation
+lookup is not an alternative to prepared build inputs.
 
 ## One task contract
 

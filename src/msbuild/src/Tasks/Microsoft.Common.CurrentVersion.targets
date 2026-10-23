@@ -1904,7 +1904,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         BuildInParallel="$(BuildInParallel)"
         Properties="%(_MSBuildProjectReferenceExistent.SetConfiguration); %(_MSBuildProjectReferenceExistent.SetPlatform)"
         ContinueOnError="!$(BuildingProject)"
-        RemoveProperties="%(_MSBuildProjectReferenceExistent.GlobalPropertiesToRemove);TargetFramework;RuntimeIdentifier;SelfContained;$(_GlobalPropertiesToRemoveFromProjectReferences)"
+        RemoveProperties="%(_MSBuildProjectReferenceExistent.GlobalPropertiesToRemove);TargetFramework;RuntimeIdentifier;SelfContained;$(_GlobalPropertiesToRemoveFromProjectReferences);_MSBuildCapturingGraphInputs"
         Condition="'%(_MSBuildProjectReferenceExistent.SkipGetTargetFrameworkProperties)' != 'true' and '$(EnableDynamicPlatformResolution)' != 'true'"
         SkipNonexistentTargets="true">
       <Output TaskParameter="TargetOutputs" ItemName="_ProjectReferenceTargetFrameworkPossibilities" />
@@ -1920,7 +1920,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         Targets="GetTargetFrameworks"
         BuildInParallel="$(BuildInParallel)"
         ContinueOnError="!$(BuildingProject)"
-        RemoveProperties="%(_MSBuildProjectReferenceExistent.GlobalPropertiesToRemove);TargetFramework;RuntimeIdentifier;SelfContained;Platform;Configuration;$(_GlobalPropertiesToRemoveFromProjectReferences)"
+        RemoveProperties="%(_MSBuildProjectReferenceExistent.GlobalPropertiesToRemove);TargetFramework;RuntimeIdentifier;SelfContained;Platform;Configuration;$(_GlobalPropertiesToRemoveFromProjectReferences);_MSBuildCapturingGraphInputs"
         Condition="'%(_MSBuildProjectReferenceExistent.SkipGetTargetFrameworkProperties)' != 'true' and '$(EnableDynamicPlatformResolution)' == 'true'"
         SkipNonexistentTargets="true">
       <Output TaskParameter="TargetOutputs" ItemName="_ProjectReferenceTargetFrameworkPossibilities" />
@@ -5993,7 +5993,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     -->
   <Target
       Name="_WriteHardenedUnmanagedRegistrationCacheImport"
-      BeforeTargets="_GenerateProjectRestoreGraphPerFramework;_CaptureHardenedGraphInputs"
+      BeforeTargets="_GenerateProjectRestoreGraphPerFramework;_CaptureHardenedGraphInputs;_CaptureHardenedGraphInputsForFrameworkDiscovery"
       AfterTargets="Restore"
       Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
 
@@ -6006,6 +6006,9 @@ Copyright (C) Microsoft Corporation. All rights reserved.
   </Target>
 
   <Target Name="_PrepareHardenedGraphInputs">
+    <PropertyGroup>
+      <_MSBuildGraphInputsCaptureTarget Condition="'$(_MSBuildGraphInputsCaptureTarget)' == ''">_CaptureHardenedGraphInputs</_MSBuildGraphInputsCaptureTarget>
+    </PropertyGroup>
     <!-- Restore each selected configuration without forcing its framework onto dependencies. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"
              Targets="Restore"
@@ -6013,7 +6016,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
              RemoveProperties="TargetFramework"
              BuildInParallel="false" />
     <MSBuild Projects="$(MSBuildProjectFullPath)"
-             Targets="_CaptureHardenedGraphInputs"
+             Targets="$(_MSBuildGraphInputsCaptureTarget)"
              Properties="_MSBuildCapturingGraphInputs=true"
              BuildInParallel="false" />
   </Target>
@@ -6024,6 +6027,21 @@ Copyright (C) Microsoft Corporation. All rights reserved.
                      ('$(MSBuildRestoreGraphInputs)' == 'true' or '$(_MSBuildPreparingGraphInputs)' == 'true')">
     <Error Text="Graph-input preparation cannot build project outputs for '$(MSBuildProjectFullPath)'. Generated tools must retain their producers in the hardened Build graph." />
   </Target>
+
+  <Target Name="_PrepareHardenedGraphInputsForFrameworkDiscovery"
+          BeforeTargets="GetTargetFrameworksWithPlatformForSingleTargetFramework"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and
+                     '$(_MSBuildPreparingGraphInputs)' == 'true' and
+                     '$(MSBuildHardenedGraph)' != 'true'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="_PrepareHardenedGraphInputs"
+             Properties="_MSBuildGraphInputsCaptureTarget=_CaptureHardenedGraphInputsForFrameworkDiscovery"
+             RemoveProperties="_MSBuildCapturingGraphInputs"
+             BuildInParallel="false" />
+  </Target>
+
+  <Target Name="_CaptureHardenedGraphInputsForFrameworkDiscovery"
+          DependsOnTargets="$(MSBuildPrepareGraphInputsDependsOn)" />
 
   <!-- Capture framework inputs before project-reference preparation composes package references. -->
   <Target Name="_CaptureHardenedGraphInputs"

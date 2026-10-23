@@ -13,6 +13,7 @@ Copyright (c) .NET Foundation. All rights reserved.
   <!-- Restore captures with MSBuildRestoreGraphInputs; hardened evaluation only enables replay. -->
   <PropertyGroup>
     <EnableFrameworkReferenceFetchManifest Condition="'$(EnableFrameworkReferenceFetchManifest)' == '' and '$(MSBuildHardenedGraph)' == 'true'">true</EnableFrameworkReferenceFetchManifest>
+    <EnableFrameworkPathOverride Condition="'$(EnableFrameworkPathOverride)' == '' and '$(MSBuildHardenedGraph)' == 'true'">false</EnableFrameworkPathOverride>
     <_GraphInputsConfiguration Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(MSBuildHardenedGraph)' == 'true'">$(Configuration)/$(Platform)/$(TargetFramework)/</_GraphInputsConfiguration>
     <_DisableNuGetRestoreTargetFrameworksOverride Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">true</_DisableNuGetRestoreTargetFrameworksOverride>
     <FrameworkReferenceFetchManifestPath Condition="('$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true') and '$(FrameworkReferenceFetchManifestPath)' == ''">$(MSBuildProjectExtensionsPath)frameworkreferences/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</FrameworkReferenceFetchManifestPath>

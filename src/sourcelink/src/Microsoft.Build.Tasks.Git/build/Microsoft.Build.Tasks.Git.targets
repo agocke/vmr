@@ -86,7 +86,7 @@
   <Target Name="_GenerateSourceControlFetchManifest"
           DependsOnTargets="_CollectSourceControlFetchManifest;_TranslateSourceControlFetchManifestUrls"
           AfterTargets="Restore"
-          BeforeTargets="_GenerateProjectRestoreGraphPerFramework;_CaptureHardenedGraphInputs"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework;_CaptureHardenedGraphInputs;_CaptureHardenedGraphInputsForFrameworkDiscovery"
           Condition="'$(MSBuildHardenedGraph)' != 'true' and
                      ('$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableSourceControlFetchManifest)' == 'true') and
                      '$(EnableSourceControlManagerQueries)' == 'true'">

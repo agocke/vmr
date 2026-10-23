@@ -231,12 +231,29 @@ WebAssembly tool versions or enable wasmtime provisioning.
 `eng/RuntimeIdentifier.props` now evaluates unchanged against captured host-RID
 context. Runtime's generator-directory classification now uses `NormalizePath`
 anchored at `MSBuildProjectDirectory`, preserving ordinary classifications.
-The next blocker is reference-project `GetTargetFrameworks` discovery: metadata
-probes for unselected frameworks try to import unprepared framework-reference
-manifests (`net11.0`, `netstandard2.0`, and `net462` for the reference project).
-Preparation and the failed graph attempt both produce zero DLLs. Tool scheduling
-has not yet been reached. No runtime library graph, compilation or independent
-execution is established.
+Restore-time capture includes the configured framework-metadata requests reached
+by ordinary project-reference negotiation, not just the configurations selected
+for compilation. Each reached configuration receives ordinary Restore followed
+by fresh local capture, without recursively requesting its compilation references.
+Framework, NuGet, compiler, and enabled source-control imports
+remain required during hardened evaluation; incomplete capture fails rather than
+being hidden by optional imports. There is no metadata-only mode or discovery
+fallback. The [packaged regression](tests/DiscoveryPreparation.csproj) requires
+facts for all four inspected frameworks, checks fresh Restore-generated imports
+and ordinary/hardened metadata parity,
+and independently compiles only the negotiated dependency. Missing facts for an
+inspected but uncompiled framework fail its required imports.
+The legacy framework-installation lookup is disabled by default in hardened SDK
+evaluation, including .NET Framework metadata probes.
+An isolated hardened metadata probe of runtime's actual reference project
+successfully returns `net11.0`, `net10.0`, `netstandard2.0`, and `net462` without
+producing DLLs.
+The real net10.0 Restore succeeds with discovery-inclusive capture. Hardened
+Build passes framework discovery and stops at classification of tasks from the
+not-yet-built `ILLink.Tasks.dll`; the metadata loader tries to open that future
+tool output. Preparation and the failed graph attempt produce zero DLLs and
+publish no library graph.
+No runtime library graph, compilation or independent execution is established.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,

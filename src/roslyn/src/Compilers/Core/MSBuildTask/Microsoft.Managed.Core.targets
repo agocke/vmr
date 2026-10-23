@@ -72,7 +72,7 @@
   <!-- Restore prepares this graph input; only a skipped-analyzer compilation should advance its timestamp afterward. -->
   <Target Name="_InitializeLastBuildWithSkipAnalyzers"
           AfterTargets="Restore"
-          BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework;_CaptureCscToolInputs"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
     <WriteLinesToFile
       File="$(IntermediateOutputPath)$(MSBuildProjectFile).BuildWithSkipAnalyzers"

@@ -88,7 +88,10 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
   Automatic mappings preserve SourceLink root aliases and cover project,
   generated-source and output paths, including CodeView. Restore's
   `_CaptureCscToolInputs` prepares the compiler/analyzer closure under
-  `$(MSBuildProjectExtensionsPath)cscinputs/`; Build imports exact inputs.
+  `$(MSBuildProjectExtensionsPath)cscinputs/`; hardened evaluation requires that
+  import. SDK preparation covers the configured metadata requests reached during
+  framework discovery as well as selected compilation requests. Capturing a
+  compiler closure does not request compilation of that framework.
   Declare analyzer/generator dependencies, configs and additional files and
   trust their nominal compiler-input-only contract; enforcement is deferred
   without per-plugin gates. `CompileCsc` controls the child environment and
