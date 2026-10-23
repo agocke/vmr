@@ -229,8 +229,11 @@ targets. Explicit host-side acquisition/provisioning consumers import those
 inputs at their use sites; ordinary libraries no longer probe `.git`, read
 WebAssembly tool versions or enable wasmtime provisioning.
 `eng/RuntimeIdentifier.props` now evaluates unchanged against captured host-RID
-context. The next blocker is runtime's root `Directory.Build.props` using
-`Path.GetFullPath` to classify generator-project directories.
+context. Runtime's generator-directory classification now uses `NormalizePath`
+anchored at `MSBuildProjectDirectory`, preserving ordinary classifications.
+The next blocker is reference-project `GetTargetFrameworks` discovery: metadata
+probes for unselected frameworks try to import unprepared framework-reference
+manifests (`net11.0`, `netstandard2.0`, and `net462` for the reference project).
 Preparation and the failed graph attempt both produce zero DLLs. Tool scheduling
 has not yet been reached. No runtime library graph, compilation or independent
 execution is established.

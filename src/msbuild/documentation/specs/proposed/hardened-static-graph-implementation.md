@@ -457,6 +457,8 @@ projects; choosing the older framework does not make those dependencies optional
   host-side tool consumers, rather than every managed library.
 - [x] Evaluate runtime's unchanged RID calculation against captured construction
   context instead of a live `RuntimeInformation.RuntimeIdentifier` lookup.
+- [x] Normalize runtime's generator-directory parent path from the absolute
+  project directory, preserving generator/source classification.
 - [ ] Replace workload-version file reads with explicit inputs before constructing
   workload actions.
 - [x] Reprobe the real closure and identify the live-tool prebuild dependency.
@@ -606,8 +608,18 @@ All 203 action-graph cases and 51 directory-import/SDK-binding cases pass,
 including captured RID overrides, string chains, invalid/mutable context and
 ordinary lookup compatibility. Packaged smoke also passes with a verified
 SDK-free external runtime host.
-The real runtime probe advances to `Directory.Build.props(325,25)`, where
-`IsGeneratorProject` uses `Path.GetFullPath` to inspect the parent directory.
+Runtime's root `Directory.Build.props` now uses
+`NormalizePath('$(MSBuildProjectDirectory)', '..')` when identifying generator
+projects. Ordinary evaluation of a source library, a project in `gen`, a child
+of `gen`, and a reference assembly preserves all 12 queried classification/path
+values. The eight-case WebAssembly-cache authoring matrix also passes.
+The real probe now reaches the reference project's `GetTargetFrameworks`
+discovery. Its `GetTargetFrameworksWithPlatformForSingleTargetFramework`
+requests evaluate unselected `net11.0`, `netstandard2.0`, and `net462` inner
+builds, where the SDK's early framework-reference import requires unprepared
+`frameworkreferences/Debug/AnyCPU/<framework>/*.g.props` inputs.
+Metadata-only probing needs to be reconciled with configured preparation;
+missing Build facts must not silently become optional.
 Preparation and the failed graph attempt both produce zero DLLs.
 Generated-tool binding has not yet been reached.
 No runtime library graph, compilation, or independent execution is proven.

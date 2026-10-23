@@ -323,7 +323,7 @@
   <PropertyGroup>
     <!-- Treat as a generator project if either the parent or the parent parent directory is named gen. -->
     <IsGeneratorProject Condition="$([System.IO.Path]::GetFileName('$(MSBuildProjectDirectory)')) == 'gen' or
-                                   $([System.IO.Path]::GetFileName('$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))')) == 'gen'">true</IsGeneratorProject>
+                                   $([System.IO.Path]::GetFileName('$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '..'))')) == 'gen'">true</IsGeneratorProject>
     <IsSourceProject Condition="'$(IsSourceProject)' == '' and
                                 '$(IsReferenceAssemblyProject)' != 'true' and
                                 '$(IsGeneratorProject)' != 'true' and
