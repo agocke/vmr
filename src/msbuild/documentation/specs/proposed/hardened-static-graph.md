@@ -250,15 +250,19 @@ capture inputs is unchanged.
 
 Machine information is predefined construction context, like predefined
 variables, rather than a requirement to thread machine properties through
-project authoring. The command-line launcher captures its host OS and process
-architecture once as the global properties `MSBuildGraphHostOS` and
-`MSBuildGraphHostArchitecture`. Defaults come from the launcher automatically;
-explicit overrides such as `-p:MSBuildGraphHostOS=linux` and
-`-p:MSBuildGraphHostArchitecture=arm64` select a different fixed context.
+project authoring. The command-line launcher captures its host OS, process
+architecture and runtime identifier once as the global properties
+`MSBuildGraphHostOS`, `MSBuildGraphHostArchitecture` and
+`MSBuildGraphHostRuntimeIdentifier`. Defaults come from the launcher automatically;
+explicit overrides such as `-p:MSBuildGraphHostOS=linux`,
+`-p:MSBuildGraphHostArchitecture=arm64` or
+`-p:MSBuildGraphHostRuntimeIdentifier=linux-musl-arm64` select a different fixed context.
 OS values are `windows`, `linux`, `osx`, and `freebsd`; architecture values must
 name a member of `System.Runtime.InteropServices.Architecture`, such as `x64`
 or `arm64`. Names are case-insensitive; numeric and compound values are rejected.
-Programmatic callers supply both global inputs before evaluating a
+The RID is a nonempty, case-preserving token containing ASCII letters, digits,
+periods, hyphens or underscores; custom RID names do not require a registry.
+Programmatic callers supply all three global inputs before evaluating a
 graph-emission project. Environment and project properties do not replace them.
 `TreatAsLocalProperty`, target assignments, and task output mappings cannot
 make them mutable, and child projects cannot change the context.
@@ -267,12 +271,15 @@ During hardened evaluation and target construction, `[MSBuild]::IsOSPlatform`
 compares its argument with the captured OS.
 `[System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture`
 returns the captured `Architecture` enum, preserving ordinary enum formatting
-and chains such as `.ToString().ToLowerInvariant()`. Neither reads live machine
-state during construction. Other `RuntimeInformation` members are not newly
+and chains such as `.ToString().ToLowerInvariant()`.
+`[System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier`
+returns the captured RID string, including ordinary string chains. None reads live
+machine state during construction. Other `RuntimeInformation` members are not newly
 allowed; ordinary builds retain their existing runtime queries.
-The emitter records canonical `msbuild_construction_host_os` and
-`msbuild_construction_host_architecture` values in the Ninja file, so changing
-either changes graph identity even when no action parameter depends on it.
+The emitter records `msbuild_construction_host_os`,
+`msbuild_construction_host_architecture` and
+`msbuild_construction_host_runtime_identifier` values in the Ninja file, so changing
+any of them changes graph identity even when no action parameter depends on it.
 Future construction-cache keys must include this context; no such cache is
 implemented yet.
 

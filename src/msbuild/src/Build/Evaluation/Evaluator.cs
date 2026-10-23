@@ -761,6 +761,9 @@ namespace Microsoft.Build.Evaluation
                         Graph.Hardened.HardenedActionGraph.GetHostArchitecture(
                             _data.GlobalPropertiesDictionary.GetProperty(Graph.Hardened.HardenedActionGraph.HostArchitectureProperty)?.EvaluatedValue,
                             _projectRootElement.ProjectFileLocation);
+                        Graph.Hardened.HardenedActionGraph.GetHostRuntimeIdentifier(
+                            _data.GlobalPropertiesDictionary.GetProperty(Graph.Hardened.HardenedActionGraph.HostRuntimeIdentifierProperty)?.EvaluatedValue,
+                            _projectRootElement.ProjectFileLocation);
                     }
 
                     string repositoryRoot = _data.GlobalPropertiesDictionary.GetProperty(

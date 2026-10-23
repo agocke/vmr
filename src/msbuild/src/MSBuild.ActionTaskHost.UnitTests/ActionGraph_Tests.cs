@@ -453,6 +453,8 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     [InlineData("remove-host", "MSBuildGraphHostOS")]
     [InlineData("remove-architecture", "MSBuildGraphHostArchitecture")]
     [InlineData("override-architecture", "host context")]
+    [InlineData("remove-runtime-identifier", "MSBuildGraphHostRuntimeIdentifier")]
+    [InlineData("override-runtime-identifier", "host context")]
     [InlineData("child-failure", "DeclaredIO")]
     public void InvalidProjectReferenceClosurePublishesNothing(string mode, string expected)
     {
@@ -476,6 +478,14 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         else if (mode == "override-architecture")
         {
             call.SetAttributeValue("Properties", "MSBuildGraphHostArchitecture=arm64");
+        }
+        else if (mode == "remove-runtime-identifier")
+        {
+            call.SetAttributeValue("RemoveProperties", "MSBuildGraphHostRuntimeIdentifier");
+        }
+        else if (mode == "override-runtime-identifier")
+        {
+            call.SetAttributeValue("Properties", "MSBuildGraphHostRuntimeIdentifier=linux-arm64");
         }
 
         XElement root = new("Project",
@@ -508,7 +518,12 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
 
         string graph = Path.Combine(directory, "build.ninja");
         Generate(project, graph, out string log,
-            mode == "override-architecture" ? "-p:MSBuildGraphHostArchitecture=x64" : "").ShouldBeFalse();
+            mode switch
+            {
+                "override-architecture" => "-p:MSBuildGraphHostArchitecture=x64",
+                "override-runtime-identifier" => "-p:MSBuildGraphHostRuntimeIdentifier=linux-x64",
+                _ => "",
+            }).ShouldBeFalse();
 
         log.ShouldContain(expected, Case.Insensitive);
         File.Exists(graph).ShouldBeFalse();
@@ -1336,6 +1351,7 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
             {
                 ["MSBuildEmitActionGraph"] = graph,
                 ["MSBuildGraphHostOS"] = "linux",
+                ["MSBuildGraphHostRuntimeIdentifier"] = "linux-x64",
             };
             Evaluation.ProjectCollection collection = env.CreateProjectCollection().Collection;
             Exceptions.InvalidProjectFileException exception = Should.Throw<Exceptions.InvalidProjectFileException>(
@@ -1374,6 +1390,157 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
 
         success.ShouldBeTrue();
         output.ShouldContain($"architecture={actualArchitecture}!");
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("win-x64")]
+    [InlineData("linux-musl-arm64")]
+    [InlineData("ubuntu.22.04-x64")]
+    [InlineData("CUSTOM_os-arm64")]
+    public void UsesCapturedHostRuntimeIdentifierDuringEvaluationAndConstruction(string hostRuntimeIdentifier)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        const string expression =
+            "$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier)|"
+            + "$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier.ToUpperInvariant())";
+        XDocument contents = XDocument.Load(project);
+        XElement root = contents.Root!;
+        root.AddFirst(new XElement("PropertyGroup",
+            new XElement("MSBuildGraphHostRuntimeIdentifier", "ignored-project-value"),
+            new XElement("TargetArchitecture", "wasm"),
+            new XElement("Evaluated", expression)));
+        XElement target = root.Element("Target")!;
+        target.AddFirst(new XElement("PropertyGroup", new XElement("Constructed", expression)));
+        target.Element("GraphValueTask")!.AddAfterSelf(new XElement("ItemGroup",
+            new XElement("Values",
+                new XElement("Tag", "$(Evaluated)|$(Constructed)|$(MSBuildGraphHostRuntimeIdentifier)|$(TargetArchitecture)"))));
+        File.WriteAllText(project, contents.ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph, $"-p:MSBuildGraphHostRuntimeIdentifier={hostRuntimeIdentifier}").ShouldBeTrue();
+
+        File.ReadAllText(graph).ShouldContain("msbuild_construction_host_runtime_identifier = " + hostRuntimeIdentifier);
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
+        Ninja(graph, out bool success);
+
+        success.ShouldBeTrue();
+        string expected = $"{hostRuntimeIdentifier}|{hostRuntimeIdentifier.ToUpperInvariant()}";
+        File.ReadAllText(Path.Combine(directory, "first.txt"))
+            .ShouldBe($"literal%3B;value|{expected}|{expected}|{hostRuntimeIdentifier}|wasm");
+    }
+
+    [UnixOnlyFact]
+    public void CapturedHostRuntimeIdentifierParticipatesInGraphIdentityWithoutBeingRead()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        string graph = Path.Combine(directory, "build.ninja");
+        string detectedRuntimeIdentifier = RuntimeInformation.RuntimeIdentifier;
+
+        Generate(project, graph).ShouldBeTrue();
+        string defaultGraph = File.ReadAllText(graph);
+        defaultGraph.ShouldContain("msbuild_construction_host_runtime_identifier = " + detectedRuntimeIdentifier);
+        Generate(project, graph, $"-p:MSBuildGraphHostRuntimeIdentifier={detectedRuntimeIdentifier}").ShouldBeTrue();
+        File.ReadAllText(graph).ShouldBe(defaultGraph);
+
+        string differentRuntimeIdentifier = detectedRuntimeIdentifier == "linux-x64" ? "linux-musl-arm64" : "linux-x64";
+        Generate(project, graph, $"-p:MSBuildGraphHostRuntimeIdentifier={differentRuntimeIdentifier}").ShouldBeTrue();
+
+        string overriddenGraph = File.ReadAllText(graph);
+        overriddenGraph.ShouldNotBe(defaultGraph);
+        overriddenGraph.ShouldContain("msbuild_construction_host_runtime_identifier = " + differentRuntimeIdentifier);
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("Missing")]
+    [InlineData("Empty")]
+    [InlineData("Whitespace")]
+    [InlineData("Path")]
+    [InlineData("Newline")]
+    [InlineData("Expansion")]
+    [InlineData("TreatAsLocal")]
+    [InlineData("TargetProperty")]
+    [InlineData("TaskOutput")]
+    [InlineData("ArgumentsEvaluation")]
+    [InlineData("ArgumentsConstruction")]
+    public void RejectsInvalidOrMutableHostRuntimeIdentifier(string invalid)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        string contents = File.ReadAllText(project);
+        contents = invalid switch
+        {
+            "Missing" => contents.Replace("<Target Name=\"Build\"", "<PropertyGroup><MSBuildGraphHostRuntimeIdentifier>linux-x64</MSBuildGraphHostRuntimeIdentifier></PropertyGroup><Target Name=\"Build\""),
+            "TreatAsLocal" => contents.Replace("<Project>", "<Project TreatAsLocalProperty=\"msbuildgraphhostruntimeidentifier\">"),
+            "TargetProperty" => contents.Replace("<GraphValueTask", "<PropertyGroup><msbuildgraphhostruntimeidentifier>linux-arm64</msbuildgraphhostruntimeidentifier></PropertyGroup><GraphValueTask"),
+            "TaskOutput" => contents.Replace("ItemName=\"Values\"", "PropertyName=\"msbuildgraphhostruntimeidentifier\""),
+            "ArgumentsEvaluation" => contents.Replace("<Target Name=\"Build\"", "<PropertyGroup><Bad>$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier('linux'))</Bad></PropertyGroup><Target Name=\"Build\""),
+            "ArgumentsConstruction" => contents.Replace("<GraphValueTask", "<PropertyGroup><Bad>$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier('linux'))</Bad></PropertyGroup><GraphValueTask"),
+            _ => contents,
+        };
+        File.WriteAllText(project, contents);
+        string graph = Path.Combine(directory, "build.ninja");
+        string arguments = invalid switch
+        {
+            "Empty" => "-p:MSBuildGraphHostRuntimeIdentifier=",
+            "Whitespace" => "-p:MSBuildGraphHostRuntimeIdentifier=linux%20x64",
+            "Path" => "-p:MSBuildGraphHostRuntimeIdentifier=linux/x64",
+            "Newline" => "-p:MSBuildGraphHostRuntimeIdentifier=linux-x64%0Ainjected",
+            "Expansion" => "-p:MSBuildGraphHostRuntimeIdentifier=linux%24x64",
+            _ => "-p:MSBuildGraphHostRuntimeIdentifier=linux-x64",
+        };
+
+        if (invalid == "Missing")
+        {
+            Dictionary<string, string> properties = new()
+            {
+                ["MSBuildEmitActionGraph"] = graph,
+                ["MSBuildGraphHostOS"] = "linux",
+                ["MSBuildGraphHostArchitecture"] = "x64",
+            };
+            Evaluation.ProjectCollection collection = env.CreateProjectCollection().Collection;
+            Exceptions.InvalidProjectFileException exception = Should.Throw<Exceptions.InvalidProjectFileException>(
+                () => new Evaluation.Project(project, properties, toolsVersion: null, collection));
+            exception.Message.ShouldContain("MSBuildGraphHostRuntimeIdentifier");
+        }
+        else
+        {
+            Generate(project, graph, out string log, arguments).ShouldBeFalse();
+            log.ShouldContain("RuntimeIdentifier", Case.Insensitive);
+        }
+
+        File.Exists(graph).ShouldBeFalse();
+        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyFact]
+    public void OrdinaryEvaluationStillQueriesTheActualHostRuntimeIdentifier()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string project = env.CreateFile(".proj").Path;
+        File.WriteAllText(project, """
+            <Project>
+              <PropertyGroup>
+                <ActualHostRuntimeIdentifier>rid=$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier)!</ActualHostRuntimeIdentifier>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        string output = RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" --hardened-graph:false -p:MSBuildGraphHostRuntimeIdentifier=overridden-rid -getProperty:ActualHostRuntimeIdentifier -nr:false",
+            out bool success, outputHelper: _output);
+
+        success.ShouldBeTrue();
+        output.ShouldContain($"rid={RuntimeInformation.RuntimeIdentifier}!");
     }
 
     [UnixOnlyTheory]

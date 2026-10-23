@@ -289,9 +289,10 @@ checklist replaces the earlier sequence of individual task-rejection probes.
   SourceLink repository metadata, and the analyzer semaphore during Restore.
 - [x] Participate in configured-project/framework Restore traversal; keep saved
   imports outside Common's automatic project-extension import wildcards.
-- [x] Capture construction host OS and process architecture in immutable globals
-  `MSBuildGraphHostOS` and `MSBuildGraphHostArchitecture`; expose existing OS and
-  architecture expressions as reads of that predefined context and include both
+- [x] Capture construction host OS, process architecture and runtime identifier in
+  immutable globals `MSBuildGraphHostOS`, `MSBuildGraphHostArchitecture` and
+  `MSBuildGraphHostRuntimeIdentifier`; expose existing OS, architecture and RID
+  expressions as reads of that predefined context and include all three
   in graph identity. Normalize `TargetDir` against the explicit project directory
   rather than ambient CWD.
 - [x] Support read-only array indexing needed by SDK/Roslyn expressions while
@@ -454,6 +455,8 @@ projects; choosing the older framework does not make those dependencies optional
   during ordinary library evaluation.
 - [x] Scope WebAssembly cache discovery to WebAssembly targets and explicit
   host-side tool consumers, rather than every managed library.
+- [x] Evaluate runtime's unchanged RID calculation against captured construction
+  context instead of a live `RuntimeInformation.RuntimeIdentifier` lookup.
 - [ ] Replace workload-version file reads with explicit inputs before constructing
   workload actions.
 - [x] Reprobe the real closure and identify the live-tool prebuild dependency.
@@ -594,9 +597,17 @@ checks native-library isolation, browser/WASI targets and individual/combined
 host-side consumers without acquiring tools. Eight cases pass; the seven
 WebAssembly/host-consumer profiles retain all 126 queried prior input values.
 Ordinary preparation of the real library leaves the cache and wasmtime inputs
-empty. The next failure is `eng/RuntimeIdentifier.props` querying
-`RuntimeInformation.RuntimeIdentifier`; this needs explicit captured host-RID
-context, not ambient lookup.
+empty. The launcher now captures `MSBuildGraphHostRuntimeIdentifier` alongside
+host OS and architecture; existing `RuntimeInformation.RuntimeIdentifier`
+expressions read that immutable context during evaluation and construction.
+The RID participates in graph identity even when unused, and child requests
+cannot remove or change it. Runtime's RID authoring needs no special adapter.
+All 203 action-graph cases and 51 directory-import/SDK-binding cases pass,
+including captured RID overrides, string chains, invalid/mutable context and
+ordinary lookup compatibility. Packaged smoke also passes with a verified
+SDK-free external runtime host.
+The real runtime probe advances to `Directory.Build.props(325,25)`, where
+`IsGeneratorProject` uses `Path.GetFullPath` to inspect the parent directory.
 Preparation and the failed graph attempt both produce zero DLLs.
 Generated-tool binding has not yet been reached.
 No runtime library graph, compilation, or independent execution is proven.

@@ -575,6 +575,18 @@ internal partial class Expander<P, I>
                                 elementLocation);
                             wellKnownFunctionSuccess = true;
                         }
+                        else if (constructingGraph &&
+                            _receiverType == typeof(RuntimeInformation) &&
+                            string.Equals(_methodMethodName, "RuntimeIdentifier", StringComparison.OrdinalIgnoreCase))
+                        {
+                            ProjectErrorUtilities.VerifyThrowInvalidProject(
+                                args.Length == 0,
+                                elementLocation, "InvalidFunctionMethodUnavailable", _methodMethodName, _receiverType.FullName);
+                            functionResult = Graph.Hardened.HardenedActionGraph.GetHostRuntimeIdentifier(
+                                properties.GetProperty(Graph.Hardened.HardenedActionGraph.HostRuntimeIdentifierProperty)?.EvaluatedValue,
+                                elementLocation);
+                            wellKnownFunctionSuccess = true;
+                        }
                         else
                         {
                             wellKnownFunctionSuccess = WellKnownFunctions.TryExecuteWellKnownFunction(_methodMethodName, _receiverType, _fileSystem, out functionResult, objectInstance, args);

@@ -396,6 +396,7 @@ public sealed class SdkImportBindings_Tests
             ["MSBuildEmitActionGraph"] = Path.Combine(root, "graph.json"),
             ["MSBuildGraphHostOS"] = "linux",
             ["MSBuildGraphHostArchitecture"] = "x64",
+            ["MSBuildGraphHostRuntimeIdentifier"] = "linux-x64",
             [DirectoryImportResolver.RepositoryRootProperty] = root,
         };
 

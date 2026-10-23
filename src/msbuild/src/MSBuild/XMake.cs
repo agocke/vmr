@@ -2730,6 +2730,16 @@ namespace Microsoft.Build.CommandLine
                             globalProperties.Add("MSBuildGraphHostArchitecture",
                                 RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant());
                         }
+
+                        if (!globalProperties.ContainsKey("MSBuildGraphHostRuntimeIdentifier"))
+                        {
+#if NETFRAMEWORK
+                            string hostRuntimeIdentifier = "win-" + RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
+#else
+                            string hostRuntimeIdentifier = RuntimeInformation.RuntimeIdentifier;
+#endif
+                            globalProperties.Add("MSBuildGraphHostRuntimeIdentifier", hostRuntimeIdentifier);
+                        }
                     }
 
                     if (commandLineSwitches.IsParameterizedSwitchSet(CommandLineSwitches.ParameterizedSwitch.IsolateProjects))

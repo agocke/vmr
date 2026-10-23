@@ -74,13 +74,14 @@ environment, or imported authoring. Explicit directory-import path overrides
 remain supported. This is evaluation-time source discovery, not a Restore
 snapshot or permission for arbitrary ancestor searches during construction.
 
-Build automatically supplies a fixed machine context: `MSBuildGraphHostOS`
-and `MSBuildGraphHostArchitecture`. Existing `IsOSPlatform` and
-`RuntimeInformation.ProcessArchitecture` expressions read those captured values,
-including normal enum formatting, rather than querying the machine again.
+Build automatically supplies a fixed machine context: `MSBuildGraphHostOS`,
+`MSBuildGraphHostArchitecture` and `MSBuildGraphHostRuntimeIdentifier`. Existing
+`IsOSPlatform`, `RuntimeInformation.ProcessArchitecture` and
+`RuntimeInformation.RuntimeIdentifier` expressions read those captured values,
+including normal enum/string formatting, rather than querying the machine again.
 Explicit global overrides are supported, but project authoring cannot mutate the
 context. These values describe the construction process, not target architecture
-or a remote executor, and both participate in graph identity. See the
+or a remote executor, and all three participate in graph identity. See the
 [machine-context contract](../src/msbuild/documentation/specs/proposed/hardened-static-graph.md#captured-construction-platform).
 
 Projects may retain `TargetFrameworks` when both invocations select an inner
@@ -226,9 +227,10 @@ the workload calculation still needs explicit prepared version inputs eventually
 Runtime now imports `eng/wasm/WasmToolCache.props` early only for WebAssembly
 targets. Explicit host-side acquisition/provisioning consumers import those
 inputs at their use sites; ordinary libraries no longer probe `.git`, read
-WebAssembly tool versions or enable wasmtime provisioning. The next blocker is
-`eng/RuntimeIdentifier.props` querying `RuntimeInformation.RuntimeIdentifier`,
-which needs explicit captured host-RID context.
+WebAssembly tool versions or enable wasmtime provisioning.
+`eng/RuntimeIdentifier.props` now evaluates unchanged against captured host-RID
+context. The next blocker is runtime's root `Directory.Build.props` using
+`Path.GetFullPath` to classify generator-project directories.
 Preparation and the failed graph attempt both produce zero DLLs. Tool scheduling
 has not yet been reached. No runtime library graph, compilation or independent
 execution is established.
