@@ -145,6 +145,15 @@ portable PDBs across relocated checkouts.
 Select a runtime-only host to check that the app does not require an installed
 SDK.
 
+The runtime WebAssembly-cache authoring has a separate evaluation-only regression:
+
+```sh
+dotnet msbuild src/runtime/eng/wasm/tests/WasmToolCache.proj -bl:{}
+```
+
+It checks native-library isolation, browser/WASI inputs and explicit host-side
+tool consumers without provisioning tools or compiling runtime products.
+
 ## Current limitations
 
 Hardened NuGet classification supports the `PackageReference` style when it is
@@ -214,8 +223,12 @@ locally to defer workload SDK-version calculations until their consumers run,
 removing the unconditional `global.json` read from `eng/Versions.props`.
 This unblocks ordinary library evaluation, not hardened workload construction;
 the workload calculation still needs explicit prepared version inputs eventually.
-The next blocker is `eng/wasm/WasmToolCache.props` probing `.git` through
-`File.Exists` to discover a shared tool-cache anchor.
+Runtime now imports `eng/wasm/WasmToolCache.props` early only for WebAssembly
+targets. Explicit host-side acquisition/provisioning consumers import those
+inputs at their use sites; ordinary libraries no longer probe `.git`, read
+WebAssembly tool versions or enable wasmtime provisioning. The next blocker is
+`eng/RuntimeIdentifier.props` querying `RuntimeInformation.RuntimeIdentifier`,
+which needs explicit captured host-RID context.
 Preparation and the failed graph attempt both produce zero DLLs. Tool scheduling
 has not yet been reached. No runtime library graph, compilation or independent
 execution is established.

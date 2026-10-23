@@ -25,8 +25,8 @@
            * every git worktree of the same repo shares one copy (no per-worktree re-download), and
            * it is removed when the repo is deleted (unlike a user-global cache).
          A git worktree has a '.git' FILE containing 'gitdir: <main>/.git/worktrees/<name>'; a normal
-         clone has a '.git' DIRECTORY. This is derived by plain file I/O (no 'git' process) so it is
-         cheap enough to evaluate for every project. Only an ABSOLUTE gitdir is trusted as the main
+         clone has a '.git' DIRECTORY. The lookup uses plain file I/O (no 'git' process) and is
+         evaluated only by WebAssembly tool consumers. Only an ABSOLUTE gitdir is trusted as the main
          checkout; a relative gitdir (git relative-worktrees) or a non-git checkout falls back to
          $(RepoRoot). The native helpers eng/wasm/wasm-tool-cache.{sh,cmd} apply the identical rule
          so provisioning and lookup can never disagree. -->
@@ -73,5 +73,14 @@
 
     <WasmtimeCacheDir>$([MSBuild]::NormalizeDirectory('$(WasmToolCacheDir)', 'wasmtime', '$(WasmtimeVersion)-$(WasmToolHostRid)'))</WasmtimeCacheDir>
     <WasmtimeStampFile>$([MSBuild]::NormalizePath('$(WasmToolCacheDir)', 'wasmtime', '$(WasmtimeVersion)-$(WasmToolHostRid).complete'))</WasmtimeStampFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Overriding with a local wasmtime is disabled for now: https://github.com/dotnet/runtime/issues/101528
+    <WasmtimeDir Condition="'$(WasmtimeDir)' == '' and '$(WASMTIME_PATH)' != '' and Exists('$(WASMTIME_PATH)')">$([MSBuild]::EnsureTrailingSlash('$(WASMTIME_PATH)'))</WasmtimeDir>
+    -->
+    <WasmtimeDir Condition="'$(WasmtimeDir)' == ''">$(WasmtimeCacheDir)</WasmtimeDir>
+    <InstallWasmtimeForTests Condition="'$(InstallWasmtimeForTests)' == '' and !Exists('$(WasmtimeStampFile)')">true</InstallWasmtimeForTests>
+    <_ImportedWasmToolCacheProps>true</_ImportedWasmToolCacheProps>
   </PropertyGroup>
 </Project>

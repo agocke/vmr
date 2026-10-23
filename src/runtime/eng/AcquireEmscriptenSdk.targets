@@ -10,6 +10,8 @@
   bump provisions a fresh entry and every clone and git worktree on the machine shares one copy.
 -->
 <Project>
+  <Import Project="$(MSBuildThisFileDirectory)wasm/WasmToolCache.props" Condition="'$(_ImportedWasmToolCacheProps)' != 'true'" />
+
   <PropertyGroup>
     <!-- The emsdk package IDs contain the Emscripten version and the RID, so there is no stable ID to track
          their version by. Use the payload-free Internal package instead, which emsdk versions identically to

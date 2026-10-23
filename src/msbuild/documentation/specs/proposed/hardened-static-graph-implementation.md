@@ -452,6 +452,8 @@ projects; choosing the older framework does not make those dependencies optional
   preserving ordinary layout and explicit overrides.
 - [x] Import upstream workload-version deferral to avoid unrelated JSON reads
   during ordinary library evaluation.
+- [x] Scope WebAssembly cache discovery to WebAssembly targets and explicit
+  host-side tool consumers, rather than every managed library.
 - [ ] Replace workload-version file reads with explicit inputs before constructing
   workload actions.
 - [x] Reprobe the real closure and identify the live-tool prebuild dependency.
@@ -582,8 +584,19 @@ band `12.0.100` and prerelease band `12.0.100-alpha.1`.
 This is an interim unblock for library evaluation, not a hardened workload adapter:
 the deferred target still performs file I/O and needs explicit version inputs
 before it can participate in workload graph construction.
-The next failure is `eng/wasm/WasmToolCache.props`' `File.Exists` probe of `.git`
-while discovering the main-checkout anchor for shared WebAssembly tool caches.
+The root cache import is now conditional on `TargetsWasm`; host-side Emscripten,
+WASI SDK and browser/wasmtime provisioning targets import the cache explicitly
+when used. A shared import guard preserves single evaluation when consumers
+overlap. Wasmtime defaults live with the cache inputs, so native libraries do not
+discover cache anchors, read WebAssembly version files or enable provisioning.
+The [evaluation fixture](../../../../runtime/eng/wasm/tests/WasmToolCache.proj)
+checks native-library isolation, browser/WASI targets and individual/combined
+host-side consumers without acquiring tools. Eight cases pass; the seven
+WebAssembly/host-consumer profiles retain all 126 queried prior input values.
+Ordinary preparation of the real library leaves the cache and wasmtime inputs
+empty. The next failure is `eng/RuntimeIdentifier.props` querying
+`RuntimeInformation.RuntimeIdentifier`; this needs explicit captured host-RID
+context, not ambient lookup.
 Preparation and the failed graph attempt both produce zero DLLs.
 Generated-tool binding has not yet been reached.
 No runtime library graph, compilation, or independent execution is proven.

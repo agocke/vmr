@@ -1,9 +1,10 @@
 <!--
   Acquires wasmtime into the shared cache described in eng/wasm/WasmToolCache.props.
   $(WasmtimeVersion), $(WasmtimeCacheDir) and $(WasmtimeStampFile) are defined there, and
-  $(WasmtimeDir) is resolved in Directory.Build.props.
+  $(WasmtimeDir) is resolved there as well.
 -->
 <Project>
+  <Import Project="$(MSBuildThisFileDirectory)../wasm/WasmToolCache.props" Condition="'$(_ImportedWasmToolCacheProps)' != 'true'" />
 
   <PropertyGroup>
     <_WasmtimeOS>linux</_WasmtimeOS>

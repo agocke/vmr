@@ -9,6 +9,8 @@
   by version and host RID. $(WasiSdkVersion) is defined there.
 -->
 <Project>
+  <Import Project="$(MSBuildThisFileDirectory)wasm/WasmToolCache.props" Condition="'$(_ImportedWasmToolCacheProps)' != 'true'" />
+
   <PropertyGroup>
     <_WasiSdkMajorVersion>$(WasiSdkVersion.Split('.')[0])</_WasiSdkMajorVersion>
     <_WasiSdkOS>linux</_WasiSdkOS>

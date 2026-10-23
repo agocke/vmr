@@ -170,17 +170,8 @@
     <WasmCommonTargetsPath>$([MSBuild]::NormalizeDirectory($(WasmProjectRoot), 'build'))</WasmCommonTargetsPath>
   </PropertyGroup>
 
-  <!-- Shared cache locations for externally acquired wasm tools. Needs $(BrowserProjectRoot),
-       $(WasiProjectRoot) and $(ArtifactsDir) from above. -->
-  <Import Project="$(RepositoryEngineeringDir)wasm\WasmToolCache.props" />
-
-  <PropertyGroup>
-    <!-- Overriding with a local wasmtime is disabled for now: https://github.com/dotnet/runtime/issues/101528
-    <WasmtimeDir Condition="'$(WasmtimeDir)' == '' and '$(WASMTIME_PATH)' != '' and Exists('$(WASMTIME_PATH)')">$([MSBuild]::EnsureTrailingSlash('$(WASMTIME_PATH)'))</WasmtimeDir>
-    -->
-    <WasmtimeDir Condition="'$(WasmtimeDir)' == ''">$(WasmtimeCacheDir)</WasmtimeDir>
-    <InstallWasmtimeForTests Condition="'$(InstallWasmtimeForTests)' == '' and !Exists('$(WasmtimeStampFile)')">true</InstallWasmtimeForTests>
-  </PropertyGroup>
+  <!-- WebAssembly targets need cache inputs early; host-side provisioning imports them at its use site. -->
+  <Import Project="$(RepositoryEngineeringDir)wasm\WasmToolCache.props" Condition="'$(TargetsWasm)' == 'true'" />
 
   <PropertyGroup Condition="'$(DotNetBuildMonoCrossAOT)' == 'true'">
     <BuildMonoAOTCrossCompilerOnly>true</BuildMonoAOTCrossCompilerOnly>

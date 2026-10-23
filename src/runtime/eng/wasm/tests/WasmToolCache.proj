@@ -1,0 +1,44 @@
+<Project DefaultTargets="Test">
+  <Import Project="../../../Directory.Build.props" />
+
+  <PropertyGroup>
+    <_RootImportedWasmToolCache>$(_ImportedWasmToolCacheProps)</_RootImportedWasmToolCache>
+    <_RootWasmToolGitPath>$(_WasmToolGitPath)</_RootWasmToolGitPath>
+    <_RootWasmtimeDir>$(WasmtimeDir)</_RootWasmtimeDir>
+    <_RootInstallWasmtimeForTests>$(InstallWasmtimeForTests)</_RootInstallWasmtimeForTests>
+  </PropertyGroup>
+
+  <Import Project="../../AcquireEmscriptenSdk.targets" Condition="'$(ToolCacheConsumer)' == 'emscripten' or '$(ToolCacheConsumer)' == 'combined'" />
+  <Import Project="../../AcquireWasiSdk.targets" Condition="'$(ToolCacheConsumer)' == 'wasi' or '$(ToolCacheConsumer)' == 'combined'" />
+  <Import Project="../../testing/wasm-provisioning.targets" Condition="'$(ToolCacheConsumer)' == 'browser' or '$(ToolCacheConsumer)' == 'combined'" />
+  <Import Project="../../testing/wasi-provisioning.targets" Condition="'$(ToolCacheConsumer)' == 'wasmtime' or '$(ToolCacheConsumer)' == 'combined'" />
+
+  <Target Name="Restore" />
+  <Target Name="Test">
+    <ItemGroup>
+      <_WasmTarget Include="browser;wasi" />
+      <_HostToolConsumer Include="emscripten;wasi;browser;wasmtime;combined" />
+    </ItemGroup>
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="CheckWasmToolCache"
+             Properties="TargetOS=$(HostOS);TargetArchitecture=$(BuildArchitecture);ToolCacheConsumer=" />
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="CheckWasmToolCache"
+             Properties="TargetOS=%(_WasmTarget.Identity);TargetArchitecture=wasm;ToolCacheConsumer=" />
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="CheckWasmToolCache"
+             Properties="TargetOS=$(HostOS);TargetArchitecture=$(BuildArchitecture);ToolCacheConsumer=%(_HostToolConsumer.Identity)" />
+  </Target>
+  <Target Name="CheckWasmToolCache">
+    <Error Condition="'$(TargetsWasm)' != 'true' and
+                      ('$(_RootImportedWasmToolCache)' != '' or '$(_RootWasmToolGitPath)' != '' or
+                       '$(_RootWasmtimeDir)' != '' or '$(_RootInstallWasmtimeForTests)' != '')"
+           Text="Non-WebAssembly projects must not discover tool caches or enable wasmtime provisioning." />
+    <Error Condition="('$(TargetsWasm)' == 'true' or '$(ToolCacheConsumer)' != '') and
+                      ('$(_ImportedWasmToolCacheProps)' != 'true' or '$(WasmToolCacheDir)' == '' or
+                       '$(EmscriptenVersion)' == '' or '$(WasiSdkVersion)' == '' or '$(WasmtimeVersion)' == '' or
+                       '$(EmscriptenSdkStampFile)' == '' or '$(WasiSdkStampFile)' == '' or '$(WasmtimeStampFile)' == '' or
+                       '$(WasmtimeDir)' != '$(WasmtimeCacheDir)')"
+           Text="WebAssembly builds and explicit host-side consumers must initialize versioned tool-cache inputs." />
+    <Error Condition="'$(TargetsWasm)' != 'true' and '$(ToolCacheConsumer)' == '' and '$(_ImportedWasmToolCacheProps)' != ''"
+           Text="Ordinary libraries must leave WebAssembly discovery uninitialized." />
+    <Message Importance="high" Text="WebAssembly tool-cache inputs passed: $(TargetOS)/$(TargetArchitecture), consumer=$(ToolCacheConsumer)" />
+  </Target>
+</Project>

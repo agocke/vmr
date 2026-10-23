@@ -1,4 +1,6 @@
 <Project>
+  <Import Project="$(MSBuildThisFileDirectory)../wasm/WasmToolCache.props" Condition="'$(_ImportedWasmToolCacheProps)' != 'true'" />
+
   <PropertyGroup>
     <!--
       Set ChromeChannel properties to get the latest versions
