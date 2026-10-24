@@ -3,6 +3,32 @@
 
   <!-- TODO: Remove Architecture="*" on Runtime="NET" UsingTask declarations below when https://github.com/dotnet/msbuild/issues/13739 is fixed and a new msbuild is consumed with the fix. -->
   <UsingTask TaskName="ChooseBestP2PTargetFrameworkTask" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="ChooseBestP2PTargetFrameworkFromInputs" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" />
+  <UsingTask TaskName="WriteTargetFrameworkInputs" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" />
+
+  <PropertyGroup>
+    <TargetFrameworkInputsPath Condition="'$(TargetFrameworkInputsPath)' == ''">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(MSBuildProjectExtensionsPath)', 'targetframeworkinputs', '$(Configuration)', '$(Platform)', '$(TargetFramework)', '$(MSBuildProjectFile).g.props'))</TargetFrameworkInputsPath>
+    <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_CaptureTargetFrameworkInputs</MSBuildPrepareGraphInputsDependsOn>
+  </PropertyGroup>
+
+  <Import Project="$(TargetFrameworkInputsPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+
+  <Target Name="_CaptureTargetFrameworkInputs"
+          Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(_MSBuildPreparingGraphInputs)' == 'true'">
+    <WriteTargetFrameworkInputs
+      RuntimeGraph="$([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))"
+      OutputFile="$(TargetFrameworkInputsPath)" />
+  </Target>
+
+  <Target Name="_ValidateTargetFrameworkInputs" Condition="'$(MSBuildHardenedGraph)' == 'true'">
+    <PropertyGroup>
+      <_CurrentTargetFrameworkRuntimeGraphPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', $([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))))</_CurrentTargetFrameworkRuntimeGraphPath>
+    </PropertyGroup>
+    <Error Condition="'$(_TargetFrameworkInputsVersion)' != '1' or '$(_TargetFrameworkInputsRuntimeGraphContents)' == '' or
+                      '$(_TargetFrameworkInputsRuntimeGraphPath)' != '$(_CurrentTargetFrameworkRuntimeGraphPath)'"
+           Text="Target-framework inputs are missing or incompatible. Run Restore with MSBuildRestoreGraphInputs=true and the same configured runtime graph."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
   
   <!--
     Runs in a leaf project (csproj) to determine best configuration for ProjectReferences.
@@ -12,7 +38,7 @@
   <Target Name="ResolveP2PReferences"
           Condition="'@(ProjectReference)' != ''"
           BeforeTargets="AssignProjectConfiguration"
-          DependsOnTargets="ResolvePackageDependenciesForBuild;_AddOutputPathToGlobalPropertiesToRemove">
+          DependsOnTargets="ResolvePackageDependenciesForBuild;_AddOutputPathToGlobalPropertiesToRemove;_ValidateTargetFrameworkInputs">
     <!--
       Select the moniker to send to each project reference  if not already set. NugetTargetMoniker (NTM) is preferred by default over
       TargetFrameworkMoniker (TFM) because it is required to disambiguate the UWP case where TFM is fixed at .NETCore,Version=v5.0 and
@@ -54,7 +80,8 @@
       <Output TaskParameter="TargetOutputs" ItemName="_ProjectReferenceWithTargetFrameworks" />
     </MSBuild>
 
-    <ChooseBestP2PTargetFrameworkTask AnnotatedProjectReferences="@(_ProjectReferenceWithTargetFrameworks)"
+    <ChooseBestP2PTargetFrameworkTask Condition="'$(MSBuildHardenedGraph)' != 'true'"
+                                      AnnotatedProjectReferences="@(_ProjectReferenceWithTargetFrameworks)"
                                       CurrentProjectTargetFramework="$(ReferringTargetFrameworkForProjectReferences)"
                                       CurrentProjectTargetPlatform="$(TargetPlatformMoniker)"
                                       RuntimeGraph="$([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))"
@@ -62,10 +89,24 @@
       <Output TaskParameter="AssignedProjects" ItemName="AnnotatedProjects" />
     </ChooseBestP2PTargetFrameworkTask>
 
+    <ChooseBestP2PTargetFrameworkFromInputs Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                                          AnnotatedProjectReferences="@(_ProjectReferenceWithTargetFrameworks)"
+                                          CurrentProjectTargetFramework="$(ReferringTargetFrameworkForProjectReferences)"
+                                          CurrentProjectTargetPlatform="$(TargetPlatformMoniker)"
+                                          RuntimeGraphContents="$(_TargetFrameworkInputsRuntimeGraphContents)"
+                                          OmitIncompatibleProjectReferences="$(OmitIncompatibleProjectReferences)"
+                                          DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="AssignedProjects" ItemName="AnnotatedProjects" />
+    </ChooseBestP2PTargetFrameworkFromInputs>
+
     <!-- IsRidAgnostic metadata is used to determine whether global properties such as RuntimeIdentifier and SelfContained flow to a referenced project.
          However, for multi-targeted projects there may be a different IsRidAgnostic value for each TargetFramework.  In that case, this task selects
          the IsRidAgnostic value for the NearestTargetFramework for the project. -->
-    <SetRidAgnosticValueForProjects Projects="@(AnnotatedProjects)">
+    <SetRidAgnosticValueForProjects Condition="'$(MSBuildHardenedGraph)' != 'true'" Projects="@(AnnotatedProjects)">
+      <Output ItemName="UpdatedAnnotatedProjects" TaskParameter="UpdatedProjects" />
+    </SetRidAgnosticValueForProjects>
+    <SetRidAgnosticValueForProjects Condition="'$(MSBuildHardenedGraph)' == 'true'" Projects="@(AnnotatedProjects)"
+                                   DeclaredInputs="" DeclaredOutputs="">
       <Output ItemName="UpdatedAnnotatedProjects" TaskParameter="UpdatedProjects" />
     </SetRidAgnosticValueForProjects>
     

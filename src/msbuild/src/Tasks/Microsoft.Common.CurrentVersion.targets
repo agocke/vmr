@@ -6015,9 +6015,10 @@ Copyright (C) Microsoft Corporation. All rights reserved.
              Properties="MSBuildRestoreGraphInputs=false;EnableFrameworkReferenceFetchManifest=false"
              RemoveProperties="TargetFramework"
              BuildInParallel="false" />
+    <!-- Capture must import restored package authoring rather than Restore's suppressed extensions. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"
              Targets="$(_MSBuildGraphInputsCaptureTarget)"
-             Properties="_MSBuildCapturingGraphInputs=true"
+             Properties="_MSBuildCapturingGraphInputs=true;MSBuildIsRestoring=false"
              BuildInParallel="false" />
   </Target>
 

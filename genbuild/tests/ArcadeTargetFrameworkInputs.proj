@@ -1,0 +1,108 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <!-- Copies named Nearest, Platform, Bypass and Incompatible act only as metadata providers. -->
+    <_IsArcadeInputParent Condition="'$(MSBuildProjectName)' == 'ArcadeTargetFrameworkInputs'">true</_IsArcadeInputParent>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+    <TargetFramework Condition="'$(_IsArcadeInputParent)' == 'true' and '$(TargetFramework)' == ''">net11.0-linux</TargetFramework>
+    <TargetFrameworkMoniker>.NETCoreApp,Version=v11.0</TargetFrameworkMoniker>
+    <TargetPlatformMoniker>linux,Version=0.0</TargetPlatformMoniker>
+    <MSBuildProjectExtensionsPath>obj/</MSBuildProjectExtensionsPath>
+    <BundledRuntimeIdentifierGraphFile>$(MSBuildProjectDirectory)/runtime.json</BundledRuntimeIdentifierGraphFile>
+    <EnableBinPlacing>false</EnableBinPlacing>
+    <TestCase Condition="'$(TestCase)' == ''">baseline</TestCase>
+    <OmitIncompatibleProjectReferences Condition="'$(TestCase)' == 'omit'">true</OmitIncompatibleProjectReferences>
+  </PropertyGroup>
+  <Import Project="$(ArcadeTargetFrameworkDirectory)/build/Microsoft.DotNet.Build.Tasks.TargetFramework.props"
+          Condition="'$(_IsArcadeInputParent)' == 'true'" />
+  <Import Project="$(ArcadeTargetFrameworkDirectory)/build/Microsoft.DotNet.Build.Tasks.TargetFramework.targets"
+          Condition="'$(_IsArcadeInputParent)' == 'true'" />
+
+  <ItemGroup Condition="'$(_IsArcadeInputParent)' == 'true'">
+    <ProjectReference Include="Nearest.proj;Platform.proj">
+      <SetConfiguration>Configuration=Release</SetConfiguration>
+      <SetPlatform>Platform=x64</SetPlatform>
+      <AdditionalProperties>PreparationMarker=child</AdditionalProperties>
+      <GlobalPropertiesToRemove>ParentOnlyProperty</GlobalPropertiesToRemove>
+      <UndefineProperties>ExistingUndefined</UndefineProperties>
+      <Payload>literal%3Bvalue%25</Payload>
+    </ProjectReference>
+    <ProjectReference Include="Bypass.proj" SetTargetFramework="TargetFramework=net8.0" Payload="bypass" />
+    <ProjectReference Include="Incompatible.proj"
+                      Condition="'$(TestCase)' == 'omit' or '$(TestCase)' == 'incompatible'"
+                      SetConfiguration="Configuration=Release" SetPlatform="Platform=x64"
+                      AdditionalProperties="PreparationMarker=child" GlobalPropertiesToRemove="ParentOnlyProperty" />
+  </ItemGroup>
+
+  <Target Name="ResolvePackageDependenciesForBuild" />
+  <Target Name="_AddOutputPathToGlobalPropertiesToRemove" />
+  <Target Name="Restore" DependsOnTargets="_CaptureTargetFrameworkInputs" Condition="'$(_IsArcadeInputParent)' == 'true'" />
+  <Target Name="Ordinary" DependsOnTargets="Restore;Build" />
+
+  <Target Name="GetTargetFrameworks" Returns="@(_ChildFrameworkInfo)">
+    <Error Condition="'$(MSBuildProjectName)' == 'Bypass'"
+           Text="An explicit SetTargetFramework must bypass GetTargetFrameworks."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(Configuration)' != 'Release' or '$(Platform)' != 'x64' or '$(PreparationMarker)' != 'child' or
+                      '$(ParentOnlyProperty)' != '' or '$(TargetFramework)' != ''"
+           Text="Arcade framework queries must preserve configured reference properties and removals."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <ItemGroup>
+      <_ChildFrameworkInfo Include="$(MSBuildProjectFullPath)">
+        <TargetFrameworks Condition="'$(MSBuildProjectName)' == 'Nearest'">net9.0;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(MSBuildProjectName)' == 'Platform'">net10.0-unix;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(MSBuildProjectName)' == 'Incompatible'">net12.0</TargetFrameworks>
+        <HasSingleTargetFramework>false</HasSingleTargetFramework>
+        <IsRidAgnostic>true;false</IsRidAgnostic>
+        <IsRidAgnostic Condition="'$(MSBuildProjectName)' == 'Nearest' and '$(TestCase)' == 'omit'">false;true</IsRidAgnostic>
+        <ChildConfiguration>$(Configuration)|$(Platform)|$(PreparationMarker)</ChildConfiguration>
+      </_ChildFrameworkInfo>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="Build" DependsOnTargets="ResolveP2PReferences" Condition="'$(_IsArcadeInputParent)' == 'true'">
+    <ItemGroup>
+      <_Nearest Include="@(ProjectReference)" Condition="'%(ProjectReference.Filename)' == 'Nearest'" />
+      <_Platform Include="@(ProjectReference)" Condition="'%(ProjectReference.Filename)' == 'Platform'" />
+      <_Bypass Include="@(ProjectReference)" Condition="'%(ProjectReference.Filename)' == 'Bypass'" />
+      <_Negotiated Include="@(_Nearest);@(_Platform)" />
+    </ItemGroup>
+    <Error Condition="'@(ProjectReference->Count())' != '3' or '@(_Nearest->Count())' != '1' or
+                      '@(_Platform->Count())' != '1' or '@(_Bypass->Count())' != '1'"
+           Text="Selection must retain exactly the two compatible references and the explicit bypass, omitting incompatible references only when requested."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'%(_Nearest.NearestTargetFramework)' != 'net10.0' or '%(_Nearest.SetTargetFramework)' != 'TargetFramework=net10.0' or
+                      '%(_Nearest.TargetFrameworks)' != 'net9.0;net10.0'"
+           Text="Nearest framework selection must choose net10.0 from the multi-TFM reference."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="('$(TestCase)' != 'omit' and ('%(_Nearest.IsRidAgnostic)' != 'false' or '%(_Nearest.UndefineProperties)' != 'ExistingUndefined')) or
+                      ('$(TestCase)' == 'omit' and ('%(_Nearest.IsRidAgnostic)' != 'true' or '%(_Nearest.UndefineProperties)' != 'ExistingUndefined;RuntimeIdentifier;SelfContained'))"
+           Text="Nearest framework selection must use its corresponding multi-TFM IsRidAgnostic entry for both true and false values."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'%(_Platform.NearestTargetFramework)' != 'net10.0-unix' or
+                      '%(_Platform.SetTargetFramework)' != 'TargetFramework=net10.0-unix' or
+                      '%(_Platform.TargetFrameworks)' != 'net10.0-unix;net10.0' or '%(_Platform.IsRidAgnostic)' != 'true' or
+                      '%(_Platform.UndefineProperties)' != 'ExistingUndefined;RuntimeIdentifier;SelfContained'"
+           Text="Platform fallback must match ordinary NuGet selection of net10.0-unix and its corresponding RID metadata."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'%(_Negotiated.Payload)' != 'literal;value%' or
+                      '%(_Negotiated.SetConfiguration)' != 'Configuration=Release' or '%(_Negotiated.SetPlatform)' != 'Platform=x64' or
+                      '%(_Negotiated.AdditionalProperties)' != 'PreparationMarker=child' or
+                      !$([System.String]::Copy(';%(_Negotiated.GlobalPropertiesToRemove);').Contains(';ParentOnlyProperty;')) or
+                      '%(_Negotiated.ChildConfiguration)' != 'Release|x64|child' or '%(_Negotiated.SkipGetTargetFrameworkProperties)' != 'true'"
+           Text="Selection must preserve reference payloads, configured queries and the SDK bypass: %(_Negotiated.Filename), Payload=[%(_Negotiated.Payload)], SetConfiguration=[%(_Negotiated.SetConfiguration)], SetPlatform=[%(_Negotiated.SetPlatform)], AdditionalProperties=[%(_Negotiated.AdditionalProperties)], GlobalPropertiesToRemove=[%(_Negotiated.GlobalPropertiesToRemove)], ChildConfiguration=[%(_Negotiated.ChildConfiguration)], SkipGetTargetFrameworkProperties=[%(_Negotiated.SkipGetTargetFrameworkProperties)]."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'%(_Bypass.SetTargetFramework)' != 'TargetFramework=net8.0' or '%(_Bypass.NearestTargetFramework)' != '' or
+                      '%(_Bypass.SkipGetTargetFrameworkProperties)' != 'true' or '%(_Bypass.Payload)' != 'bypass'"
+           Text="Explicit SetTargetFramework metadata must remain untouched."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <PropertyGroup>
+      <_ResultGraphPath Condition="'$(MSBuildHardenedGraph)' != 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', $([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))))</_ResultGraphPath>
+      <_ResultGraphContents Condition="'$(MSBuildHardenedGraph)' != 'true'">$([System.IO.File]::ReadAllText('$(_ResultGraphPath)'))</_ResultGraphContents>
+      <_ResultGraphContents Condition="'$(MSBuildHardenedGraph)' == 'true'">$(_TargetFrameworkInputsRuntimeGraphContents)</_ResultGraphContents>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(ResultFile)" Overwrite="true"
+                      Lines="@(ProjectReference->'%(Filename)|%(NearestTargetFramework)|%(TargetFrameworks)|%(HasSingleTargetFramework)|%(IsRidAgnostic)|%(SetTargetFramework)|%(UndefineProperties)|%(SetConfiguration)|%(SetPlatform)|%(AdditionalProperties)|%(GlobalPropertiesToRemove)|%(Payload)|%(ChildConfiguration)|%(SkipGetTargetFrameworkProperties)');graph=$(_ResultGraphContents)"
+                      DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+  </Target>
+</Project>

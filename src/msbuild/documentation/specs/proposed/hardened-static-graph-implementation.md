@@ -470,6 +470,8 @@ projects; choosing the older framework does not make those dependencies optional
   project directory, preserving generator/source classification.
 - [x] Capture the configured framework-discovery requests reached by reference
   negotiation, retaining required prepared-fact imports for those evaluations.
+- [x] Separate Arcade P2P runtime-graph acquisition from construction-time
+  framework selection, retaining NuGet's runtime/platform fallback policy.
 - [ ] Replace workload-version file reads with explicit inputs before constructing
   workload actions.
 - [x] Reprobe the real closure and identify the live-tool prebuild dependency.
@@ -501,7 +503,9 @@ framework negotiation do not import inner-build snapshots.
 
 Each selected configuration gets an ordinary Restore without an inherited global
 `TargetFramework`, followed by a distinct capture evaluation that imports the
-newly restored package targets. Local snapshot capture precedes
+newly restored package targets. Capture explicitly clears `MSBuildIsRestoring`;
+otherwise Common suppresses NuGet-generated props/targets and their capture hooks.
+The preparation marker and product/tool build guard remain enabled. Local snapshot capture precedes
 `PrepareProjectReferences`; its negotiated items, including additional/removed
 global-property metadata, drive recursive child preparation. This avoids treating
 NuGet's path-only restore closure as the configured Build closure.
@@ -652,10 +656,29 @@ A regression captures an absent task DLL, validates its earlier producer edge,
 and executes it through Ninja with literal arguments, metadata, and typed values
 matching ordinary execution. Invalid implementation contracts and parameter types
 fail in the executor; empty-footprint tasks remain audited during construction.
-The runtime probe's first reported blockers are missing explicit footprints on
-Arcade's `ChooseBestP2PTargetFrameworkTask` and `SetRidAgnosticValueForProjects`
-calls. Audit and adapt those construction-time negotiation tasks next.
-Preparation and the failed graph attempt produce zero DLLs and publish no library graph.
+Arcade's file-backed chooser now shares selection with an audited in-memory
+`ChooseBestP2PTargetFrameworkFromInputs`. Configured preparation captures the
+selected runtime-graph JSON, not project-reference winners. Required
+`targetframeworkinputs` imports supply that data during construction; the existing
+NuGet matching algorithm still selects among current framework/platform and
+reference metadata. `SetRidAgnosticValueForProjects` already has an audited
+empty-footprint implementation; its hardened call now supplies both declarations.
+The [packaged fixtures](../../../../../genbuild/tests/ArcadeTargetFrameworkInputs.proj)
+compare ordinary and hardened metadata, runtime/platform fallback, omission,
+explicit framework overrides, configured queries and literal JSON. They also
+cover missing/incompatible inputs, replay with the original JSON absent, and
+[automatic capture through real NuGet package imports](../../../../../genbuild/tests/ArcadeTargetFrameworkPackage.csproj).
+Both the ordinary Arcade task project and selected-source component build, and
+the complete SDK-free packaged smoke passes.
+
+The real probe explicitly selects an isolated local task package and the
+prototype's packaged `CSharpCoreTargetsPath`. Without that compiler-target
+binding, runtime's compiler package replaces the prototype integration authoring.
+Restore now captures five Arcade input files and produces zero DLLs. Build runs
+the in-memory chooser and RID metadata task, then reaches hardened reference
+resolution's `{RawFileName}` rejection in `ILLink.RoslynAnalyzer.csproj`; a
+subsequent `Build` cycle diagnostic is not a separately established blocker.
+Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.
 Native/CoreCLR/CMake integration is later.
 

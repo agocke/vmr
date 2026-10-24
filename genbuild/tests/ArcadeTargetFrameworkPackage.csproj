@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableBinPlacing>false</EnableBinPlacing>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.Build.Tasks.TargetFramework"
+                      Version="$(ArcadeTargetFrameworkPackageVersion)" PrivateAssets="all" />
+  </ItemGroup>
+  <Target Name="CheckArcadePackageCaptureContext" BeforeTargets="_CaptureTargetFrameworkInputs"
+          Condition="'$(_MSBuildPreparingGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
+    <Error Condition="'$(_MSBuildCapturingGraphInputs)' != 'true' or '$(MSBuildIsRestoring)' != 'false' or
+                      '$(DotNetBuildTasksTargetFrameworkAssembly)' == ''"
+           Text="Fresh SDK capture must import restored Arcade package props and targets without Restore's extension suppression."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+</Project>

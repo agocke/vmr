@@ -23,6 +23,7 @@
     <CallTarget Targets="TestNuGetSdkResolution" />
     <CallTarget Targets="TestDirectoryImports" />
     <CallTarget Targets="TestArcadeLayout" />
+    <CallTarget Targets="TestArcadeTargetFrameworkInputs" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -128,6 +129,146 @@
     <Error Condition="$([System.IO.File]::ReadAllText('%(_ArcadeLayoutCase.Root)ordinary.txt')) != $([System.IO.File]::ReadAllText('%(_ArcadeLayoutCase.Root)graph.txt'))"
            Text="Source Arcade layout paths, including trailing separators, must match ordinary execution (%(_ArcadeLayoutCase.Identity))." />
     <Message Importance="high" Text="Source Arcade layout smoke checks passed: AnyCPU, x64, explicit base paths, graph-only construction and ordinary-equivalent Ninja output. $(_ArcadeLayoutRoot)" />
+  </Target>
+  <Target Name="TestArcadeTargetFrameworkInputs">
+    <PropertyGroup>
+      <_ArcadeInputsRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'arcade-targetframework-inputs'))</_ArcadeInputsRoot>
+      <_ArcadeInputsPackage>$([MSBuild]::NormalizeDirectory('$(_AppDirectory)', 'toolset/Arcade/TargetFramework'))</_ArcadeInputsPackage>
+      <_ArcadeInputsArguments>-p:ArcadeTargetFrameworkDirectory=&quot;$(_ArcadeInputsPackage)&quot; -p:TargetFramework=net11.0-linux -p:PreparationMarker=parent -p:ParentOnlyProperty=parent -p:ArcadeInputPoison=EXPANDED</_ArcadeInputsArguments>
+      <_ArcadeInputsBaselineRoot>$(_ArcadeInputsRoot)baseline/</_ArcadeInputsBaselineRoot>
+      <_ArcadeInputsBaselineArguments>$(_ArcadeInputsArguments) -p:Configuration=Debug -p:Platform=AnyCPU -p:RuntimeIdentifierGraphPath=runtime.json</_ArcadeInputsBaselineArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ArcadeInputsCase Include="baseline" Configuration="Debug" Platform="AnyCPU" GraphArgument="-p:RuntimeIdentifierGraphPath=runtime.json" />
+      <_ArcadeInputsCase Include="omit" Configuration="Release" Platform="x86" />
+      <_ArcadeInputsCase Update="@(_ArcadeInputsCase)">
+        <Root>$([MSBuild]::NormalizeDirectory('$(_ArcadeInputsRoot)', '%(_ArcadeInputsCase.Identity)'))</Root>
+        <Arguments>$(_ArcadeInputsArguments) -p:TestCase=%(_ArcadeInputsCase.Identity) -p:Configuration=%(_ArcadeInputsCase.Configuration) -p:Platform=%(_ArcadeInputsCase.Platform) %(_ArcadeInputsCase.GraphArgument)</Arguments>
+        <Inputs>obj/targetframeworkinputs/%(_ArcadeInputsCase.Configuration)/%(_ArcadeInputsCase.Platform)/net11.0-linux/ArcadeTargetFrameworkInputs.proj.g.props</Inputs>
+      </_ArcadeInputsCase>
+    </ItemGroup>
+    <MakeDir Directories="%(_ArcadeInputsCase.Root)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ArcadeTargetFrameworkInputs.proj;$(MSBuildThisFileDirectory)ArcadeTargetFrameworkInputs.proj;$(MSBuildThisFileDirectory)ArcadeTargetFrameworkInputs.proj;$(MSBuildThisFileDirectory)ArcadeTargetFrameworkInputs.proj;$(MSBuildThisFileDirectory)ArcadeTargetFrameworkInputs.proj"
+          DestinationFiles="%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj;%(_ArcadeInputsCase.Root)Nearest.proj;%(_ArcadeInputsCase.Root)Platform.proj;%(_ArcadeInputsCase.Root)Bypass.proj;%(_ArcadeInputsCase.Root)Incompatible.proj" />
+    <!-- An ignored JSON field detects expression expansion and percent/semicolon corruption on replay. -->
+    <WriteLinesToFile File="%(_ArcadeInputsCase.Root)runtime.json" Overwrite="true"
+                      Lines="{&quot;runtimes&quot;:{&quot;linux&quot;:{&quot;#import&quot;:[&quot;unix&quot;]},&quot;unix&quot;:{&quot;#import&quot;:[&quot;any&quot;]},&quot;any&quot;:{}},&quot;transport&quot;:&quot;%24(ArcadeInputPoison)%253B%3B100%25done&quot;}" />
+    <Exec Command="$(_App) restore &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; -t:Restore %(_ArcadeInputsCase.Arguments) -p:MSBuildRestoreGraphInputs=false -p:_MSBuildPreparingGraphInputs=true -bl:&quot;%(_ArcadeInputsCase.Root)no-restore-flag.binlog&quot;" />
+    <Error Condition="Exists('%(_ArcadeInputsCase.Root)%(_ArcadeInputsCase.Inputs)')"
+           Text="Arcade inputs must not be captured without MSBuildRestoreGraphInputs." />
+    <Exec Command="$(_App) restore &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; -t:Restore %(_ArcadeInputsCase.Arguments) -p:MSBuildRestoreGraphInputs=true -p:_MSBuildPreparingGraphInputs=false -bl:&quot;%(_ArcadeInputsCase.Root)no-preparation-flag.binlog&quot;" />
+    <Error Condition="Exists('%(_ArcadeInputsCase.Root)%(_ArcadeInputsCase.Inputs)')"
+           Text="Arcade inputs must not be captured outside graph-input preparation." />
+    <Exec Command="$(_App) restore &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; -t:Ordinary %(_ArcadeInputsCase.Arguments) -p:_MSBuildPreparingGraphInputs=true -p:ResultFile=&quot;%(_ArcadeInputsCase.Root)ordinary.txt&quot; -bl:&quot;%(_ArcadeInputsCase.Root)ordinary.binlog&quot;" />
+    <Error Condition="!Exists('%(_ArcadeInputsCase.Root)%(_ArcadeInputsCase.Inputs)') or !Exists('%(_ArcadeInputsCase.Root)ordinary.txt')"
+           Text="Ordinary Arcade negotiation must capture configured inputs and provide the metadata oracle." />
+    <Move SourceFiles="%(_ArcadeInputsCase.Root)runtime.json" DestinationFiles="%(_ArcadeInputsCase.Root)runtime.saved.json" />
+    <Exec Command="$(_App) build &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; %(_ArcadeInputsCase.Arguments) -p:ResultFile=&quot;%(_ArcadeInputsCase.Root)graph.txt&quot; -p:MSBuildEmitActionGraph=&quot;%(_ArcadeInputsCase.Root)build.ninja&quot; -bl:&quot;%(_ArcadeInputsCase.Root)build.binlog&quot;" />
+    <Error Condition="!Exists('%(_ArcadeInputsCase.Root)build.ninja') or !Exists('%(_ArcadeInputsCase.Root)build.ninja.actions') or
+                      Exists('%(_ArcadeInputsCase.Root)graph.txt') or Exists('%(_ArcadeInputsCase.Root)runtime.json')"
+           Text="Arcade graph construction must use captured JSON without reading the live graph or executing publication actions." />
+    <Exec WorkingDirectory="%(_ArcadeInputsCase.Root)" Command="ninja -f build.ninja" />
+    <Error Condition="$([System.IO.File]::ReadAllText('%(_ArcadeInputsCase.Root)ordinary.txt')) != $([System.IO.File]::ReadAllText('%(_ArcadeInputsCase.Root)graph.txt'))"
+           Text="Ordinary and hardened Arcade selection must preserve identical framework/RID/configuration metadata and literal JSON (%(_ArcadeInputsCase.Identity))." />
+
+    <Move SourceFiles="$(_ArcadeInputsBaselineRoot)runtime.saved.json" DestinationFiles="$(_ArcadeInputsBaselineRoot)runtime.json" />
+    <Exec Command="$(_App) restore &quot;$(_ArcadeInputsBaselineRoot)ArcadeTargetFrameworkInputs.proj&quot; -t:Ordinary $(_ArcadeInputsBaselineArguments) -p:TestCase=incompatible -p:_MSBuildPreparingGraphInputs=true -p:ResultFile=&quot;$(_ArcadeInputsBaselineRoot)ordinary-incompatible.txt&quot; -bl:&quot;$(_ArcadeInputsBaselineRoot)ordinary-incompatible.binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ArcadeInputsOrdinaryIncompatibleExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_ArcadeInputsOrdinaryIncompatibleOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_ArcadeInputsOrdinaryIncompatibleLog>@(_ArcadeInputsOrdinaryIncompatibleOutput)</_ArcadeInputsOrdinaryIncompatibleLog>
+    </PropertyGroup>
+    <Error Condition="'$(_ArcadeInputsOrdinaryIncompatibleExit)' == '0' or !$(_ArcadeInputsOrdinaryIncompatibleLog.Contains('cannot be referenced')) or
+                      Exists('$(_ArcadeInputsBaselineRoot)ordinary-incompatible.txt')"
+           Text="Ordinary incompatible references must report the existing diagnostic rather than silently disappear." />
+    <Move SourceFiles="$(_ArcadeInputsBaselineRoot)runtime.json" DestinationFiles="$(_ArcadeInputsBaselineRoot)runtime.saved.json" />
+    <ItemGroup>
+      <_ArcadeInputsFailure Include="missing" Arguments="-p:TargetFrameworkInputsPath=missing.props" />
+      <_ArcadeInputsFailure Include="version" Arguments="-p:_TargetFrameworkInputsVersion=2" />
+      <_ArcadeInputsFailure Include="empty" Arguments="-p:_TargetFrameworkInputsRuntimeGraphContents=" />
+      <_ArcadeInputsFailure Include="source" Arguments="-p:RuntimeIdentifierGraphPath=other.json" />
+      <_ArcadeInputsFailure Include="incompatible" Arguments="-p:TestCase=incompatible" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_ArcadeInputsBaselineRoot)ArcadeTargetFrameworkInputs.proj&quot; $(_ArcadeInputsBaselineArguments) %(_ArcadeInputsFailure.Arguments) -p:ResultFile=&quot;$(_ArcadeInputsBaselineRoot)bad-%(_ArcadeInputsFailure.Identity).txt&quot; -p:MSBuildEmitActionGraph=&quot;$(_ArcadeInputsBaselineRoot)bad-%(_ArcadeInputsFailure.Identity).ninja&quot; -bl:&quot;$(_ArcadeInputsBaselineRoot)bad-%(_ArcadeInputsFailure.Identity).binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" ItemName="_ArcadeInputsFailureExitCodes" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_ArcadeInputsFailureOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_ArcadeInputsFailureLog>@(_ArcadeInputsFailureOutput)</_ArcadeInputsFailureLog>
+    </PropertyGroup>
+    <Error Condition="'@(_ArcadeInputsFailureExitCodes->Count())' != '5' or '%(_ArcadeInputsFailureExitCodes.Identity)' == '0'"
+           Text="Missing, unsupported, empty, wrong-source and incompatible Arcade inputs must all fail." />
+    <Error Condition="!$(_ArcadeInputsFailureLog.Contains('MSB4019')) or
+                      !$(_ArcadeInputsFailureLog.Contains('Target-framework inputs are missing or incompatible')) or
+                      !$(_ArcadeInputsFailureLog.Contains('cannot be referenced'))"
+           Text="Arcade failures must come from the required import, input validation and existing compatibility diagnostic." />
+    <Error Condition="Exists('$(_ArcadeInputsBaselineRoot)bad-%(_ArcadeInputsFailure.Identity).ninja') or
+                      Exists('$(_ArcadeInputsBaselineRoot)bad-%(_ArcadeInputsFailure.Identity).ninja.actions') or
+                      Exists('$(_ArcadeInputsBaselineRoot)bad-%(_ArcadeInputsFailure.Identity).txt')"
+           Text="Rejected Arcade inputs must not publish a graph, action directory or result (%(_ArcadeInputsFailure.Identity))." />
+    <PropertyGroup>
+      <_ArcadeSdkRoot>$(_ArcadeInputsRoot)sdk-package/</_ArcadeSdkRoot>
+      <_ArcadeSdkPackageVersion>1.0.0-smoke-$([System.Guid]::NewGuid().ToString('N'))</_ArcadeSdkPackageVersion>
+      <_ArcadeSdkInputs>$(_ArcadeSdkRoot)app/obj/targetframeworkinputs/Debug/AnyCPU/net11.0/ArcadeTargetFrameworkPackage.csproj.g.props</_ArcadeSdkInputs>
+      <_ArcadeSdkHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_ArcadeSdkHostOS>
+      <_ArcadeSdkHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_ArcadeSdkHostOS>
+      <_ArcadeSdkHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_ArcadeSdkHostOS>
+      <_ArcadeSdkHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_ArcadeSdkHostOS>
+      <_ArcadeSdkArguments>-p:DirectoryBuildPropsPath=&quot;$(_ArcadeSdkRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_ArcadeSdkRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_ArcadeSdkRoot)Directory.Packages.props&quot; -p:RestoreSources=&quot;$(_ArcadeSdkRoot)feed&quot; -p:ArcadeTargetFrameworkPackageVersion=$(_ArcadeSdkPackageVersion) -p:Configuration=Debug -p:Platform=AnyCPU -p:MSBuildGraphHostOS=$(_ArcadeSdkHostOS) -p:NuGetAudit=false</_ArcadeSdkArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_ArcadeSdkRoot)package;$(_ArcadeSdkRoot)feed;$(_ArcadeSdkRoot)app" />
+    <WriteLinesToFile File="$(_ArcadeSdkRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_ArcadeSdkRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_ArcadeSdkRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_ArcadeSdkPackageFile Include="$(_ArcadeInputsPackage)**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ArcadeSdkPackageFile)"
+          DestinationFiles="@(_ArcadeSdkPackageFile->'$(_ArcadeSdkRoot)package/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <WriteLinesToFile File="$(_ArcadeSdkRoot)package/Microsoft.DotNet.Build.Tasks.TargetFramework.nuspec" Overwrite="true"
+                      Lines="&lt;package&gt;&lt;metadata&gt;&lt;id&gt;Microsoft.DotNet.Build.Tasks.TargetFramework&lt;/id&gt;&lt;version&gt;$(_ArcadeSdkPackageVersion)&lt;/version&gt;&lt;authors&gt;genbuild&lt;/authors&gt;&lt;description&gt;Local staged Arcade capture fixture&lt;/description&gt;&lt;/metadata&gt;&lt;/package&gt;" />
+    <ZipDirectory SourceDirectory="$(_ArcadeSdkRoot)package"
+                  DestinationFile="$(_ArcadeSdkRoot)feed/Microsoft.DotNet.Build.Tasks.TargetFramework.$(_ArcadeSdkPackageVersion).nupkg" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ArcadeTargetFrameworkPackage.csproj" DestinationFolder="$(_ArcadeSdkRoot)app" />
+    <!-- No explicit capture target or preparation flag: fresh evaluation must see NuGet's generated imports. -->
+    <Exec Command="$(_App) restore &quot;$(_ArcadeSdkRoot)app/ArcadeTargetFrameworkPackage.csproj&quot; $(_ArcadeSdkArguments) -bl:&quot;$(_ArcadeSdkRoot)restore.binlog&quot;" />
+    <Error Condition="!Exists('$(_ArcadeSdkRoot)app/obj/ArcadeTargetFrameworkPackage.csproj.nuget.g.props') or
+                      !Exists('$(_ArcadeSdkRoot)app/obj/ArcadeTargetFrameworkPackage.csproj.nuget.g.targets') or
+                      !Exists('$(_ArcadeSdkInputs)') or Exists('$(_ArcadeSdkRoot)app/bin')"
+           Text="Normal SDK Restore must import the newly restored Arcade task package and capture its configured runtime graph without building products." />
+    <XmlPeek XmlInputPath="$(_ArcadeSdkInputs)" Query="/Project/PropertyGroup/_TargetFrameworkInputsVersion/text()">
+      <Output TaskParameter="Result" PropertyName="_ArcadeSdkInputsVersion" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_ArcadeSdkInputs)" Query="/Project/PropertyGroup/_TargetFrameworkInputsRuntimeGraphPath/text()">
+      <Output TaskParameter="Result" PropertyName="_ArcadeSdkRuntimeGraphPath" />
+    </XmlPeek>
+    <Error Condition="'$(_ArcadeSdkInputsVersion)' != '1' or
+                      '$(_ArcadeSdkRuntimeGraphPath)' != $([MSBuild]::NormalizePath('$(_AppDirectory)', 'toolset/PortableRuntimeIdentifierGraph.json'))"
+           Text="Automatic package capture must record version 1 and the real SDK-selected portable runtime graph." />
+    <Exec Command="$(_App) build &quot;$(_ArcadeSdkRoot)app/ArcadeTargetFrameworkPackage.csproj&quot; $(_ArcadeSdkArguments) -p:MSBuildEmitActionGraph=&quot;$(_ArcadeSdkRoot)build.ninja&quot; -bl:&quot;$(_ArcadeSdkRoot)build.binlog&quot;" />
+    <Error Condition="!Exists('$(_ArcadeSdkRoot)build.ninja') or !Exists('$(_ArcadeSdkRoot)build.ninja.actions') or Exists('$(_ArcadeSdkRoot)app/bin')"
+           Text="A fresh SDK graph must import the actual restored Arcade package and prepared inputs without executing product actions." />
+    <Move SourceFiles="$(_ArcadeSdkInputs)" DestinationFiles="$(_ArcadeSdkInputs).saved" />
+    <Exec Command="$(_App) build &quot;$(_ArcadeSdkRoot)app/ArcadeTargetFrameworkPackage.csproj&quot; $(_ArcadeSdkArguments) -p:MSBuildEmitActionGraph=&quot;$(_ArcadeSdkRoot)missing-input.ninja&quot; -bl:&quot;$(_ArcadeSdkRoot)missing-input.binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ArcadeSdkMissingInputsExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_ArcadeSdkMissingInputsOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_ArcadeSdkMissingInputsLog>@(_ArcadeSdkMissingInputsOutput)</_ArcadeSdkMissingInputsLog>
+    </PropertyGroup>
+    <Error Condition="'$(_ArcadeSdkMissingInputsExit)' == '0' or !$(_ArcadeSdkMissingInputsLog.Contains('MSB4019')) or
+                      !$(_ArcadeSdkMissingInputsLog.Contains('ArcadeTargetFrameworkPackage.csproj.g.props')) or
+                      Exists('$(_ArcadeSdkRoot)missing-input.ninja') or Exists('$(_ArcadeSdkRoot)missing-input.ninja.actions')"
+           Text="A missing real package-captured input must fail its required import before fresh SDK graph publication." />
+    <ItemGroup>
+      <_ArcadeSdkProduct Include="$(_ArcadeSdkRoot)app/bin/**/*;$(_ArcadeSdkRoot)app/obj/**/*.dll;$(_ArcadeSdkRoot)app/obj/**/*.pdb" />
+    </ItemGroup>
+    <Error Condition="'@(_ArcadeSdkProduct)' != ''" Text="SDK package preparation and graph construction must not compile or publish products." />
+    <Message Importance="high" Text="Arcade target-framework inputs smoke checks passed: ordinary parity, platform fallback, multi-TFM RID metadata, explicit overrides, configured queries, literal JSON replay without a live graph, omission, fail-closed inputs and automatic capture through fresh SDK/NuGet package imports. $(_ArcadeInputsRoot)" />
   </Target>
   <Target Name="TestDirectoryImports">
     <PropertyGroup>

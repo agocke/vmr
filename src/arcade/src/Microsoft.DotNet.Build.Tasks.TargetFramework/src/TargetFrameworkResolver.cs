@@ -23,8 +23,13 @@ internal class TargetFrameworkResolver
     private readonly object _gate = new();
 
     private TargetFrameworkResolver(string runtimeGraph)
+        : this(JsonRuntimeFormat.ReadRuntimeGraph(runtimeGraph))
     {
-        _conventions = new ManagedCodeConventions(JsonRuntimeFormat.ReadRuntimeGraph(runtimeGraph));
+    }
+
+    internal TargetFrameworkResolver(RuntimeGraph runtimeGraph)
+    {
+        _conventions = new ManagedCodeConventions(runtimeGraph);
         _configStringPattern = new PatternSet(
             _conventions.Properties,
             groupPatterns: new PatternDefinition[]

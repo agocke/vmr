@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../src/sdk/eng/Version.Details.props" />
+  <PropertyGroup>
+    <RestoreConfigFile>$(MSBuildThisFileDirectory)../../src/sdk/NuGet.config</RestoreConfigFile>
+    <AssemblyName>Microsoft.DotNet.Build.Tasks.TargetFramework</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>true</IsPackable>
+    <PackageId>Microsoft.DotNet.Build.Tasks.TargetFramework</PackageId>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetTaskPackageFiles</TargetsForTfmSpecificContentInPackage>
+    <_TaskSource>$(MSBuildThisFileDirectory)../../src/arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/</_TaskSource>
+    <_Engine>$(MSBuildThisFileDirectory)../../src/msbuild/artifacts/bin/MSBuild/$(Configuration)/net11.0/</_Engine>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(_TaskSource)*.cs" Exclude="$(_TaskSource)MSBuildDeclaredIOTaskAttribute.cs" />
+    <Reference Include="Microsoft.Build" HintPath="$(_Engine)Microsoft.Build.dll" Private="false" />
+    <Reference Include="Microsoft.Build.Framework" HintPath="$(_Engine)Microsoft.Build.Framework.dll" Private="false" />
+    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(_Engine)Microsoft.Build.Utilities.Core.dll" Private="false" />
+    <ProjectReference Include="../../src/nuget-client/src/NuGet.Core/NuGet.Packaging/NuGet.Packaging.csproj"
+                      AdditionalProperties="TargetFrameworks=net10.0" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="$(SystemSecurityCryptographyPkcsPackageVersion)" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="$(SystemSecurityCryptographyProtectedDataPackageVersion)" />
+    <None Include="$(_TaskSource)build/**/*" Pack="true" PackagePath="build/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="$(_TaskSource)buildMultiTargeting/**/*" Pack="true" PackagePath="buildMultiTargeting/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Target Name="GetTaskPackageFiles">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetDir)**/*" PackagePath="tools/net/%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+  </Target>
+</Project>

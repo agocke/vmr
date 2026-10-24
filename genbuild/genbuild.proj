@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <Component Include="$(GenBuildRoot)src/msbuild/src/MSBuild/MSBuild.csproj;$(GenBuildRoot)src/msbuild/src/MSBuild.ActionTaskHost/MSBuild.ActionTaskHost.csproj;$(GenBuildRoot)src/sdk/src/Tasks/Microsoft.NET.Build.Tasks/Microsoft.NET.Build.Tasks.csproj" Tfm="net11.0" />
+    <Component Include="$(MSBuildThisFileDirectory)arcade/TargetFramework.csproj" Tfm="net11.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/MSBuild/Microsoft.Build.Tasks.CodeAnalysis.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/Tools/CodeStyleConfigFileGenerator.csproj" Tfm="net10.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/CodeStyle/CSharp/CodeFixes/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/VisualBasic/CodeFixes/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes.vbproj" Tfm="netstandard2.0" />
     <Component Include="$(GenBuildRoot)src/sdk/src/Microsoft.CodeAnalysis.NetAnalyzers/src/Microsoft.CodeAnalysis.NetAnalyzers.Package.csproj" />
@@ -84,6 +85,9 @@
       <_SourceLinkTask Include="$(_SourceLinkOutput)%(SourceLink.Identity)/$(Configuration)/net10.0/**/*">
         <Package>%(SourceLink.Identity)</Package>
       </_SourceLinkTask>
+      <_ArcadeTask Include="$(MSBuildThisFileDirectory)arcade/bin/$(Configuration)/net11.0/**/*" />
+      <_ArcadeBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/build/**/*" />
+      <_ArcadeMultiTargetingBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/buildMultiTargeting/**/*" />
     </ItemGroup>
     <Copy SourceFiles="@(_Engine)" DestinationFiles="@(_Engine->'$(GenBuildToolsetDirectory)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_CommonEntry)" DestinationFolder="$(GenBuildToolsetDirectory)Current/" SkipUnchangedFiles="true" />
@@ -97,6 +101,10 @@
     <Copy SourceFiles="@(_SourceLinkBuild)" DestinationFiles="@(_SourceLinkBuild->'$(GenBuildToolsetDirectory)Sdks/%(Package)/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_SourceLinkMultiTargetingBuild)" DestinationFiles="@(_SourceLinkMultiTargetingBuild->'$(GenBuildToolsetDirectory)Sdks/%(Package)/buildMultiTargeting/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_SourceLinkTask)" DestinationFiles="@(_SourceLinkTask->'$(GenBuildToolsetDirectory)Sdks/%(Package)/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Error Condition="'@(_ArcadeTask)' == ''" Text="The locally-built Arcade target-framework tasks are missing. Run without GenBuildSkipComponentBuild." />
+    <Copy SourceFiles="@(_ArcadeTask)" DestinationFiles="@(_ArcadeTask->'$(GenBuildToolsetDirectory)Arcade/TargetFramework/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ArcadeBuild)" DestinationFiles="@(_ArcadeBuild->'$(GenBuildToolsetDirectory)Arcade/TargetFramework/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ArcadeMultiTargetingBuild)" DestinationFiles="@(_ArcadeMultiTargetingBuild->'$(GenBuildToolsetDirectory)Arcade/TargetFramework/buildMultiTargeting/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <ItemGroup>
       <_NetAnalyzerBuild Include="$(_NetAnalyzers)Build/**/*" />
       <_NetAnalyzerConfig Include="$(_NetAnalyzers)GlobalAnalyzerConfigs/**/*" />

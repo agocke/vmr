@@ -51,37 +51,62 @@ public class ChooseBestP2PTargetFrameworkTask : Task, IMultiThreadableTask
 
     public override bool Execute()
     {
-        if (AnnotatedProjectReferences == null)
+        bool result = AssignFrameworks(
+            AnnotatedProjectReferences,
+            CurrentProjectTargetFramework!,
+            CurrentProjectTargetPlatform,
+            OmitIncompatibleProjectReferences,
+            () => TargetFrameworkResolver.CreateOrGet(TaskEnvironment.GetAbsolutePath(RuntimeGraph!)),
+            Log,
+            out var assignedProjects);
+        AssignedProjects = assignedProjects;
+        return result;
+    }
+
+    internal static bool AssignFrameworks(
+        ITaskItem[]? references,
+        string currentFramework,
+        string? currentPlatform,
+        bool omitIncompatibleReferences,
+        Func<TargetFrameworkResolver> getResolver,
+        TaskLoggingHelper log,
+        out ITaskItem[]? assignedProjects)
+    {
+        assignedProjects = null;
+        if (references == null)
         {
-            return !Log.HasLoggedErrors;
+            return !log.HasLoggedErrors;
         }
 
         // validate current project framework
-        string errorMessage = string.Format(CultureInfo.CurrentCulture, "The project target framework '{0}' is not a supported target framework.", $"TargetFrameworkMoniker: {CurrentProjectTargetFramework}, TargetPlatformMoniker:{CurrentProjectTargetPlatform}");
-        if (!TryParseFramework(CurrentProjectTargetFramework!, CurrentProjectTargetPlatform, errorMessage, Log, out var projectNuGetFramework))
+        string errorMessage = string.Format(CultureInfo.CurrentCulture, "The project target framework '{0}' is not a supported target framework.", $"TargetFrameworkMoniker: {currentFramework}, TargetPlatformMoniker:{currentPlatform}");
+        if (!TryParseFramework(currentFramework, currentPlatform, errorMessage, log, out var projectNuGetFramework))
         {
             return false;
         }
 
-        TargetFrameworkResolver targetFrameworkResolver = TargetFrameworkResolver.CreateOrGet(TaskEnvironment.GetAbsolutePath(RuntimeGraph!));
-        List<ITaskItem> assignedProjects = new(AnnotatedProjectReferences.Length);
+        TargetFrameworkResolver targetFrameworkResolver = getResolver();
+        List<ITaskItem> assignedProjectList = new(references.Length);
 
-        foreach (ITaskItem annotatedProjectReference in AnnotatedProjectReferences)
+        foreach (ITaskItem annotatedProjectReference in references)
         {
-            ITaskItem? assignedProject = AssignNearestFrameworkForSingleReference(annotatedProjectReference, projectNuGetFramework, targetFrameworkResolver);
+            ITaskItem? assignedProject = AssignNearestFrameworkForSingleReference(
+                annotatedProjectReference, projectNuGetFramework, targetFrameworkResolver, omitIncompatibleReferences, log);
             if (assignedProject != null)
             {
-                assignedProjects.Add(assignedProject);
+                assignedProjectList.Add(assignedProject);
             }
         }
 
-        AssignedProjects = assignedProjects.ToArray();
-        return !Log.HasLoggedErrors;
+        assignedProjects = assignedProjectList.ToArray();
+        return !log.HasLoggedErrors;
     }
 
-    private ITaskItem? AssignNearestFrameworkForSingleReference(ITaskItem project,
+    private static ITaskItem? AssignNearestFrameworkForSingleReference(ITaskItem project,
         NuGetFramework projectNuGetFramework,
-        TargetFrameworkResolver targetFrameworkResolver)
+        TargetFrameworkResolver targetFrameworkResolver,
+        bool omitIncompatibleReferences,
+        TaskLoggingHelper log)
     {
         TaskItem itemWithProperties = new(project);
         string referencedProjectFrameworkString = project.GetMetadata(TARGET_FRAMEWORKS);
@@ -102,13 +127,13 @@ public class ChooseBestP2PTargetFrameworkTask : Task, IMultiThreadableTask
             return itemWithProperties;
         }
 
-        if (OmitIncompatibleProjectReferences)
+        if (omitIncompatibleReferences)
         {
             return null;
         }
 
         // no match found
-        Log.LogError(string.Format(CultureInfo.CurrentCulture, "Project '{0}' targets '{1}'. It cannot be referenced by a project that targets '{2}{3}'.", project.ItemSpec, referencedProjectFrameworkString, projectNuGetFramework.DotNetFrameworkName, projectNuGetFramework.HasPlatform ? "-" + projectNuGetFramework.DotNetPlatformName : string.Empty));
+        log.LogError(string.Format(CultureInfo.CurrentCulture, "Project '{0}' targets '{1}'. It cannot be referenced by a project that targets '{2}{3}'.", project.ItemSpec, referencedProjectFrameworkString, projectNuGetFramework.DotNetFrameworkName, projectNuGetFramework.HasPlatform ? "-" + projectNuGetFramework.DotNetPlatformName : string.Empty));
         return itemWithProperties;
     }
 

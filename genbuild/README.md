@@ -18,7 +18,8 @@ Run these commands from the **VMR root**:
 dotnet msbuild genbuild/genbuild.proj -m:1 -nr:false -bl:{}
 ```
 
-This builds the selected MSBuild, SDK-task, Roslyn, SourceLink, and NuGet projects and
+This builds the selected MSBuild, SDK-task, Roslyn, SourceLink, NuGet, and Arcade
+target-framework task sources and
 assembles the app in `artifacts/bin/genbuild/Debug/`. It does not build the full
 SDK, templates, workloads, or a runtime.
 
@@ -92,6 +93,42 @@ are separated by `Configuration/Platform/TargetFramework` beneath their respecti
 intermediate directories. Other input-affecting global properties still require
 distinct intermediate paths.
 
+### Arcade framework negotiation
+
+The app stages the selected Arcade task package at
+`toolset/Arcade/TargetFramework/`. Ordinary selection still reads the configured
+runtime-graph file. Restore preparation captures that file's JSON in
+`targetframeworkinputs/Configuration/Platform/TargetFramework/Project.g.props`
+under the project's extensions directory. Hardened selection consumes the
+captured data in memory, using the same NuGet matching policy over the current
+framework/platform and referenced-project metadata. Restore does not capture
+the winning framework. Changed runtime-graph inputs require a fresh Restore.
+
+Capture runs in a fresh non-restoring evaluation so NuGet-generated props and
+targets participate, including their preparation hooks. The normal guard against
+building products/tools during preparation remains enabled.
+
+A repository consuming a pinned Arcade target-framework package must explicitly
+select the local package; `ArcadeSdkDir` alone does not replace NuGet imports.
+After building the app, create a local package, using a new version for each
+revision to avoid reusing a cached package:
+
+```sh
+dotnet msbuild genbuild/arcade/TargetFramework.csproj -t:Pack \
+  -p:Configuration=Debug -p:NoBuild=true \
+  -p:PackageVersion=12.0.0-genbuild.1 \
+  -p:PackageOutputPath=/absolute/path/to/isolated-feed
+```
+
+For runtime, pass the matching
+`-p:MicrosoftDotNetBuildTasksTargetFrameworkPackageVersion=12.0.0-genbuild.1`
+and `-p:RestoreAdditionalProjectSources=/absolute/path/to/isolated-feed`
+to Restore and Build. Its compiler package also supplies integration targets;
+select the prototype integration explicitly in both commands with
+`-p:CSharpCoreTargetsPath=/absolute/path/to/app/toolset/Roslyn/Microsoft.CSharp.Core.targets`.
+This changes the integration authoring, not a permission to prebuild compiler
+or runtime products. Do not patch shared cached package contents.
+
 ## Smoke checks
 
 Install Ninja and build the app first. Then run from the VMR root, replacing
@@ -113,6 +150,10 @@ execution through final artifact publication and program startup on the external
 runtime. A clean SDK executable/library closure also constructs and executes
 without prebuilding references, including renamed library outputs, copy-local
 symbols and ordinary-equivalent dependency manifests.
+Arcade checks compare ordinary and prepared P2P selection, platform fallback,
+RID-agnostic metadata, explicit framework overrides and incompatible references.
+They also exercise real NuGet-imported capture hooks, literal JSON transport,
+replay without the live runtime-graph file, and fail-closed prepared inputs.
 A configured fixture retains parent/child multi-targeting declarations, prepares
 multiple parent frameworks/configurations, and independently builds a Debug/net11
 parent with its negotiated Release/net10 child. Outer preparation and attempts
