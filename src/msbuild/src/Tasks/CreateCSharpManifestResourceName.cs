@@ -84,6 +84,7 @@ namespace Microsoft.Build.Tasks
         /// <param name="log">Task's TaskLoggingHelper, for logging warnings or errors</param>
         /// <param name="treatAsCultureNeutral">Whether to treat the current file as 'culture-neutral' and retain the culture in the name.</param>
         /// <param name="enableCustomCulture">Whether custom culture handling is expected.</param>
+        /// <param name="deterministic">Whether to use fixed culture names and path separators.</param>
         /// <returns>Returns the manifest name</returns>
         internal static string CreateManifestNameImpl(
             string fileName,
@@ -95,7 +96,8 @@ namespace Microsoft.Build.Tasks
             Stream binaryStream, // File contents binary stream, may be null
             TaskLoggingHelper log,
             bool treatAsCultureNeutral = false,
-            bool enableCustomCulture = false)
+            bool enableCustomCulture = false,
+            bool deterministic = false)
         {
             // Use the link file name if there is one, otherwise, fall back to file name.
             string embeddedFileName = FileUtilities.FixFilePath(linkFileName);
@@ -117,7 +119,9 @@ namespace Microsoft.Build.Tasks
             }
             else
             {
-                info = Culture.GetItemCultureInfo(embeddedFileName, dependentUponFileName, treatAsCultureNeutral);
+                info = deterministic
+                    ? Culture.GetItemCultureInfoDeterministic(embeddedFileName, dependentUponFileName, treatAsCultureNeutral)
+                    : Culture.GetItemCultureInfo(embeddedFileName, dependentUponFileName, treatAsCultureNeutral);
 
                 // If the item has a culture override, respect that.
                 if (!string.IsNullOrEmpty(culture))
@@ -216,7 +220,7 @@ namespace Microsoft.Build.Tasks
                         // Prepend the culture as a subdirectory if there is one.
                         if (!string.IsNullOrEmpty(info.culture))
                         {
-                            manifestName.Insert(0, Path.DirectorySeparatorChar);
+                            manifestName.Insert(0, deterministic ? '/' : Path.DirectorySeparatorChar);
                             manifestName.Insert(0, info.culture);
                         }
                     }

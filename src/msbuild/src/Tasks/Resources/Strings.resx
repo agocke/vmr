@@ -3221,7 +3221,15 @@
     <value>MSB3671: Hardened reference resolution requires an explicit file path for "{0}", not "{1}". Assembly names, search tokens, and wildcards are not supported.</value>
     <comment>{StrBegin="MSB3671: "}{0} is a task parameter or item metadata name. {1} is the unsupported reference value.</comment>
   </data>
-  <!-- Next available general task message code: MSB3672. -->
+  <data name="CommonSdk.HardenedResourceName">
+    <value>MSB3672: Hardened resource naming does not support "{0}" because it can discover or read source files. Disable the dependent-upon convention and use path-based naming, or supply explicit ManifestResourceName metadata.</value>
+    <comment>{StrBegin="MSB3672: "}{0} is a resource item or unsupported naming option. ManifestResourceName is not localized.</comment>
+  </data>
+  <data name="CommonSdk.HardenedSigningSource">
+    <value>MSB3673: Hardened signing requires an explicit non-PFX AssemblyOriginatorKeyFile. Certificate stores, manifest signing, and key containers are not supported.</value>
+    <comment>{StrBegin="MSB3673: "}AssemblyOriginatorKeyFile and PFX are not localized.</comment>
+  </data>
+  <!-- Next available general task message code: MSB3674. -->
 
   <!--
         The tasks message bucket is: MSB3001 - MSB3999

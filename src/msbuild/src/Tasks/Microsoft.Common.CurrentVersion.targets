@@ -3729,6 +3729,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       Condition="$(SignManifests) == 'true' or $(SignAssembly) == 'true'">
 
     <ResolveKeySource
+        Condition="'$(MSBuildHardenedGraph)' != 'true'"
         KeyFile="$(AssemblyOriginatorKeyFile)"
         CertificateThumbprint="$(ManifestCertificateThumbprint)"
         CertificateFile="$(ManifestKeyFile)"
@@ -3742,6 +3743,21 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       <Output TaskParameter="ResolvedThumbprint" PropertyName="_DeploymentResolvedManifestCertificateThumbprint" Condition=" '$(SignManifests)' == 'true' "/>
 
     </ResolveKeySource>
+
+    <MSBuildInternalMessage
+        Condition="'$(MSBuildHardenedGraph)' == 'true' and
+                   ('$(SignManifests)' == 'true' or
+                    '$(ManifestCertificateThumbprint)' != '' or '$(ManifestKeyFile)' != '' or
+                    '$(KeyContainerName)' != '' or '$(AssemblyOriginatorKeyFile)' == '' or
+                    '$([System.IO.Path]::GetExtension($(AssemblyOriginatorKeyFile)))' == '.pfx')"
+        ResourceName="CommonSdk.HardenedSigningSource"
+        Severity="Error"
+        DeclaredInputs="" DeclaredOutputs="" />
+
+    <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(SignAssembly)' == 'true'">
+      <KeyOriginatorFile>$(AssemblyOriginatorKeyFile)</KeyOriginatorFile>
+      <KeyContainerName></KeyContainerName>
+    </PropertyGroup>
 
   </Target>
 

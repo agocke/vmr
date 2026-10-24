@@ -154,6 +154,11 @@ Arcade checks compare ordinary and prepared P2P selection, platform fallback,
 RID-agnostic metadata, explicit framework overrides and incompatible references.
 They also exercise real NuGet-imported capture hooks, literal JSON transport,
 replay without the live runtime-graph file, and fail-closed prepared inputs.
+Resource/signing checks compare ordinary and graph-time metadata with resource
+and key files absent. Source-dependent resource naming and certificate/PFX/
+key-container discovery fail without publishing a partial graph.
+The compiler independently consumes an execution-produced signing key and emits
+the expected public-key token.
 A configured fixture retains parent/child multi-targeting declarations, prepares
 multiple parent frameworks/configurations, and independently builds a Debug/net11
 parent with its negotiated Release/net10 child. Outer preparation and attempts

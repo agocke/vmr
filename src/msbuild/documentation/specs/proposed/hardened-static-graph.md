@@ -518,6 +518,25 @@ identities and optional `DebugSymbolsFile` metadata supply copy-local artifacts.
 Framework/copy-local/private metadata controls publication without inspecting
 assemblies. Related-file and satellite discovery remain outside this profile.
 
+### Resource names and signing keys
+
+Hardened C# resource naming uses the audited zero-I/O `FormatResourceNames`
+task. It shares the ordinary name formatter over resource paths, `TargetPath`,
+root namespace and supplied culture metadata, using the fixed culture-name set.
+It preserves resource metadata and explicit logical names. The dependent-upon
+convention and `DependentUpon` metadata fail with MSB3672 rather than probing
+adjacent files or parsing source. Explicit `ManifestResourceName` metadata
+bypasses naming as in ordinary builds. Resource contents remain execution inputs;
+neither resource files nor generated source must exist to construct their names.
+
+Hardened `ResolveKeySource` forwards the explicit non-PFX
+`AssemblyOriginatorKeyFile` to `KeyOriginatorFile` without opening it. The
+compiler declares that file as an input; its bytes can come from a producer.
+Manifest signing, certificate-file/store lookup and key containers fail with
+MSB3673. The compiler's existing public/delay-signing restriction still applies.
+Ordinary resource and signing tasks retain their existing behavior. Neither
+metadata transformation requires a new Restore snapshot.
+
 ## Graph construction
 
 Reuse MSBuild's target ordering, expression expansion, batching, and

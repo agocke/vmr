@@ -203,6 +203,7 @@
     <Compile Include="FileIO\ReadLinesFromFile.cs" />
     <Compile Include="FileIO\WriteLinesToFile.cs" />
     <Compile Include="FindInList.cs" />
+    <Compile Include="FormatResourceNames.cs" />
     <Compile Include="FormatUrl.cs" />
     <Compile Include="FormatVersion.cs" />
     <Compile Include="GenerateApplicationManifest.cs" />

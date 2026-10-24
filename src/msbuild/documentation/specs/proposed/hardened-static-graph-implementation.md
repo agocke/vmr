@@ -678,10 +678,19 @@ Restore now captures five Arcade input files and produces zero DLLs. Build runs
 the in-memory chooser and RID metadata task. Hardened reference resolution
 accepts `{RawFileName}` for explicit project-relative or absolute paths without
 probing file existence; generated-reference and bare-name rejection regressions
-pass through the packaged app. The real probe now reaches unsupported
-`CreateCSharpManifestResourceName` and `ResolveKeySource` invocations in
-`ILLink.RoslynAnalyzer.csproj`. Subsequent deferred-value diagnostics are not
-separately established blockers.
+pass through the packaged app. Audited graph-time resource naming now formats
+paths and metadata without opening resources or source files. Source-dependent
+naming remains unsupported; ordinary builds retain their existing naming task.
+Hardened signing forwards an explicit key-file path without opening it and rejects
+certificate/PFX/key-container discovery. A packaged compiler regression constructs
+with both the generated key and assembly absent, then independently produces the
+key and compiles an assembly with the expected public-key token through Ninja.
+Resource-metadata regressions compare ordinary and hardened results and reject
+unsupported naming/signing policies without partial graph publication.
+The real probe passes these naming/key-selection invocations and now first fails
+at `GenerateResource` in `ILLink.RoslynAnalyzer.csproj`. Subsequent deferred-value,
+resource-source generation and SourceLink diagnostics are not separately
+established blockers.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.
 Native/CoreCLR/CMake integration is later.

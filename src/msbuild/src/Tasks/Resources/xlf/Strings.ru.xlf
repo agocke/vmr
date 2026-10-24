@@ -189,6 +189,16 @@
         <target state="new">MSB3671: Hardened reference resolution requires an explicit file path for "{0}", not "{1}". Assembly names, search tokens, and wildcards are not supported.</target>
         <note>{StrBegin="MSB3671: "}{0} is a task parameter or item metadata name. {1} is the unsupported reference value.</note>
       </trans-unit>
+      <trans-unit id="CommonSdk.HardenedResourceName">
+        <source>MSB3672: Hardened resource naming does not support "{0}" because it can discover or read source files. Disable the dependent-upon convention and use path-based naming, or supply explicit ManifestResourceName metadata.</source>
+        <target state="new">MSB3672: Hardened resource naming does not support "{0}" because it can discover or read source files. Disable the dependent-upon convention and use path-based naming, or supply explicit ManifestResourceName metadata.</target>
+        <note>{StrBegin="MSB3672: "}{0} is a resource item or unsupported naming option. ManifestResourceName is not localized.</note>
+      </trans-unit>
+      <trans-unit id="CommonSdk.HardenedSigningSource">
+        <source>MSB3673: Hardened signing requires an explicit non-PFX AssemblyOriginatorKeyFile. Certificate stores, manifest signing, and key containers are not supported.</source>
+        <target state="new">MSB3673: Hardened signing requires an explicit non-PFX AssemblyOriginatorKeyFile. Certificate stores, manifest signing, and key containers are not supported.</target>
+        <note>{StrBegin="MSB3673: "}AssemblyOriginatorKeyFile and PFX are not localized.</note>
+      </trans-unit>
       <trans-unit id="CommonSdk.InvalidConfigurationTextWhenBuildingInsideVisualStudio">
         <source>The BaseOutputPath/OutputPath property is not set for project '{0}'.  Please check to make sure that you have specified a valid combination of Configuration and Platform for this project.  Configuration='{1}'  Platform='{2}'. This error may also appear if some other project is trying to follow a project-to-project reference to this project, this project has been unloaded or is not included in the solution, and the referencing project does not build using the same or an equivalent Configuration or Platform.</source>
         <target state="translated">Свойство BaseOutputPath/OutputPath не задано для проекта '{0}'.  Убедитесь проверка что для этого проекта указано допустимое сочетание конфигурации и платформы.  Configuration='{1}' Platform='{2}'. Эта ошибка также может появиться, если другой проект пытается подписаться на ссылку проекта на этот проект, этот проект был выгружен или не включен в решение, а ссылающийся проект не выполняет сборку с использованием той же или эквивалентной конфигурации или платформы.</target>

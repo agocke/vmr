@@ -1,0 +1,33 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <RootNamespace>ResourceRoot</RootNamespace>
+    <EmbeddedResourceUseDependentUponConvention Condition="'$(TestCase)' == 'convention'">true</EmbeddedResourceUseDependentUponConvention>
+    <SignAssembly>true</SignAssembly>
+    <PublicSign>true</PublicSign>
+    <BuildingProject>true</BuildingProject>
+    <AssemblyOriginatorKeyFile>missing/public.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile Condition="'$(TestCase)' == 'pfx'">missing/key.PFX</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile Condition="'$(TestCase)' == 'missing-key'"></AssemblyOriginatorKeyFile>
+    <ManifestCertificateThumbprint Condition="'$(TestCase)' == 'certificate'">not-a-certificate</ManifestCertificateThumbprint>
+    <ManifestKeyFile Condition="'$(TestCase)' == 'certificate-file'">missing/cert.pfx</ManifestKeyFile>
+    <KeyContainerName Condition="'$(TestCase)' == 'container'">machine-container</KeyContainerName>
+    <SignManifests Condition="'$(TestCase)' == 'manifest'">true</SignManifests>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="missing/Strings.resx" Type="Resx" WithCulture="false" TargetPath="Strings.resx">
+      <DependentUpon Condition="'$(TestCase)' == 'dependent'">Form.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="missing/Strings.fr.resx" Type="Resx" WithCulture="true" Culture="fr" TargetPath="Linked/Strings.fr.resx" />
+    <EmbeddedResource Include="missing/Data.fr.txt" Type="Non-Resx" WithCulture="true" Culture="fr" TargetPath="Data.fr.txt" />
+    <EmbeddedResource Include="missing/Kept.resx" Type="Resx" WithCulture="false" ManifestResourceName="Explicit.Name" />
+  </ItemGroup>
+  <Import Project="ResourceMetadata.targets" />
+  <Target Name="Restore" />
+  <Target Name="Build" DependsOnTargets="CreateManifestResourceNames;ResolveKeySource">
+    <Error Condition="'$(KeyOriginatorFile)' != 'missing/public.snk' or '$(KeyContainerName)' != ''"
+           Text="Explicit signing paths must be forwarded without certificate or key-container discovery." />
+    <WriteLinesToFile File="$(ResultFile)"
+                      Lines="@(EmbeddedResource->'%(Identity)|%(ManifestResourceName)|%(LogicalName)');$(KeyOriginatorFile)"
+                      Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+  </Target>
+</Project>

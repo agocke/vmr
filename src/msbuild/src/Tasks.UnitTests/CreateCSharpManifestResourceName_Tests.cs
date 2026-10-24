@@ -23,6 +23,102 @@ namespace Microsoft.Build.UnitTests
         {
             _testOutput = output;
         }
+
+        [Theory]
+        [InlineData("Folder/Strings.resx", "Resx", "", false, "ResourceRoot.Folder.Strings")]
+        [InlineData(@"Folder\Strings.fr.resx", "Resx", "fr", false, "ResourceRoot.Folder.Strings.fr")]
+        [InlineData("Strings.fr.resx", "Resx", "", false, "ResourceRoot.Strings.fr")]
+        [InlineData("Data.fr.txt", "Non-Resx", "fr", false, "ResourceRoot.Data.txt")]
+        [InlineData("Data.txt", "Non-Resx", "", false, "ResourceRoot.Data.txt")]
+        [InlineData("Strings.custom.resx", "Resx", "custom", true, "ResourceRoot.Strings.custom")]
+        public void FormatsPathOnlyNamesLikeOrdinaryTaskWithoutResourceFiles(
+            string targetPath, string type, string culture, bool customCulture, string expected)
+        {
+            using TestEnvironment env = TestEnvironment.Create(_testOutput);
+            string missing = Path.Combine(env.CreateFolder().Path, "missing", "resource.resx");
+            TaskItem resource = new(missing);
+            resource.SetMetadata("TargetPath", targetPath);
+            resource.SetMetadata("Type", type);
+            resource.SetMetadata("Culture", culture);
+            resource.SetMetadata("WithCulture", culture.Length == 0 ? "false" : "true");
+            resource.SetMetadata("Custom", "retained");
+            CreateCSharpManifestResourceName ordinary = new()
+            {
+                BuildEngine = new MockEngine(_testOutput),
+                ResourceFiles = [resource],
+                RootNamespace = "ResourceRoot",
+                PrependCultureAsDirectory = false,
+                EnableCustomCulture = customCulture
+            };
+            FormatResourceNames task = new()
+            {
+                BuildEngine = new MockEngine(_testOutput),
+                ResourceFiles = [resource],
+                RootNamespace = "ResourceRoot",
+                PrependCultureAsDirectory = false,
+                EnableCustomCulture = customCulture
+            };
+
+            ordinary.Execute().ShouldBeTrue();
+            task.Execute().ShouldBeTrue();
+
+            ITaskItem result = task.ResourceFilesWithManifestResourceNames.ShouldHaveSingleItem();
+            result.ItemSpec.ShouldBe(missing);
+            result.GetMetadata("ManifestResourceName").ShouldBe(expected);
+            result.GetMetadata("LogicalName").ShouldBe(ordinary.ResourceFilesWithManifestResourceNames[0].GetMetadata("LogicalName"));
+            result.GetMetadata("ManifestResourceName").ShouldBe(ordinary.ResourceFilesWithManifestResourceNames[0].GetMetadata("ManifestResourceName"));
+            result.GetMetadata("Custom").ShouldBe("retained");
+            resource.GetMetadata("ManifestResourceName").ShouldBeEmpty();
+            Directory.Exists(Path.GetDirectoryName(missing)).ShouldBeFalse();
+        }
+
+        [Theory]
+        [InlineData(true, "")]
+        [InlineData(false, "Form.cs")]
+        public void RejectsSourceDependentNamingWithoutPartialMetadata(bool convention, string dependentUpon)
+        {
+            TaskItem resource = new("missing/Form.resx");
+            resource.SetMetadata("DependentUpon", dependentUpon);
+            MockEngine engine = new(_testOutput);
+            FormatResourceNames task = new()
+            {
+                BuildEngine = engine,
+                ResourceFiles = [new TaskItem("Strings.resx"), resource],
+                UseDependentUponConvention = convention
+            };
+
+            task.Execute().ShouldBeFalse();
+
+            engine.Log.ShouldContain("MSB3672");
+            task.ResourceFilesWithManifestResourceNames.ShouldBeEmpty();
+        }
+
+        [Theory]
+        [InlineData("%3B")]
+        [InlineData("%25")]
+        [InlineData("%24(Value)")]
+        public void PreservesLiteralResourceNamesAndMetadata(string literal)
+        {
+            string name = $"ResourceRoot.Data{literal}.txt";
+            TaskItem resource = new(EscapingUtilities.Escape($"missing/Data{literal}.txt"));
+            resource.SetMetadata("TargetPath", EscapingUtilities.Escape($"Data{literal}.txt"));
+            resource.SetMetadata("Type", "Non-Resx");
+            resource.SetMetadata("LogicalName", EscapingUtilities.Escape($"explicit{literal}"));
+            FormatResourceNames task = new()
+            {
+                BuildEngine = new MockEngine(_testOutput),
+                ResourceFiles = [resource],
+                RootNamespace = "ResourceRoot"
+            };
+
+            task.Execute().ShouldBeTrue();
+
+            ITaskItem result = task.ResourceFilesWithManifestResourceNames.ShouldHaveSingleItem();
+            result.GetMetadata("ManifestResourceName").ShouldBe(name);
+            result.GetMetadata("LogicalName").ShouldBe($"explicit{literal}");
+            result.ItemSpec.ShouldBe($"missing/Data{literal}.txt");
+        }
+
         /// <summary>
         /// Test the basic functionality.
         /// </summary>

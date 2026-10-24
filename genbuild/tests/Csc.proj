@@ -19,9 +19,16 @@
     <_CompilerDirectory>$(MSBuildSDKsPath)/../Roslyn/</_CompilerDirectory>
     <_SourceLinkText>{"documents":{"/_/*":"https://example.invalid/repository/*"}}</_SourceLinkText>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(TestCase)' == 'signed'">
+    <SignAssembly>true</SignAssembly>
+    <PublicSign>true</PublicSign>
+    <AssemblyOriginatorKeyFile>obj/public.snk</AssemblyOriginatorKeyFile>
+    <_SigningTarget>ResolveKeySource</_SigningTarget>
+  </PropertyGroup>
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.Csc" AssemblyFile="$(_CompilerDirectory)Microsoft.Build.Tasks.CodeAnalysis.dll" />
   <Import Project="$(_CompilerDirectory)Microsoft.CSharp.Core.targets" />
   <Import Project="FrameworkInputs.props" />
+  <Import Project="Signing.targets" Condition="'$(TestCase)' == 'signed'" />
   <ItemGroup>
     <SourceRoot Include="$(MSBuildProjectDirectory)/../" SourceControl="git" />
     <Compile Include="Program.cs;obj/Generated.cs" />
@@ -31,11 +38,14 @@
     <Analyzer Include="@(_FrameworkReferenceManifestFrameworkReference->'%(TargetingPackPath)/analyzers/dotnet/cs/System.Text.RegularExpressions.Generator.dll')" />
     <Analyzer Include="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll;$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll" />
   </ItemGroup>
-  <Target Name="_BeforeVBCSCoreCompile" />
+  <Target Name="_BeforeVBCSCoreCompile" DependsOnTargets="$(_SigningTarget)" />
   <Target Name="PrepareForBuild" />
   <Target Name="ResolvePackageAssets" />
   <Target Name="ResolveTargetingPackAssets" />
   <Target Name="Produce">
+    <CopyFiles SourceFiles="public.snk" DestinationFiles="obj/public.snk"
+               DeclaredInputs="public.snk" DeclaredOutputs="obj/public.snk"
+               Condition="'$(TestCase)' == 'signed'" />
     <WriteLinesToFile File="obj/Generated.cs"
                       Lines="public static class Producer { public const string Text = &quot;generated before compilation&quot;%3B }"
                       Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="obj/Generated.cs" />

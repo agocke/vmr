@@ -24,6 +24,7 @@
     <CallTarget Targets="TestDirectoryImports" />
     <CallTarget Targets="TestArcadeLayout" />
     <CallTarget Targets="TestArcadeTargetFrameworkInputs" />
+    <CallTarget Targets="TestResourceMetadata" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -1161,6 +1162,46 @@
     <Error Condition="Exists('$(_FrameworkSelectionRoot)%(_FrameworkSelectionFailure.Identity).ninja') or Exists('$(_FrameworkSelectionRoot)%(_FrameworkSelectionFailure.Identity).ninja.actions') or Exists('$(_FrameworkSelectionRoot)%(_FrameworkSelectionFailure.Identity).txt')"
            Text="Invalid or incompatible frameworks must fail without publishing partial action graphs or content." />
   </Target>
+  <Target Name="TestResourceMetadata">
+    <PropertyGroup>
+      <_ResourceMetadataRoot>$(_TestDirectory)resource-metadata/</_ResourceMetadataRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_ResourceMetadataRoot)" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.CSharp.CurrentVersion.targets"
+             Query="/Project/Target[@Name='CreateManifestResourceNames']">
+      <Output TaskParameter="Result" ItemName="_ResourceMetadataTargets" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
+             Query="/Project/Target[@Name='ResolveKeySource']">
+      <Output TaskParameter="Result" ItemName="_ResourceMetadataTargets" />
+    </XmlPeek>
+    <Error Condition="'@(_ResourceMetadataTargets->Count())' != '2'" Text="Resource and signing tests must use the packaged targets." />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ResourceMetadata.proj" DestinationFolder="$(_ResourceMetadataRoot)" />
+    <WriteLinesToFile File="$(_ResourceMetadataRoot)ResourceMetadata.targets" Lines="&lt;Project&gt;;@(_ResourceMetadataTargets);&lt;/Project&gt;" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_ResourceMetadataRoot)ResourceMetadata.proj&quot; -p:ResultFile=graph.txt -bl:&quot;$(_ResourceMetadataRoot)build.binlog&quot;" />
+    <Error Condition="Exists('$(_ResourceMetadataRoot)missing') or Exists('$(_ResourceMetadataRoot)graph.txt')"
+           Text="Resource naming and key selection must not require resource/source/key files or execute actions during construction." />
+    <Exec WorkingDirectory="$(_ResourceMetadataRoot)" Command="ninja -f obj/genbuild/build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_ResourceMetadataRoot)ResourceMetadata.proj&quot; -t:Build -p:ResultFile=ordinary.txt -bl:&quot;$(_ResourceMetadataRoot)ordinary.binlog&quot;" />
+    <GetFileHash Files="$(_ResourceMetadataRoot)graph.txt;$(_ResourceMetadataRoot)ordinary.txt">
+      <Output TaskParameter="Items" ItemName="_ResourceMetadataHash" />
+    </GetFileHash>
+    <Error Condition="'@(_ResourceMetadataHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Resource metadata and explicit signing paths must match ordinary execution." />
+    <ItemGroup>
+      <_ResourceMetadataRejected Include="convention;dependent" Code="MSB3672" />
+      <_ResourceMetadataRejected Include="pfx;missing-key;certificate;certificate-file;container;manifest" Code="MSB3673" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_ResourceMetadataRoot)ResourceMetadata.proj&quot; -p:TestCase=%(_ResourceMetadataRejected.Identity) -p:ResultFile=%(_ResourceMetadataRejected.Identity).txt -p:MSBuildEmitActionGraph=&quot;$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).ninja&quot; -flp:&quot;LogFile=$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).log;Verbosity=quiet&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_ResourceMetadataRejectedExit" />
+    </Exec>
+    <Error Condition="@(_ResourceMetadataRejectedExit->AnyHaveMetadataValue('Identity', '0')) or
+                      !$([System.IO.File]::ReadAllText('$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).log').Contains('%(_ResourceMetadataRejected.Code)')) or
+                      Exists('$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).ninja') or Exists('$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).ninja.actions') or
+                      Exists('$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).txt') or Exists('$(_ResourceMetadataRoot)missing')"
+           Text="Source-dependent naming and machine-backed signing must fail explicitly without partial graphs or execution." />
+  </Target>
   <Target Name="TestNativeManifest">
     <PropertyGroup>
       <_NativeManifestRoot>$(_TestDirectory)native-manifest/</_NativeManifestRoot>
@@ -1558,7 +1599,7 @@
     <WriteLinesToFile File="$(_TestDirectory)csc/Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/HelloWorld.csproj&quot;" />
     <ItemGroup>
-      <_CscCase Include="short;another much longer checkout;embedded;compiler-error;ordinary;determinism;paths;response;generated-directory" />
+      <_CscCase Include="short;another much longer checkout;embedded;compiler-error;ordinary;determinism;paths;response;generated-directory;signed" />
       <_CscRoot Include="@(_CscCase->'$(_TestDirectory)csc/%(Identity)/project/')" />
       <_CscRelocation Include="short;another much longer checkout" />
       <_CscRejected Include="determinism" Arguments="-p:Deterministic=false" />
@@ -1569,6 +1610,13 @@
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.proj" DestinationFiles="%(_CscRoot.Identity)Csc.proj" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_CscRoot.Identity)Program.cs" />
     <Copy SourceFiles="$(_TestDirectory)csc/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_CscRoot.Identity)FrameworkInputs.props" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
+             Query="/Project/Target[@Name='ResolveKeySource']">
+      <Output TaskParameter="Result" PropertyName="_CscSigningTarget" />
+    </XmlPeek>
+    <WriteLinesToFile File="$(_TestDirectory)csc/signed/project/Signing.targets"
+                      Lines="&lt;Project&gt;;$(_CscSigningTarget);&lt;/Project&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../../src/msbuild/src/MSFT.snk" DestinationFiles="$(_TestDirectory)csc/signed/project/public.snk" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/%(_CscCase.Identity)/project/Csc.proj&quot;" />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/Csc.proj&quot;" />
     <Error Condition="Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Generated.cs') or Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Hello.dll')"
@@ -1591,6 +1639,15 @@
     </Exec>
     <Error Condition="'@(_CscProgramOutput)' != '/_/project/Program.cs;True;generated before compilation'"
            Text="Compiler actions must map CallerFilePath, execute generators and consume generated producer inputs." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/signed/project/Csc.proj&quot; -p:TestCase=signed" />
+    <Error Condition="Exists('$(_TestDirectory)csc/signed/project/obj/public.snk') or Exists('$(_TestDirectory)csc/signed/project/obj/Hello.dll')"
+           Text="Signing-key selection must accept a future key producer without opening it or executing the compiler." />
+    <Exec WorkingDirectory="$(_TestDirectory)csc/signed/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <GetAssemblyIdentity AssemblyFiles="$(_TestDirectory)csc/signed/project/obj/Hello.dll">
+      <Output TaskParameter="Assemblies" ItemName="_CscSignedIdentity" />
+    </GetAssemblyIdentity>
+    <Error Condition="'@(_CscSignedIdentity->'%(PublicKeyToken)')' != 'B03F5F7F11D50A3A'"
+           Text="The compiler must consume the produced public key and emit the expected signed assembly identity." />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/embedded/project/Csc.proj&quot; -p:DebugType=embedded" />
     <Exec WorkingDirectory="$(_TestDirectory)csc/embedded/project" Command="ninja -f obj/genbuild/build.ninja" />
     <Error Condition="Exists('$(_TestDirectory)csc/embedded/project/obj/Hello.pdb')" Text="Embedded debug information must not declare or emit a sidecar PDB." />
