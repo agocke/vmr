@@ -446,6 +446,17 @@ namespace Microsoft.Build.BackEnd
 
                 if (howToExecuteTask == TaskExecutionMode.ExecuteTaskAndGatherOutputs)
                 {
+                    if (_buildRequestEntry.ActionGraph is { } graph &&
+                        !MSBuildNameIgnoreCaseComparer.Default.Equals(_taskNode.Name, "MSBuild") &&
+                        !MSBuildNameIgnoreCaseComparer.Default.Equals(_taskNode.Name, "CallTarget"))
+                    {
+                        UpdateContinueOnError(bucket, taskHost);
+                        if (graph.Record(_buildRequestEntry.RequestConfiguration.Project, _taskNode, bucket, _targetLoggingContext, _taskHostObject))
+                        {
+                            return new WorkUnitResult(WorkUnitResultCode.Success, WorkUnitActionCode.Continue, null);
+                        }
+                    }
+
                     // We need to find the task before logging the task started event so that the using task statement comes before the task started event
                     TaskHostParameters taskIdentityParameters = GatherTaskIdentityParameters(bucket.Expander);
                     (TaskRequirements? requirements, TaskFactoryWrapper taskFactoryWrapper) = _taskExecutionHost.FindTask(taskIdentityParameters);
@@ -788,15 +799,11 @@ namespace Microsoft.Build.BackEnd
             }
             else
             {
-                if (_buildRequestEntry.ActionGraph is { } graph && !isConstructionMSBuild)
+                if (_buildRequestEntry.ActionGraph is not null && !isConstructionMSBuild)
                 {
                     ProjectErrorUtilities.VerifyThrowInvalidProject(
                         taskExecutionHost.SupportsActionGraph,
                         _taskNode.Location, "HardenedGraphUnsupportedConstruct", "unaudited tasks, custom task factories or specialized hosting", "action graph construction");
-                    if (graph.Record(taskExecutionHost.TaskInstance, taskExecutionHost.ActionParameters, _taskNode))
-                    {
-                        return new WorkUnitResult(WorkUnitResultCode.Success, WorkUnitActionCode.Continue, null);
-                    }
                 }
 
                 bool taskReturned = false;

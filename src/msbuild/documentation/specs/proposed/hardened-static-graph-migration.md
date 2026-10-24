@@ -35,6 +35,11 @@ The implementation must also have `[MSBuildDeclaredIOTask]` and public
 does not make an unaudited task eligible. Both lists must be explicitly
 supplied, including when empty.
 
+For nonempty footprints, construction captures the authored `UsingTask`
+registration and concrete arguments without loading the implementation.
+The executor performs the audit and typed binding after the assembly's producer
+runs. Empty-footprint invocations still require that audit during construction.
+
 Engine services need individual audits too. `ValidateExecutableReferences`
 parses supplied metadata and reads the request's global-property dictionary;
 it does not open referenced projects. Preserve that provenance: a global
@@ -187,8 +192,9 @@ For runtime library trimming, the compiler writes directly to `PreTrim/`, and
 the linker produces distinct final paths for normal publication. Do not move
 compiler outputs away or let both actions write the same path. XML-combining
 helpers from `ILLink.Tasks` still run before compilation; moving every use of
-that assembly after compilation would be incorrect. Generated-task binding and
-the helpers'/linker's declared-I/O adaptations are still required.
+that assembly after compilation would be incorrect. Opaque action capture now
+supports generated task assemblies without prebuilding them; the helpers' and
+linker's declared-I/O adaptations are still required.
 
 The [prepared SDK selection path](hardened-static-graph-implementation.md#prepared-sdk-package-selection)
 reuses ordinary policy with a direct fact-to-model projection and direct item

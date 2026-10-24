@@ -42,7 +42,7 @@ internal sealed class TaskInvocation
         TaskInvocation invocation = JsonSerializer.Deserialize<TaskInvocation>(stream, JsonOptions)
             ?? throw new InvalidDataException(HostResources.Format("InvalidInvocation", path));
 
-        if (invocation.Version != 1)
+        if (invocation.Version is not (1 or 2))
         {
             throw new InvalidDataException(HostResources.Format("UnsupportedVersion", invocation.Version));
         }

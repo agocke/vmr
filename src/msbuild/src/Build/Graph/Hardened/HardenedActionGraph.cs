@@ -10,12 +10,16 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Build.BackEnd;
+using Microsoft.Build.BackEnd.Logging;
 using Microsoft.Build.Collections;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
+using Microsoft.Build.Exceptions;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
+using TaskItem = Microsoft.Build.Execution.ProjectItemInstance.TaskItem;
 #if NETFRAMEWORK
 using Path = Microsoft.IO.Path;
 #else
@@ -218,13 +222,14 @@ internal sealed class HardenedActionGraph
         }
     }
 
-    // True means the invocation was recorded, not executed.
-    internal bool Record(ITask task, Dictionary<string, object> parameters, ProjectTaskInstance node)
+    // Capture both concrete parameter interpretations; only the executor knows the parameter types.
+    internal bool Record(ProjectInstance project, ProjectTaskInstance node, ItemBucket bucket, LoggingContext loggingContext, ITaskHost? hostObject)
     {
-        Require(parameters.TryGetValue("DeclaredInputs", out object? inputValue) && inputValue is ITaskItem[], "missing DeclaredInputs", node.Location);
-        Require(parameters.TryGetValue("DeclaredOutputs", out object? outputValue) && outputValue is ITaskItem[], "missing DeclaredOutputs", node.Location);
-        string[] inputs = Paths((ITaskItem[])inputValue!);
-        string[] outputs = Paths((ITaskItem[])outputValue!);
+        Dictionary<string, (string, ElementLocation)> expressions = new(node.ParametersForBuild, MSBuildNameIgnoreCaseComparer.Default);
+        Require(expressions.TryGetValue("DeclaredInputs", out var input), "missing DeclaredInputs", node.Location);
+        Require(expressions.TryGetValue("DeclaredOutputs", out var output), "missing DeclaredOutputs", node.Location);
+        string[] inputs = Paths([.. bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(input.Item1, ExpanderOptions.ExpandAll, input.Item2)]);
+        string[] outputs = Paths([.. bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(output.Item1, ExpanderOptions.ExpandAll, output.Item2)]);
         if (inputs.Length == 0 && outputs.Length == 0)
         {
             return false;
@@ -232,19 +237,38 @@ internal sealed class HardenedActionGraph
 
         Require(outputs.Length != 0, "a file-I/O action without outputs", node.Location);
         Require(node.Outputs.Count == 0, "Output mappings on file-I/O actions", node.Location);
-        Require(task.HostObject is null, "task host objects", node.Location);
-        foreach (string output in outputs)
+        Require(hostObject is null, "task host objects", node.Location);
+        TaskHostParameters identity = TaskBuilder.GatherTaskIdentityParameters(node, bucket.Expander);
+        bool registered = project.TaskRegistry.TryGetRegisteredTaskForAction(
+            node.Name, identity, true, loggingContext, out AssemblyLoadInfo assembly, out string typeName);
+        if (!registered)
         {
-            Require(!Directory.Exists(output), $"directory output '{output}'", node.Location);
+            registered = project.TaskRegistry.TryGetRegisteredTaskForAction(
+                node.Name, identity, false, loggingContext, out assembly, out typeName);
+        }
+
+        if (!registered && TaskClassRegistry.TryGetRegistration(node.Name, out TaskClassRegistration? registration) &&
+            registration.TryGetLoadedTypeWithoutConstruction(out LoadedType? loaded))
+        {
+            assembly = AssemblyLoadInfo.Create(null, loaded.Type.Assembly.Location);
+            typeName = loaded.Type.FullName!;
+        }
+
+        Require(assembly is not null && !string.IsNullOrEmpty(assembly.AssemblyFile),
+            "a task without an explicit assembly registration, a custom task factory, or specialized hosting", node.Location);
+        string taskAssembly = CanonicalPath(assembly!.AssemblyFile, node.Location);
+        foreach (string path in outputs)
+        {
+            Require(!Directory.Exists(path), $"directory output '{path}'", node.Location);
         }
 
         using MemoryStream stream = new();
         using (Utf8JsonWriter json = new(stream))
         {
             json.WriteStartObject();
-            json.WriteNumber("version", 1);
-            json.WriteString("taskAssembly", task.GetType().Assembly.Location);
-            json.WriteString("taskType", task.GetType().FullName);
+            json.WriteNumber("version", 2);
+            json.WriteString("taskAssembly", taskAssembly);
+            json.WriteString("taskType", typeName);
             json.WriteString("workingDirectory", _directory);
             json.WriteString("projectFile", node.Location.File);
             json.WriteNumber("lineNumber", node.Location.Line);
@@ -257,17 +281,46 @@ internal sealed class HardenedActionGraph
 
             json.WriteEndObject();
             json.WriteStartObject("parameters");
-            foreach (string name in SortedKeys(parameters))
+            foreach (string name in SortedKeys(expressions))
             {
                 json.WritePropertyName(name);
-                WriteValue(json, parameters[name]);
+                (string expression, ElementLocation location) = expressions[name];
+                json.WriteStartObject();
+                json.WriteString("scalar", bucket.Expander.ExpandIntoStringAndUnescape(expression, ExpanderOptions.ExpandAll, location));
+                json.WritePropertyName("items");
+                IList<TaskItem>? items = null;
+                try
+                {
+                    items = bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(expression, ExpanderOptions.ExpandAll, location);
+                }
+                catch (InvalidProjectFileException)
+                {
+                    // A valid scalar expression need not be a valid item-vector expression.
+                }
+
+                if (items is null)
+                {
+                    json.WriteNullValue();
+                }
+                else
+                {
+                    json.WriteStartArray();
+                    foreach (TaskItem item in items)
+                    {
+                        WriteItem(json, item);
+                    }
+
+                    json.WriteEndArray();
+                }
+
+                json.WriteEndObject();
             }
 
             json.WriteEndObject();
             json.WriteEndObject();
         }
 
-        _actions.Add(new(stream.ToArray(), inputs, outputs, task.GetType().Assembly.Location));
+        _actions.Add(new(stream.ToArray(), [.. inputs, taskAssembly], outputs, taskAssembly));
         return true;
     }
 
@@ -352,9 +405,12 @@ internal sealed class HardenedActionGraph
             ninja.Append(": ").Append(rule);
             AppendPaths(ninja, action.Inputs);
             ninja.Append(" | ").Append(EscapePath(manifest));
-            HashSet<string> tools = new(FileUtilities.PathComparer) { _host, _dotnet, action.Assembly };
+            HashSet<string> tools = new(FileUtilities.PathComparer) { _host, _dotnet };
             AddToolDirectory(tools, Path.GetDirectoryName(_host)!);
-            AddToolDirectory(tools, Path.GetDirectoryName(action.Assembly)!);
+            if (!producers.ContainsKey(action.Assembly))
+            {
+                AddToolDirectory(tools, Path.GetDirectoryName(action.Assembly)!);
+            }
             List<string> sortedTools = [.. tools];
             sortedTools.Sort(StringComparer.Ordinal);
             AppendPaths(ninja, sortedTools);
@@ -414,51 +470,26 @@ internal sealed class HardenedActionGraph
         }
     }
 
-    private void WriteValue(Utf8JsonWriter json, object value)
+    private static void WriteItem(Utf8JsonWriter json, ITaskItem item)
     {
-        if (value is ITaskItem item)
+        json.WriteStartObject();
+        json.WriteString("itemSpec", item.ItemSpec);
+        json.WriteStartObject("metadata");
+        IDictionary metadata = item.CloneCustomMetadata();
+        List<string> names = [];
+        foreach (string name in metadata.Keys)
         {
-            json.WriteStartObject();
-            json.WriteString("itemSpec", item.ItemSpec);
-            json.WriteStartObject("metadata");
-            IDictionary metadata = item.CloneCustomMetadata();
-            List<string> names = [];
-            foreach (string name in metadata.Keys)
-            {
-                names.Add(name);
-            }
-
-            names.Sort(StringComparer.Ordinal);
-            foreach (string name in names)
-            {
-                json.WriteString(name, (string)metadata[name]!);
-            }
-
-            json.WriteEndObject();
-            json.WriteEndObject();
+            names.Add(name);
         }
-        else if (value is Array array)
+
+        names.Sort(StringComparer.Ordinal);
+        foreach (string name in names)
         {
-            Require(array.Rank == 1, $"parameter type '{value.GetType()}'");
-            Type element = value.GetType().GetElementType()!;
-            Require(element == typeof(ITaskItem) || ValueTypeParser.IsSupportedType(element) || element.IsEnum,
-                $"parameter type '{value.GetType()}'");
-            json.WriteStartArray();
-            foreach (object entry in array)
-            {
-                WriteValue(json, entry);
-            }
+            json.WriteString(name, (string)metadata[name]!);
+        }
 
-            json.WriteEndArray();
-        }
-        else
-        {
-            Require(value is not null && (ValueTypeParser.IsSupportedType(value.GetType()) || value.GetType().IsEnum),
-                $"parameter type '{value?.GetType()}'");
-            json.WriteStringValue(value is DateTime dateTime
-                ? dateTime.ToString("O", CultureInfo.InvariantCulture)
-                : ValueTypeParser.ToString(value));
-        }
+        json.WriteEndObject();
+        json.WriteEndObject();
     }
 
     private string[] Paths(ITaskItem[] items)

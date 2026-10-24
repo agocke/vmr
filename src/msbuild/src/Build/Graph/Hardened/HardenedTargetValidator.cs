@@ -851,36 +851,6 @@ internal sealed class HardenedTargetValidator
                     ValueState.Combine(runtimeResult.State, architectureResult.State))));
 
         HardenedTaskDescriptor taskDescriptor = HardenedTaskDescriptor.Unaudited;
-        if (runtimeResult.State.IsStatic && architectureResult.State.IsStatic)
-        {
-            TaskHostParameters taskIdentityParameters =
-                TaskBuilder.GatherTaskIdentityParameters(
-                    task,
-                    ConcreteExpander,
-                    _activeMetadata is null
-                        ? ExpanderOptions.ExpandPropertiesAndItems
-                        : ExpanderOptions.ExpandAll);
-            if (_taskClassifier is not null)
-            {
-                taskDescriptor = _taskClassifier(task, taskIdentityParameters);
-            }
-            else
-            {
-                if (!_taskDescriptors.TryGetValue(
-                        task.Name,
-                        out HardenedTaskDescriptor? configuredDescriptor) ||
-                    configuredDescriptor is null)
-                {
-                    taskDescriptor = HardenedTaskDescriptor.Unaudited;
-                }
-                else
-                {
-                    taskDescriptor = configuredDescriptor;
-                }
-            }
-        }
-
-        HardenedTaskClassification classification = taskDescriptor.Classification;
         bool isCallTarget = MSBuildNameIgnoreCaseComparer.Default.Equals(task.Name, "CallTarget");
         bool isMSBuild = MSBuildNameIgnoreCaseComparer.Default.Equals(task.Name, "MSBuild");
 
@@ -905,13 +875,48 @@ internal sealed class HardenedTargetValidator
         }
 
         int footprintCount = _declaredIOFootprints.Count;
-        ValueState declaredIOState =
-            classification == HardenedTaskClassification.DeclaredIO
-                ? ResolveDeclaredIO(task, taskDescriptor)
-                : ValueState.Static;
-        taskControlState = ValueState.Combine(taskControlState, declaredIOState);
+        bool invocationDeclaresIO = _taskClassifier is not null && !isMSBuild && !isCallTarget;
+        ValueState declaredIOState = invocationDeclaresIO
+            ? ResolveDeclaredIO(task, HardenedTaskDescriptor.DeclaredIO)
+            : ValueState.Static;
         bool zeroIO = _declaredIOFootprints.Count > footprintCount &&
             _declaredIOFootprints[footprintCount] is { InputPaths.Count: 0, OutputPaths.Count: 0 };
+        if (invocationDeclaresIO)
+        {
+            taskDescriptor = HardenedTaskDescriptor.DeclaredIO;
+        }
+
+        if ((!invocationDeclaresIO || zeroIO) &&
+            runtimeResult.State.IsStatic && architectureResult.State.IsStatic)
+        {
+            TaskHostParameters taskIdentityParameters = TaskBuilder.GatherTaskIdentityParameters(
+                task, ConcreteExpander,
+                _activeMetadata is null ? ExpanderOptions.ExpandPropertiesAndItems : ExpanderOptions.ExpandAll);
+            if (_taskClassifier is not null)
+            {
+                taskDescriptor = _taskClassifier(task, taskIdentityParameters);
+            }
+            else if (_taskDescriptors.TryGetValue(task.Name, out HardenedTaskDescriptor? configuredDescriptor) &&
+                     configuredDescriptor is not null)
+            {
+                taskDescriptor = configuredDescriptor;
+            }
+        }
+
+        HardenedTaskClassification classification = taskDescriptor.Classification;
+        if (!invocationDeclaresIO && classification == HardenedTaskClassification.DeclaredIO)
+        {
+            declaredIOState = ResolveDeclaredIO(task, taskDescriptor);
+            zeroIO = _declaredIOFootprints.Count > footprintCount &&
+                _declaredIOFootprints[footprintCount] is { InputPaths.Count: 0, OutputPaths.Count: 0 };
+        }
+        else if (zeroIO && classification == HardenedTaskClassification.DeclaredIO)
+        {
+            declaredIOState = ValueState.Combine(declaredIOState,
+                ValidateRequiredUnsetParameters(task, taskDescriptor.RequiredUnsetParameters));
+        }
+
+        taskControlState = ValueState.Combine(taskControlState, declaredIOState);
         bool isConstructionMSBuild = isMSBuild &&
             classification == HardenedTaskClassification.Unaudited &&
             HasStaticMSBuildProjects(task, taskControlState);

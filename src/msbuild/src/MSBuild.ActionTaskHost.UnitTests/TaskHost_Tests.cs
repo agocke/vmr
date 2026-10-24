@@ -124,6 +124,7 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
             ["Forbidden"] = "",
             ["DeclaredInputs"] = Array.Empty<string>(),
             ["DeclaredOutputs"] = new[] { "bound.json" },
+            ["RequiredItems"] = Array.Empty<string>(),
         }, new() { ["ACTION_HOST_EXPLICIT"] = "present" });
 
         Run(manifest, out _).ShouldBeTrue();
@@ -146,17 +147,90 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void OmittedParametersKeepTaskDefaults()
+    public void BindsCapturedParametersUsingActualPropertyTypesWithoutReevaluation()
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
         string directory = env.CreateFolder().Path;
-        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), ProbeParameters());
+        Dictionary<string, object?> parameters = CapturedProbeParameters();
+        parameters["Value"] = CapturedParameter("literal%3B;$(MustNotExpand);@(NoItems)", null);
+        parameters["Values"] = CapturedParameter("first;part;second$(literal)",
+            [CapturedItem("first;part"), CapturedItem("second$(literal)")]);
+        parameters["Enabled"] = CapturedParameter("on", [CapturedItem("on")]);
+        parameters["Count"] = CapturedParameter("42", [CapturedItem("42")]);
+        parameters["Mode"] = CapturedParameter("second", [CapturedItem("second")]);
+        parameters["Items"] = CapturedParameter("one%3B;$(literal);two",
+        [
+            new { itemSpec = "one%3B;$(literal)", metadata = new { Tag = "tag%25;$(metadata)" } },
+            CapturedItem("two"),
+        ]);
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), parameters, version: 2);
+
+        Run(manifest, out _).ShouldBeTrue();
+
+        using JsonDocument result = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "probe.json")));
+        JsonElement root = result.RootElement;
+        root.GetProperty("value").GetString().ShouldBe("literal%3B;$(MustNotExpand);@(NoItems)");
+        root.GetProperty("values").EnumerateArray().Select(value => value.GetString()).ShouldBe(["first;part", "second$(literal)"]);
+        root.GetProperty("enabled").GetBoolean().ShouldBeTrue();
+        root.GetProperty("count").GetInt32().ShouldBe(42);
+        root.GetProperty("mode").GetString().ShouldBe("Second");
+        root.GetProperty("items").GetArrayLength().ShouldBe(2);
+        root.GetProperty("items")[0].GetProperty("itemSpec").GetString().ShouldBe("one%3B;$(literal)");
+        root.GetProperty("items")[0].GetProperty("tag").GetString().ShouldBe("tag%25;$(metadata)");
+        root.GetProperty("items")[1].GetProperty("itemSpec").GetString().ShouldBe("two");
+        root.GetProperty("engineLoaded").GetBoolean().ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(2, true)]
+    public void OmittedOrCapturedEmptyOptionalParametersKeepTaskDefaults(int version, bool supplyEmpty)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        Dictionary<string, object?> parameters = version == 1 ? ProbeParameters() : CapturedProbeParameters();
+        if (supplyEmpty)
+        {
+            foreach (string name in new[] { "Value", "Values", "Items", "OptionalItem" })
+            {
+                parameters[name] = CapturedParameter("", []);
+            }
+        }
+
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), parameters, version: version);
 
         Run(manifest, out _).ShouldBeTrue();
 
         using JsonDocument result = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "probe.json")));
         result.RootElement.GetProperty("value").GetString().ShouldBe("default");
-        result.RootElement.GetProperty("values")[0].GetString().ShouldBe("default");
+        result.RootElement.GetProperty("values").EnumerateArray().Select(value => value.GetString()).ShouldBe(["default"]);
+        result.RootElement.GetProperty("items").GetArrayLength().ShouldBe(1);
+        result.RootElement.GetProperty("items")[0].GetProperty("itemSpec").GetString().ShouldBe("constructor-item");
+        result.RootElement.GetProperty("optionalItem").GetString().ShouldBe("constructor-item");
+        result.RootElement.GetProperty("requiredItems").GetArrayLength().ShouldBe(0);
+        result.RootElement.GetProperty("declaredInputs").GetArrayLength().ShouldBe(0);
+        result.RootElement.GetProperty("declaredOutputs").EnumerateArray().Select(value => value.GetString()).ShouldBe(["probe.json"]);
+    }
+
+    [Theory]
+    [InlineData("Items", "Items")]
+    [InlineData("Unsupported", "Unsupported")]
+    [InlineData("DeclaredOutputs", "persistent regular-file output")]
+    public void CapturedInvalidVectorsAndEmptyOutputDeclarationsFailBeforeExecution(string parameter, string expected)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        Dictionary<string, object?> parameters = CapturedProbeParameters();
+        parameters[parameter] = parameter == "Items"
+            ? CapturedParameter("@(MustNotReevaluate)", null)
+            : CapturedParameter("", []);
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), parameters, version: 2);
+
+        Run(manifest, out string log).ShouldBeFalse();
+
+        log.ShouldContain(expected);
+        File.Exists(Path.Combine(directory, "probe.json")).ShouldBeFalse();
     }
 
     [Theory]
@@ -321,20 +395,34 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
     private static Dictionary<string, object?> ProbeParameters() => new()
     {
         ["File"] = "probe.json",
+        ["RequiredItems"] = Array.Empty<string>(),
         ["DeclaredInputs"] = Array.Empty<string>(),
         ["DeclaredOutputs"] = new[] { "probe.json" },
     };
+
+    private static Dictionary<string, object?> CapturedProbeParameters() => new()
+    {
+        ["File"] = CapturedParameter("probe.json", [CapturedItem("probe.json")]),
+        ["RequiredItems"] = CapturedParameter("", []),
+        ["DeclaredInputs"] = CapturedParameter("", []),
+        ["DeclaredOutputs"] = CapturedParameter("probe.json", [CapturedItem("probe.json")]),
+    };
+
+    private static object CapturedParameter(string scalar, object[]? items) => new { scalar, items };
+
+    private static object CapturedItem(string itemSpec) => new { itemSpec, metadata = new Dictionary<string, string>() };
 
     private static string WriteInvocation(
         string directory,
         Type taskType,
         Dictionary<string, object?> parameters,
-        Dictionary<string, string>? environment = null)
+        Dictionary<string, string>? environment = null,
+        int version = 1)
     {
         string path = Path.Combine(directory, "invocation.json");
         File.WriteAllText(path, JsonSerializer.Serialize(new
         {
-            version = 1,
+            version,
             taskAssembly = taskType.Assembly.Location,
             taskType = taskType.FullName,
             workingDirectory = directory,
@@ -371,12 +459,19 @@ public enum ProbeMode
 [MSBuildDeclaredIORequiresUnset(nameof(Forbidden))]
 public sealed class ManifestProbeTask : Utilities.Task
 {
+    public ManifestProbeTask()
+    {
+    }
+
     [Required]
     public ITaskItem? File { get; set; }
 
-    public ITaskItem[] DeclaredInputs { get; set; } = [];
+    public ITaskItem[] DeclaredInputs { get; set; } = [new Utilities.TaskItem("constructor-input")];
 
-    public ITaskItem[] DeclaredOutputs { get; set; } = [];
+    public ITaskItem[] DeclaredOutputs { get; set; } = [new Utilities.TaskItem("constructor-output")];
+
+    [Required]
+    public ITaskItem[] RequiredItems { get; set; } = [new Utilities.TaskItem("constructor-required-item")];
 
     public string Value { get; set; } = "default";
 
@@ -388,7 +483,9 @@ public sealed class ManifestProbeTask : Utilities.Task
 
     public ProbeMode Mode { get; set; }
 
-    public ITaskItem[] Items { get; set; } = [];
+    public ITaskItem[] Items { get; set; } = [new Utilities.TaskItem("constructor-item")];
+
+    public ITaskItem OptionalItem { get; set; } = new Utilities.TaskItem("constructor-item");
 
     public DateTimeOffset[] Unsupported { get; set; } = [];
 
@@ -427,6 +524,10 @@ public sealed class ManifestProbeTask : Utilities.Task
                 count = Count,
                 mode = Mode.ToString(),
                 items = Items.Select(item => new { itemSpec = item.ItemSpec, tag = item.GetMetadata("Tag") }).ToArray(),
+                optionalItem = OptionalItem.ItemSpec,
+                requiredItems = RequiredItems.Select(item => item.ItemSpec).ToArray(),
+                declaredInputs = DeclaredInputs.Select(item => item.ItemSpec).ToArray(),
+                declaredOutputs = DeclaredOutputs.Select(item => item.ItemSpec).ToArray(),
                 workingDirectory = Environment.CurrentDirectory,
                 explicitEnvironment = Environment.GetEnvironmentVariable("ACTION_HOST_EXPLICIT"),
                 ambientEnvironment = Environment.GetEnvironmentVariable("ACTION_HOST_AMBIENT"),

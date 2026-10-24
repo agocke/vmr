@@ -129,9 +129,17 @@ Treatment is per invocation:
 
 | Declared filesystem footprint | Treatment with known parameters |
 | --- | --- |
-| Both lists empty | Execute during graph construction |
-| Either list nonempty | Emit an independently executable action |
-| Missing or invalid contract | Reject graph generation |
+| Both lists empty | Audit the implementation, bind, and execute during construction |
+| Either list nonempty | Capture an opaque action; audit and bind at execution |
+| Missing or invalid declarations | Reject graph generation |
+
+Construction does not load, instantiate, or reflect over a nonempty-footprint
+task. Its existing `UsingTask` registration supplies the assembly artifact and
+task name; no additional registration annotation is needed. The standalone
+executor checks the implementation's declared-I/O contract and parameter types
+before `Execute`. Invalid implementation contracts and type-dependent binding
+errors therefore fail execution, not construction. Zero-I/O invocations still
+need an available, audited implementation before they can run during construction.
 
 Pure is the zero-I/O case, not a separate classification or annotation.
 Zero-I/O tasks may still accept values and return properties, items, and
@@ -515,8 +523,8 @@ Reuse MSBuild's target ordering, expression expansion, batching, and
 property/item scope semantics for the supported subset.
 
 The current path reuses the existing hardened construction walk and its
-task-builder callback. After ordinary task parameter binding, file actions
-are captured instead of calling `Execute`; zero-I/O invocations execute and
+task-builder callback. File actions are captured before task loading and typed
+parameter binding; zero-I/O invocations use ordinary binding, execute, and
 gather outputs normally. Successful construction returns before ordinary
 `BuildTargets`, so target timestamp skipping cannot erase actions or execute
 construction tasks a second time. No additional target interpreter is added.
@@ -558,8 +566,8 @@ manifests. No separate whole-graph JSON format is required.
 Each manifest contains:
 
 - invocation identity, including configured project, target, and batch;
-- exact task type, assembly/annotation identity, and pinned code/tool dependencies;
-- concrete typed parameters, preserving item order, metadata, and unset/empty values;
+- registered task name, assembly artifact, and pinned code/tool dependencies;
+- expanded scalar and item-vector parameter values, preserving order and metadata;
 - working directory, explicit environment, and runtime/host context;
 - canonical declared paths and original diagnostic locations.
 
@@ -568,6 +576,13 @@ invocation. Declared input files, manifests, and host/tool dependencies are
 normal explicit or implicit inputs. Required ordering without content
 invalidation uses order-only edges, never as a substitute for consumed files.
 Default roots represent the requested target closure.
+
+Task assemblies are ordinary file inputs, including when an earlier action
+produces them. Construction does not enumerate a generated assembly's future
+directory. Its producer and consumers must declare any other generated tool
+artifacts they need. Registration selection follows authored override and
+registration order, without probing assemblies for alternative task types;
+use unambiguous registrations rather than assembly-content fallback.
 
 Host commands receive manifest paths, not MSBuild expressions or serialized
 engine objects. Ninja escaping and platform command quoting are separate
@@ -588,35 +603,58 @@ their invocation-specific execution directories.
 ## Standalone task hosts
 
 The first host, `MSBuild.ActionTaskHost`, accepts `--invocation <file.json>`.
-Version 1 uses JSON values rather than command-line task expressions:
+Newly emitted version 2 invocations preserve both expanded interpretations of
+each authored parameter without inspecting the task's property types:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "taskAssembly": "/tools/Microsoft.Build.Tasks.Core.dll",
   "taskType": "Microsoft.Build.Tasks.WriteLinesToFile",
   "workingDirectory": "/workspace",
   "environment": {},
   "parameters": {
-    "File": "obj/generated.txt",
-    "Lines": ["first line", "second line"],
-    "Overwrite": true,
-    "DeclaredInputs": [],
-    "DeclaredOutputs": ["obj/generated.txt"]
+    "File": {
+      "scalar": "obj/generated.txt",
+      "items": [{"itemSpec": "obj/generated.txt", "metadata": {}}]
+    },
+    "Lines": {
+      "scalar": "first line;second line",
+      "items": [
+        {"itemSpec": "first line", "metadata": {}},
+        {"itemSpec": "second line", "metadata": {}}
+      ]
+    },
+    "Overwrite": {
+      "scalar": "true",
+      "items": [{"itemSpec": "true", "metadata": {}}]
+    },
+    "DeclaredInputs": {"scalar": "", "items": []},
+    "DeclaredOutputs": {
+      "scalar": "obj/generated.txt",
+      "items": [{"itemSpec": "obj/generated.txt", "metadata": {}}]
+    }
   }
 }
 ```
 
 Assembly and working-directory paths are absolute; task paths are relative
-to that directory. Scalars use JSON strings, numbers, or booleans; the host
-converts them to the task's declared parameter types using invariant MSBuild
-conversions. Arrays are explicit JSON arrays, never semicolon-delimited text.
-An item is either a literal string or
-`{"itemSpec":"file.cs","metadata":{"Tag":"value"}}`. Item text and metadata
-are literal, not MSBuild-escaped or expression-expanded. Custom metadata is
-supported; derived item metadata is calculated by the task-item implementation.
-Omitted parameters keep task defaults, empty strings/arrays remain empty,
-and null values are rejected.
+to that directory. `scalar` is expanded and unescaped text; `items` preserves
+item boundaries and custom metadata. Item text and metadata are literal, not
+MSBuild-escaped or expression-expanded at execution. If an expression is valid
+only as a scalar, `items` is null; this fails only when the actual parameter
+needs an item/vector representation. The executor selects the representation
+using the real property type and performs invariant MSBuild conversions.
+An `ITaskItem` scalar needs exactly one item; arrays preserve all items.
+Omitted parameters and explicitly empty optional values retain constructor
+defaults, as in ordinary binding. Required empty arrays bind as empty arrays;
+the two footprint declarations always bind, even when empty.
+
+The executor also accepts version 1 pre-bound JSON values for direct callers.
+That format uses scalar strings/numbers/booleans and explicit arrays; items
+are literal strings or `{"itemSpec":"file.cs","metadata":{"Tag":"value"}}`.
+Explicit empty values remain empty in version 1. Null parameter values are
+rejected in both formats.
 
 The environment replaces inherited task environment variables and defaults to
 empty; culture is invariant. Optional `projectFile`, `lineNumber`, and

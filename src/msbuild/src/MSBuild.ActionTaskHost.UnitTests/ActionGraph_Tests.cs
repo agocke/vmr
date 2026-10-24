@@ -455,7 +455,7 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     [InlineData("override-architecture", "host context")]
     [InlineData("remove-runtime-identifier", "MSBuildGraphHostRuntimeIdentifier")]
     [InlineData("override-runtime-identifier", "host context")]
-    [InlineData("child-failure", "DeclaredIO")]
+    [InlineData("child-failure", "a missing 'DeclaredInputs' parameter")]
     public void InvalidProjectReferenceClosurePublishesNothing(string mode, string expected)
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
@@ -571,10 +571,17 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         File.Exists(Path.Combine(directory, "action.txt")).ShouldBeFalse();
         string manifest = Directory.GetFiles(graph + ".actions", "*.json").ShouldHaveSingleItem();
         using JsonDocument invocation = JsonDocument.Parse(File.ReadAllText(manifest));
+        invocation.RootElement.GetProperty("version").GetInt32().ShouldBe(2);
         JsonElement parameters = invocation.RootElement.GetProperty("parameters");
-        bool hasValue = value is { Length: > 0 } && value != "$(Missing)";
+        bool hasValue = value is not null;
         parameters.TryGetProperty("NullText", out _).ShouldBe(hasValue);
         parameters.TryGetProperty("DefaultText", out _).ShouldBe(hasValue);
+        if (hasValue)
+        {
+            string expanded = value is "" or "$(Missing)" ? "" : "literal%3B;value";
+            parameters.GetProperty("NullText").GetProperty("scalar").GetString().ShouldBe(expanded);
+            parameters.GetProperty("DefaultText").GetProperty("scalar").GetString().ShouldBe(expanded);
+        }
 
         Ninja(graph, out succeeded);
 
@@ -586,7 +593,7 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     [UnixOnlyTheory]
     [InlineData("")]
     [InlineData("$(Missing)")]
-    public void CapturedRequiredScalarParametersRejectEmptyValues(string value)
+    public void CapturedRequiredScalarParametersRejectEmptyValuesAtExecution(string value)
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
         string directory = env.CreateFolder().Path;
@@ -608,12 +615,164 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         ordinaryLog.ShouldContain("MSB4044");
         string graph = Path.Combine(directory, "build.ninja");
 
-        Generate(project, graph, out string log).ShouldBeFalse();
+        Generate(project, graph).ShouldBeTrue();
 
-        log.ShouldContain("MSB4044");
-        File.Exists(graph).ShouldBeFalse();
-        Directory.Exists(graph + ".actions").ShouldBeFalse();
+        Directory.GetFiles(graph + ".actions", "*.json").Length.ShouldBe(1);
         File.Exists(Path.Combine(directory, "result.txt")).ShouldBeFalse();
+        string log = Ninja(graph, out succeeded);
+
+        succeeded.ShouldBeFalse();
+        log.ShouldContain("File");
+        log.ShouldContain("required", Case.Insensitive);
+        File.Exists(Path.Combine(directory, "result.txt")).ShouldBeFalse();
+    }
+
+    [UnixOnlyFact]
+    public void CapturesTaskAssemblyProducedByAnEarlierActionWithoutLoadingIt()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = Path.Combine(directory, "generated-task.proj");
+        string futureAssembly = Path.Combine(directory, "future", Path.GetFileName(typeof(ManifestProbeTask).Assembly.Location));
+        File.WriteAllText(project, $$"""
+            <Project>
+              <PropertyGroup>
+                <FixtureAssembly>{{SecurityElement.Escape(typeof(ManifestProbeTask).Assembly.Location)}}</FixtureAssembly>
+                <FutureTaskAssembly>{{SecurityElement.Escape(futureAssembly)}}</FutureTaskAssembly>
+                <InvocationTaskAssembly>$(FutureTaskAssembly)</InvocationTaskAssembly>
+              </PropertyGroup>
+              <UsingTask TaskName="{{typeof(Microsoft.Build.Tasks.CopyFiles).FullName}}"
+                         AssemblyFile="{{SecurityElement.Escape(typeof(Microsoft.Build.Tasks.CopyFiles).Assembly.Location)}}" />
+              <UsingTask TaskName="{{typeof(ManifestProbeTask).FullName}}" AssemblyFile="$(InvocationTaskAssembly)" />
+              <ItemGroup>
+                <Payload Include="one%253B%3B%24(literal)" Tag="tag%253B%3B%24(metadata)" />
+              </ItemGroup>
+              <Target Name="Build">
+                <CopyFiles SourceFiles="$(FixtureAssembly)" DestinationFiles="$(FutureTaskAssembly)"
+                           DeclaredInputs="$(FixtureAssembly)" DeclaredOutputs="$(FutureTaskAssembly)" />
+                <ManifestProbeTask File="$(ResultFile)" Value="scalar%253B%3B%24(MustNotExpand)"
+                                   Values="first%3Bpart;second%24(literal)" Items="@(Payload)"
+                                   Enabled="on" Count="42" RequiredItems=""
+                                   DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+              </Target>
+            </Project>
+            """);
+        string graph = Path.Combine(directory, "build.ninja");
+
+        File.Exists(futureAssembly).ShouldBeFalse();
+        Generate(project, graph, "-p:ResultFile=action.json").ShouldBeTrue();
+
+        File.Exists(futureAssembly).ShouldBeFalse();
+        Directory.Exists(Path.GetDirectoryName(futureAssembly)).ShouldBeFalse();
+        File.Exists(Path.Combine(directory, "action.json")).ShouldBeFalse();
+        string[] manifests = Directory.GetFiles(graph + ".actions", "*.json");
+        manifests.Length.ShouldBe(2);
+        string consumerManifest = manifests.Single(path => Path.GetFileName(path).StartsWith("1-", StringComparison.Ordinal));
+        using (JsonDocument invocation = JsonDocument.Parse(File.ReadAllText(consumerManifest)))
+        {
+            invocation.RootElement.GetProperty("version").GetInt32().ShouldBe(2);
+            invocation.RootElement.GetProperty("taskAssembly").GetString().ShouldBe(futureAssembly);
+            invocation.RootElement.GetProperty("taskType").GetString().ShouldBe(typeof(ManifestProbeTask).FullName);
+            JsonElement parameters = invocation.RootElement.GetProperty("parameters");
+            parameters.GetProperty("Value").GetProperty("scalar").GetString().ShouldBe("scalar%3B;$(MustNotExpand)");
+            JsonElement item = parameters.GetProperty("Items").GetProperty("items")[0];
+            item.GetProperty("itemSpec").GetString().ShouldBe("one%3B;$(literal)");
+            item.GetProperty("metadata").GetProperty("Tag").GetString().ShouldBe("tag%3B;$(metadata)");
+        }
+
+        string escapedAssembly = futureAssembly.Replace("$", "$$").Replace(" ", "$ ").Replace(":", "$:");
+        string[] edges = File.ReadAllLines(graph).Where(line => line.StartsWith("build ", StringComparison.Ordinal)).ToArray();
+        edges.Length.ShouldBe(2);
+        edges[0].ShouldStartWith($"build {escapedAssembly}: action_0");
+        // The generated assembly must be a real input/tool dependency, not just an order-only edge.
+        edges[1].Split(" ||", StringSplitOptions.None)[0].ShouldContain(" " + escapedAssembly);
+
+        Ninja(graph, out bool succeeded);
+
+        succeeded.ShouldBeTrue();
+        File.ReadAllBytes(futureAssembly).ShouldBe(File.ReadAllBytes(typeof(ManifestProbeTask).Assembly.Location));
+        using JsonDocument result = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "action.json")));
+        JsonElement root = result.RootElement;
+        root.GetProperty("value").GetString().ShouldBe("scalar%3B;$(MustNotExpand)");
+        root.GetProperty("values").EnumerateArray().Select(value => value.GetString()).ShouldBe(["first;part", "second$(literal)"]);
+        root.GetProperty("enabled").GetBoolean().ShouldBeTrue();
+        root.GetProperty("count").GetInt32().ShouldBe(42);
+        root.GetProperty("items").GetArrayLength().ShouldBe(1);
+        root.GetProperty("items")[0].GetProperty("itemSpec").GetString().ShouldBe("one%3B;$(literal)");
+        root.GetProperty("items")[0].GetProperty("tag").GetString().ShouldBe("tag%3B;$(metadata)");
+        root.GetProperty("requiredItems").GetArrayLength().ShouldBe(0);
+        root.GetProperty("engineLoaded").GetBoolean().ShouldBeFalse();
+        root.GetProperty("processId").GetInt32().ShouldNotBe(Environment.ProcessId);
+
+        string ordinaryResult = Path.Combine(directory, "ordinary.json");
+        // Ordinary MSBuild scans all exported test types, so use the identical fixture beside its test dependencies.
+        RunnerUtilities.ExecBootstrapedMSBuild(
+            $"\"{project}\" -p:ResultFile=\"{ordinaryResult}\""
+                + $" -p:InvocationTaskAssembly=\"{typeof(ManifestProbeTask).Assembly.Location}\" -nr:false -v:minimal",
+            out succeeded, outputHelper: _output);
+        succeeded.ShouldBeTrue();
+        using JsonDocument ordinary = JsonDocument.Parse(File.ReadAllText(ordinaryResult));
+        foreach (string name in new[] { "value", "values", "enabled", "count", "items", "requiredItems" })
+        {
+            root.GetProperty(name).GetRawText().ShouldBe(ordinary.RootElement.GetProperty(name).GetRawText());
+        }
+    }
+
+    [UnixOnlyTheory]
+    [InlineData("Contract", "MSBuildDeclaredIOTaskAttribute")]
+    [InlineData("Unset", "Forbidden")]
+    [InlineData("Unknown", "NoSuchParameter")]
+    [InlineData("Typed", "Count")]
+    [InlineData("ItemVector", "Items")]
+    public void CapturedInvalidTaskContractsAndParametersFailOnlyAtExecution(string invalid, string expected)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        Type taskType = invalid == "Contract" ? typeof(MSBuild) : typeof(ManifestProbeTask);
+        XElement task = new(taskType.FullName!,
+            new XAttribute("File", "result.json"),
+            new XAttribute("DeclaredInputs", ""),
+            new XAttribute("DeclaredOutputs", "result.json"));
+        if (invalid != "Contract")
+        {
+            task.Add(new XAttribute("RequiredItems", ""));
+            task.Add(invalid switch
+            {
+                "Unset" => new XAttribute("Forbidden", "must-not-be-set"),
+                "Unknown" => new XAttribute("NoSuchParameter", "value"),
+                "Typed" => new XAttribute("Count", "not-an-integer"),
+                "ItemVector" => new XAttribute("Items", "prefix@(Payload)"),
+                _ => throw new InvalidOperationException(invalid),
+            });
+        }
+
+        string project = Path.Combine(directory, "invalid-task.proj");
+        File.WriteAllText(project, new XElement("Project",
+            new XElement("UsingTask",
+                new XAttribute("TaskName", taskType.FullName!),
+                new XAttribute("AssemblyFile", taskType.Assembly.Location)),
+            new XElement("ItemGroup", new XElement("Payload", new XAttribute("Include", "one"))),
+            new XElement("Target", new XAttribute("Name", "Build"), task)).ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph).ShouldBeTrue();
+
+        File.Exists(Path.Combine(directory, "result.json")).ShouldBeFalse();
+        string manifest = Directory.GetFiles(graph + ".actions", "*.json").ShouldHaveSingleItem();
+        using JsonDocument invocation = JsonDocument.Parse(File.ReadAllText(manifest));
+        invocation.RootElement.GetProperty("version").GetInt32().ShouldBe(2);
+        if (invalid == "ItemVector")
+        {
+            JsonElement items = invocation.RootElement.GetProperty("parameters").GetProperty("Items");
+            items.GetProperty("scalar").GetString().ShouldBe("prefixone");
+            items.GetProperty("items").ValueKind.ShouldBe(JsonValueKind.Null);
+        }
+
+        string log = Ninja(graph, out bool succeeded);
+
+        succeeded.ShouldBeFalse();
+        log.ShouldContain(expected);
+        File.Exists(Path.Combine(directory, "result.json")).ShouldBeFalse();
     }
 
     [UnixOnlyTheory]
@@ -1639,14 +1798,15 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         manifests.Length.ShouldBe(2);
         using (JsonDocument invocation = JsonDocument.Parse(File.ReadAllText(manifests[0])))
         {
-            invocation.RootElement.GetProperty("taskType").GetString().ShouldBe(typeof(GraphTransformTask).FullName);
+            invocation.RootElement.GetProperty("version").GetInt32().ShouldBe(2);
+            invocation.RootElement.GetProperty("taskType").GetString().ShouldBe(nameof(GraphTransformTask));
         }
         foreach (string manifest in manifests)
         {
             using JsonDocument invocation = JsonDocument.Parse(File.ReadAllText(manifest));
             if (invocation.RootElement.GetProperty("parameters").TryGetProperty("Text", out JsonElement text))
             {
-                text[0].GetProperty("metadata").GetProperty("ConstructionDirectory").GetString().ShouldBe(directory);
+                text.GetProperty("items")[0].GetProperty("metadata").GetProperty("ConstructionDirectory").GetString().ShouldBe(directory);
             }
         }
 
@@ -1869,17 +2029,19 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         File.Exists(Path.Combine(directory, "second.txt")).ShouldBeFalse();
     }
 
-    [UnixOnlyFact]
-    public void EmptyProjectsDoNotAdmitAnUnauditedMSBuildOverride()
+    [UnixOnlyTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EmptyFootprintsDoNotAdmitUnauditedOrMissingTasks(bool missing)
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
         string directory = env.CreateFolder().Path;
         string project = WriteProject(directory);
         XDocument contents = XDocument.Load(project);
         contents.Root!.AddFirst(new XElement("UsingTask",
-            new XAttribute("TaskName", typeof(MSBuild).FullName!),
-            new XAttribute("AssemblyFile", typeof(MSBuild).Assembly.Location)));
-        contents.Root.Element("Target")!.Add(new XElement("MSBuild",
+            new XAttribute("TaskName", missing ? "MissingGraphTask" : typeof(MSBuild).FullName!),
+            new XAttribute("AssemblyFile", missing ? Path.Combine(directory, "missing.dll") : typeof(MSBuild).Assembly.Location)));
+        contents.Root.Element("Target")!.Add(new XElement(missing ? "MissingGraphTask" : "MSBuild",
             new XAttribute("Projects", ""),
             new XAttribute("DeclaredInputs", ""),
             new XAttribute("DeclaredOutputs", ""),
@@ -1889,7 +2051,7 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
 
         Generate(project, graph, out string log).ShouldBeFalse();
 
-        log.ShouldContain("unaudited tasks");
+        log.ShouldContain(missing ? "MissingGraphTask" : "unaudited tasks");
         File.Exists(graph).ShouldBeFalse();
         Directory.Exists(graph + ".actions").ShouldBeFalse();
         File.Exists(Path.Combine(directory, "unaudited.txt")).ShouldBeFalse();
@@ -1925,7 +2087,11 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
 
         Generate(project, graph, out string log).ShouldBeFalse();
 
-        log.ShouldContain(invalid == "Importance" ? "invalid-message-importance" : $"missing '{invalid}'");
+        log.ShouldContain(invalid == "Importance" ? "invalid-message-importance" : $"a missing '{invalid}' parameter");
+        if (invalid != "Importance")
+        {
+            log.ShouldContain("MSB4286");
+        }
         File.Exists(graph).ShouldBeFalse();
         Directory.Exists(graph + ".actions").ShouldBeFalse();
         File.Exists(Path.Combine(directory, "first.txt")).ShouldBeFalse();

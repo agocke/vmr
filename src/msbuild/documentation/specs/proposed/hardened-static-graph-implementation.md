@@ -220,15 +220,20 @@ owned directory artifact or a success stamp. Collisions fail without deletion.
   values before file-action side effects.
 - [x] Preserve ordinary task/target selection outside the opt-in hardened path.
 
-`HardenedTaskClassificationResolver` checks implementation annotations;
-`HardenedTargetValidator` reuses the existing construction walk and callback.
+`HardenedTargetValidator` schedules ordinary tasks from their declared footprint.
+Only zero-I/O invocations use `HardenedTaskClassificationResolver` to check
+implementation annotations during construction; nonempty-footprint invocations
+are captured before task loading, construction, or typed binding. The standalone
+executor audits their implementations and binds their actual parameter types.
+The existing `UsingTask` registration is sufficient, including for a future DLL.
+The validator reuses the existing construction walk and callback.
 `HardenedDeclaredIOFootprint` describes paths; executable actions additionally
 capture parameters and implementation/context. No second interpreter is added.
 
 ## 3. Emit a concrete Ninja graph
 
 - [x] Capture actions per concrete task bucket, including configured-project
-  identity, bound parameters, declarations, host/tool context, and source location.
+  identity, expanded scalar/item parameters, declarations, host/tool context, and source location.
 - [x] Expand supported `MSBuild`/`CallTarget` requests into a shared root graph.
 - [x] Preserve configured-target state across metadata queries and Build requests,
   static target returns, property scopes, and repeated/diamond project requests.
@@ -243,6 +248,10 @@ Each action is one edge containing all its outputs. Declared input contents,
 manifests, and host/tool dependencies invalidate work; order-only edges carry
 control precedence, not consumed data. External input files must exist at
 publication; predecessor-produced inputs need not exist yet.
+Task assemblies participate in the same producer validation and Ninja file
+dependencies. Generated task directories are not enumerated during construction.
+Version 2 invocation manifests preserve both scalar and item interpretations;
+version 1 direct-host invocations remain supported.
 
 The implemented emitter uses Unix commands, one construction node, and conservative
 ordering. Adjacent host/task files are conservative tool dependencies; tools
@@ -637,10 +646,16 @@ An isolated hardened `GetTargetFrameworks` request against the actual runtime
 reference project also returns all four advertised frameworks (`net11.0`,
 `net10.0`, `netstandard2.0`, and `net462`) through an independently executed
 metadata writer, without producing DLLs.
-The real net10.0 Restore succeeds with discovery-inclusive capture. Hardened Build
-passes framework discovery and stops at task classification loading the not-yet-built
-`runtime/bin/ILLink.Tasks/Debug/net/ILLink.Tasks.dll`. Preparation and the failed
-graph attempt produce zero DLLs and publish no library graph.
+The real net10.0 Restore succeeds with discovery-inclusive capture. Opaque action
+capture removes construction-time metadata loading of the future `ILLink.Tasks.dll`.
+A regression captures an absent task DLL, validates its earlier producer edge,
+and executes it through Ninja with literal arguments, metadata, and typed values
+matching ordinary execution. Invalid implementation contracts and parameter types
+fail in the executor; empty-footprint tasks remain audited during construction.
+The runtime probe's first reported blockers are missing explicit footprints on
+Arcade's `ChooseBestP2PTargetFrameworkTask` and `SetRidAgnosticValueForProjects`
+calls. Audit and adapt those construction-time negotiation tasks next.
+Preparation and the failed graph attempt produce zero DLLs and publish no library graph.
 No runtime library graph, compilation, or independent execution is proven.
 Native/CoreCLR/CMake integration is later.
 

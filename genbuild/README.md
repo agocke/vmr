@@ -199,8 +199,8 @@ Preparation now completes, including the ordinary package-backed `netstandard2.0
 references of `ILLink.CodeFixProvider` and `ILLink.RoslynAnalyzer`, without producing
 DLLs. The producer dependencies remain intact.
 Runtime library trimming compiles directly to `PreTrim/` and links to separate
-final paths, without moving or rewriting compiler outputs. Generated-tool task
-binding and declared-I/O adaptations, explicit version inputs, and broader
+final paths, without moving or rewriting compiler outputs. Runtime task
+declared-I/O adaptations, explicit version inputs, and broader
 compiler/tool profiles remain necessary.
 The trial uses ordinary
 Restore (`RestoreUseStaticGraphEvaluation=false`): the static Restore launcher
@@ -248,11 +248,20 @@ evaluation, including .NET Framework metadata probes.
 An isolated hardened metadata probe of runtime's actual reference project
 successfully returns `net11.0`, `net10.0`, `netstandard2.0`, and `net462` without
 producing DLLs.
+Nonempty-footprint tasks are now opaque during construction: the graph captures
+their authored registration, expanded scalar/item arguments, and declared paths
+without loading their assemblies. The executor audits and binds after producers
+run. A generated-task regression captures an absent DLL, gives it a producer
+dependency, and independently executes it with ordinary-equivalent arguments.
+Zero-I/O tasks still require an available audited implementation during construction.
+No new `UsingTask` syntax or tool prebuild is needed.
 The real net10.0 Restore succeeds with discovery-inclusive capture. Hardened
-Build passes framework discovery and stops at classification of tasks from the
-not-yet-built `ILLink.Tasks.dll`; the metadata loader tries to open that future
-tool output. Preparation and the failed graph attempt produce zero DLLs and
-publish no library graph.
+Build no longer attempts metadata loading of the future `ILLink.Tasks.dll`.
+Its first reported blockers are missing explicit footprints on Arcade's
+`ChooseBestP2PTargetFrameworkTask` and `SetRidAgnosticValueForProjects` calls.
+These construction-time negotiation tasks need audited zero-I/O authoring.
+Preparation and the failed graph attempt produce zero DLLs and publish no
+library graph.
 No runtime library graph, compilation or independent execution is established.
 
 Ordinary graph-input preparation now captures the complete assets JSON as

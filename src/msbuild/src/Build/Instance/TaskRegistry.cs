@@ -637,6 +637,77 @@ namespace Microsoft.Build.Execution
             return taskRecord;
         }
 
+        // Resolve authored precedence without probing task types or executing factories.
+        internal bool TryGetRegisteredTaskForAction(
+            string taskName,
+            in TaskHostParameters taskIdentityParameters,
+            bool exactMatchRequired,
+            LoggingContext loggingContext,
+            out AssemblyLoadInfo assembly,
+            out string typeName)
+        {
+            RegisteredTaskIdentity identity = new(taskName, taskIdentityParameters);
+            if (_overriddenTasks.TryGetValue(taskName, out List<RegisteredTaskRecord> overrides))
+            {
+                foreach (RegisteredTaskRecord record in overrides)
+                {
+                    if (RegisteredTaskIdentity.RegisteredTaskIdentityComparer.IsPartialMatch(identity, record.TaskIdentity))
+                    {
+                        return GetActionRegistration(taskName, record, out assembly, out typeName);
+                    }
+                }
+            }
+
+            if (_toolset is not null &&
+                _toolset.GetOverrideTaskRegistry(loggingContext, RootElementCache).TryGetRegisteredTaskForAction(
+                    taskName, taskIdentityParameters, exactMatchRequired, loggingContext, out assembly, out typeName))
+            {
+                return true;
+            }
+
+            if (_taskRegistrations?.Count > 0)
+            {
+                foreach (RegisteredTaskRecord record in GetRelevantOrderedRegistrations(identity, exactMatchRequired))
+                {
+                    if (RegisteredTaskIdentity.RegisteredTaskIdentityComparer.IsPartialMatch(identity, record.TaskIdentity))
+                    {
+                        return GetActionRegistration(taskName, record, out assembly, out typeName);
+                    }
+                }
+            }
+
+            if (_toolset is not null &&
+                _toolset.GetTaskRegistry(loggingContext, RootElementCache).TryGetRegisteredTaskForAction(
+                    taskName, taskIdentityParameters, exactMatchRequired, loggingContext, out assembly, out typeName))
+            {
+                return true;
+            }
+
+            assembly = null;
+            typeName = null;
+            return false;
+        }
+
+        private static bool GetActionRegistration(
+            string taskName, RegisteredTaskRecord record, out AssemblyLoadInfo assembly, out string typeName)
+        {
+            typeName = taskName.Length > record.TaskIdentity.Name.Length ? taskName : record.TaskIdentity.Name;
+            assembly = IsAssemblyTaskFactory(record) &&
+                string.IsNullOrEmpty(record.TaskFactoryParameters.Runtime) &&
+                string.IsNullOrEmpty(record.TaskFactoryParameters.Architecture)
+                    ? record.TaskFactoryAssemblyLoadInfo
+                    : null;
+            if (assembly is not null && string.IsNullOrEmpty(assembly.AssemblyFile))
+            {
+                assembly = !string.IsNullOrEmpty(assembly.AssemblyName) &&
+                    string.Equals(new AssemblyName(assembly.AssemblyName).Name, s_tasksCoreSimpleName, StringComparison.OrdinalIgnoreCase)
+                        ? AssemblyLoadInfo.Create(null, s_potentialTasksCoreLocation)
+                        : null;
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// Resolves the task type using metadata-only assembly loading.
         /// </summary>
@@ -746,7 +817,7 @@ namespace Microsoft.Build.Execution
             AssemblyLoadInfo assemblyLoadInfo = record.TaskFactoryAssemblyLoadInfo;
             if (!string.IsNullOrEmpty(assemblyLoadInfo.AssemblyFile))
             {
-                return assemblyLoadInfo;
+                return File.Exists(assemblyLoadInfo.AssemblyFile) ? assemblyLoadInfo : null;
             }
 
             if (string.IsNullOrEmpty(assemblyLoadInfo.AssemblyName))

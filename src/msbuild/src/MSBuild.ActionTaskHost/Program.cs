@@ -64,7 +64,9 @@ internal static class Program
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
         TaskAssemblyLoadContext context = new(invocation.TaskAssembly);
-        Type taskType = context.LoadFromAssemblyPath(invocation.TaskAssembly).GetType(invocation.TaskType, throwOnError: true)!;
+        Assembly assembly = context.LoadFromAssemblyPath(invocation.TaskAssembly);
+        Type taskType = assembly.GetType(invocation.TaskType, throwOnError: false, ignoreCase: true)
+            ?? ResolveTaskType(assembly, invocation.TaskType);
         if (!typeof(ITask).IsAssignableFrom(taskType) || taskType.IsAbstract || !taskType.IsPublic)
         {
             throw new InvalidDataException(HostResources.Format("InvalidTaskType", invocation.TaskType));
@@ -84,7 +86,7 @@ internal static class Program
 
         try
         {
-            Dictionary<string, object> parameters = TaskParameterBinder.Bind(task, invocation.Parameters);
+            Dictionary<string, object> parameters = TaskParameterBinder.Bind(task, invocation.Parameters, invocation.Version == 2);
             IReadOnlyList<string> outputs = ValidateFootprint(taskType, parameters);
             foreach (string output in outputs)
             {
@@ -113,6 +115,29 @@ internal static class Program
         {
             (task as IDisposable)?.Dispose();
         }
+    }
+
+    private static Type ResolveTaskType(Assembly assembly, string name)
+    {
+        Type? match = null;
+        foreach (Type type in assembly.GetExportedTypes())
+        {
+            if (!typeof(ITask).IsAssignableFrom(type) || type.IsAbstract ||
+                !(type.FullName!.EndsWith("." + name, StringComparison.OrdinalIgnoreCase) ||
+                  type.FullName.EndsWith("+" + name, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            if (match is not null)
+            {
+                throw new InvalidDataException(HostResources.Format("InvalidTaskType", name));
+            }
+
+            match = type;
+        }
+
+        return match ?? throw new InvalidDataException(HostResources.Format("InvalidTaskType", name));
     }
 
     private static void ValidateTaskAttributes(Type type)

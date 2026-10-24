@@ -15,7 +15,7 @@ namespace Microsoft.Build.ActionTaskHost;
 
 internal static class TaskParameterBinder
 {
-    internal static Dictionary<string, object> Bind(ITask task, Dictionary<string, JsonElement> parameters)
+    internal static Dictionary<string, object> Bind(ITask task, Dictionary<string, JsonElement> parameters, bool unbound = false)
     {
         Type taskType = task.GetType();
         Dictionary<string, PropertyInfo> properties = new(MSBuildNameIgnoreCaseComparer.Default);
@@ -25,6 +25,7 @@ internal static class TaskParameterBinder
         }
 
         Dictionary<string, object> bound = new(MSBuildNameIgnoreCaseComparer.Default);
+        HashSet<string> supplied = new(MSBuildNameIgnoreCaseComparer.Default);
         foreach (KeyValuePair<string, JsonElement> parameter in parameters)
         {
             if (!properties.TryGetValue(parameter.Key, out PropertyInfo? property) ||
@@ -36,7 +37,7 @@ internal static class TaskParameterBinder
                 throw new InvalidDataException(HostResources.Format("InvalidParameter", parameter.Key, taskType.FullName));
             }
 
-            if (bound.ContainsKey(property.Name))
+            if (!supplied.Add(property.Name))
             {
                 throw new InvalidDataException(HostResources.Format("DuplicateParameter", parameter.Key));
             }
@@ -44,7 +45,66 @@ internal static class TaskParameterBinder
             object value;
             try
             {
-                value = ConvertValue(parameter.Value, property.PropertyType);
+                JsonElement concrete = parameter.Value;
+                if (unbound)
+                {
+                    Type type = property.PropertyType;
+                    if (type.IsArray
+                        ? type.GetArrayRank() != 1 || !IsSupportedScalarType(type.GetElementType()!)
+                        : !IsSupportedScalarType(type))
+                    {
+                        throw new NotSupportedException(HostResources.Format("UnsupportedParameterType", type));
+                    }
+
+                    ExpandedValue expanded = concrete.Deserialize<ExpandedValue>(TaskInvocation.JsonOptions) ?? throw new JsonException();
+                    JsonElement items = expanded.Items;
+                    bool vector = property.PropertyType.IsArray || property.PropertyType == typeof(ITaskItem);
+                    bool declaration = property.Name.Equals("DeclaredInputs", StringComparison.OrdinalIgnoreCase) ||
+                        property.Name.Equals("DeclaredOutputs", StringComparison.OrdinalIgnoreCase);
+                    if (vector)
+                    {
+                        if (items.ValueKind != JsonValueKind.Array)
+                        {
+                            throw new JsonException();
+                        }
+
+                        if (items.GetArrayLength() == 0 && !declaration &&
+                            !property.IsDefined(typeof(RequiredAttribute), inherit: true))
+                        {
+                            continue;
+                        }
+
+                        if (property.PropertyType == typeof(ITaskItem))
+                        {
+                            if (items.GetArrayLength() == 0)
+                            {
+                                continue;
+                            }
+
+                            if (items.GetArrayLength() != 1)
+                            {
+                                throw new JsonException();
+                            }
+
+                            concrete = items[0];
+                        }
+                        else
+                        {
+                            concrete = items;
+                        }
+                    }
+                    else
+                    {
+                        if (expanded.Scalar.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        concrete = concrete.GetProperty("scalar");
+                    }
+                }
+
+                value = ConvertValue(concrete, property.PropertyType, unbound);
             }
             catch (Exception ex) when (ex is ArgumentException or JsonException or InvalidOperationException or NotSupportedException)
             {
@@ -66,7 +126,7 @@ internal static class TaskParameterBinder
         return bound;
     }
 
-    private static object ConvertValue(JsonElement value, Type type)
+    private static object ConvertValue(JsonElement value, Type type, bool expandedItems = false)
     {
         if (type.IsArray)
         {
@@ -85,7 +145,14 @@ internal static class TaskParameterBinder
             int index = 0;
             foreach (JsonElement element in value.EnumerateArray())
             {
-                array.SetValue(ConvertValue(element, elementType), index++);
+                JsonElement concrete = element;
+                if (expandedItems && elementType != typeof(ITaskItem) && element.ValueKind == JsonValueKind.Object &&
+                    element.TryGetProperty("itemSpec", out JsonElement itemSpec))
+                {
+                    concrete = itemSpec;
+                }
+
+                array.SetValue(ConvertValue(concrete, elementType), index++);
             }
 
             return array;
@@ -150,5 +217,12 @@ internal static class TaskParameterBinder
         public required string ItemSpec { get; init; }
 
         public Dictionary<string, string> Metadata { get; init; } = [];
+    }
+
+    private sealed class ExpandedValue
+    {
+        public required string Scalar { get; init; }
+
+        public required JsonElement Items { get; init; }
     }
 }

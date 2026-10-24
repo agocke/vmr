@@ -1329,7 +1329,7 @@
       <_RuntimeConfigInvocationCandidate Include="$(_TestDirectory)runtime-config/%(_RuntimeConfigNegative.Identity)/project/obj/genbuild/build.ninja.actions/*.json">
         <Case>%(_RuntimeConfigNegative.Identity)</Case>
       </_RuntimeConfigInvocationCandidate>
-      <_RuntimeConfigFailureInvocation Include="@(_RuntimeConfigInvocationCandidate)" Condition="$([System.IO.File]::ReadAllText('%(_RuntimeConfigInvocationCandidate.Identity)').Contains('Microsoft.NET.Build.Tasks.WriteRuntimeConfig'))" />
+      <_RuntimeConfigFailureInvocation Include="@(_RuntimeConfigInvocationCandidate)" Condition="$([System.IO.File]::ReadAllText('%(_RuntimeConfigInvocationCandidate.Identity)').Contains('&quot;taskType&quot;:&quot;WriteRuntimeConfig&quot;'))" />
     </ItemGroup>
     <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot; --invocation &quot;%(_RuntimeConfigFailureInvocation.Identity)&quot;"
           IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
@@ -1399,7 +1399,7 @@
     <Error Condition="$(_DepsJson.Contains('$(_TestDirectory)'))" Text="Deps JSON must not contain physical checkout paths." />
     <ItemGroup>
       <_DepsInvocationCandidate Include="$(_TestDirectory)deps/missing/project/obj/genbuild/build.ninja.actions/*.json" />
-      <_DepsMissingInvocation Include="@(_DepsInvocationCandidate)" Condition="$([System.IO.File]::ReadAllText('%(_DepsInvocationCandidate.Identity)').Contains('Microsoft.NET.Build.Tasks.WriteDepsFile'))" />
+      <_DepsMissingInvocation Include="@(_DepsInvocationCandidate)" Condition="$([System.IO.File]::ReadAllText('%(_DepsInvocationCandidate.Identity)').Contains('&quot;taskType&quot;:&quot;WriteDepsFile&quot;'))" />
     </ItemGroup>
     <Error Condition="'@(_DepsMissingInvocation->Count())' != '1'" Text="GenerateBuildDependencyFile must emit a single independent deps writer." />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot; --invocation &quot;@(_DepsMissingInvocation)&quot;"
