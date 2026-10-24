@@ -32,6 +32,7 @@ public sealed class ValidateHardenedAssemblySearchPaths : TaskExtension, IMultiT
             if (string.Equals(searchPath, "{CandidateAssemblyFiles}", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(searchPath, "{HintPathFromItem}", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(searchPath, "{TargetFrameworkDirectory}", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(searchPath, "{RawFileName}", StringComparison.OrdinalIgnoreCase)
                 || Path.IsPathFullyQualified(searchPath))
             {
                 continue;

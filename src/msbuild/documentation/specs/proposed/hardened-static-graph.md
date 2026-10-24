@@ -497,11 +497,12 @@ Ordinary builds retain their previous behavior.
 The Common reference-resolution target validates the effective
 `AssemblySearchPaths` before its resolution dependencies. Permitted entries
 are `{CandidateAssemblyFiles}`, `{HintPathFromItem}`,
-`{TargetFrameworkDirectory}`, and explicitly configured fully qualified
+`{TargetFrameworkDirectory}`, `{RawFileName}`, and explicitly configured fully qualified
 directories. Unsupported tokens or relative search directories fail with
 MSB3669 rather than being silently removed from an explicit override.
 This guard does not enable searches: hardened `ResolveAssemblyReferences`
-selects zero-I/O `ResolveReferencePaths`, not stock RAR. Every reference identity
+selects zero-I/O `ResolveReferencePaths`, not stock RAR. `{RawFileName}` permits
+explicit path binding, not an existence-based fallback. Every reference identity
 must already be a file path, relative to the captured project directory or
 absolute. Simple/display assembly names, search tokens, wildcards and URIs fail;
 `HintPath` does not make a non-path identity acceptable.

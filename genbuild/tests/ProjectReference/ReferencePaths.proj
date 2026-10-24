@@ -3,6 +3,7 @@
     <OutDir>out/</OutDir>
     <ResolveAssemblyReferencesDependsOn>_ValidateHardenedAssemblySearchPaths</ResolveAssemblyReferencesDependsOn>
     <AssemblySearchPaths>{HintPathFromItem}</AssemblySearchPaths>
+    <AssemblySearchPaths Condition="'$(Case)' == 'raw-filename' or '$(Case)' == 'name-raw-filename'">{RawFileName}</AssemblySearchPaths>
     <UseCommonOutputDirectory Condition="'$(Case)' == 'common-output'">true</UseCommonOutputDirectory>
     <CreateHardLinksForCopyLocalIfPossible Condition="'$(Case)' == 'hardlink'">true</CreateHardLinksForCopyLocalIfPossible>
     <CreateSymbolicLinksForCopyLocalIfPossible Condition="'$(Case)' == 'symlink'">true</CreateSymbolicLinksForCopyLocalIfPossible>
@@ -19,7 +20,8 @@
       <Aliases>custom</Aliases>
       <Private Condition="'$(Case)' == 'private-false'">false</Private>
     </_ResolvedProjectReferencePaths>
-    <Reference Include="Assembly.Name" Condition="'$(Case)' == 'name' or '$(Case)' == 'name-hint'">
+    <Reference Include="generated/ref/api.dll" Private="false" Aliases="raw" Condition="'$(Case)' == 'raw-filename'" />
+    <Reference Include="Assembly.Name" Condition="'$(Case)' == 'name' or '$(Case)' == 'name-hint' or '$(Case)' == 'name-raw-filename'">
       <HintPath Condition="'$(Case)' == 'name-hint'">generated/implementation.dll</HintPath>
     </Reference>
   </ItemGroup>
@@ -38,7 +40,10 @@
     <ItemGroup>
       <_ProjectReference Include="@(ReferencePath)" Condition="'%(ReferencePath.ReferenceSourceTarget)' == 'ProjectReference'" />
       <_CompileProjectReference Include="@(ReferencePathWithRefAssemblies)" Condition="'%(ReferencePathWithRefAssemblies.ReferenceSourceTarget)' == 'ProjectReference'" />
+      <_RawFileReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Aliases)' == 'raw'" />
     </ItemGroup>
+    <Error Condition="'$(Case)' == 'raw-filename' and '@(_RawFileReference)' != '$(_ExpectedReference)'"
+           Text="RawFileName must bind an explicit project-relative reference without requiring its generated assembly to exist." />
     <Error Condition="'@(_ProjectReference)' != '$(_ExpectedImplementation)' or '@(_ProjectReference->'%(ProjectReferenceOriginalItemSpec)')' != '../DifferentProject/Project.csproj' or '@(_ProjectReference->'%(Aliases)')' != 'custom'"
            Text="Reference resolution must normalize paths and retain project-reference metadata." />
     <Error Condition="'@(_CompileProjectReference)' != '$(_ExpectedReference)' or '@(_CompileProjectReference->'%(OriginalPath)')' != '@(_ProjectReference)'"

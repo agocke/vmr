@@ -675,9 +675,13 @@ The real probe explicitly selects an isolated local task package and the
 prototype's packaged `CSharpCoreTargetsPath`. Without that compiler-target
 binding, runtime's compiler package replaces the prototype integration authoring.
 Restore now captures five Arcade input files and produces zero DLLs. Build runs
-the in-memory chooser and RID metadata task, then reaches hardened reference
-resolution's `{RawFileName}` rejection in `ILLink.RoslynAnalyzer.csproj`; a
-subsequent `Build` cycle diagnostic is not a separately established blocker.
+the in-memory chooser and RID metadata task. Hardened reference resolution
+accepts `{RawFileName}` for explicit project-relative or absolute paths without
+probing file existence; generated-reference and bare-name rejection regressions
+pass through the packaged app. The real probe now reaches unsupported
+`CreateCSharpManifestResourceName` and `ResolveKeySource` invocations in
+`ILLink.RoslynAnalyzer.csproj`. Subsequent deferred-value diagnostics are not
+separately established blockers.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.
 Native/CoreCLR/CMake integration is later.

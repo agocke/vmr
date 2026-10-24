@@ -3210,8 +3210,8 @@
     <comment>{StrBegin="MSB3668: "}{0} is a generated MSBuild props file path. {1} is the configuration input name. Restore and MSBuildRestoreGraphInputs=true are not localized.</comment>
   </data>
   <data name="CommonSdk.HardenedAssemblySearchPath">
-    <value>MSB3669: Hardened reference resolution does not support the search path "{0}" because it can depend on undeclared machine or working-directory state. Use explicit fully qualified directories or the CandidateAssemblyFiles, HintPathFromItem, and TargetFrameworkDirectory search tokens.</value>
-    <comment>{StrBegin="MSB3669: "}{0} is an assembly search path. CandidateAssemblyFiles, HintPathFromItem, and TargetFrameworkDirectory are not localized.</comment>
+    <value>MSB3669: Hardened reference resolution does not support the search path "{0}" because it can depend on undeclared machine or working-directory state. Use explicit fully qualified directories or the CandidateAssemblyFiles, HintPathFromItem, TargetFrameworkDirectory, and RawFileName search tokens.</value>
+    <comment>{StrBegin="MSB3669: "}{0} is an assembly search path. CandidateAssemblyFiles, HintPathFromItem, TargetFrameworkDirectory, and RawFileName are not localized.</comment>
   </data>
   <data name="CommonSdk.HardenedPostBuildEvent">
     <value>MSB3670: Hardened action graphs do not support a PostBuildEvent with RunPostBuildEvent="{0}" because it requires failure-time execution. Use OnBuildSuccess or leave PostBuildEvent empty.</value>

@@ -1070,12 +1070,12 @@
     </XmlPeek>
     <Error Condition="'@(_ReferencePathTarget->Count())' != '4'" Text="The packaged Common targets must contain reference resolution and copy-local publication." />
     <ItemGroup>
-      <_ReferencePathCase Include="normal;stale;write-failure;private-false;common-output" />
-      <_ReferencePathNegative Include="name;name-hint" Code="MSB3671" />
+      <_ReferencePathCase Include="normal;stale;write-failure;private-false;common-output;raw-filename" />
+      <_ReferencePathNegative Include="name;name-hint;name-raw-filename" Code="MSB3671" />
       <_ReferencePathNegative Include="hardlink;symlink;read-only" Code="MSB3098" />
       <_ReferencePathCase Include="@(_ReferencePathNegative)" />
       <_ReferencePathRoot Include="@(_ReferencePathCase->'$(_TestDirectory)reference-paths/%(Identity)/')" />
-      <_ReferencePathExecution Include="normal;stale;private-false;common-output" />
+      <_ReferencePathExecution Include="normal;stale;private-false;common-output;raw-filename" />
     </ItemGroup>
     <MakeDir Directories="@(_ReferencePathRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/ReferencePaths.proj" DestinationFolder="%(_ReferencePathRoot.Identity)" />
@@ -1085,17 +1085,17 @@
     <WriteLinesToFile File="$(_TestDirectory)reference-paths/stale/out/nested/implementation.pdb" Lines="old symbols" Overwrite="true" />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)reference-paths/%(_ReferencePathCase.Identity)/ReferencePaths.proj&quot; -p:Case=%(_ReferencePathCase.Identity)"
           Condition="'%(_ReferencePathCase.Code)' == ''" />
-    <Error Condition="Exists('$(_TestDirectory)reference-paths/normal/generated') or Exists('$(_TestDirectory)reference-paths/normal/out')"
+    <Error Condition="Exists('$(_TestDirectory)reference-paths/normal/generated') or Exists('$(_TestDirectory)reference-paths/normal/out') or Exists('$(_TestDirectory)reference-paths/raw-filename/generated') or Exists('$(_TestDirectory)reference-paths/raw-filename/out')"
            Text="Explicit reference resolution and copy-local construction must not read generated assemblies or publish files." />
     <ReadLinesFromFile File="$(_TestDirectory)reference-paths/stale/out/nested/implementation.dll">
       <Output TaskParameter="Lines" PropertyName="_ReferencePathStaleContents" />
     </ReadLinesFromFile>
     <Error Condition="'$(_ReferencePathStaleContents)' != 'old assembly'" Text="Copy-local construction must leave old output untouched." />
     <Exec WorkingDirectory="$(_TestDirectory)reference-paths/%(_ReferencePathExecution.Identity)" Command="ninja -f obj/genbuild/build.ninja" />
-    <GetFileHash Files="$(_TestDirectory)reference-paths/normal/generated/implementation.dll;$(_TestDirectory)reference-paths/normal/out/nested/implementation.dll;$(_TestDirectory)reference-paths/stale/out/nested/implementation.dll">
+    <GetFileHash Files="$(_TestDirectory)reference-paths/normal/generated/implementation.dll;$(_TestDirectory)reference-paths/normal/out/nested/implementation.dll;$(_TestDirectory)reference-paths/stale/out/nested/implementation.dll;$(_TestDirectory)reference-paths/raw-filename/out/nested/implementation.dll">
       <Output TaskParameter="Items" ItemName="_ReferencePathAssemblyHash" />
     </GetFileHash>
-    <GetFileHash Files="$(_TestDirectory)reference-paths/normal/generated/implementation.pdb;$(_TestDirectory)reference-paths/normal/out/nested/implementation.pdb;$(_TestDirectory)reference-paths/stale/out/nested/implementation.pdb">
+    <GetFileHash Files="$(_TestDirectory)reference-paths/normal/generated/implementation.pdb;$(_TestDirectory)reference-paths/normal/out/nested/implementation.pdb;$(_TestDirectory)reference-paths/stale/out/nested/implementation.pdb;$(_TestDirectory)reference-paths/raw-filename/out/nested/implementation.pdb">
       <Output TaskParameter="Items" ItemName="_ReferencePathSymbolsHash" />
     </GetFileHash>
     <Error Condition="@(_ReferencePathAssemblyHash->'%(FileHash)'->Distinct()->Count()) != '1' or @(_ReferencePathSymbolsHash->'%(FileHash)'->Distinct()->Count()) != '1'"

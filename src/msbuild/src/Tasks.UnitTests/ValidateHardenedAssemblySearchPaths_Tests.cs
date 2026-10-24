@@ -18,6 +18,8 @@ public sealed class ValidateHardenedAssemblySearchPaths_Tests(ITestOutputHelper 
     [InlineData("{CandidateAssemblyFiles}")]
     [InlineData("{hintpathfromitem}")]
     [InlineData("{TARGETFRAMEWORKDIRECTORY}")]
+    [InlineData("{RawFileName}")]
+    [InlineData("{rawfilename}")]
     public void AcceptsExplicitReferenceSourcesWithoutProbingDirectories(string token)
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
@@ -37,7 +39,6 @@ public sealed class ValidateHardenedAssemblySearchPaths_Tests(ITestOutputHelper 
     [InlineData("{AssemblyFolders}")]
     [InlineData("{registry:Software\\Microsoft\\.NETFramework,v4.8,AssemblyFoldersEx}")]
     [InlineData("{AssemblyFoldersFromConfig:machine.config,v4.8}")]
-    [InlineData("{RawFileName}")]
     [InlineData("{UnknownResolver}")]
     [InlineData("relative-reference-directory")]
     [InlineData(@"C:drive-relative")]
