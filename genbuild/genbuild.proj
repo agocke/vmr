@@ -90,7 +90,7 @@
       <_ArcadeBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/build/**/*" />
       <_ArcadeMultiTargetingBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/buildMultiTargeting/**/*" />
       <_ArcadeSdkTask Include="$(MSBuildThisFileDirectory)arcade/sdk/bin/$(Configuration)/net11.0/**/*" />
-      <_ArcadeSdkTools Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/BuildTasks.props;$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/GenerateResxSource.targets" />
+      <_ArcadeSdkTools Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/BuildTasks.props;$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/GenerateResxSource.targets;$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/RepositoryInfo.targets" />
     </ItemGroup>
     <Copy SourceFiles="@(_Engine)" DestinationFiles="@(_Engine->'$(GenBuildToolsetDirectory)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_CommonEntry)" DestinationFolder="$(GenBuildToolsetDirectory)Current/" SkipUnchangedFiles="true" />

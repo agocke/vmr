@@ -1,0 +1,38 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
+    <ScmRepositoryUrl>$(InputUrl)</ScmRepositoryUrl>
+    <_SourceLinkFetchManifestImported Condition="'$(Replay)' == 'true'">true</_SourceLinkFetchManifestImported>
+    <_SourceLinkFetchManifestContainsTranslatedUrls Condition="'$(Replay)' == 'true'">true</_SourceLinkFetchManifestContainsTranslatedUrls>
+  </PropertyGroup>
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.props" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.GitHub/build/Microsoft.SourceLink.GitHub.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.GitLab/build/Microsoft.SourceLink.GitLab.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.AzureRepos.Git/build/Microsoft.SourceLink.AzureRepos.Git.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.Bitbucket.Git/build/Microsoft.SourceLink.Bitbucket.Git.targets" />
+  <Import Project="$(MSBuildSDKsPath)/Microsoft.SourceLink.Common/build/Microsoft.SourceLink.Common.targets" />
+  <Import Project="$(MSBuildToolsPath)/Arcade/Sdk/tools/BuildTasks.props" />
+  <Import Project="$(MSBuildToolsPath)/Arcade/Sdk/tools/RepositoryInfo.targets" />
+  <ItemGroup>
+    <SourceLinkGitHubHost Include="github.com" />
+    <SourceLinkGitLabHost Include="gitlab.com" />
+    <SourceLinkAzureReposGitHost Include="dev.azure.com;devdiv.visualstudio.com" />
+    <SourceLinkBitbucketGitHost Include="bitbucket.org" />
+    <SourceRoot Include="missing-repository/" SourceControl="git" ScmRepositoryUrl="$(InputUrl)" Marker="preserved" />
+  </ItemGroup>
+  <Target Name="Build" DependsOnTargets="SourceControlManagerPublishTranslatedUrls">
+    <Error Condition="'$(ScmRepositoryUrl)' != '$(ExpectedUrl)' or '$(PrivateRepositoryUrl)' != '$(ExpectedUrl)'"
+           Text="Arcade must preserve its mirror URL remapping after provider translation or replay."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'@(SourceRoot->Count())' != '1' or '%(SourceRoot.ScmRepositoryUrl)' != '$(ExpectedUrl)' or
+                      '%(SourceRoot.RepositoryUrl)' != '$(ExpectedUrl)' or '%(SourceRoot.Marker)' != 'preserved'"
+           Text="Arcade URL translation must update and publish source-root URLs without losing other metadata."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="repository-info/$(TestCase).txt"
+                      Lines="$(ScmRepositoryUrl);$(PrivateRepositoryUrl);@(SourceRoot->'%(ScmRepositoryUrl)');@(SourceRoot->'%(RepositoryUrl)');@(SourceRoot->'%(Marker)')"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="repository-info/$(TestCase).txt" />
+  </Target>
+  <Target Name="Restore">
+    <CallTarget Targets="Build" />
+  </Target>
+</Project>

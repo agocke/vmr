@@ -154,6 +154,9 @@ Arcade checks compare ordinary and prepared P2P selection, platform fallback,
 RID-agnostic metadata, explicit framework overrides and incompatible references.
 They also exercise real NuGet-imported capture hooks, literal JSON transport,
 replay without the live runtime-graph file, and fail-closed prepared inputs.
+Repository-info checks preserve provider URL replay, Azure DevOps mirror
+remapping, the translation opt-out and unrelated source-root metadata, then
+independently publish metadata matching ordinary builds.
 Resource/signing checks compare ordinary and graph-time metadata with resource
 and key files absent. Source-dependent resource naming and certificate/PFX/
 key-container discovery fail without publishing a partial graph.
@@ -317,14 +320,21 @@ resource compilation, and Arcade resource-source generation authoring.
 `GenerateResxSource` reads one RESX and writes one known source path as an
 execution action; it needs neither a Restore snapshot nor a graph-time task
 output. The app stages the source-built SDK task assembly and its
-`BuildTasks.props`/`GenerateResxSource.targets` at `toolset/Arcade/Sdk/tools/`.
+`BuildTasks.props`, `GenerateResxSource.targets`, and `RepositoryInfo.targets`
+at `toolset/Arcade/Sdk/tools/`.
 The real probe regenerates its isolated Arcade SDK overlay with these files and
 the `net/` payload, selecting the same `ArcadeSdkDir` for Restore and Build.
 The staged task subset is not a complete Arcade SDK installation.
 Ordinary task hosting is unchanged; hardened source generation uses the current
 action host rather than the ordinary specialized `Runtime="NET"` registration.
-The first remaining errors are SourceLink GitHub/GitLab repository-URL translation
-declarations and construction-time outputs.
+Arcade now routes provider URL translation through SourceLink's replay-aware
+target, so prepared URLs are not translated again. Its Azure DevOps mirror
+remapping still runs, using the audited zero-I/O `RewriteRepositoryUrls` task
+for the existing regex rewrite during construction. Ordinary expressions and
+SourceLink enablement policy are unchanged; no new snapshot is needed.
+The first remaining error is a construction-time `Exists` condition in
+`Microsoft.CodeAnalysis.Analyzers` 3.11.0. Later SourceLink URL-metadata,
+analyzer-marker and copy diagnostics remain untriaged.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

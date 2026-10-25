@@ -704,9 +704,20 @@ absent, independently generates the source and compiles a consumer that retrieve
 resources and calls named/numbered format methods. Generated source bytes match
 ordinary execution with default-value arguments enabled. Unrecognized source
 languages fail before publication. The complete SDK-free packaged smoke passes.
-The real probe now passes resource-source generation authoring and first reports
-SourceLink GitHub/GitLab translation declaration and deferred-output errors.
-These tasks' required construction-time metadata still needs investigation.
+Arcade's repository-info hook now requests SourceLink's replay-aware translation
+target instead of invoking providers directly. Prepared provider URLs are reused,
+while Azure DevOps mirror remapping remains active. The original regex rewrite
+is performed by the audited zero-I/O `RewriteRepositoryUrls` task during
+construction; ordinary expressions and SourceLink enablement are unchanged.
+The packaged regression first reproduced the redundant provider calls, then
+verified dnceng mirror URLs, legacy DevDiv trusted URLs, the translation opt-out,
+independent metadata publication and ordinary parity. Complete SDK-free smoke
+passes, and no additional preparation snapshot is introduced.
+The real probe gets past provider translation and mirror remapping. Its first
+remaining error is a forbidden `Exists` condition in
+`Microsoft.CodeAnalysis.Analyzers` 3.11.0's global analyzer-config target.
+Subsequent SourceLink URL-metadata, analyzer-marker and copy diagnostics are
+not separately established blockers.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

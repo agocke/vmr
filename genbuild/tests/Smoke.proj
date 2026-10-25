@@ -45,6 +45,7 @@
     <CallTarget Targets="TestAssemblyVersion" />
     <CallTarget Targets="TestIncrementalCaches" />
     <CallTarget Targets="TestSourceLink" />
+    <CallTarget Targets="TestArcadeRepositoryInfo" />
     <CallTarget Targets="TestCsc" />
     <CallTarget Targets="TestCopyOutputs" />
     <CallTarget Targets="TestCleanup" />
@@ -1749,6 +1750,38 @@
     </Exec>
     <Error Condition="'$(_CscCompilerFailure)' == '0' or Exists('$(_TestDirectory)csc/compiler-error/project/obj/Hello.dll')"
            Text="Independent compiler failures must fail execution without a successful assembly output." />
+  </Target>
+  <Target Name="TestArcadeRepositoryInfo">
+    <MakeDir Directories="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ArcadeRepositoryInfo.proj" DestinationFolder="$(_TestDirectory)" />
+    <ItemGroup>
+      <_ArcadeRepositoryCase Include="dnceng"
+                             PreparedUrl="https://dev.azure.com/dnceng/internal/_git/org-repo.git"
+                             OrdinaryUrl="ssh://git@ssh.dev.azure.com/v3/dnceng/internal/org-repo.git"
+                             ExpectedUrl="https://github.com/org/repo.git" />
+      <_ArcadeRepositoryCase Include="devdiv"
+                             PreparedUrl="https://devdiv.visualstudio.com/DevDiv/_git/ORG-REPO-Trusted"
+                             OrdinaryUrl="https://devdiv.visualstudio.com/DevDiv/_git/ORG-REPO-Trusted"
+                             ExpectedUrl="https://github.com/org/repo" />
+      <_ArcadeRepositoryCase Include="disabled"
+                             PreparedUrl="https://dev.azure.com/dnceng/internal/_git/org-repo.git"
+                             OrdinaryUrl="https://dev.azure.com/dnceng/internal/_git/org-repo.git"
+                             ExpectedUrl="https://dev.azure.com/dnceng/internal/_git/org-repo.git"
+                             Arguments="-p:DisableSourceLinkUrlTranslation=true" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)ArcadeRepositoryInfo.proj&quot; -p:Replay=true -p:TestCase=%(_ArcadeRepositoryCase.Identity) -p:InputUrl=%(_ArcadeRepositoryCase.PreparedUrl) -p:ExpectedUrl=%(_ArcadeRepositoryCase.ExpectedUrl) %(_ArcadeRepositoryCase.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)repository-info-%(_ArcadeRepositoryCase.Identity).ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)repository-info') or Exists('$(_TestDirectory)missing-repository')"
+           Text="Prepared Arcade URL translation must not execute file actions or inspect repository directories." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f repository-info-%(_ArcadeRepositoryCase.Identity).ninja" />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)ArcadeRepositoryInfo.proj&quot; -p:TestCase=ordinary-%(_ArcadeRepositoryCase.Identity) -p:InputUrl=%(_ArcadeRepositoryCase.OrdinaryUrl) -p:ExpectedUrl=%(_ArcadeRepositoryCase.ExpectedUrl) %(_ArcadeRepositoryCase.Arguments)" />
+    <GetFileHash Files="$(_TestDirectory)repository-info/%(_ArcadeRepositoryCase.Identity).txt">
+      <Output TaskParameter="Items" ItemName="_ArcadeRepositoryReplayHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_TestDirectory)repository-info/ordinary-%(_ArcadeRepositoryCase.Identity).txt">
+      <Output TaskParameter="Items" ItemName="_ArcadeRepositoryOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_ArcadeRepositoryReplayHash->'%(FileHash)')' != '@(_ArcadeRepositoryOrdinaryHash->'%(FileHash)')'"
+           Text="Prepared Arcade URL metadata must match ordinary provider translation and preserve opt-out behavior." />
   </Target>
   <Target Name="TestSourceLink">
     <MakeDir Directories="$(_TestDirectory)" />

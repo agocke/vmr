@@ -420,6 +420,13 @@ replaying stale snapshots during Restore. Capture ignores existing snapshots
 and refreshes them from current inputs, preserving timestamps when unchanged.
 Hardened evaluation requires the snapshots and never regenerates them.
 SourceLink capture still respects `EnableSourceControlManagerQueries=false`.
+Arcade requests provider translation through `SourceControlManagerTranslateUrls`,
+which skips it when the manifest already contains translated URLs. Its separate
+Azure DevOps-to-GitHub mirror remapping still runs over the prepared metadata.
+During construction, `RewriteRepositoryUrls` applies the existing authored regex
+and replacement to the repository URL and cloned source-root metadata without
+filesystem access. Ordinary builds retain the original regex expressions.
+This changes neither SourceLink enablement policy nor the snapshot format.
 The analyzer marker is prepared during Restore, not written as an in-place
 action during graph construction.
 
