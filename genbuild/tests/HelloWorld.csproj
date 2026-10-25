@@ -4,6 +4,7 @@
     <TargetFramework>net11.0</TargetFramework>
     <UseAppHost>false</UseAppHost>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="HelloWorld.cs" />

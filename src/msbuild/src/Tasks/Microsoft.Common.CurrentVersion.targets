@@ -3541,7 +3541,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       <ResgenToolPath Condition="'$(ResgenToolPath)' == ''">$(TargetFrameworkSDKToolsDirectory)</ResgenToolPath>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(TargetFrameworkAsMSBuildRuntime)' != '' and '$(GenerateResourceMSBuildArchitecture)' != ''">
+    <PropertyGroup Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(TargetFrameworkAsMSBuildRuntime)' != '' and '$(GenerateResourceMSBuildArchitecture)' != ''">
       <!-- In the general case, we want to fail to run the task if the task host it's requesting doesn't exist, because we'd rather let the
            user know there's something wrong than just silently generate something that's probably not quite right. However, in a few
            circumstances, there are tasks that are already aware of runtime / bitness concerns, in which case even if we go ahead and run
@@ -3561,6 +3561,35 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       <GenerateResourceMSBuildRuntime Condition="'$(GenerateResourceMSBuildRuntime)' == ''">CurrentRuntime</GenerateResourceMSBuildRuntime>
     </PropertyGroup>
 
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <_Temporary Include="@(EmbeddedResource)" Condition="'%(EmbeddedResource.Type)' == 'Resx' and '%(EmbeddedResource.GenerateResource)' != 'false'">
+        <OutputResource>$(IntermediateOutputPath)%(EmbeddedResource.ManifestResourceName).resources</OutputResource>
+      </_Temporary>
+      <FileWrites Include="@(_Temporary->'%(OutputResource)')" />
+    </ItemGroup>
+
+    <MSBuildInternalMessage
+        Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(_Temporary)' != '' and
+                   ('$(ResGenExecuteAsTool)' == 'true' or '$(ResGenEnvironment)' != '' or
+                    '$(GenerateResourceUsePreserializedResources)' == 'true' or
+                    ('$(GenerateResourceMSBuildRuntime)' != '' and '$(GenerateResourceMSBuildRuntime)' != 'CurrentRuntime') or
+                    ('$(GenerateResourceMSBuildArchitecture)' != '' and '$(GenerateResourceMSBuildArchitecture)' != 'CurrentArchitecture') or
+                    '%(_Temporary.Extension)' != '.resx' or
+                    '%(_Temporary.StronglyTypedLanguage)' != '' or '%(_Temporary.StronglyTypedFileName)' != '' or
+                    '%(_Temporary.StronglyTypedClassName)' != '' or '%(_Temporary.StronglyTypedNamespace)' != '' or
+                    '%(_Temporary.StronglyTypedManifestPrefix)' != '' or '%(_Temporary.PublicClass)' == 'true')"
+        ResourceName="CommonSdk.HardenedResourceCompilation"
+        FormatArguments="%(_Temporary.Identity)"
+        Severity="Error"
+        DeclaredInputs="" DeclaredOutputs="" />
+
+    <CompileResources
+        SourceFile="%(_Temporary.Identity)"
+        OutputFile="%(_Temporary.OutputResource)"
+        DeclaredInputs="%(_Temporary.Identity)"
+        DeclaredOutputs="%(_Temporary.OutputResource)"
+        Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(_Temporary)' != ''" />
+
     <!-- 4.0 task has some new parameters that we want to make use of if we're targeting 4.0 -->
     <GenerateResource
         Sources="@(EmbeddedResource)"
@@ -3577,7 +3606,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         StronglyTypedManifestPrefix="%(EmbeddedResource.StronglyTypedManifestPrefix)"
         PublicClass="%(EmbeddedResource.PublicClass)"
         OutputResources="@(EmbeddedResource->'$(IntermediateOutputPath)%(ManifestResourceName).resources')"
-        Condition="'%(EmbeddedResource.Type)' == 'Resx' and '%(EmbeddedResource.GenerateResource)' != 'false' and '$(GenerateResourceMSBuildRuntime)' != 'CLR2'"
+        Condition="'$(MSBuildHardenedGraph)' != 'true' and '%(EmbeddedResource.Type)' == 'Resx' and '%(EmbeddedResource.GenerateResource)' != 'false' and '$(GenerateResourceMSBuildRuntime)' != 'CLR2'"
         SdkToolsPath="$(ResgenToolPath)"
         ExecuteAsTool="$(ResGenExecuteAsTool)"
         EnvironmentVariables="$(ResGenEnvironment)"
@@ -3611,7 +3640,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         OutputResources="@(EmbeddedResource->'$(IntermediateOutputPath)%(ManifestResourceName).resources')"
         MSBuildRuntime="$(GenerateResourceMSBuildRuntime)"
         MSBuildArchitecture="$(GenerateResourceMSBuildArchitecture)"
-        Condition="'%(EmbeddedResource.Type)' == 'Resx' and '%(EmbeddedResource.GenerateResource)' != 'false' and '$(GenerateResourceMSBuildRuntime)' == 'CLR2'">
+        Condition="'$(MSBuildHardenedGraph)' != 'true' and '%(EmbeddedResource.Type)' == 'Resx' and '%(EmbeddedResource.GenerateResource)' != 'false' and '$(GenerateResourceMSBuildRuntime)' == 'CLR2'">
 
       <Output TaskParameter="FilesWritten" ItemName="FileWrites"/>
       <Output TaskParameter="StronglyTypedFileName" ItemName="Compile"/>

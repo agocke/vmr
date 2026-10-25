@@ -687,10 +687,16 @@ with both the generated key and assembly absent, then independently produces the
 key and compiles an assembly with the expected public-key token through Ninja.
 Resource-metadata regressions compare ordinary and hardened results and reject
 unsupported naming/signing policies without partial graph publication.
-The real probe passes these naming/key-selection invocations and now first fails
-at `GenerateResource` in `ILLink.RoslynAnalyzer.csproj`. Subsequent deferred-value,
-resource-source generation and SourceLink diagnostics are not separately
-established blockers.
+Hardened `CoreResGen` also assigns known resource output paths during construction
+and schedules cache-free `CompileResources` actions for inline string `.resx`
+files. A packaged regression constructs with generated resources absent, then
+independently produces, compiles, embeds and retrieves their values. Main and
+culture resource bytes match ordinary execution. Unsupported resource modes fail
+construction; linked/typed payloads fail execution before output creation.
+The real probe passes resource compilation authoring and now first fails at
+Arcade's `GenerateResxSource` in `ILLink.RoslynAnalyzer.csproj`. This is separate
+C# source generation, not `.resources` compilation. Subsequent SourceLink
+translation diagnostics are not separately established blockers.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.
 Native/CoreCLR/CMake integration is later.

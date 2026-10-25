@@ -19,7 +19,7 @@ namespace Microsoft.Build.Tasks.ResourceHandling
 {
     internal class MSBuildResXReader
     {
-        public static IReadOnlyList<IResource> ReadResources(Stream s, string filename, bool pathsRelativeToBasePath, TaskLoggingHelper log, bool logWarningForBinaryFormatter)
+        public static IReadOnlyList<IResource> ReadResources(Stream s, string filename, bool pathsRelativeToBasePath, TaskLoggingHelper log, bool logWarningForBinaryFormatter, bool stringsOnly = false)
         {
             var resources = new List<IResource>();
             var aliases = new Dictionary<string, string>();
@@ -41,7 +41,7 @@ namespace Microsoft.Build.Tasks.ResourceHandling
                             case "resheader":
                                 break;
                             case "data":
-                                ParseData(filename, pathsRelativeToBasePath, resources, aliases, elem, log, logWarningForBinaryFormatter);
+                                ParseData(filename, pathsRelativeToBasePath, resources, aliases, elem, log, logWarningForBinaryFormatter, stringsOnly);
                                 break;
                         }
                     }
@@ -115,7 +115,8 @@ namespace Microsoft.Build.Tasks.ResourceHandling
             Dictionary<string, string> aliases,
             XElement elem,
             TaskLoggingHelper log,
-            bool logWarningForBinaryFormatter)
+            bool logWarningForBinaryFormatter,
+            bool stringsOnly)
         {
             string name = elem.Attribute("name").Value;
             string value;
@@ -157,6 +158,17 @@ namespace Microsoft.Build.Tasks.ResourceHandling
 
                 // It's a string, but it might be represented oddly.
                 // Fall through to see if one of the serializers can handle it.
+            }
+
+            if (stringsOnly)
+            {
+                string input = $"{resxFilename}: {name}";
+                if (log is null)
+                {
+                    throw new NotSupportedException(ResourceUtilities.FormatResourceStringIgnoreCodeAndKeyword("CommonSdk.HardenedResourceCompilation", input));
+                }
+                log.LogErrorWithCodeFromResources("CommonSdk.HardenedResourceCompilation", input);
+                return;
             }
 
             if (typename.StartsWith("System.Resources.ResXFileRef", StringComparison.Ordinal)) // TODO: is this too general? Should it be OrdinalIgnoreCase?
@@ -312,11 +324,11 @@ namespace Microsoft.Build.Tasks.ResourceHandling
         /// <summary>
         /// Extract <see cref="IResource"/>s from a given file on disk.
         /// </summary>
-        public static IReadOnlyList<IResource> GetResourcesFromFile(string filename, bool pathsRelativeToBasePath, TaskLoggingHelper log, bool logWarningForBinaryFormatter)
+        public static IReadOnlyList<IResource> GetResourcesFromFile(string filename, bool pathsRelativeToBasePath, TaskLoggingHelper log, bool logWarningForBinaryFormatter, bool stringsOnly = false)
         {
             using (var x = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                return ReadResources(x, filename, pathsRelativeToBasePath, log, logWarningForBinaryFormatter);
+                return ReadResources(x, filename, pathsRelativeToBasePath, log, logWarningForBinaryFormatter, stringsOnly);
             }
         }
 

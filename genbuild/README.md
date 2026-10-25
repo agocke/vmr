@@ -159,6 +159,11 @@ and key files absent. Source-dependent resource naming and certificate/PFX/
 key-container discovery fail without publishing a partial graph.
 The compiler independently consumes an execution-produced signing key and emits
 the expected public-key token.
+Resource compilation likewise consumes generated `.resx` files, produces
+ordinary-equivalent main/culture resource bytes without a state cache, and
+embeds values retrieved by the independently compiled program. Unsupported
+host/tool/source-generation modes fail construction; linked and typed resource
+payloads fail execution before resource output creation.
 A configured fixture retains parent/child multi-targeting declarations, prepares
 multiple parent frameworks/configurations, and independently builds a Debug/net11
 parent with its negotiated Release/net10 child. Outer preparation and attempts

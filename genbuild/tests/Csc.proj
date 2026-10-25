@@ -25,10 +25,26 @@
     <AssemblyOriginatorKeyFile>obj/public.snk</AssemblyOriginatorKeyFile>
     <_SigningTarget>ResolveKeySource</_SigningTarget>
   </PropertyGroup>
+  <PropertyGroup Condition="$(TestCase.StartsWith('resource-'))">
+    <DefineConstants>$(DefineConstants);RESOURCE_TEST</DefineConstants>
+    <_ResourceTargets>CoreResGen;_GenerateCompileInputs</_ResourceTargets>
+    <GenerateResourceMSBuildRuntime>CurrentRuntime</GenerateResourceMSBuildRuntime>
+    <GenerateResourceMSBuildArchitecture>CurrentArchitecture</GenerateResourceMSBuildArchitecture>
+    <UseSourcePath>true</UseSourcePath>
+    <ResGenExecuteAsTool>false</ResGenExecuteAsTool>
+    <ResGenExecuteAsTool Condition="'$(TestCase)' == 'resource-tool'">true</ResGenExecuteAsTool>
+    <GenerateResourceMSBuildRuntime Condition="'$(TestCase)' == 'resource-runtime'">CLR2</GenerateResourceMSBuildRuntime>
+    <GenerateResourceMSBuildArchitecture Condition="'$(TestCase)' == 'resource-architecture'">x86</GenerateResourceMSBuildArchitecture>
+    <GenerateResourceUsePreserializedResources Condition="'$(TestCase)' == 'resource-preserialized'">true</GenerateResourceUsePreserializedResources>
+    <_ResourceData>&lt;root&gt;&lt;data name="Greeting" xml:space="preserve"&gt;&lt;value&gt; inline &amp;amp%3B generated &lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
+    <_ResourceData Condition="'$(TestCase)' == 'resource-linked'">&lt;root&gt;&lt;data name="Greeting" type="System.Resources.ResXFileRef, System.Windows.Forms"&gt;&lt;value&gt;undeclared.txt%3BSystem.String, mscorlib, Version=4.0.0.0&lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
+    <_ResourceData Condition="'$(TestCase)' == 'resource-typed'">&lt;root&gt;&lt;data name="Greeting" type="System.Int32, mscorlib"&gt;&lt;value&gt;42&lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
+  </PropertyGroup>
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.Csc" AssemblyFile="$(_CompilerDirectory)Microsoft.Build.Tasks.CodeAnalysis.dll" />
   <Import Project="$(_CompilerDirectory)Microsoft.CSharp.Core.targets" />
   <Import Project="FrameworkInputs.props" />
   <Import Project="Signing.targets" Condition="'$(TestCase)' == 'signed'" />
+  <Import Project="Resources.targets" Condition="$(TestCase.StartsWith('resource-'))" />
   <ItemGroup>
     <SourceRoot Include="$(MSBuildProjectDirectory)/../" SourceControl="git" />
     <Compile Include="Program.cs;obj/Generated.cs" />
@@ -38,11 +54,20 @@
     <Analyzer Include="@(_FrameworkReferenceManifestFrameworkReference->'%(TargetingPackPath)/analyzers/dotnet/cs/System.Text.RegularExpressions.Generator.dll')" />
     <Analyzer Include="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll;$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll" />
   </ItemGroup>
-  <Target Name="_BeforeVBCSCoreCompile" DependsOnTargets="$(_SigningTarget)" />
+  <ItemGroup Condition="$(TestCase.StartsWith('resource-'))">
+    <EmbeddedResource Include="obj/Strings.resx" Type="Resx" WithCulture="false" ManifestResourceName="ResourceRoot.Strings">
+      <StronglyTypedLanguage Condition="'$(TestCase)' == 'resource-source'">C#</StronglyTypedLanguage>
+    </EmbeddedResource>
+    <EmbeddedResource Include="obj/Strings.fr.resx" Type="Resx" WithCulture="true" Culture="fr" ManifestResourceName="ResourceRoot.Strings.fr" />
+  </ItemGroup>
+  <Target Name="_BeforeVBCSCoreCompile" DependsOnTargets="$(_SigningTarget);$(_ResourceTargets)" />
   <Target Name="PrepareForBuild" />
   <Target Name="ResolvePackageAssets" />
   <Target Name="ResolveTargetingPackAssets" />
   <Target Name="Produce">
+    <WriteLinesToFile File="%(EmbeddedResource.Identity)" Lines="$(_ResourceData)"
+                      Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="%(EmbeddedResource.Identity)"
+                      Condition="$(TestCase.StartsWith('resource-'))" />
     <CopyFiles SourceFiles="public.snk" DestinationFiles="obj/public.snk"
                DeclaredInputs="public.snk" DeclaredOutputs="obj/public.snk"
                Condition="'$(TestCase)' == 'signed'" />

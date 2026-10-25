@@ -18,5 +18,8 @@ internal static partial class Program
         Console.WriteLine(SourcePath().Replace('\\', '/'));
         Console.WriteLine(Pattern().IsMatch("genbuild"));
         Console.WriteLine(Producer.Text);
+#if RESOURCE_TEST
+        Console.WriteLine("[" + new System.Resources.ResourceManager("ResourceRoot.Strings", typeof(Program).Assembly).GetString("Greeting") + "]");
+#endif
     }
 }

@@ -3229,7 +3229,11 @@
     <value>MSB3673: Hardened signing requires an explicit non-PFX AssemblyOriginatorKeyFile. Certificate stores, manifest signing, and key containers are not supported.</value>
     <comment>{StrBegin="MSB3673: "}AssemblyOriginatorKeyFile and PFX are not localized.</comment>
   </data>
-  <!-- Next available general task message code: MSB3674. -->
+  <data name="CommonSdk.HardenedResourceCompilation">
+    <value>MSB3674: Hardened resource compilation requires inline string .resx inputs, explicit .resources outputs, and current-host in-process execution without strongly typed source generation. Unsupported input or option: "{0}".</value>
+    <comment>{StrBegin="MSB3674: "}{0} is an unsupported resource input or compilation option. .resx and .resources are not localized.</comment>
+  </data>
+  <!-- Next available general task message code: MSB3675. -->
 
   <!--
         The tasks message bucket is: MSB3001 - MSB3999

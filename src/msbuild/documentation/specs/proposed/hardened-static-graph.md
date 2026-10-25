@@ -537,6 +537,27 @@ MSB3673. The compiler's existing public/delay-signing restriction still applies.
 Ordinary resource and signing tasks retain their existing behavior. Neither
 metadata transformation requires a new Restore snapshot.
 
+### Resource compilation
+
+Hardened `CoreResGen` assigns `OutputResource` metadata and `FileWrites` from
+the existing intermediate path and manifest resource name. It schedules one
+declared-I/O `CompileResources` action per resource without consuming task
+outputs during construction. Generated `.resx` files need not exist yet.
+
+The action shares the ordinary resource parser and uses `ResourceWriter` to
+compile inline strings into explicit `.resources` outputs. A string-only parser
+mode rejects linked files, typed payloads and serialized objects with MSB3674
+before reading any referenced file or creating the output. Malformed resource
+XML is diagnosed at execution. The action validates its exact input/output
+declarations and uses the supplied task environment for absolute paths.
+
+This profile excludes strongly typed source generation, preserialized-resource
+mode, external resgen tools/environment overrides and non-current task hosts;
+these options fail construction with MSB3674. Ordinary builds retain their
+existing task and host-selection behavior. Hardened compilation has no
+`GenerateResource.cache`: Ninja owns incrementality, and resource contents
+remain execution inputs rather than new Restore snapshots.
+
 ## Graph construction
 
 Reuse MSBuild's target ordering, expression expansion, batching, and

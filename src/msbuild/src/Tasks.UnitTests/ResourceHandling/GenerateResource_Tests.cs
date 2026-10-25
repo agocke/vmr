@@ -6,11 +6,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Resources;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
 using Microsoft.Build.Tasks;
+using Microsoft.Build.Tasks.UnitTests.ResourceHandling;
 using Microsoft.Build.Utilities;
 using Shouldly;
 using Xunit;
@@ -33,6 +35,135 @@ namespace Microsoft.Build.UnitTests.GenerateResource_Tests.InProc
         public void Dispose()
         {
             _env.Dispose();
+        }
+
+        [Theory]
+        [InlineData("Strings.resx")]
+        [InlineData("Strings %3B%25.resx")]
+        public void CompileInlineStringsMatchesOrdinaryResources(string fileName)
+        {
+            string directory = _env.CreateFolder().Path;
+            string source = Path.Combine(directory, fileName);
+            string output = Path.Combine(directory, "graph.resources");
+            string ordinaryOutput = Path.Combine(directory, "ordinary.resources");
+            File.WriteAllText(source, ResXHelper.SurroundWithBoilerplate("""
+                <data name="Greeting" xml:space="preserve"><value> inline &amp; &#x2603; </value></data>
+                <data name="Empty"><value> </value></data>
+                <data name="Literal" type="System.String"><value>%3B%25$(Value)</value></data>
+                """));
+            TaskItem sourceItem = new(EscapingUtilities.Escape(source));
+            TaskItem outputItem = new(output);
+            CompileResources task = new()
+            {
+                BuildEngine = new MockEngine(_output),
+                SourceFile = sourceItem,
+                OutputFile = outputItem,
+                DeclaredInputs = [sourceItem],
+                DeclaredOutputs = [outputItem]
+            };
+            GenerateResource ordinary = new()
+            {
+                BuildEngine = new MockEngine(_output),
+                Sources = [sourceItem],
+                OutputResources = [new TaskItem(ordinaryOutput)],
+                ExecuteAsTool = false,
+                UsePreserializedResources = true
+            };
+
+            task.Execute().ShouldBeTrue();
+            ordinary.Execute().ShouldBeTrue();
+
+            File.ReadAllBytes(output).ShouldBe(File.ReadAllBytes(ordinaryOutput));
+            using ResourceReader reader = new(output);
+            Dictionary<string, string> values = [];
+            foreach (DictionaryEntry entry in reader)
+            {
+                values.Add((string)entry.Key, (string)entry.Value);
+            }
+            values["Greeting"].ShouldBe(" inline & \u2603 ");
+            values["Empty"].ShouldBeEmpty();
+            values["Literal"].ShouldBe("%3B%25$(Value)");
+        }
+
+        [Theory]
+        [InlineData("System.Resources.ResXFileRef, System.Windows.Forms", "", "missing.txt;System.String, mscorlib, Version=4.0.0.0")]
+        [InlineData("System.Int32, mscorlib", "", "42")]
+        [InlineData("", "application/x-microsoft.net.object.binary.base64", "not base64")]
+        public void CompileInlineStringsRejectsHiddenInputsBeforeReadingThem(string type, string mimeType, string value)
+        {
+            string directory = _env.CreateFolder().Path;
+            string source = Path.Combine(directory, "Strings.resx");
+            string output = Path.Combine(directory, "out.resources");
+            string typeAttribute = type.Length == 0 ? "" : $"""type="{type}" """;
+            File.WriteAllText(source, ResXHelper.SurroundWithBoilerplate($"""
+                <data name="Valid"><value>inline</value></data>
+                <data name="Unsupported" {typeAttribute}mimetype="{mimeType}"><value>{value}</value></data>
+                """.Replace("mimetype=\"\"", "")));
+            MockEngine engine = new(_output);
+            TaskItem sourceItem = new(source);
+            TaskItem outputItem = new(output);
+            CompileResources task = new()
+            {
+                BuildEngine = engine,
+                SourceFile = sourceItem,
+                OutputFile = outputItem,
+                DeclaredInputs = [sourceItem],
+                DeclaredOutputs = [outputItem]
+            };
+
+            task.Execute().ShouldBeFalse();
+
+            engine.Log.ShouldContain("MSB3674");
+            engine.Log.ShouldNotContain("MSB3103");
+            File.Exists(output).ShouldBeFalse();
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CompileInlineStringsValidatesDeclarationsBeforeOpeningFiles(bool input)
+        {
+            string directory = _env.CreateFolder().Path;
+            TaskItem source = new(Path.Combine(directory, "missing.resx"));
+            TaskItem output = new(Path.Combine(directory, "out.resources"));
+            MockEngine engine = new(_output);
+            CompileResources task = new()
+            {
+                BuildEngine = engine,
+                SourceFile = source,
+                OutputFile = output,
+                DeclaredInputs = input ? [] : [source],
+                DeclaredOutputs = input ? [output] : []
+            };
+
+            task.Execute().ShouldBeFalse();
+
+            engine.Log.ShouldContain(input ? "DeclaredInputs" : "DeclaredOutputs");
+            engine.Log.ShouldNotContain("MSB3103");
+            File.Exists(output.ItemSpec).ShouldBeFalse();
+        }
+
+        [Fact]
+        public void CompileInlineStringsDiagnosesInvalidXmlWithoutOutput()
+        {
+            string directory = _env.CreateFolder().Path;
+            TaskItem source = new(Path.Combine(directory, "Strings.resx"));
+            TaskItem output = new(Path.Combine(directory, "out.resources"));
+            File.WriteAllText(source.ItemSpec, "<root><data");
+            MockEngine engine = new(_output);
+            CompileResources task = new()
+            {
+                BuildEngine = engine,
+                SourceFile = source,
+                OutputFile = output,
+                DeclaredInputs = [source],
+                DeclaredOutputs = [output]
+            };
+
+            task.Execute().ShouldBeFalse();
+
+            engine.Log.ShouldContain("MSB3103");
+            File.Exists(output.ItemSpec).ShouldBeFalse();
         }
 
         /// <summary>

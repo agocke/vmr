@@ -162,6 +162,7 @@
     <Compile Include="BootstrapperUtil\*.cs" />
     <Compile Include="CallTarget.cs" />
     <Compile Include="CombinePath.cs" />
+    <Compile Include="CompileResources.cs" />
     <Compile Include="ValidateHardenedAssemblySearchPaths.cs" />
     <Compile Include="ResolveReferencePaths.cs" />
     <Compile Include="CommandLineBuilderExtension.cs" />

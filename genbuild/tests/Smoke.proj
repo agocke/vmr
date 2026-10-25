@@ -1599,7 +1599,7 @@
     <WriteLinesToFile File="$(_TestDirectory)csc/Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/HelloWorld.csproj&quot;" />
     <ItemGroup>
-      <_CscCase Include="short;another much longer checkout;embedded;compiler-error;ordinary;determinism;paths;response;generated-directory;signed" />
+      <_CscCase Include="short;another much longer checkout;embedded;compiler-error;ordinary;determinism;paths;response;generated-directory;signed;resource-graph;resource-ordinary;resource-linked;resource-typed;resource-source;resource-tool;resource-runtime;resource-architecture;resource-preserialized" />
       <_CscRoot Include="@(_CscCase->'$(_TestDirectory)csc/%(Identity)/project/')" />
       <_CscRelocation Include="short;another much longer checkout" />
       <_CscRejected Include="determinism" Arguments="-p:Deterministic=false" />
@@ -1617,6 +1617,13 @@
     <WriteLinesToFile File="$(_TestDirectory)csc/signed/project/Signing.targets"
                       Lines="&lt;Project&gt;;$(_CscSigningTarget);&lt;/Project&gt;" Overwrite="true" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)../../src/msbuild/src/MSFT.snk" DestinationFiles="$(_TestDirectory)csc/signed/project/public.snk" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
+             Query="/Project/Target[@Name='CoreResGen' or @Name='_GenerateCompileInputs']">
+      <Output TaskParameter="Result" ItemName="_CscResourceTargets" />
+    </XmlPeek>
+    <Error Condition="'@(_CscResourceTargets->Count())' != '2'" Text="Resource compilation must use the packaged resource and compiler-input targets." />
+    <WriteLinesToFile File="%(_CscRoot.Identity)Resources.targets"
+                      Lines="&lt;Project&gt;;@(_CscResourceTargets);&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/%(_CscCase.Identity)/project/Csc.proj&quot;" />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/Csc.proj&quot;" />
     <Error Condition="Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Generated.cs') or Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Hello.dll')"
@@ -1648,6 +1655,52 @@
     </GetAssemblyIdentity>
     <Error Condition="'@(_CscSignedIdentity->'%(PublicKeyToken)')' != 'B03F5F7F11D50A3A'"
            Text="The compiler must consume the produced public key and emit the expected signed assembly identity." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/resource-graph/project/Csc.proj&quot; -p:TestCase=resource-graph" />
+    <Error Condition="Exists('$(_TestDirectory)csc/resource-graph/project/obj/Strings.resx') or
+                      Exists('$(_TestDirectory)csc/resource-graph/project/obj/ResourceRoot.Strings.resources') or
+                      Exists('$(_TestDirectory)csc/resource-graph/project/obj/Hello.dll')"
+           Text="Resource graph construction must accept generated RESX inputs without producing resources or assemblies." />
+    <Exec WorkingDirectory="$(_TestDirectory)csc/resource-graph/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_TestDirectory)csc/resource-graph/project/obj/Hello.runtimeconfig.json" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_TestDirectory)csc/resource-graph/project/obj/Hello.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_CscResourceProgramOutput" />
+    </Exec>
+    <Error Condition="'@(_CscResourceProgramOutput)' != '/_/project/Program.cs;True;generated before compilation;[ inline &amp; generated ]'"
+           Text="Independent resource and compiler actions must embed and retrieve the produced resource value." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/resource-ordinary/project/Csc.proj&quot; -t:Build -p:TestCase=resource-ordinary" />
+    <ItemGroup>
+      <_CscResourceFile Include="ResourceRoot.Strings.resources;ResourceRoot.Strings.fr.resources" />
+      <_CscResourceRejected Include="source;tool;runtime;architecture;preserialized" />
+      <_CscResourcePayloadRejected Include="linked;typed" />
+    </ItemGroup>
+    <GetFileHash Files="$(_TestDirectory)csc/resource-graph/project/obj/%(_CscResourceFile.Identity)">
+      <Output TaskParameter="Items" ItemName="_CscResourceGraphHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_TestDirectory)csc/resource-ordinary/project/obj/%(_CscResourceFile.Identity)">
+      <Output TaskParameter="Items" ItemName="_CscResourceOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_CscResourceGraphHash->'%(FileHash)')' != '@(_CscResourceOrdinaryHash->'%(FileHash)')' or
+                      Exists('$(_TestDirectory)csc/resource-graph/project/obj/Csc.proj.GenerateResource.cache')"
+           Text="Main and culture resources must match ordinary bytes without using an incremental state cache." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/resource-%(_CscResourceRejected.Identity)/project/Csc.proj&quot; -p:TestCase=resource-%(_CscResourceRejected.Identity) -flp:&quot;LogFile=$(_TestDirectory)csc/resource-%(_CscResourceRejected.Identity).log;Verbosity=quiet&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_CscResourceRejectedExit" />
+    </Exec>
+    <Error Condition="@(_CscResourceRejectedExit->AnyHaveMetadataValue('Identity', '0')) or
+                      !$([System.IO.File]::ReadAllText('$(_TestDirectory)csc/resource-%(_CscResourceRejected.Identity).log').Contains('MSB3674')) or
+                      Exists('$(_TestDirectory)csc/resource-%(_CscResourceRejected.Identity)/project/obj/genbuild/build.ninja') or
+                      Exists('$(_TestDirectory)csc/resource-%(_CscResourceRejected.Identity)/project/obj/genbuild/build.ninja.actions') or
+                      Exists('$(_TestDirectory)csc/resource-%(_CscResourceRejected.Identity)/project/obj/Strings.resx')"
+           Text="Unsupported resource compilation modes must fail explicitly before graph publication or action execution." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/resource-%(_CscResourcePayloadRejected.Identity)/project/Csc.proj&quot; -p:TestCase=resource-%(_CscResourcePayloadRejected.Identity)" />
+    <Exec WorkingDirectory="$(_TestDirectory)csc/resource-%(_CscResourcePayloadRejected.Identity)/project" Command="ninja -f obj/genbuild/build.ninja"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_CscResourcePayloadExit" />
+    </Exec>
+    <Error Condition="@(_CscResourcePayloadExit->AnyHaveMetadataValue('Identity', '0')) or
+                      Exists('$(_TestDirectory)csc/resource-%(_CscResourcePayloadRejected.Identity)/project/obj/ResourceRoot.Strings.resources') or
+                      Exists('$(_TestDirectory)csc/resource-%(_CscResourcePayloadRejected.Identity)/project/obj/Hello.dll')"
+           Text="Linked or typed resource payloads must fail execution before creating resources or compiling an assembly." />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/embedded/project/Csc.proj&quot; -p:DebugType=embedded" />
     <Exec WorkingDirectory="$(_TestDirectory)csc/embedded/project" Command="ninja -f obj/genbuild/build.ninja" />
     <Error Condition="Exists('$(_TestDirectory)csc/embedded/project/obj/Hello.pdb')" Text="Embedded debug information must not declare or emit a sidecar PDB." />
