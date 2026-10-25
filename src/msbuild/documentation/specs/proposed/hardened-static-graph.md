@@ -558,6 +558,21 @@ existing task and host-selection behavior. Hardened compilation has no
 `GenerateResource.cache`: Ninja owns incrementality, and resource contents
 remain execution inputs rather than new Restore snapshots.
 
+### Arcade resource-source generation
+
+Arcade's `GenerateResxSource` is a declared-I/O execution task: it reads only
+`ResourceFile` and writes only `OutputPath`. Existing target authoring computes
+`SourceOutputPath`, `GeneratedResxSource`, `Compile` and `FileWrites` without
+reading resource contents or consuming task outputs. The invocation declares
+those exact paths, so both the RESX and generated accessor source can be future
+producer outputs. No additional preparation snapshot is needed.
+
+The generator implementation and options are unchanged. Hardened registration
+uses the current action host; ordinary builds retain the existing specialized
+host registration. Source-language validation supplies empty I/O declarations
+and runs during construction. This is independent of `GenerateResource`'s
+unsupported strongly typed source-generation mode.
+
 ## Graph construction
 
 Reuse MSBuild's target ordering, expression expansion, batching, and

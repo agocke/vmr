@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Microsoft.DotNet.Arcade.Sdk</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>$(NoWarn);SYSLIB0013</NoWarn>
+    <DefineConstants>$(DefineConstants);ARCADE_SDK_BUILD_TASKS_ASSEMBLY</DefineConstants>
+    <_ArcadeSource>$(MSBuildThisFileDirectory)../../../src/arcade/src/</_ArcadeSource>
+    <_Engine>$(MSBuildThisFileDirectory)../../../src/msbuild/artifacts/bin/MSBuild/$(Configuration)/net11.0/</_Engine>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(_ArcadeSource)Microsoft.DotNet.Arcade.Sdk/src/*.cs"
+             Exclude="$(_ArcadeSource)Microsoft.DotNet.Arcade.Sdk/src/MSBuildDeclaredIOTaskAttribute.cs" />
+    <Compile Include="$(_ArcadeSource)Common/Tasks/ExecWithRetries.cs;$(_ArcadeSource)Common/Internal/AbsolutePathExtensions.cs" />
+    <Reference Include="Microsoft.Build" HintPath="$(_Engine)Microsoft.Build.dll" Private="false" />
+    <Reference Include="Microsoft.Build.Framework" HintPath="$(_Engine)Microsoft.Build.Framework.dll" Private="false" />
+    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(_Engine)Microsoft.Build.Utilities.Core.dll" Private="false" />
+    <Reference Include="Microsoft.Build.Tasks.Core" HintPath="$(_Engine)Microsoft.Build.Tasks.Core.dll" Private="false" />
+    <ProjectReference Include="../../../src/nuget-client/src/NuGet.Core/NuGet.Versioning/NuGet.Versioning.csproj"
+                      AdditionalProperties="TargetFrameworks=net10.0" />
+  </ItemGroup>
+</Project>

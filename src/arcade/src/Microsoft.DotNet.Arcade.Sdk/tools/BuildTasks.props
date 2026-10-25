@@ -23,7 +23,8 @@
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.ExecWithRetries" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.ExtractNgenMethodList" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.GenerateChecksums" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
-  <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.GenerateResxSource" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.GenerateResxSource" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.GenerateResxSource" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.GenerateSourcePackageSourceLinkTargetsFile" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.GetAssemblyFullName" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.GetLicenseFilePath" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />

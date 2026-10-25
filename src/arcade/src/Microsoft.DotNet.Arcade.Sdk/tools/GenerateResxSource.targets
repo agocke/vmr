@@ -52,7 +52,9 @@
       OmitGetResourceString="$(GenerateResxSourceOmitGetResourceString)"
       IncludeDefaultValues="$(GenerateResxSourceIncludeDefaultValues)"
       EmitFormatMethods="$(GenerateResxSourceEmitFormatMethods)"
-      OutputPath="%(EmbeddedResourceSGResx.SourceOutputPath)" />
+      OutputPath="%(EmbeddedResourceSGResx.SourceOutputPath)"
+      DeclaredInputs="%(EmbeddedResourceSGResx.FullPath)"
+      DeclaredOutputs="%(EmbeddedResourceSGResx.SourceOutputPath)" />
   </Target>
 
   <Target Name="_GetEmbeddedResourcesWithSourceGeneration" Condition="'@(EmbeddedResource)' != ''">
@@ -61,7 +63,11 @@
       <_EmbeddedResourceSourceExtension Condition="'$(Language)' == 'VB'">vb</_EmbeddedResourceSourceExtension>
       <_EmbeddedResourceSourceExtension Condition="'$(Language)' == 'F#'">fs</_EmbeddedResourceSourceExtension>
     </PropertyGroup>
-    <Error Text="GenerateResxSource doesn't support language: '$(Language)'" Condition="'$(_EmbeddedResourceSourceExtension)' == ''"/>
+    <Error Text="GenerateResxSource doesn't support language: '$(Language)'"
+           Condition="'$(_EmbeddedResourceSourceExtension)' == '' and '$(MSBuildHardenedGraph)' != 'true'" />
+    <Error Text="GenerateResxSource doesn't support language: '$(Language)'"
+           Condition="'$(_EmbeddedResourceSourceExtension)' == '' and '$(MSBuildHardenedGraph)' == 'true'"
+           DeclaredInputs="" DeclaredOutputs="" />
     <ItemGroup>
       <EmbeddedResourceSG Include="@(EmbeddedResource)" Condition="'%(EmbeddedResource.GenerateSource)' == 'true' and '%(EmbeddedResource.XlfLanguage)' == ''" />
       <EmbeddedResourceSG Condition="'$(Language)' != 'F#'">

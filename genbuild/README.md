@@ -164,6 +164,10 @@ ordinary-equivalent main/culture resource bytes without a state cache, and
 embeds values retrieved by the independently compiled program. Unsupported
 host/tool/source-generation modes fail construction; linked and typed resource
 payloads fail execution before resource output creation.
+Arcade resource-source generation independently consumes a generated `.resx`,
+produces accessors used by the compiler, and preserves ordinary source bytes,
+resource lookup, default-value arguments, and named/numbered format methods.
+Unrecognized source languages fail without graph publication.
 A configured fixture retains parent/child multi-targeting declarations, prepares
 multiple parent frameworks/configurations, and independently builds a Debug/net11
 parent with its negotiated Release/net10 child. Outer preparation and attempts
@@ -308,11 +312,21 @@ Zero-I/O tasks still require an available audited implementation during construc
 No new `UsingTask` syntax or tool prebuild is needed.
 The real net10.0 Restore succeeds with discovery-inclusive capture. Hardened
 Build no longer attempts metadata loading of the future `ILLink.Tasks.dll`.
-Its first reported blockers are missing explicit footprints on Arcade's
-`ChooseBestP2PTargetFrameworkTask` and `SetRidAgnosticValueForProjects` calls.
-These construction-time negotiation tasks need audited zero-I/O authoring.
-Preparation and the failed graph attempt produce zero DLLs and publish no
-library graph.
+It now passes Arcade framework negotiation and resource/signing metadata,
+resource compilation, and Arcade resource-source generation authoring.
+`GenerateResxSource` reads one RESX and writes one known source path as an
+execution action; it needs neither a Restore snapshot nor a graph-time task
+output. The app stages the source-built SDK task assembly and its
+`BuildTasks.props`/`GenerateResxSource.targets` at `toolset/Arcade/Sdk/tools/`.
+The real probe regenerates its isolated Arcade SDK overlay with these files and
+the `net/` payload, selecting the same `ArcadeSdkDir` for Restore and Build.
+The staged task subset is not a complete Arcade SDK installation.
+Ordinary task hosting is unchanged; hardened source generation uses the current
+action host rather than the ordinary specialized `Runtime="NET"` registration.
+The first remaining errors are SourceLink GitHub/GitLab repository-URL translation
+declarations and construction-time outputs.
+Preparation and the failed graph attempt produce zero DLLs, binary resources,
+or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.
 
 Ordinary graph-input preparation now captures the complete assets JSON as

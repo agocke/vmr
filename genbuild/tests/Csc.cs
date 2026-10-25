@@ -21,5 +21,10 @@ internal static partial class Program
 #if RESOURCE_TEST
         Console.WriteLine("[" + new System.Resources.ResourceManager("ResourceRoot.Strings", typeof(Program).Assembly).GetString("Greeting") + "]");
 #endif
+#if RESOURCE_ACCESSORS
+        Console.WriteLine("[" + ResourceRoot.Accessors.Greeting + "]");
+        Console.WriteLine(ResourceRoot.Accessors.FormatNamed("reader"));
+        Console.WriteLine(ResourceRoot.Accessors.FormatNumbered(42));
+#endif
     }
 }

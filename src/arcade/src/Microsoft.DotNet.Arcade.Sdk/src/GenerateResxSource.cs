@@ -14,6 +14,7 @@ using Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Arcade.Sdk;
 
+[MSBuildDeclaredIOTask]
 [MSBuildMultiThreadableTask]
 public sealed class GenerateResxSource : Task, IMultiThreadableTask
 {
@@ -67,6 +68,16 @@ public sealed class GenerateResxSource : Task, IMultiThreadableTask
 
     [Required]
     public string OutputPath { get; set; }
+
+    /// <summary>
+    /// Exact file inputs for this invocation. This declaration does not affect task execution.
+    /// </summary>
+    public ITaskItem[] DeclaredInputs { get; set; }
+
+    /// <summary>
+    /// Exact persistent file outputs for this invocation. This declaration does not affect task execution.
+    /// </summary>
+    public ITaskItem[] DeclaredOutputs { get; set; }
 
     private enum Lang
     {

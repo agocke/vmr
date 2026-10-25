@@ -693,10 +693,21 @@ files. A packaged regression constructs with generated resources absent, then
 independently produces, compiles, embeds and retrieves their values. Main and
 culture resource bytes match ordinary execution. Unsupported resource modes fail
 construction; linked/typed payloads fail execution before output creation.
-The real probe passes resource compilation authoring and now first fails at
-Arcade's `GenerateResxSource` in `ILLink.RoslynAnalyzer.csproj`. This is separate
-C# source generation, not `.resources` compilation. Subsequent SourceLink
-translation diagnostics are not separately established blockers.
+Arcade's `GenerateResxSource` now declares its single RESX input and known source
+output, keeping the generator implementation and options unchanged. Its existing
+targets compute source paths and compiler items without task outputs; hardened
+registration selects the current action host. The standalone app stages the
+source-built SDK task assembly and associated source-generation authoring, and
+the real probe regenerates its isolated SDK overlay from those files.
+A packaged regression constructs with both generated RESX and accessor source
+absent, independently generates the source and compiles a consumer that retrieves
+resources and calls named/numbered format methods. Generated source bytes match
+ordinary execution with default-value arguments enabled. Unrecognized source
+languages fail before publication. The complete SDK-free packaged smoke passes.
+The real probe now passes resource-source generation authoring and first reports
+SourceLink GitHub/GitLab translation declaration and deferred-output errors.
+These tasks' required construction-time metadata still needs investigation.
+The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.
 Native/CoreCLR/CMake integration is later.

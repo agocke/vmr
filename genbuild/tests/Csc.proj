@@ -3,6 +3,7 @@
     <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
     <_TargetFrameworkVersionWithoutV>11.0</_TargetFrameworkVersionWithoutV>
     <TargetFramework>net11.0</TargetFramework>
+    <Language>C#</Language>
     <OutputType>exe</OutputType>
     <Deterministic Condition="'$(Deterministic)' == ''">true</Deterministic>
     <DeterministicSourcePaths Condition="'$(DeterministicSourcePaths)' == ''">true</DeterministicSourcePaths>
@@ -40,11 +41,19 @@
     <_ResourceData Condition="'$(TestCase)' == 'resource-linked'">&lt;root&gt;&lt;data name="Greeting" type="System.Resources.ResXFileRef, System.Windows.Forms"&gt;&lt;value&gt;undeclared.txt%3BSystem.String, mscorlib, Version=4.0.0.0&lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
     <_ResourceData Condition="'$(TestCase)' == 'resource-typed'">&lt;root&gt;&lt;data name="Greeting" type="System.Int32, mscorlib"&gt;&lt;value&gt;42&lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
   </PropertyGroup>
+  <PropertyGroup Condition="$(TestCase.StartsWith('resource-accessors'))">
+    <DefineConstants>$(DefineConstants);RESOURCE_ACCESSORS</DefineConstants>
+    <GenerateResxSourceIncludeDefaultValues>true</GenerateResxSourceIncludeDefaultValues>
+    <GenerateResxSourceEmitFormatMethods>true</GenerateResxSourceEmitFormatMethods>
+    <_ResourceData>&lt;root&gt;&lt;data name="Greeting" xml:space="preserve"&gt;&lt;value&gt; inline &amp;amp%3B generated &lt;/value&gt;&lt;/data&gt;&lt;data name="Named"&gt;&lt;value&gt;hello {name}&lt;/value&gt;&lt;/data&gt;&lt;data name="Numbered"&gt;&lt;value&gt;quoted &amp;quot%3B{0}&amp;quot%3B&lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
+  </PropertyGroup>
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.Csc" AssemblyFile="$(_CompilerDirectory)Microsoft.Build.Tasks.CodeAnalysis.dll" />
   <Import Project="$(_CompilerDirectory)Microsoft.CSharp.Core.targets" />
   <Import Project="FrameworkInputs.props" />
   <Import Project="Signing.targets" Condition="'$(TestCase)' == 'signed'" />
   <Import Project="Resources.targets" Condition="$(TestCase.StartsWith('resource-'))" />
+  <Import Project="$(MSBuildToolsPath)/Arcade/Sdk/tools/BuildTasks.props" Condition="$(TestCase.StartsWith('resource-accessors'))" />
+  <Import Project="$(MSBuildToolsPath)/Arcade/Sdk/tools/GenerateResxSource.targets" Condition="$(TestCase.StartsWith('resource-accessors'))" />
   <ItemGroup>
     <SourceRoot Include="$(MSBuildProjectDirectory)/../" SourceControl="git" />
     <Compile Include="Program.cs;obj/Generated.cs" />
@@ -57,11 +66,16 @@
   <ItemGroup Condition="$(TestCase.StartsWith('resource-'))">
     <EmbeddedResource Include="obj/Strings.resx" Type="Resx" WithCulture="false" ManifestResourceName="ResourceRoot.Strings">
       <StronglyTypedLanguage Condition="'$(TestCase)' == 'resource-source'">C#</StronglyTypedLanguage>
+      <GenerateSource Condition="$(TestCase.StartsWith('resource-accessors'))">true</GenerateSource>
+      <Generator Condition="$(TestCase.StartsWith('resource-accessors'))">MSBuild:_GenerateResxSource</Generator>
+      <ClassName Condition="$(TestCase.StartsWith('resource-accessors'))">ResourceRoot.Accessors</ClassName>
+      <SourceOutputPath Condition="$(TestCase.StartsWith('resource-accessors'))">obj/generated source/accessors.cs</SourceOutputPath>
     </EmbeddedResource>
     <EmbeddedResource Include="obj/Strings.fr.resx" Type="Resx" WithCulture="true" Culture="fr" ManifestResourceName="ResourceRoot.Strings.fr" />
   </ItemGroup>
   <Target Name="_BeforeVBCSCoreCompile" DependsOnTargets="$(_SigningTarget);$(_ResourceTargets)" />
   <Target Name="PrepareForBuild" />
+  <Target Name="PrepareResourceNames" />
   <Target Name="ResolvePackageAssets" />
   <Target Name="ResolveTargetingPackAssets" />
   <Target Name="Produce">
@@ -79,6 +93,6 @@
   </Target>
   <Target Name="Build" DependsOnTargets="_SetPathMapFromSourceRoots;Produce;CoreCompile" />
   <Target Name="Restore">
-    <MakeDir Directories="obj/ref" />
+    <MakeDir Directories="obj/ref;obj/generated source" />
   </Target>
 </Project>
