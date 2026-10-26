@@ -762,13 +762,24 @@ Mono, and cross-targeting. Direct generation checks root-over-IL priority and th
 alias checks IL fallback, with distinct resolved-reference directories retained.
 This tests path selection and ordering, not actual GenAPI source generation;
 hardened execution of the generator is still unsupported.
+ILLink declares `Mono.Linker.Resources.Strings` and `ILLink.Shared.SharedStrings`
+as explicit manifest names in the linker project and shared project items.
+Ordinary `PrepareResourceNames` on the real net11.0 tool project produces the
+same manifest/logical names before and after the change. These declarations
+avoid source-dependent naming without disabling the convention globally or
+expanding the graph-time formatter into a source reader.
+The focused resource/signing regression imports both actual resource declarations
+and checks ordinary-equivalent metadata with source/resource files absent and
+the naming convention still enabled. Its hardened graph fails with `MSB3672`
+before the declarations and passes afterward; independent publication matches
+ordinary execution. The existing convention/dependent-source and machine-backed
+signing rejection cases remain intact. No task rebuild or new snapshot is needed.
 The real probe gets past analyzer-config selection, provider translation,
 mirror remapping, the marker hook, the empty resource-source batch and unrequested
-GenAPI discovery.
+GenAPI discovery, then passes ILLink's resource naming.
 Construction advances through the ILLink analyzer, code-fix and linker reference
-projects. Its first remaining error is `MSB3672` in `Mono.Linker.csproj`:
-hardened resource naming rejects `UseDependentUponConvention` because it can
-discover or read source files.
+projects. Its first remaining error is the hardened resource-compilation contract
+(`MSB3674`) for `Resources/Strings.resx` in `Mono.Linker.csproj`.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

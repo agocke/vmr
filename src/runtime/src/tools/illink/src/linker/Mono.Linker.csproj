@@ -105,6 +105,7 @@
 
   <ItemGroup>
     <EmbeddedResource Update="Resources\Strings.resx">
+      <ManifestResourceName>Mono.Linker.Resources.Strings</ManifestResourceName>
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
     </EmbeddedResource>

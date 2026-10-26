@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)SharedStrings.resx">
+      <ManifestResourceName>ILLink.Shared.SharedStrings</ManifestResourceName>
       <GenerateSource>true</GenerateSource>
       <Namespace>ILLink.Shared</Namespace>
       <SubType>Designer</SubType>

@@ -1230,6 +1230,32 @@
     </GetFileHash>
     <Error Condition="'@(_ResourceMetadataHash->'%(FileHash)'->Distinct()->Count())' != '1'"
            Text="Resource metadata and explicit signing paths must match ordinary execution." />
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/linker/Mono.Linker.csproj"
+             Query="/Project/ItemGroup/EmbeddedResource[@Update]">
+      <Output TaskParameter="Result" ItemName="_RuntimeResourceMetadata" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/ILLink.Shared/ILLink.Shared.projitems"
+             Namespaces="&lt;Namespace Prefix='msb' Uri='http://schemas.microsoft.com/developer/msbuild/2003' /&gt;"
+             Query="/msb:Project/msb:ItemGroup/msb:EmbeddedResource">
+      <Output TaskParameter="Result" ItemName="_RuntimeResourceMetadata" />
+    </XmlPeek>
+    <Error Condition="'@(_RuntimeResourceMetadata->Count())' != '2'" Text="Missing ILLink resource authoring." />
+    <PropertyGroup>
+      <_RuntimeResourceMetadataXml>@(_RuntimeResourceMetadata, '')</_RuntimeResourceMetadataXml>
+      <_RuntimeResourceMetadataXml>$(_RuntimeResourceMetadataXml.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_RuntimeResourceMetadataXml>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_ResourceMetadataRoot)RuntimeResourceMetadata.props"
+                      Lines="&lt;Project&gt;&lt;ItemGroup&gt;;$(_RuntimeResourceMetadataXml);&lt;/ItemGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_ResourceMetadataRoot)ResourceMetadata.proj&quot; -p:TestCase=illink -p:ResultFile=illink-graph.txt -p:MSBuildEmitActionGraph=&quot;$(_ResourceMetadataRoot)illink.ninja&quot;" />
+    <Error Condition="Exists('$(_ResourceMetadataRoot)Resources') or Exists('$(_ResourceMetadataRoot)SharedStrings.resx') or Exists('$(_ResourceMetadataRoot)illink-graph.txt')"
+           Text="Explicit ILLink naming must not require source/resource files or execute publication during construction." />
+    <Exec WorkingDirectory="$(_ResourceMetadataRoot)" Command="ninja -f illink.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_ResourceMetadataRoot)ResourceMetadata.proj&quot; -t:Build -p:TestCase=illink -p:ResultFile=illink-ordinary.txt" />
+    <GetFileHash Files="$(_ResourceMetadataRoot)illink-graph.txt;$(_ResourceMetadataRoot)illink-ordinary.txt">
+      <Output TaskParameter="Items" ItemName="_IllinkResourceMetadataHash" />
+    </GetFileHash>
+    <Error Condition="'@(_IllinkResourceMetadataHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Explicit ILLink resource names must match ordinary execution while the source naming convention remains enabled." />
     <ItemGroup>
       <_ResourceMetadataRejected Include="convention;dependent" Code="MSB3672" />
       <_ResourceMetadataRejected Include="pfx;missing-key;certificate;certificate-file;container;manifest" Code="MSB3673" />

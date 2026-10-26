@@ -366,10 +366,12 @@ on-demand `GenerateReferenceAssemblySource` inner-build target, after that
 target's reference-resolution dependencies. Normal compilation does not need
 GenAPI's CoreLib probes or a snapshot of them. Ordinary explicit generation
 retains the existing path policy; hardened GenAPI execution is not implemented.
+ILLink now declares the linker and shared-resource manifest names directly in
+its project authoring. These match ordinary MSBuild's names and remove the need
+for source-dependent naming without disabling the convention globally.
 Construction advances through the ILLink analyzer, code-fix and linker reference
-projects. The first remaining error is `MSB3672` in `Mono.Linker.csproj`:
-hardened resource naming rejects `UseDependentUponConvention` because it can
-discover or read source files.
+projects. The first remaining error is the hardened resource-compilation
+contract (`MSB3674`) for `Resources/Strings.resx` in `Mono.Linker.csproj`.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

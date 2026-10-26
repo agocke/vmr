@@ -1,7 +1,8 @@
 <Project DefaultTargets="Build">
   <PropertyGroup>
     <RootNamespace>ResourceRoot</RootNamespace>
-    <EmbeddedResourceUseDependentUponConvention Condition="'$(TestCase)' == 'convention'">true</EmbeddedResourceUseDependentUponConvention>
+    <RootNamespace Condition="'$(TestCase)' == 'illink'">Mono.Linker</RootNamespace>
+    <EmbeddedResourceUseDependentUponConvention Condition="'$(TestCase)' == 'convention' or '$(TestCase)' == 'illink'">true</EmbeddedResourceUseDependentUponConvention>
     <SignAssembly>true</SignAssembly>
     <PublicSign>true</PublicSign>
     <BuildingProject>true</BuildingProject>
@@ -13,7 +14,7 @@
     <KeyContainerName Condition="'$(TestCase)' == 'container'">machine-container</KeyContainerName>
     <SignManifests Condition="'$(TestCase)' == 'manifest'">true</SignManifests>
   </PropertyGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(TestCase)' != 'illink'">
     <EmbeddedResource Include="missing/Strings.resx" Type="Resx" WithCulture="false" TargetPath="Strings.resx">
       <DependentUpon Condition="'$(TestCase)' == 'dependent'">Form.cs</DependentUpon>
     </EmbeddedResource>
@@ -21,11 +22,22 @@
     <EmbeddedResource Include="missing/Data.fr.txt" Type="Non-Resx" WithCulture="true" Culture="fr" TargetPath="Data.fr.txt" />
     <EmbeddedResource Include="missing/Kept.resx" Type="Resx" WithCulture="false" ManifestResourceName="Explicit.Name" />
   </ItemGroup>
+  <ItemGroup Condition="'$(TestCase)' == 'illink'">
+    <EmbeddedResource Include="Resources/Strings.resx" Type="Resx" WithCulture="false" TargetPath="Resources/Strings.resx" />
+  </ItemGroup>
+  <Import Project="RuntimeResourceMetadata.props" Condition="'$(TestCase)' == 'illink'" />
+  <ItemGroup Condition="'$(TestCase)' == 'illink'">
+    <EmbeddedResource Update="@(EmbeddedResource)" Type="Resx" WithCulture="false" />
+  </ItemGroup>
   <Import Project="ResourceMetadata.targets" />
   <Target Name="Restore" />
   <Target Name="Build" DependsOnTargets="CreateManifestResourceNames;ResolveKeySource">
     <Error Condition="'$(KeyOriginatorFile)' != 'missing/public.snk' or '$(KeyContainerName)' != ''"
            Text="Explicit signing paths must be forwarded without certificate or key-container discovery." />
+    <Error Condition="'$(TestCase)' == 'illink' and ('@(EmbeddedResource->Count())' != '2' or
+                      '@(EmbeddedResource->'%(ManifestResourceName)')' != 'Mono.Linker.Resources.Strings;ILLink.Shared.SharedStrings')"
+           Text="ILLink resource metadata must preserve the ordinary manifest names without source discovery."
+           DeclaredInputs="" DeclaredOutputs="" />
     <WriteLinesToFile File="$(ResultFile)"
                       Lines="@(EmbeddedResource->'%(Identity)|%(ManifestResourceName)|%(LogicalName)');$(KeyOriginatorFile)"
                       Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
