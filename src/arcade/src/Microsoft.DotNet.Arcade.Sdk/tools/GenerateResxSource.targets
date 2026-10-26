@@ -40,6 +40,7 @@
   </Target>
 
   <Target Name="_BatchGenerateResxSource"
+          Condition="'@(EmbeddedResourceSGResx)' != ''"
           Inputs="@(EmbeddedResourceSGResx)"
           Outputs="%(EmbeddedResourceSGResx.SourceOutputPath)">
 

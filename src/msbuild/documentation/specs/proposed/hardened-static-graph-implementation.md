@@ -738,11 +738,21 @@ deterministic. The focused SDK-free compiler regression preserves marker bytes
 and timestamps during construction, requests only the marker to prove the
 compiler dependency, recreates a missing marker, and checks failed-compilation,
 ordinary-build and analyzer-enabled behavior.
+Arcade's resource-source batch target explicitly requires a nonempty selected
+resource list. Ordinary MSBuild already skips the empty batch because it has no
+outputs; hardened construction instead uses the condition, without executing an
+empty zero-footprint generator or restoring incremental target skipping.
+All compiler fixtures import the real Arcade targets, covering empty resources,
+resources without source generation, ordinary no-ops and nonempty source
+generation. The focused SDK-free compiler suite passes. Source, staged and fresh
+isolated-overlay resource-source targets are byte-identical; no task rebuild,
+new snapshot or shared-cache edit is needed.
 The real probe gets past analyzer-config selection, provider translation,
-mirror remapping and the marker hook. Construction advances through the ILLink
-analyzer and code-fix projects to the linker reference project. Its first remaining
-error is `GenerateResxSource` being invoked without the required `ResourceFile`
-in `src/tools/illink/src/linker/ref/Mono.Linker.csproj`.
+mirror remapping, the marker hook and the empty resource-source batch.
+Construction advances through the ILLink analyzer, code-fix and linker reference
+projects. Its first remaining error is the live `Exists` probe in
+`AddImplementationAssembliesToGenAPIResolutionPath` in `eng/resolveContract.targets`,
+which discovers CoreLib implementation assemblies for GenAPI.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

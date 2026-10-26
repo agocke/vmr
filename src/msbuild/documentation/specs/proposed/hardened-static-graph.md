@@ -637,6 +637,11 @@ timestamp skipping must not omit actions from the graph. Unsupported
 constructs fail with source locations and useful origin chains before graph
 publication; there is no partial fallback to ordinary execution.
 
+Targets whose empty input selection means no work must express that intent with
+an explicit condition. They cannot rely on legacy empty-input/output target
+skipping. For example, Arcade's resource-source batch target requires a nonempty
+`EmbeddedResourceSGResx` list; otherwise no generator invocation is constructed.
+
 ## Persistent graph
 
 The graph bundle consists of `build.ninja` and versioned per-action invocation

@@ -53,8 +53,8 @@
   <Import Project="FrameworkInputs.props" />
   <Import Project="Signing.targets" Condition="'$(TestCase)' == 'signed'" />
   <Import Project="Resources.targets" Condition="$(TestCase.StartsWith('resource-'))" />
-  <Import Project="$(MSBuildToolsPath)/Arcade/Sdk/tools/BuildTasks.props" Condition="$(TestCase.StartsWith('resource-accessors'))" />
-  <Import Project="$(MSBuildToolsPath)/Arcade/Sdk/tools/GenerateResxSource.targets" Condition="$(TestCase.StartsWith('resource-accessors'))" />
+  <Import Project="$(MSBuildToolsPath)/Arcade/Sdk/tools/BuildTasks.props" />
+  <Import Project="$(MSBuildToolsPath)/Arcade/Sdk/tools/GenerateResxSource.targets" />
   <ItemGroup>
     <SourceRoot Include="$(MSBuildProjectDirectory)/../" SourceControl="git" />
     <Compile Include="Program.cs;obj/Generated.cs" />

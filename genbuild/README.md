@@ -180,6 +180,10 @@ Arcade resource-source generation independently consumes a generated `.resx`,
 produces accessors used by the compiler, and preserves ordinary source bytes,
 resource lookup, default-value arguments, and named/numbered format methods.
 Unrecognized source languages fail without graph publication.
+All compiler fixtures import Arcade's resource-source targets. Empty resource
+lists and resources without source generation are explicit no-ops, while the
+nonempty accessor cases still generate and compile source. This does not rely on
+incremental target skipping.
 A configured fixture retains parent/child multi-targeting declarations, prepares
 multiple parent frameworks/configurations, and independently builds a Debug/net11
 parent with its negotiated Release/net10 child. Outer preparation and attempts
@@ -354,9 +358,12 @@ in hardened mode, declaring the intermediate assembly as its input. Independent
 execution publishes an empty marker after successful compilation; ordinary builds
 retain `Touch`. Neither the clock nor the marker's prior contents become action
 inputs, and graph construction does not update the marker.
-Construction advances through the ILLink analyzer and code-fix projects to the
-linker reference project. The first remaining error is `GenerateResxSource`
-being invoked without its required `ResourceFile` in `linker/ref/Mono.Linker.csproj`.
+Arcade's resource-source batch target explicitly requires a nonempty selected
+resource list, preserving ordinary no-op behavior without relying on target
+incrementality. Construction advances through the ILLink analyzer, code-fix and
+linker reference projects. The first remaining error is the live `Exists` probe
+in runtime's `AddImplementationAssembliesToGenAPIResolutionPath` target in
+`eng/resolveContract.targets`.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.
