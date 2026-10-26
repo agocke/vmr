@@ -747,12 +747,28 @@ resources without source generation, ordinary no-ops and nonempty source
 generation. The focused SDK-free compiler suite passes. Source, staged and fresh
 isolated-overlay resource-source targets are byte-identical; no task rebuild,
 new snapshot or shared-cache edit is needed.
+Runtime's `AddImplementationAssembliesToGenAPIResolutionPath` is now scoped to
+the on-demand `GenerateReferenceAssemblySource` inner-build entry point, rather
+than every `ResolveAssemblyReferences`. The GenAPI target's dependencies resolve
+references before its `BeforeTargets` hooks run; the cross-targeting dispatcher
+does not perform the implementation-assembly probes. No new Restore snapshot or
+hardened bypass is needed for normal compilation.
+The focused SDK-free regression imports the actual runtime hook and observes its
+metadata at a synthetic GenAPI consumer. It reproduces the old construction-time
+`Exists` rejection, then independently executes normal-build publication and
+checks eight ordinary cases: normal compilation, direct and alias requests,
+compilation-triggered generation, missing CoreLib, an explicit libpath override,
+Mono, and cross-targeting. Direct generation checks root-over-IL priority and the
+alias checks IL fallback, with distinct resolved-reference directories retained.
+This tests path selection and ordering, not actual GenAPI source generation;
+hardened execution of the generator is still unsupported.
 The real probe gets past analyzer-config selection, provider translation,
-mirror remapping, the marker hook and the empty resource-source batch.
+mirror remapping, the marker hook, the empty resource-source batch and unrequested
+GenAPI discovery.
 Construction advances through the ILLink analyzer, code-fix and linker reference
-projects. Its first remaining error is the live `Exists` probe in
-`AddImplementationAssembliesToGenAPIResolutionPath` in `eng/resolveContract.targets`,
-which discovers CoreLib implementation assemblies for GenAPI.
+projects. Its first remaining error is `MSB3672` in `Mono.Linker.csproj`:
+hardened resource naming rejects `UseDependentUponConvention` because it can
+discover or read source files.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

@@ -360,10 +360,16 @@ retain `Touch`. Neither the clock nor the marker's prior contents become action
 inputs, and graph construction does not update the marker.
 Arcade's resource-source batch target explicitly requires a nonempty selected
 resource list, preserving ordinary no-op behavior without relying on target
-incrementality. Construction advances through the ILLink analyzer, code-fix and
-linker reference projects. The first remaining error is the live `Exists` probe
-in runtime's `AddImplementationAssembliesToGenAPIResolutionPath` target in
-`eng/resolveContract.targets`.
+incrementality.
+Runtime's GenAPI implementation-assembly discovery runs only before the
+on-demand `GenerateReferenceAssemblySource` inner-build target, after that
+target's reference-resolution dependencies. Normal compilation does not need
+GenAPI's CoreLib probes or a snapshot of them. Ordinary explicit generation
+retains the existing path policy; hardened GenAPI execution is not implemented.
+Construction advances through the ILLink analyzer, code-fix and linker reference
+projects. The first remaining error is `MSB3672` in `Mono.Linker.csproj`:
+hardened resource naming rejects `UseDependentUponConvention` because it can
+discover or read source files.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

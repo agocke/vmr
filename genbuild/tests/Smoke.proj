@@ -25,6 +25,7 @@
     <CallTarget Targets="TestArcadeLayout" />
     <CallTarget Targets="TestArcadeTargetFrameworkInputs" />
     <CallTarget Targets="TestResourceMetadata" />
+    <CallTarget Targets="TestRuntimeGenAPI" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -519,6 +520,45 @@
     <Error Condition="'$(_MissingFactExitCode)' == '0' or !$(_MissingFactLog.Contains('MSB4019')) or !$(_MissingFactLog.Contains('$(PreparedFactKind)')) or
                       Exists('$(_MissingFactGraph)') or Exists('$(_MissingFactGraph).actions') or Exists('$(PreparedFactsRoot)rejected-$(PreparedFactKind).txt')"
            Text="Missing $(PreparedFactKind) facts for a discovered framework must fail its required import without publishing a graph or executing actions." />
+  </Target>
+  <Target Name="TestRuntimeGenAPI">
+    <MakeDir Directories="$(_TestDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeGenAPI.proj" DestinationFolder="$(_TestDirectory)" />
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)../../src/runtime/eng/resolveContract.targets"
+             Query="/Project/Target[@Name='AddImplementationAssembliesToGenAPIResolutionPath']">
+      <Output TaskParameter="Result" ItemName="_RuntimeGenAPITarget" />
+    </XmlPeek>
+    <Error Condition="'@(_RuntimeGenAPITarget->Count())' != '1'" Text="Missing runtime GenAPI resolution hook." />
+    <WriteLinesToFile File="$(_TestDirectory)RuntimeGenAPI.targets"
+                      Lines="&lt;Project&gt;;@(_RuntimeGenAPITarget);&lt;/Project&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_RuntimeGenAPIOrdinaryCase Include="normal" Invocation="Build" CoreLibLayout="both" Arguments="" />
+      <_RuntimeGenAPIOrdinaryCase Include="direct" Invocation="GenerateReferenceAssemblySource" CoreLibLayout="both" Arguments="-p:ExpectGenAPI=true -p:ExpectImplementationPaths=true" />
+      <_RuntimeGenAPIOrdinaryCase Include="alias" Invocation="GenerateReferenceSource" CoreLibLayout="il" Arguments="-p:ExpectGenAPI=true -p:ExpectImplementationPaths=true" />
+      <_RuntimeGenAPIOrdinaryCase Include="triggered" Invocation="Build" CoreLibLayout="both" Arguments="-p:GenerateReferenceAssemblySource=true -p:ExpectGenAPI=true -p:ExpectImplementationPaths=true" />
+      <_RuntimeGenAPIOrdinaryCase Include="missing" Invocation="GenerateReferenceAssemblySource" CoreLibLayout="missing" Arguments="-p:ExpectGenAPI=true" />
+      <_RuntimeGenAPIOrdinaryCase Include="override" Invocation="GenerateReferenceAssemblySource" CoreLibLayout="both" Arguments="-p:GenAPILibPath=custom -p:ExpectGenAPI=true" />
+      <_RuntimeGenAPIOrdinaryCase Include="mono" Invocation="GenerateReferenceAssemblySource" CoreLibLayout="both" Arguments="-p:RuntimeFlavor=Mono -p:ExpectGenAPI=true" />
+      <_RuntimeGenAPIOrdinaryCase Include="outer" Invocation="GenerateReferenceAssemblySource" CoreLibLayout="both" Arguments="-p:IsCrossTargetingBuild=true -p:ExpectGenAPI=true" />
+      <_RuntimeGenAPICase Include="@(_RuntimeGenAPIOrdinaryCase)" />
+      <_RuntimeGenAPICase Include="graph" CoreLibLayout="both" />
+    </ItemGroup>
+    <MakeDir Directories="$(_TestDirectory)runtime-genapi/%(_RuntimeGenAPICase.Identity)/coreclr/IL" />
+    <WriteLinesToFile Condition="'%(_RuntimeGenAPICase.CoreLibLayout)' == 'both'"
+                      File="$(_TestDirectory)runtime-genapi/%(_RuntimeGenAPICase.Identity)/coreclr/System.Private.CoreLib.dll"
+                      Lines="metadata-path sentinel" Overwrite="true" />
+    <WriteLinesToFile Condition="'%(_RuntimeGenAPICase.CoreLibLayout)' != 'missing'"
+                      File="$(_TestDirectory)runtime-genapi/%(_RuntimeGenAPICase.Identity)/coreclr/IL/System.Private.CoreLib.dll"
+                      Lines="metadata-path sentinel" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)RuntimeGenAPI.proj&quot; -p:TestCase=graph -p:CoreLibLayout=both -p:MSBuildEmitActionGraph=&quot;$(_TestDirectory)runtime-genapi.ninja&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)runtime-genapi/graph/selection.txt')"
+           Text="Normal compilation must not perform GenAPI discovery or execute publication during construction." />
+    <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f runtime-genapi.ninja" />
+    <Error Condition="!Exists('$(_TestDirectory)runtime-genapi/graph/selection.txt')"
+           Text="Independent execution must publish the normal-build selection check." />
+    <Exec Command="$(_App) restore &quot;$(_TestDirectory)RuntimeGenAPI.proj&quot; -p:TestCase=%(_RuntimeGenAPIOrdinaryCase.Identity) -p:CoreLibLayout=%(_RuntimeGenAPIOrdinaryCase.CoreLibLayout) -p:Invocation=%(_RuntimeGenAPIOrdinaryCase.Invocation) %(_RuntimeGenAPIOrdinaryCase.Arguments)" />
+    <Error Condition="!Exists('$(_TestDirectory)runtime-genapi/%(_RuntimeGenAPIOrdinaryCase.Identity)/selection.txt')"
+           Text="Every ordinary GenAPI entry-point and path-policy case must execute its checks." />
   </Target>
   <Target Name="TestRuntimeReferences">
     <PropertyGroup>

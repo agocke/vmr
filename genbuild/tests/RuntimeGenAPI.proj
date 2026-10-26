@@ -1,0 +1,50 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <Invocation Condition="'$(Invocation)' == ''">Build</Invocation>
+    <ExpectGenAPI Condition="'$(ExpectGenAPI)' == ''">false</ExpectGenAPI>
+    <_CaseRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'runtime-genapi', '$(TestCase)'))</_CaseRoot>
+    <_ReferenceDirectoryA>$([MSBuild]::NormalizeDirectory('$(_CaseRoot)', 'refs-a'))</_ReferenceDirectoryA>
+    <_ReferenceDirectoryB>$([MSBuild]::NormalizeDirectory('$(_CaseRoot)', 'refs-b'))</_ReferenceDirectoryB>
+    <CoreCLRArtifactsPath>$(_CaseRoot)coreclr/</CoreCLRArtifactsPath>
+    <MicrosoftNetCoreAppRuntimePackRidLibTfmDir>$(_CaseRoot)shared/</MicrosoftNetCoreAppRuntimePackRidLibTfmDir>
+    <_ExpectedCoreLibDir Condition="'$(CoreLibLayout)' == 'both'">$(CoreCLRArtifactsPath)</_ExpectedCoreLibDir>
+    <_ExpectedCoreLibDir Condition="'$(CoreLibLayout)' == 'il'">$(CoreCLRArtifactsPath)IL/</_ExpectedCoreLibDir>
+    <_ExpectedGenAPILibPath>$(GenAPILibPath)</_ExpectedGenAPILibPath>
+    <_ExpectedGenAPILibPath Condition="'$(ExpectImplementationPaths)' == 'true'">$(_ReferenceDirectoryA);$(_ReferenceDirectoryB);$(_ExpectedCoreLibDir);$(MicrosoftNetCoreAppRuntimePackRidLibTfmDir)</_ExpectedGenAPILibPath>
+    <_GenAPITarget Condition="'$(GenerateReferenceAssemblySource)' == 'true'">GenerateReferenceAssemblySource</_GenAPITarget>
+  </PropertyGroup>
+  <Import Project="RuntimeGenAPI.targets" />
+  <Target Name="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferencePath Include="$(_ReferenceDirectoryA)First.dll;$(_ReferenceDirectoryA)Second.dll;$(_ReferenceDirectoryB)Third.dll" />
+    </ItemGroup>
+  </Target>
+  <Target Name="_DontBuildProjectReferences" Condition="'$(GenerateReferenceAssemblySource)' != 'true'">
+    <PropertyGroup>
+      <BuildProjectReferences>false</BuildProjectReferences>
+    </PropertyGroup>
+  </Target>
+  <!-- Model the legacy package entry points, observing the path before its generation task consumes it. -->
+  <Target Name="GenerateReferenceSource" DependsOnTargets="GenerateReferenceAssemblySource" />
+  <Target Name="GenerateReferenceAssemblySource" DependsOnTargets="_DontBuildProjectReferences;ResolveAssemblyReferences">
+    <Error Condition="'$(ExpectGenAPI)' != 'true'" Text="Normal compilation must not invoke GenAPI."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(GenAPILibPath)' != '$(_ExpectedGenAPILibPath)'"
+           Text="GenAPI must receive the selected resolution path before its generation task runs."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="ResolveAssemblyReferences;$(_GenAPITarget)" />
+  <Target Name="Check" AfterTargets="Build;GenerateReferenceAssemblySource">
+    <Error Condition="'@(ReferencePath->Count())' != '3'"
+           Text="The requested entry point must run after reference resolution."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(GenAPILibPath)' != '$(_ExpectedGenAPILibPath)'"
+           Text="Unexpected GenAPI resolution path for $(TestCase): '$(GenAPILibPath)' instead of '$(_ExpectedGenAPILibPath)'."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(_CaseRoot)selection.txt" Lines="$(TestCase);$(GenAPILibPath)"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="$(_CaseRoot)selection.txt" />
+  </Target>
+  <Target Name="Restore">
+    <CallTarget Targets="$(Invocation)" />
+  </Target>
+</Project>
