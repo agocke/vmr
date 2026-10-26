@@ -406,6 +406,14 @@ assembly names even with `HintPath`. Legacy manifest-only mode still rejects
 `Reference` items. Retained `TargetFrameworks` is supported when an inner
 `TargetFramework` is selected; outer preparation is not.
 
+Roslyn excludes the analyzer semaphore from `CustomAdditionalCompileInputs` when
+analyzers are skipped. In that configuration, an overwrite-only file action
+publishes an empty marker and declares the intermediate assembly as its input,
+preserving the post-compilation dependency without an input/output overlap.
+Graph construction never initializes or advances the marker. Ordinary builds
+retain `Touch`; its explicit clock read and preservation of prior marker bytes
+are not asserted as a deterministic action contract.
+
 Framework snapshots live in
 `$(MSBuildProjectExtensionsPath)frameworkreferences/$(MSBuildProjectFile).g.props`;
 repository snapshots live in

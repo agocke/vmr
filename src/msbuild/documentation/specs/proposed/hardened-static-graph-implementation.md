@@ -729,10 +729,20 @@ package config assets declared. A normally restored isolated package preserves
 the original binary/config payload; the shared cache is unchanged.
 `RestorePackagesPath` and Arcade's early `NuGetPackageRoot` select the same
 isolated root. No additional preparation snapshot is introduced.
-The real probe gets past analyzer-config selection, provider translation and
-mirror remapping. Its first remaining error is missing I/O declarations on the
-skipped-analyzer marker's `Touch` in `_TouchLastBuildWithSkipAnalyzers`.
-Subsequent copy diagnostics are not separately established blockers.
+Roslyn's skipped-analyzer hook publishes an empty marker through the existing
+overwrite-only `WriteLinesToFile` action in hardened mode. Its declared input is
+the intermediate assembly, so execution follows successful compilation without
+reading or declaring the old marker as an input. Ordinary builds retain `Touch`;
+its clock access and preservation of prior contents are not annotated as
+deterministic. The focused SDK-free compiler regression preserves marker bytes
+and timestamps during construction, requests only the marker to prove the
+compiler dependency, recreates a missing marker, and checks failed-compilation,
+ordinary-build and analyzer-enabled behavior.
+The real probe gets past analyzer-config selection, provider translation,
+mirror remapping and the marker hook. Construction advances through the ILLink
+analyzer and code-fix projects to the linker reference project. Its first remaining
+error is `GenerateResxSource` being invoked without the required `ResourceFile`
+in `src/tools/illink/src/linker/ref/Mono.Linker.csproj`.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

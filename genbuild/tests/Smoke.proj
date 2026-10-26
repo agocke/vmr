@@ -1601,7 +1601,7 @@
     <WriteLinesToFile File="$(_TestDirectory)csc/Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/HelloWorld.csproj&quot;" />
     <ItemGroup>
-      <_CscCase Include="short;another much longer checkout;embedded;compiler-error;ordinary;determinism;paths;response;generated-directory;signed;resource-graph;resource-ordinary;resource-linked;resource-typed;resource-source;resource-tool;resource-runtime;resource-architecture;resource-preserialized;resource-accessors;resource-accessors-ordinary;resource-accessors-language" />
+      <_CscCase Include="short;another much longer checkout;embedded;compiler-error;ordinary;determinism;paths;response;generated-directory;signed;resource-graph;resource-ordinary;resource-linked;resource-typed;resource-source;resource-tool;resource-runtime;resource-architecture;resource-preserialized;resource-accessors;resource-accessors-ordinary;resource-accessors-language;skip-analyzers;skip-analyzers-ordinary;skip-analyzers-compiler-error" />
       <_CscRoot Include="@(_CscCase->'$(_TestDirectory)csc/%(Identity)/project/')" />
       <_CscRelocation Include="short;another much longer checkout" />
       <_CscRejected Include="determinism" Arguments="-p:Deterministic=false" />
@@ -1627,10 +1627,91 @@
     <WriteLinesToFile File="%(_CscRoot.Identity)Resources.targets"
                       Lines="&lt;Project&gt;;@(_CscResourceTargets);&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/%(_CscCase.Identity)/project/Csc.proj&quot;" />
+    <PropertyGroup>
+      <_CscSkipRoot>$(_TestDirectory)csc/skip-analyzers/project/</_CscSkipRoot>
+      <_CscSkipMarker>$(_CscSkipRoot)obj/Csc.proj.BuildWithSkipAnalyzers</_CscSkipMarker>
+      <_CscSkipFailureRoot>$(_TestDirectory)csc/skip-analyzers-compiler-error/project/</_CscSkipFailureRoot>
+      <_CscSkipFailureMarker>$(_CscSkipFailureRoot)obj/Csc.proj.BuildWithSkipAnalyzers</_CscSkipFailureMarker>
+      <_CscSkipOrdinaryRoot>$(_TestDirectory)csc/skip-analyzers-ordinary/project/</_CscSkipOrdinaryRoot>
+      <_CscSkipOrdinaryMarker>$(_CscSkipOrdinaryRoot)obj/Csc.proj.BuildWithSkipAnalyzers</_CscSkipOrdinaryMarker>
+      <_CscEnabledMarker>$(_TestDirectory)csc/short/project/obj/Csc.proj.BuildWithSkipAnalyzers</_CscEnabledMarker>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_CscSkipMarker)" Lines="stale marker" Overwrite="true" />
+    <Touch Files="$(_CscSkipMarker);$(_CscSkipFailureMarker);$(_CscSkipOrdinaryMarker);$(_CscEnabledMarker)" Time="2000-01-01T00:00:00" />
+    <GetFileHash Files="$(_CscSkipMarker)">
+      <Output TaskParameter="Hash" PropertyName="_CscSkipMarkerHashBefore" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_CscSkipMarkerTimeBefore>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscSkipMarker)').Ticks)</_CscSkipMarkerTimeBefore>
+      <_CscSkipFailureTimeBefore>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscSkipFailureMarker)').Ticks)</_CscSkipFailureTimeBefore>
+      <_CscSkipOrdinaryTimeBefore>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscSkipOrdinaryMarker)').Ticks)</_CscSkipOrdinaryTimeBefore>
+      <_CscEnabledMarkerTimeBefore>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscEnabledMarker)').Ticks)</_CscEnabledMarkerTimeBefore>
+    </PropertyGroup>
+    <Exec Command="$(_App) build &quot;$(_CscSkipRoot)Csc.proj&quot; -p:TestCase=skip-analyzers" />
+    <GetFileHash Files="$(_CscSkipMarker)">
+      <Output TaskParameter="Hash" PropertyName="_CscSkipMarkerHashAfter" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_CscSkipMarkerTimeAfter>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscSkipMarker)').Ticks)</_CscSkipMarkerTimeAfter>
+    </PropertyGroup>
+    <Error Condition="'$(_CscSkipMarkerHashBefore)' != '$(_CscSkipMarkerHashAfter)' or
+                      '$(_CscSkipMarkerTimeBefore)' != '$(_CscSkipMarkerTimeAfter)' or
+                      Exists('$(_CscSkipRoot)obj/Generated.cs') or Exists('$(_CscSkipRoot)obj/Hello.dll')"
+           Text="Skipped-analyzer graph construction must preserve the prepared marker's bytes and timestamp without compiling." />
+    <Exec WorkingDirectory="$(_CscSkipRoot)" Command="ninja -f obj/genbuild/build.ninja &quot;$([System.IO.Path]::GetFullPath('$(_CscSkipMarker)'))&quot;" />
+    <Error Condition="!Exists('$(_CscSkipRoot)obj/Hello.dll') or !Exists('$(_CscSkipMarker)')"
+           Text="Requesting the marker alone must also produce the compiled assembly." />
+    <PropertyGroup>
+      <_CscSkipMarkerContents>$([System.IO.File]::ReadAllText('$(_CscSkipMarker)'))</_CscSkipMarkerContents>
+      <_CscSkipMarkerTimeAfter>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscSkipMarker)').Ticks)</_CscSkipMarkerTimeAfter>
+      <_CscSkipAssemblyTime>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscSkipRoot)obj/Hello.dll').Ticks)</_CscSkipAssemblyTime>
+    </PropertyGroup>
+    <Error Condition="'$(_CscSkipMarkerContents)' != '' or $(_CscSkipMarkerTimeAfter) &lt; $(_CscSkipAssemblyTime)"
+           Text="Requesting the marker alone must compile first, then overwrite stale marker contents after successful compilation." />
+    <Delete Files="$(_CscSkipMarker)" />
+    <Exec WorkingDirectory="$(_CscSkipRoot)" Command="ninja -f obj/genbuild/build.ninja &quot;$([System.IO.Path]::GetFullPath('$(_CscSkipMarker)'))&quot;" />
+    <Error Condition="!Exists('$(_CscSkipMarker)')" Text="Independent marker execution must recreate a missing marker." />
+    <PropertyGroup>
+      <_CscSkipMarkerContents>$([System.IO.File]::ReadAllText('$(_CscSkipMarker)'))</_CscSkipMarkerContents>
+    </PropertyGroup>
+    <Error Condition="'$(_CscSkipMarkerContents)' != ''"
+           Text="Independent marker execution must recreate a missing marker with empty contents." />
+    <Exec Command="$(_App) build &quot;$(_CscSkipFailureRoot)Csc.proj&quot; -p:TestCase=skip-analyzers-compiler-error" />
+    <Exec WorkingDirectory="$(_CscSkipFailureRoot)" Command="ninja -f obj/genbuild/build.ninja &quot;$([System.IO.Path]::GetFullPath('$(_CscSkipFailureMarker)'))&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_CscSkipFailureExit" />
+    </Exec>
+    <PropertyGroup>
+      <_CscSkipFailureTimeAfter>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscSkipFailureMarker)').Ticks)</_CscSkipFailureTimeAfter>
+    </PropertyGroup>
+    <Error Condition="'$(_CscSkipFailureExit)' == '0' or Exists('$(_CscSkipFailureRoot)obj/Hello.dll') or
+                      '$(_CscSkipFailureTimeBefore)' != '$(_CscSkipFailureTimeAfter)'"
+           Text="Failed compilation must not run the skipped-analyzer marker action or advance its timestamp." />
+    <WriteLinesToFile File="$(_CscSkipOrdinaryMarker)" Lines="ordinary marker" Overwrite="true" />
+    <Touch Files="$(_CscSkipOrdinaryMarker)" Time="2000-01-01T00:00:00" />
+    <GetFileHash Files="$(_CscSkipOrdinaryMarker)">
+      <Output TaskParameter="Hash" PropertyName="_CscSkipOrdinaryHashBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) restore &quot;$(_CscSkipOrdinaryRoot)Csc.proj&quot; -t:Build -p:TestCase=skip-analyzers-ordinary -p:MSBuildRestoreGraphInputs=false" />
+    <GetFileHash Files="$(_CscSkipOrdinaryMarker)">
+      <Output TaskParameter="Hash" PropertyName="_CscSkipOrdinaryHashAfter" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_CscSkipOrdinaryTimeAfter>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscSkipOrdinaryMarker)').Ticks)</_CscSkipOrdinaryTimeAfter>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_CscSkipOrdinaryRoot)obj/Hello.dll') or
+                      '$(_CscSkipOrdinaryHashBefore)' != '$(_CscSkipOrdinaryHashAfter)' or
+                      '$(_CscSkipOrdinaryTimeBefore)' == '$(_CscSkipOrdinaryTimeAfter)'"
+           Text="Ordinary skipped-analyzer builds must retain Touch's timestamp update and preserve marker contents." />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/Csc.proj&quot;" />
     <Error Condition="Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Generated.cs') or Exists('$(_TestDirectory)csc/%(_CscRelocation.Identity)/project/obj/Hello.dll')"
            Text="Compiler preparation must not write generated sources or compilation outputs." />
     <Exec WorkingDirectory="$(_TestDirectory)csc/%(_CscRelocation.Identity)/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <PropertyGroup>
+      <_CscEnabledMarkerTimeAfter>$([System.IO.File]::GetLastWriteTimeUtc('$(_CscEnabledMarker)').Ticks)</_CscEnabledMarkerTimeAfter>
+    </PropertyGroup>
+    <Error Condition="'$(_CscEnabledMarkerTimeBefore)' != '$(_CscEnabledMarkerTimeAfter)'"
+           Text="Analyzer-enabled compilation must not advance the skipped-analyzer marker." />
     <GetFileHash Files="@(_CscRelocation->'$(_TestDirectory)csc/%(Identity)/project/obj/Hello.dll')">
       <Output TaskParameter="Items" ItemName="_CscPeHash" />
     </GetFileHash>

@@ -162,6 +162,10 @@ inventory against every emitted file, and select configs with those files absent
 during construction. Version, mode, category, warnings-as-errors, empty and
 unsupported selections match ordinary execution. Ordinary custom directories
 remain supported and fail closed in hardened construction.
+Skipped-analyzer checks request the marker output alone to prove its compilation
+dependency, recreate a missing marker, and preserve its timestamp on compilation
+failure and analyzer-enabled builds. Construction leaves existing marker bytes
+and timestamps unchanged; ordinary builds retain `Touch` behavior.
 Resource/signing checks compare ordinary and graph-time metadata with resource
 and key files absent. Source-dependent resource naming and certificate/PFX/
 key-container discovery fail without publishing a partial graph.
@@ -345,9 +349,14 @@ source-generated target authoring in an isolated, normally restored analyzer
 package root; its original binaries and config payload are preserved. Both
 `RestorePackagesPath` and Arcade's early `NuGetPackageRoot` are bound to this root,
 with the shared package cache retained as a read-only fallback.
-The first remaining error is the skipped-analyzer marker's undeclared `Touch`
-in Roslyn's `_TouchLastBuildWithSkipAnalyzers` target. Subsequent copy diagnostics
-remain untriaged.
+Roslyn's skipped-analyzer marker uses the existing overwrite-only file writer
+in hardened mode, declaring the intermediate assembly as its input. Independent
+execution publishes an empty marker after successful compilation; ordinary builds
+retain `Touch`. Neither the clock nor the marker's prior contents become action
+inputs, and graph construction does not update the marker.
+Construction advances through the ILLink analyzer and code-fix projects to the
+linker reference project. The first remaining error is `GenerateResxSource`
+being invoked without its required `ResourceFile` in `linker/ref/Mono.Linker.csproj`.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

@@ -103,7 +103,12 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
   source-control discovery must already have prepared those inputs.
 - `Microsoft.Managed.Core.targets` prepares the analyzer-skip marker during
   ordinary Restore when `MSBuildRestoreGraphInputs=true`. Hardened graph
-  construction consumes that marker without initializing it.
+  construction consumes that marker without initializing it. Skipped-analyzer
+  builds publish an empty marker through `WriteLinesToFile`, with the intermediate
+  assembly as its declared input so publication follows successful compilation.
+  The marker is not also a compiler input in that configuration. Ordinary builds
+  retain `Touch`; its clock access and preservation of prior contents are not
+  asserted as a deterministic declared-I/O contract.
 - Hardened editorconfig generation composes the zero-I/O `FormatAnalyzerConfig`
   task with the overwrite-only declared-output `WriteAnalyzerConfig` action.
   Ordinary builds retain `GenerateMSBuildEditorConfig`; both paths share the

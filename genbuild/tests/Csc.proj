@@ -12,7 +12,8 @@
     <DebugType Condition="'$(DebugType)' == ''">portable</DebugType>
     <IntermediateOutputPath>obj/</IntermediateOutputPath>
     <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/</MSBuildProjectExtensionsPath>
-    <DefineConstants Condition="'$(TestCase)' == 'compiler-error'">BROKEN</DefineConstants>
+    <DefineConstants Condition="'$(TestCase)' == 'compiler-error' or '$(TestCase)' == 'skip-analyzers-compiler-error'">BROKEN</DefineConstants>
+    <RunAnalyzersDuringBuild Condition="$(TestCase.StartsWith('skip-analyzers'))">false</RunAnalyzersDuringBuild>
     <CompilerResponseFile Condition="'$(TestCase)' == 'response'">override.rsp</CompilerResponseFile>
     <CompilerGeneratedFilesOutputPath Condition="'$(TestCase)' == 'generated-directory'">generated/</CompilerGeneratedFilesOutputPath>
     <EmitCompilerGeneratedFiles Condition="'$(TestCase)' == 'generated-directory'">true</EmitCompilerGeneratedFiles>

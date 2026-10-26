@@ -145,7 +145,12 @@
 
   <!-- We touch and create a semaphore file after build to indicate the time stamp for last build with skipAnalyzers flag. -->
   <Target Name="_TouchLastBuildWithSkipAnalyzers" Condition="'$(_SkipAnalyzers)' == 'true'" AfterTargets="CoreCompile">
-    <Touch AlwaysCreate="true" Files="$(_LastBuildWithSkipAnalyzers)"/>
+    <Touch Condition="'$(MSBuildHardenedGraph)' != 'true'" AlwaysCreate="true" Files="$(_LastBuildWithSkipAnalyzers)"/>
+    <WriteLinesToFile Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                      File="$(_LastBuildWithSkipAnalyzers)"
+                      Lines="" Overwrite="true"
+                      DeclaredInputs="@(IntermediateAssembly)"
+                      DeclaredOutputs="$(_LastBuildWithSkipAnalyzers)" />
   </Target>
 
   <!--
