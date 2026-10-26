@@ -1,0 +1,22 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup Condition="'$(CustomConfigDirectory)' != ''">
+    <_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisAnalyzers>$(CustomConfigDirectory)</_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisAnalyzers>
+  </PropertyGroup>
+  <Import Project="$(AnalyzerTargets)" />
+  <ItemGroup>
+    <_ExpectedConfig Include="$(MSBuildProjectDirectory)/config/$(ExpectedBaseConfig)" Condition="'$(ExpectedBaseConfig)' != ''" />
+    <_ExpectedConfig Include="$(MSBuildProjectDirectory)/config/$(ExpectedCategoryConfig)" Condition="'$(ExpectedCategoryConfig)' != ''" />
+  </ItemGroup>
+  <Target Name="CoreCompile" />
+  <Target Name="Build" DependsOnTargets="CoreCompile">
+    <Error Condition="'@(EditorConfigFiles->'%(FullPath)')' != '@(_ExpectedConfig->'%(FullPath)')'"
+           Text="Roslyn analyzer configuration must retain version, mode, warnings-as-errors and category selection. Expected '@(_ExpectedConfig)', got '@(EditorConfigFiles)'."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="selection/$(TestCase).txt"
+                      Lines="@(EditorConfigFiles->'%(FullPath)')"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="selection/$(TestCase).txt" />
+  </Target>
+  <Target Name="Restore">
+    <CallTarget Targets="Build" />
+  </Target>
+</Project>

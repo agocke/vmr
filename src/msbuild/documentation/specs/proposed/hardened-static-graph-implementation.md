@@ -713,11 +713,26 @@ The packaged regression first reproduced the redundant provider calls, then
 verified dnceng mirror URLs, legacy DevDiv trusted URLs, the translation opt-out,
 independent metadata publication and ordinary parity. Complete SDK-free smoke
 passes, and no additional preparation snapshot is introduced.
-The real probe gets past provider translation and mirror remapping. Its first
-remaining error is a forbidden `Exists` condition in
-`Microsoft.CodeAnalysis.Analyzers` 3.11.0's global analyzer-config target.
-Subsequent SourceLink URL-metadata, analyzer-marker and copy diagnostics are
-not separately established blockers.
+Roslyn's analyzer-package config generator now follows the SDK generator's
+explicit-inventory pattern. It records the actual emitted config filenames in a
+deterministic set and publishes package-local items. Hardened targets apply the
+existing version/mode/category/warnings-as-errors selection to those items;
+ordinary expressions and custom-directory discovery are retained.
+The standalone build includes the original Roslyn generator and a source-built
+analyzer payload for its regression. A controlled release fixture exercises the
+full generator, checks every emitted config against the declared inventory,
+constructs with config files absent, and independently publishes metadata
+matching ordinary execution. Empty/unsupported versions and opt-out behavior are
+preserved; custom-directory overrides fail without a partial graph.
+The real probe uses source-generated authoring with all 600 original analyzer
+package config assets declared. A normally restored isolated package preserves
+the original binary/config payload; the shared cache is unchanged.
+`RestorePackagesPath` and Arcade's early `NuGetPackageRoot` select the same
+isolated root. No additional preparation snapshot is introduced.
+The real probe gets past analyzer-config selection, provider translation and
+mirror remapping. Its first remaining error is missing I/O declarations on the
+skipped-analyzer marker's `Touch` in `_TouchLastBuildWithSkipAnalyzers`.
+Subsequent copy diagnostics are not separately established blockers.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

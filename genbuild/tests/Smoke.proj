@@ -46,6 +46,7 @@
     <CallTarget Targets="TestIncrementalCaches" />
     <CallTarget Targets="TestSourceLink" />
     <CallTarget Targets="TestArcadeRepositoryInfo" />
+    <CallTarget Targets="TestRoslynAnalyzerConfig" />
     <CallTarget Targets="TestCsc" />
     <CallTarget Targets="TestCopyOutputs" />
     <CallTarget Targets="TestCleanup" />
@@ -1750,6 +1751,75 @@
     </Exec>
     <Error Condition="'$(_CscCompilerFailure)' == '0' or Exists('$(_TestDirectory)csc/compiler-error/project/obj/Hello.dll')"
            Text="Independent compiler failures must fail execution without a successful assembly output." />
+  </Target>
+  <Target Name="TestRoslynAnalyzerConfig">
+    <PropertyGroup>
+      <_AnalyzerConfigRoot>$(_TestDirectory)roslyn-analyzer-config/</_AnalyzerConfigRoot>
+      <_AnalyzerConfigGenerator>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/roslyn/artifacts/bin/GenerateDocumentationAndConfigFiles/$(Configuration)/net10.0/GenerateDocumentationAndConfigFiles.dll'))</_AnalyzerConfigGenerator>
+      <_AnalyzerConfigBin>$(_AnalyzerConfigRoot)bin</_AnalyzerConfigBin>
+      <_AnalyzerConfigAssembly>$(_AnalyzerConfigBin)/Microsoft.CodeAnalysis.Analyzers/$(Configuration)/netstandard2.0/</_AnalyzerConfigAssembly>
+      <_AnalyzerConfigTargets>$(_AnalyzerConfigRoot)Microsoft.CodeAnalysis.Analyzers.targets</_AnalyzerConfigTargets>
+      <_AnalyzerConfigArguments>-p:AnalyzerTargets=&quot;$(_AnalyzerConfigTargets)&quot;</_AnalyzerConfigArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_AnalyzerConfigRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RoslynAnalyzerConfig.proj" DestinationFolder="$(_AnalyzerConfigRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../../src/roslyn/artifacts/bin/Microsoft.CodeAnalysis.Analyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.Analyzers.dll" DestinationFolder="$(_AnalyzerConfigAssembly)" />
+    <WriteLinesToFile File="$(_AnalyzerConfigAssembly)AnalyzerReleases/Microsoft.CodeAnalysis.Analyzers/AnalyzerReleases.Shipped.md"
+                      Lines="## Release 1.0;### New Rules;Rule ID | Category | Severity | Notes;--------|----------|----------|-------;RS1001 | MicrosoftCodeAnalysisCorrectness | Warning | Fixture release"
+                      Overwrite="true" />
+    <WriteLinesToFile File="$(_AnalyzerConfigAssembly)AnalyzerReleases/Microsoft.CodeAnalysis.Analyzers/AnalyzerReleases.Unshipped.md"
+                      Lines="" Overwrite="true" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AnalyzerConfigGenerator)&quot; --validateOnly false --analyzerRulesetsDir &quot;$(_AnalyzerConfigRoot)rulesets&quot; --analyzerEditorconfigsDir &quot;$(_AnalyzerConfigRoot)editorconfigs&quot; --analyzerGlobalconfigsDir &quot;$(_AnalyzerConfigRoot)config&quot; --binDirectory &quot;$(_AnalyzerConfigBin)&quot; --configuration $(Configuration) --tfm netstandard2.0 --assemblies Microsoft.CodeAnalysis.Analyzers.dll --propsFileDir &quot;$(_AnalyzerConfigRoot)&quot; --propsFileName Microsoft.CodeAnalysis.Analyzers.props --targetsFileDir &quot;$(_AnalyzerConfigRoot)&quot; --targetsFileName Microsoft.CodeAnalysis.Analyzers.targets --propsFileToDisableNetAnalyzers &quot;&quot; --analyzerDocumentationFileDir &quot;$(_AnalyzerConfigRoot)docs&quot; --analyzerDocumentationFileName analyzers.md --analyzerSarifFileDir &quot;$(_AnalyzerConfigRoot)docs&quot; --analyzerSarifFileName analyzers.sarif --analyzerVersion 3.11.0 --analyzerPackageName Microsoft.CodeAnalysis.Analyzers --containsPortedFxcopRules false --generateAnalyzerRulesMissingDocumentationFile false --releaseTrackingOptOut false --validateOffline true" />
+    <XmlPeek XmlInputPath="$(_AnalyzerConfigTargets)" Query="/Project/ItemGroup/_GlobalAnalyzerConfigAsset_MicrosoftCodeAnalysisAnalyzers/@Include">
+      <Output TaskParameter="Result" ItemName="_DeclaredAnalyzerConfig" />
+    </XmlPeek>
+    <ItemGroup>
+      <_GeneratedAnalyzerConfig Include="$(_AnalyzerConfigRoot)config/*.globalconfig" />
+      <_DeclaredAnalyzerConfigName Include="@(_DeclaredAnalyzerConfig->'%(Filename)%(Extension)')" />
+      <_GeneratedAnalyzerConfigName Include="@(_GeneratedAnalyzerConfig->'%(Filename)%(Extension)')" />
+      <_MissingAnalyzerConfig Include="@(_DeclaredAnalyzerConfigName)" Exclude="@(_GeneratedAnalyzerConfigName)" />
+      <_UndeclaredAnalyzerConfig Include="@(_GeneratedAnalyzerConfigName)" Exclude="@(_DeclaredAnalyzerConfigName)" />
+      <_RoslynAnalyzerConfigCase Include="empty" />
+      <_RoslynAnalyzerConfigCase Include="default"
+                                Arguments="-p:MicrosoftCodeAnalysisAnalyzersRulesVersion=1"
+                                BaseConfig="analysislevel_1_default.globalconfig" />
+      <_RoslynAnalyzerConfigCase Include="all-errors"
+                                Arguments="-p:MicrosoftCodeAnalysisAnalyzersRulesVersion=1 -p:AnalysisMode=AllEnabledByDefault -p:CodeAnalysisTreatWarningsAsErrors=true"
+                                BaseConfig="analysislevel_1_all_warnaserror.globalconfig" />
+      <_RoslynAnalyzerConfigCase Include="category"
+                                Arguments="-p:MicrosoftCodeAnalysisAnalyzersRulesVersion=1 -p:MicrosoftCodeAnalysisAnalyzersMicrosoftCodeAnalysisCorrectnessRulesVersion=1 -p:AnalysisModeMicrosoftCodeAnalysisCorrectness=AllDisabledByDefault"
+                                BaseConfig="analysislevel_1_default.globalconfig"
+                                CategoryConfig="analysislevelmicrosoftcodeanalysiscorrectness_1_none.globalconfig" />
+      <_RoslynAnalyzerConfigCase Include="unsupported"
+                                Arguments="-p:MicrosoftCodeAnalysisAnalyzersRulesVersion=999.0" />
+      <_RoslynAnalyzerConfigCase Include="skipped"
+                                Arguments="-p:MicrosoftCodeAnalysisAnalyzersRulesVersion=1 -p:SkipGlobalAnalyzerConfigForPackage=true" />
+    </ItemGroup>
+    <Error Condition="'@(_DeclaredAnalyzerConfig)' == '' or '@(_MissingAnalyzerConfig)' != '' or '@(_UndeclaredAnalyzerConfig)' != ''"
+           Text="Roslyn's declared analyzer-config inventory must match the files emitted by the generator." />
+    <MakeDir Directories="$(_AnalyzerConfigRoot)held-config" />
+    <Move SourceFiles="@(_GeneratedAnalyzerConfig)" DestinationFiles="@(_GeneratedAnalyzerConfig->'$(_AnalyzerConfigRoot)held-config/%(Filename)%(Extension)')" />
+    <Exec Command="$(_App) build &quot;$(_AnalyzerConfigRoot)RoslynAnalyzerConfig.proj&quot; $(_AnalyzerConfigArguments) -p:TestCase=%(_RoslynAnalyzerConfigCase.Identity) -p:ExpectedBaseConfig=%(_RoslynAnalyzerConfigCase.BaseConfig) -p:ExpectedCategoryConfig=%(_RoslynAnalyzerConfigCase.CategoryConfig) %(_RoslynAnalyzerConfigCase.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_AnalyzerConfigRoot)%(_RoslynAnalyzerConfigCase.Identity).ninja&quot;" />
+    <Error Condition="Exists('$(_AnalyzerConfigRoot)selection')"
+           Text="Analyzer-config selection must not execute publication actions during construction." />
+    <Move SourceFiles="@(_GeneratedAnalyzerConfig->'$(_AnalyzerConfigRoot)held-config/%(Filename)%(Extension)')" DestinationFiles="@(_GeneratedAnalyzerConfig)" />
+    <Exec WorkingDirectory="$(_AnalyzerConfigRoot)" Command="ninja -f %(_RoslynAnalyzerConfigCase.Identity).ninja" />
+    <Exec Command="$(_App) restore &quot;$(_AnalyzerConfigRoot)RoslynAnalyzerConfig.proj&quot; $(_AnalyzerConfigArguments) -p:TestCase=ordinary-%(_RoslynAnalyzerConfigCase.Identity) -p:ExpectedBaseConfig=%(_RoslynAnalyzerConfigCase.BaseConfig) -p:ExpectedCategoryConfig=%(_RoslynAnalyzerConfigCase.CategoryConfig) %(_RoslynAnalyzerConfigCase.Arguments)" />
+    <GetFileHash Files="$(_AnalyzerConfigRoot)selection/%(_RoslynAnalyzerConfigCase.Identity).txt">
+      <Output TaskParameter="Items" ItemName="_RoslynAnalyzerReplayHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_AnalyzerConfigRoot)selection/ordinary-%(_RoslynAnalyzerConfigCase.Identity).txt">
+      <Output TaskParameter="Items" ItemName="_RoslynAnalyzerOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_RoslynAnalyzerReplayHash->'%(FileHash)')' != '@(_RoslynAnalyzerOrdinaryHash->'%(FileHash)')'"
+           Text="Declared Roslyn analyzer-config selection must match ordinary execution." />
+    <Exec Command="$(_App) restore &quot;$(_AnalyzerConfigRoot)RoslynAnalyzerConfig.proj&quot; $(_AnalyzerConfigArguments) -p:TestCase=ordinary-custom -p:MicrosoftCodeAnalysisAnalyzersRulesVersion=1 -p:ExpectedBaseConfig=analysislevel_1_default.globalconfig -p:CustomConfigDirectory=&quot;$(_AnalyzerConfigRoot)config&quot;" />
+    <Exec Command="$(_App) build &quot;$(_AnalyzerConfigRoot)RoslynAnalyzerConfig.proj&quot; $(_AnalyzerConfigArguments) -p:MicrosoftCodeAnalysisAnalyzersRulesVersion=1 -p:ExpectedBaseConfig=analysislevel_1_default.globalconfig -p:CustomConfigDirectory=&quot;$(_AnalyzerConfigRoot)config&quot; -p:MSBuildEmitActionGraph=&quot;$(_AnalyzerConfigRoot)custom.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_CustomAnalyzerConfigExitCode" />
+    </Exec>
+    <Error Condition="'$(_CustomAnalyzerConfigExitCode)' == '0' or Exists('$(_AnalyzerConfigRoot)custom.ninja') or Exists('$(_AnalyzerConfigRoot)custom.ninja.actions')"
+           Text="Undeclared custom analyzer-config directories must fail without publishing a partial graph." />
   </Target>
   <Target Name="TestArcadeRepositoryInfo">
     <MakeDir Directories="$(_TestDirectory)" />

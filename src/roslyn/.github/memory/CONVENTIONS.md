@@ -71,6 +71,16 @@ var symbolInfo = semanticModel.GetSymbolInfo(expression, cancellationToken);
 - SDK and VS toolset pinned in `global.json`.
 - Arcade-based build (`Microsoft.DotNet.Arcade.Sdk`); package versions centralized in `Directory.Packages.props`.
 
+### Analyzer config authoring
+
+The [CodeStyle generator](../../src/CodeStyle/Tools/Program.cs) and
+[analyzer-package generator](../../src/RoslynAnalyzers/Tools/GenerateDocumentationAndConfigFiles/Program.cs)
+emit deterministic package-local inventories of their generated `.globalconfig`
+files. Hardened targets select from these items using the existing analysis
+policy rather than probing file presence. Ordinary custom-directory overrides
+retain discovery and therefore fail hardened construction without explicit
+authoring.
+
 ## Documentation Files
 
 - New docs use **kebab-case** filenames (e.g., `roslyn-language-server-copilot-plugin.md`, not `Roslyn Language Server Copilot Plugin.md`).

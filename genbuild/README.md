@@ -157,6 +157,11 @@ replay without the live runtime-graph file, and fail-closed prepared inputs.
 Repository-info checks preserve provider URL replay, Azure DevOps mirror
 remapping, the translation opt-out and unrelated source-root metadata, then
 independently publish metadata matching ordinary builds.
+Roslyn analyzer-config checks run the source generator, verify its declared
+inventory against every emitted file, and select configs with those files absent
+during construction. Version, mode, category, warnings-as-errors, empty and
+unsupported selections match ordinary execution. Ordinary custom directories
+remain supported and fail closed in hardened construction.
 Resource/signing checks compare ordinary and graph-time metadata with resource
 and key files absent. Source-dependent resource naming and certificate/PFX/
 key-container discovery fail without publishing a partial graph.
@@ -332,9 +337,17 @@ target, so prepared URLs are not translated again. Its Azure DevOps mirror
 remapping still runs, using the audited zero-I/O `RewriteRepositoryUrls` task
 for the existing regex rewrite during construction. Ordinary expressions and
 SourceLink enablement policy are unchanged; no new snapshot is needed.
-The first remaining error is a construction-time `Exists` condition in
-`Microsoft.CodeAnalysis.Analyzers` 3.11.0. Later SourceLink URL-metadata,
-analyzer-marker and copy diagnostics remain untriaged.
+Roslyn's analyzer-package generator now emits an explicit config inventory,
+matching the existing SDK generator pattern. Hardened targets select from these
+items without `Exists`; ordinary policy and custom-directory behavior remain
+unchanged. This needs no new Restore snapshot. The real probe selects
+source-generated target authoring in an isolated, normally restored analyzer
+package root; its original binaries and config payload are preserved. Both
+`RestorePackagesPath` and Arcade's early `NuGetPackageRoot` are bound to this root,
+with the shared package cache retained as a read-only fallback.
+The first remaining error is the skipped-analyzer marker's undeclared `Touch`
+in Roslyn's `_TouchLastBuildWithSkipAnalyzers` target. Subsequent copy diagnostics
+remain untriaged.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

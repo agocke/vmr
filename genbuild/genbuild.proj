@@ -24,8 +24,8 @@
     <Component Include="$(GenBuildRoot)src/msbuild/src/MSBuild/MSBuild.csproj;$(GenBuildRoot)src/msbuild/src/MSBuild.ActionTaskHost/MSBuild.ActionTaskHost.csproj;$(GenBuildRoot)src/sdk/src/Tasks/Microsoft.NET.Build.Tasks/Microsoft.NET.Build.Tasks.csproj" Tfm="net11.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/TargetFramework.csproj" Tfm="net11.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/sdk/ArcadeSdk.csproj" Tfm="net11.0" />
-    <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/MSBuild/Microsoft.Build.Tasks.CodeAnalysis.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/Tools/CodeStyleConfigFileGenerator.csproj" Tfm="net10.0" />
-    <Component Include="$(GenBuildRoot)src/roslyn/src/CodeStyle/CSharp/CodeFixes/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/VisualBasic/CodeFixes/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes.vbproj" Tfm="netstandard2.0" />
+    <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/MSBuild/Microsoft.Build.Tasks.CodeAnalysis.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/Tools/CodeStyleConfigFileGenerator.csproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Tools/GenerateDocumentationAndConfigFiles/GenerateDocumentationAndConfigFiles.csproj" Tfm="net10.0" />
+    <Component Include="$(GenBuildRoot)src/roslyn/src/CodeStyle/CSharp/CodeFixes/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/VisualBasic/CodeFixes/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes.vbproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Microsoft.CodeAnalysis.Analyzers/Core/Microsoft.CodeAnalysis.Analyzers.csproj" Tfm="netstandard2.0" />
     <Component Include="$(GenBuildRoot)src/sdk/src/Microsoft.CodeAnalysis.NetAnalyzers/src/Microsoft.CodeAnalysis.NetAnalyzers.Package.csproj" />
     <SourceLink Include="Microsoft.Build.Tasks.Git" Source="Microsoft.Build.Tasks.Git" />
     <SourceLink Include="Microsoft.SourceLink.Common" Source="SourceLink.Common" />

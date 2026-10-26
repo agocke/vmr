@@ -430,6 +430,14 @@ This changes neither SourceLink enablement policy nor the snapshot format.
 The analyzer marker is prepared during Restore, not written as an in-place
 action during graph construction.
 
+Roslyn and SDK analyzer-package generators publish deterministic inventories of
+their emitted global configs in package authoring. Hardened targets select from
+these items using the existing version, mode, category and warnings-as-errors
+policy, without probing config-file presence or snapshotting the final selection.
+Empty and unsupported selections remain empty. Ordinary builds retain discovery
+for custom config directories; those overrides fail hardened construction
+unless their authoring provides explicit inputs.
+
 Without the flag, ordinary Restore writes none of these additional imports.
 The earlier `MSBuildRestorePlatformSDK=true` flag remains supported for
 SDK-only capture; prefer `MSBuildRestoreGraphInputs=true` to prepare all known
