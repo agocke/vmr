@@ -804,16 +804,46 @@ output and creates no fresh source or metadata files. F# graph construction
 checks static `CompileBefore` wiring only; F# generator execution is not proven.
 The resource/compiler regressions also pass. No worker rebuild, new capture or
 shared-cache edit is needed; source, staged and isolated-overlay IVT targets match.
+ILLink's `GeneratePackageRuntimeConfig` now delegates its file read and regex
+replacement to Arcade's `RegexReplaceFile` execution worker in hardened mode.
+The source runtime config is an explicit input and the package config is an
+explicit output; pattern and replacement remain ordinary target properties.
+Normal builds retain their original property expressions and writer. The worker
+writes UTF-8 without a BOM and appends the same newline without inspecting prior
+output. It introduces no new Restore snapshot or product/tool prebuild.
+The focused regression imports the actual linker targets and packaged SDK
+runtime-config producer. Requesting only the package config executes its template
+and main-config dependencies. Main and rewritten configs remain absent during
+construction, while a stale rewritten config is untouched. Independent package
+config bytes match ordinary output for two frameworks and escaped content;
+inactive-framework no-ops and worker write failures are checked.
+Common's three source-content copy targets now select the existing `CopyFiles`
+worker with declared inputs/outputs in hardened mode. `FileWrites` is published
+from known destinations rather than task outputs. Normal `PreserveNewest`,
+`Always` and `IfDifferent` behavior remains unchanged; hardened actions replace
+stale copies without consulting destination state. Link/read-only overrides are
+rejected consistently with final build-output publication.
+The source-copy regression imports all three actual targets, independently copies
+both source and future generated inputs, and compares all six destination bytes
+and bookkeeping with ordinary execution. It covers empty no-ops, unchanged stale
+outputs during construction, and fail-closed link/read-only options. The combined
+source-copy and runtime-config regression passes.
 The real probe gets past analyzer-config selection, provider translation,
 mirror remapping, the marker hook, the empty resource-source batch and unrequested
 GenAPI discovery, then passes ILLink's resource naming, resource-action construction
 and IVT action construction.
 Construction advances through the ILLink analyzer, code-fix and linker reference
-projects and Banned API global-config selection. Its first remaining error is
-the linker implementation's `GeneratePackageRuntimeConfig` target: it reads the
-future `ProjectRuntimeConfigFilePath` with `File.ReadAllText` during construction
-(`MSB4287`). The existing version replacement must move to an execution action
-with declared input and output paths.
+projects, Banned API global-config selection, the package-runtime-config action
+and source-content copies. It reaches the Immutable reference project's Arcade
+`BinPlace` hook. The first error is a missing `DeclaredInputs` parameter on
+`ChooseBestTargetFrameworksTask` (`MSB4286`). Its resolver reads the live runtime
+graph, so an empty-footprint annotation would be incorrect. The later
+`GetBinPlaceItems` inventory probes future assemblies, PDBs and XML files with
+`Exists`, and placement defaults to hardlinks with read-only overwrites.
+This is the next coordinated boundary: reuse prepared runtime-graph data for
+framework selection, derive products from authored metadata instead of current
+existence, and establish explicit destination ownership and copy/link policy.
+Do not snapshot future outputs or omit binplacement to advance construction.
 Later target-validation diagnostics are not yet isolated as independent blockers.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.

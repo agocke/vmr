@@ -52,9 +52,11 @@
     <CallTarget Targets="TestRoslynAnalyzerConfig" />
     <CallTarget Targets="TestCsc" />
     <CallTarget Targets="TestCopyOutputs" />
+    <CallTarget Targets="TestSourceCopies" />
     <CallTarget Targets="TestCleanup" />
     <CallTarget Targets="TestDeps" />
     <CallTarget Targets="TestRuntimeConfig" />
+    <CallTarget Targets="TestRuntimePackageConfig" />
     <PropertyGroup>
       <_SdkGraph>$([System.IO.Path]::GetFullPath('$(_TestDirectory)sdk-build.ninja'))</_SdkGraph>
       <_SdkHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_SdkHostOS>
@@ -1589,6 +1591,128 @@
       <Output TaskParameter="ExitCode" PropertyName="_CopyFailureExitCode" />
     </Exec>
     <Error Condition="'$(_CopyFailureExitCode)' == '0'" Text="Independent copy publication errors must be fatal." />
+  </Target>
+  <Target Name="TestSourceCopies">
+    <PropertyGroup>
+      <_SourceCopyRoot>$(_TestDirectory)source-copies/</_SourceCopyRoot>
+    </PropertyGroup>
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
+             Query="/Project/Target[@Name='_ValidateHardenedSourceCopyOptions' or @Name='_CopyOutOfDateSourceItemsToOutputDirectory' or @Name='_CopyOutOfDateSourceItemsToOutputDirectoryAlways' or @Name='_CopyDifferingSourceItemsToOutputDirectory']">
+      <Output TaskParameter="Result" ItemName="_SourceCopyTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_SourceCopyTarget->Count())' != '4'" Text="The packaged source-copy targets and option validation must be present." />
+    <ItemGroup>
+      <_SourceCopyCase Include="normal;empty;hardlink;symlink;read-only" />
+      <_SourceCopyExecution Include="normal;empty" />
+      <_SourceCopyRejected Include="hardlink;symlink;read-only" />
+      <_SourceCopyDirectory Include="@(_SourceCopyCase->'$(_SourceCopyRoot)%(Identity)/action/');@(_SourceCopyExecution->'$(_SourceCopyRoot)%(Identity)/ordinary/')" />
+      <_SourceCopyOutput Include="preserve/static.txt;preserve/generated.txt;always/static.txt;always/generated.txt;different/static.txt;different/generated.txt" />
+    </ItemGroup>
+    <MakeDir Directories="@(_SourceCopyDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)SourceCopies.proj" DestinationFolder="%(_SourceCopyDirectory.Identity)" />
+    <WriteLinesToFile File="%(_SourceCopyDirectory.Identity)SourceCopies.targets"
+                      Lines="&lt;Project&gt;;@(_SourceCopyTarget);&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="%(_SourceCopyDirectory.Identity)inputs/static.txt" Lines="source content" Overwrite="true" />
+    <WriteLinesToFile File="$(_SourceCopyRoot)normal/action/out/%(_SourceCopyOutput.Identity)" Lines="stale copy" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_SourceCopyRoot)%(_SourceCopyExecution.Identity)/action/SourceCopies.proj&quot; -p:TestCase=%(_SourceCopyExecution.Identity) -p:MSBuildEmitActionGraph=&quot;$(_SourceCopyRoot)%(_SourceCopyExecution.Identity)/action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_SourceCopyRoot)normal/action/obj/generated.txt') or
+                      Exists('$(_SourceCopyRoot)normal/action/items.txt') or Exists('$(_SourceCopyRoot)empty/action/out')"
+           Text="Source-copy construction must execute neither producers, copies nor metadata publication." />
+    <ReadLinesFromFile File="$(_SourceCopyRoot)normal/action/out/%(_SourceCopyOutput.Identity)">
+      <Output TaskParameter="Lines" ItemName="_SourceCopyStale" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_SourceCopyStale->Distinct())' != 'stale copy'" Text="Construction must leave every stale content copy untouched." />
+    <Exec WorkingDirectory="$(_SourceCopyRoot)%(_SourceCopyExecution.Identity)/action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_SourceCopyRoot)%(_SourceCopyExecution.Identity)/ordinary/SourceCopies.proj&quot; -t:Build -p:TestCase=%(_SourceCopyExecution.Identity)" />
+    <GetFileHash Files="$(_SourceCopyRoot)normal/action/out/%(_SourceCopyOutput.Identity)">
+      <Output TaskParameter="Items" ItemName="_SourceCopyActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_SourceCopyRoot)normal/ordinary/out/%(_SourceCopyOutput.Identity)">
+      <Output TaskParameter="Items" ItemName="_SourceCopyOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_SourceCopyActionHash->'%(FileHash)')' != '@(_SourceCopyOrdinaryHash->'%(FileHash)')'"
+           Text="All source-copy modes must independently consume future inputs and match ordinary output bytes." />
+    <GetFileHash Files="$(_SourceCopyRoot)%(_SourceCopyExecution.Identity)/action/items.txt">
+      <Output TaskParameter="Items" ItemName="_SourceCopyActionItemsHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_SourceCopyRoot)%(_SourceCopyExecution.Identity)/ordinary/items.txt">
+      <Output TaskParameter="Items" ItemName="_SourceCopyOrdinaryItemsHash" />
+    </GetFileHash>
+    <Error Condition="'@(_SourceCopyActionItemsHash->'%(FileHash)')' != '@(_SourceCopyOrdinaryItemsHash->'%(FileHash)')'"
+           Text="Source-copy FileWrites must match ordinary bookkeeping, including empty no-ops." />
+    <Exec Command="$(_App) build &quot;$(_SourceCopyRoot)%(_SourceCopyRejected.Identity)/action/SourceCopies.proj&quot; -p:TestCase=%(_SourceCopyRejected.Identity) -p:MSBuildEmitActionGraph=&quot;$(_SourceCopyRoot)%(_SourceCopyRejected.Identity)/action/build.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_SourceCopyRejectedExitCode" />
+    </Exec>
+    <Error Condition="@(_SourceCopyRejectedExitCode->AnyHaveMetadataValue('Identity', '0')) or
+                      Exists('$(_SourceCopyRoot)%(_SourceCopyRejected.Identity)/action/build.ninja') or
+                      Exists('$(_SourceCopyRoot)%(_SourceCopyRejected.Identity)/action/build.ninja.actions')"
+           Text="Unsupported source-copy link/read-only policies must fail without a partial graph." />
+  </Target>
+  <Target Name="TestRuntimePackageConfig" DependsOnTargets="TestRuntimeConfig">
+    <PropertyGroup>
+      <_RuntimePackageRoot>$(_TestDirectory)runtime-package-config/</_RuntimePackageRoot>
+      <_RuntimePackageOutput>out/RuntimeApp.runtimeconfig.pack.json</_RuntimePackageOutput>
+      <_RuntimePackageArguments>-p:TestPackageConfig=true -p:ArcadeBuildTasksProps=&quot;$(_AppDirectory)/toolset/Arcade/Sdk/tools/BuildTasks.props&quot;</_RuntimePackageArguments>
+    </PropertyGroup>
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/linker/Mono.Linker.csproj"
+             Query="/Project/Target[@Name='_ComputePackRuntimeConfigFilePath' or @Name='GeneratePackageRuntimeConfig']">
+      <Output TaskParameter="Result" ItemName="_RuntimePackageTarget" />
+    </XmlPeek>
+    <Error Condition="'@(_RuntimePackageTarget->Count())' != '2'" Text="The linker runtime-config path and transformation targets must be present." />
+    <ItemGroup>
+      <_RuntimePackageCase Include="generated;escaped-template;other-framework;write-failure" />
+      <_RuntimePackageExecution Include="generated;escaped-template" />
+      <_RuntimePackageDirectory Include="@(_RuntimePackageCase->'$(_RuntimePackageRoot)%(Identity)/action/');@(_RuntimePackageCase->'$(_RuntimePackageRoot)%(Identity)/ordinary/')" />
+    </ItemGroup>
+    <MakeDir Directories="@(_RuntimePackageDirectory);$(_RuntimePackageRoot)generated/action/out" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeConfig.proj" DestinationFolder="%(_RuntimePackageDirectory.Identity)" />
+    <WriteLinesToFile File="%(_RuntimePackageDirectory.Identity)RuntimeConfig.targets"
+                      Lines="&lt;Project&gt;;$(_RuntimeConfigXml);&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="%(_RuntimePackageDirectory.Identity)RuntimePackageConfig.targets"
+                      Lines="&lt;Project&gt;;@(_RuntimePackageTarget);&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_RuntimePackageRoot)generated/action/$(_RuntimePackageOutput)" Lines="stale package config" Overwrite="true" />
+    <GetFileHash Files="$(_RuntimePackageRoot)generated/action/$(_RuntimePackageOutput)">
+      <Output TaskParameter="Hash" PropertyName="_RuntimePackageStaleBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) restore &quot;$(_RuntimePackageRoot)%(_RuntimePackageCase.Identity)/action/RuntimeConfig.proj&quot; -p:TestCase=%(_RuntimePackageCase.Identity) $(_RuntimePackageArguments)" />
+    <Exec Command="$(_App) build &quot;$(_RuntimePackageRoot)%(_RuntimePackageCase.Identity)/action/RuntimeConfig.proj&quot; -p:TestCase=%(_RuntimePackageCase.Identity) $(_RuntimePackageArguments) -p:MSBuildEmitActionGraph=&quot;$(_RuntimePackageRoot)%(_RuntimePackageCase.Identity)/action/build.ninja&quot;" />
+    <GetFileHash Files="$(_RuntimePackageRoot)generated/action/$(_RuntimePackageOutput)">
+      <Output TaskParameter="Hash" PropertyName="_RuntimePackageStaleAfter" />
+    </GetFileHash>
+    <Error Condition="'$(_RuntimePackageStaleBefore)' != '$(_RuntimePackageStaleAfter)' or
+                      Exists('$(_RuntimePackageRoot)generated/action/obj/generated.template.json') or
+                      Exists('$(_RuntimePackageRoot)generated/action/out/RuntimeApp.runtimeconfig.json') or
+                      Exists('$(_RuntimePackageRoot)escaped-template/action/$(_RuntimePackageOutput)')"
+           Text="Package runtime-config construction must preserve stale output and execute neither templates nor runtime-config producers." />
+    <Exec WorkingDirectory="$(_RuntimePackageRoot)%(_RuntimePackageExecution.Identity)/action" Command="ninja -f build.ninja &quot;$(_RuntimePackageRoot)%(_RuntimePackageExecution.Identity)/action/$(_RuntimePackageOutput)&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimePackageRoot)%(_RuntimePackageCase.Identity)/ordinary/RuntimeConfig.proj&quot; -p:TestCase=%(_RuntimePackageCase.Identity) $(_RuntimePackageArguments)" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimePackageRoot)%(_RuntimePackageCase.Identity)/ordinary/RuntimeConfig.proj&quot; -t:Build -p:TestCase=%(_RuntimePackageCase.Identity) $(_RuntimePackageArguments)" />
+    <ItemGroup>
+      <_RuntimePackageComparable Include="@(_RuntimePackageExecution)" />
+    </ItemGroup>
+    <GetFileHash Files="$(_RuntimePackageRoot)%(_RuntimePackageComparable.Identity)/action/$(_RuntimePackageOutput)">
+      <Output TaskParameter="Items" ItemName="_RuntimePackageActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_RuntimePackageRoot)%(_RuntimePackageComparable.Identity)/ordinary/$(_RuntimePackageOutput)">
+      <Output TaskParameter="Items" ItemName="_RuntimePackageOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_RuntimePackageActionHash->'%(FileHash)')' != '@(_RuntimePackageOrdinaryHash->'%(FileHash)')' or
+                      Exists('$(_RuntimePackageRoot)other-framework/action/$(_RuntimePackageOutput)') or
+                      Exists('$(_RuntimePackageRoot)other-framework/ordinary/$(_RuntimePackageOutput)')"
+           Text="Independent package runtime-config generation must preserve ordinary bytes and inactive-framework no-ops." />
+    <PropertyGroup>
+      <_RuntimePackageContents>$([System.IO.File]::ReadAllText('$(_RuntimePackageRoot)generated/action/$(_RuntimePackageOutput)'))</_RuntimePackageContents>
+    </PropertyGroup>
+    <Error Condition="!$(_RuntimePackageContents.Contains('&quot;version&quot;: &quot;12.34.56-preview.1&quot;')) or $(_RuntimePackageContents.Contains('&quot;version&quot;: &quot;11.0.0&quot;'))"
+           Text="Package runtime-config generation must replace each framework version with the runtime version being built." />
+    <MakeDir Directories="$(_RuntimePackageRoot)write-failure/action/$(_RuntimePackageOutput)" />
+    <Exec WorkingDirectory="$(_RuntimePackageRoot)write-failure/action"
+          Command="ninja -f build.ninja &quot;$(_RuntimePackageRoot)write-failure/action/$(_RuntimePackageOutput)&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_RuntimePackageFailureExitCode" />
+    </Exec>
+    <Error Condition="'$(_RuntimePackageFailureExitCode)' == '0'" Text="Package runtime-config write failures must fail independent execution." />
   </Target>
   <Target Name="TestRuntimeConfig">
     <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets"

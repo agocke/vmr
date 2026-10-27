@@ -5699,6 +5699,20 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     Copy files that have the CopyToOutputDirectory attribute set to 'PreserveNewest'.
     ============================================================
     -->
+  <Target Name="_ValidateHardenedSourceCopyOptions"
+          BeforeTargets="_CopyOutOfDateSourceItemsToOutputDirectory;_CopyOutOfDateSourceItemsToOutputDirectoryAlways;_CopyDifferingSourceItemsToOutputDirectory"
+          Condition="'$(MSBuildHardenedGraph)' == 'true'">
+    <ItemGroup>
+      <_UnsupportedSourceCopyOption Include="CreateHardLinksForAdditionalFilesIfPossible" Condition="'$(CreateHardLinksForAdditionalFilesIfPossible)' == 'true'" />
+      <_UnsupportedSourceCopyOption Include="CreateSymbolicLinksForAdditionalFilesIfPossible" Condition="'$(CreateSymbolicLinksForAdditionalFilesIfPossible)' == 'true'" />
+      <_UnsupportedSourceCopyOption Include="OverwriteReadOnlyFiles" Condition="'$(OverwriteReadOnlyFiles)' == 'true'" />
+    </ItemGroup>
+    <MSBuildInternalMessage Condition="'@(_UnsupportedSourceCopyOption)' != ''"
+                            ResourceName="General.InvalidValue"
+                            FormatArguments="%(_UnsupportedSourceCopyOption.Identity);CopyFiles"
+                            Severity="Error" DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+
   <Target
       Name="_CopyOutOfDateSourceItemsToOutputDirectory"
       Condition=" '@(_SourceItemsToCopyToOutputDirectory)' != '' "
@@ -5720,11 +5734,18 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
         UseHardlinksIfPossible="$(CreateHardLinksForAdditionalFilesIfPossible)"
         UseSymboliclinksIfPossible="$(CreateSymbolicLinksForAdditionalFilesIfPossible)"
+        Condition="'$(MSBuildHardenedGraph)' != 'true'"
             >
 
       <Output TaskParameter="DestinationFiles" ItemName="FileWrites" Condition="'$(MSBuildHardenedGraph)' != 'true'"/>
 
     </Copy>
+
+    <CopyFiles SourceFiles="@(_SourceItemsToCopyToOutputDirectory)"
+               DestinationFiles="@(_SourceItemsToCopyToOutputDirectory->'$(OutDir)%(TargetPath)')"
+               DeclaredInputs="@(_SourceItemsToCopyToOutputDirectory)"
+               DeclaredOutputs="@(_SourceItemsToCopyToOutputDirectory->'$(OutDir)%(TargetPath)')"
+               Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
   </Target>
 
@@ -5747,6 +5768,10 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       <SkipUnchangedFilesOnCopyAlways Condition="'$(SkipUnchangedFilesOnCopyAlways)' == ''">false</SkipUnchangedFilesOnCopyAlways>
     </PropertyGroup>
 
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <FileWrites Include="@(_SourceItemsToCopyToOutputDirectoryAlways->'$(OutDir)%(TargetPath)')" />
+    </ItemGroup>
+
     <Copy
         SourceFiles = "@(_SourceItemsToCopyToOutputDirectoryAlways)"
         DestinationFiles = "@(_SourceItemsToCopyToOutputDirectoryAlways->'$(OutDir)%(TargetPath)')"
@@ -5756,11 +5781,18 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
         UseHardlinksIfPossible="$(CreateHardLinksForAdditionalFilesIfPossible)"
         UseSymboliclinksIfPossible="$(CreateSymbolicLinksForAdditionalFilesIfPossible)"
+        Condition="'$(MSBuildHardenedGraph)' != 'true'"
             >
 
       <Output TaskParameter="DestinationFiles" ItemName="FileWrites"/>
 
     </Copy>
+
+    <CopyFiles SourceFiles="@(_SourceItemsToCopyToOutputDirectoryAlways)"
+               DestinationFiles="@(_SourceItemsToCopyToOutputDirectoryAlways->'$(OutDir)%(TargetPath)')"
+               DeclaredInputs="@(_SourceItemsToCopyToOutputDirectoryAlways)"
+               DeclaredOutputs="@(_SourceItemsToCopyToOutputDirectoryAlways->'$(OutDir)%(TargetPath)')"
+               Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
   </Target>
 
@@ -5775,6 +5807,10 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       Name="_CopyDifferingSourceItemsToOutputDirectory"
       Condition=" '@(_SourceItemsToCopyToOutputDirectoryIfDifferent)' != '' ">
 
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <FileWrites Include="@(_SourceItemsToCopyToOutputDirectoryIfDifferent->'$(OutDir)%(TargetPath)')" />
+    </ItemGroup>
+
     <!--
         Using SkipUnchangedFiles="true" because we want only differing files.
         -->
@@ -5787,11 +5823,18 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
         UseHardlinksIfPossible="$(CreateHardLinksForAdditionalFilesIfPossible)"
         UseSymboliclinksIfPossible="$(CreateSymbolicLinksForAdditionalFilesIfPossible)"
+        Condition="'$(MSBuildHardenedGraph)' != 'true'"
             >
 
       <Output TaskParameter="DestinationFiles" ItemName="FileWrites"/>
 
     </Copy>
+
+    <CopyFiles SourceFiles="@(_SourceItemsToCopyToOutputDirectoryIfDifferent)"
+               DestinationFiles="@(_SourceItemsToCopyToOutputDirectoryIfDifferent->'$(OutDir)%(TargetPath)')"
+               DeclaredInputs="@(_SourceItemsToCopyToOutputDirectoryIfDifferent)"
+               DeclaredOutputs="@(_SourceItemsToCopyToOutputDirectoryIfDifferent->'$(OutDir)%(TargetPath)')"
+               Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
   </Target>
 

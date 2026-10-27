@@ -39,16 +39,27 @@
           DependsOnTargets="_ComputePackRuntimeConfigFilePath"
           Condition="'$(TargetFramework)' == '$(NetCoreAppToolCurrent)'">
     <PropertyGroup>
-      <_RuntimeConfigContents>$([System.IO.File]::ReadAllText('$(ProjectRuntimeConfigFilePath)'))</_RuntimeConfigContents>
       <ReplacementPattern>"version": ".*"</ReplacementPattern>
       <ReplacementString>"version": "$(Version)"</ReplacementString>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
+      <_RuntimeConfigContents>$([System.IO.File]::ReadAllText('$(ProjectRuntimeConfigFilePath)'))</_RuntimeConfigContents>
       <_NewRuntimeConfigContents>$([System.Text.RegularExpressions.Regex]::Replace($(_RuntimeConfigContents), $(ReplacementPattern), $(ReplacementString)))</_NewRuntimeConfigContents>
     </PropertyGroup>
 
     <WriteLinesToFile File="$(PackRuntimeConfigFilePath)"
                       Lines="$(_NewRuntimeConfigContents)"
                       Overwrite="true"
-                      WriteOnlyWhenDifferent="true" />
+                      WriteOnlyWhenDifferent="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+
+    <RegexReplaceFile InputFile="$(ProjectRuntimeConfigFilePath)"
+                      OutputFile="$(PackRuntimeConfigFilePath)"
+                      Pattern="$(ReplacementPattern)"
+                      Replacement="$(ReplacementString)"
+                      DeclaredInputs="$(ProjectRuntimeConfigFilePath)"
+                      DeclaredOutputs="$(PackRuntimeConfigFilePath)"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   </Target>
 
   <!-- Ensure that the pack.json file flows to ILLink.Tasks so that it can be included in the package.

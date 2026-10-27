@@ -1,0 +1,30 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <OutDir>out/</OutDir>
+    <CreateHardLinksForAdditionalFilesIfPossible Condition="'$(TestCase)' == 'hardlink'">true</CreateHardLinksForAdditionalFilesIfPossible>
+    <CreateSymbolicLinksForAdditionalFilesIfPossible Condition="'$(TestCase)' == 'symlink'">true</CreateSymbolicLinksForAdditionalFilesIfPossible>
+    <OverwriteReadOnlyFiles Condition="'$(TestCase)' == 'read-only'">true</OverwriteReadOnlyFiles>
+    <_ExpectedWrites Condition="'$(TestCase)' != 'empty'">out/preserve/static.txt;out/preserve/generated.txt;out/always/static.txt;out/always/generated.txt;out/different/static.txt;out/different/generated.txt</_ExpectedWrites>
+  </PropertyGroup>
+  <Import Project="SourceCopies.targets" />
+  <ItemGroup Condition="'$(TestCase)' != 'empty'">
+    <_SourceItemsToCopyToOutputDirectory Include="inputs/static.txt" TargetPath="preserve/static.txt" />
+    <_SourceItemsToCopyToOutputDirectory Include="obj/generated.txt" TargetPath="preserve/generated.txt" />
+    <_SourceItemsToCopyToOutputDirectoryAlways Include="inputs/static.txt" TargetPath="always/static.txt" />
+    <_SourceItemsToCopyToOutputDirectoryAlways Include="obj/generated.txt" TargetPath="always/generated.txt" />
+    <_SourceItemsToCopyToOutputDirectoryIfDifferent Include="inputs/static.txt" TargetPath="different/static.txt" />
+    <_SourceItemsToCopyToOutputDirectoryIfDifferent Include="obj/generated.txt" TargetPath="different/generated.txt" />
+  </ItemGroup>
+  <Target Name="Produce" Condition="'$(TestCase)' != 'empty'">
+    <WriteLinesToFile File="obj/generated.txt" Lines="generated after construction"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="obj/generated.txt" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="Produce;_CopyOutOfDateSourceItemsToOutputDirectory;_CopyOutOfDateSourceItemsToOutputDirectoryAlways;_CopyDifferingSourceItemsToOutputDirectory">
+    <Error Condition="'@(FileWrites)' != '$(_ExpectedWrites)'"
+           Text="Source-copy destinations must be statically published in FileWrites in ordinary order."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="items.txt" Lines="@(FileWrites)"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="items.txt" />
+  </Target>
+  <Target Name="Restore" />
+</Project>

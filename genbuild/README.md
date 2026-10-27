@@ -150,6 +150,15 @@ execution through final artifact publication and program startup on the external
 runtime. A clean SDK executable/library closure also constructs and executes
 without prebuilding references, including renamed library outputs, copy-local
 symbols and ordinary-equivalent dependency manifests.
+Source-content copies cover `PreserveNewest`, `Always` and `IfDifferent` with
+existing and execution-produced inputs, stale destinations, static `FileWrites`,
+ordinary byte parity and empty no-ops. Unsupported link/read-only overrides fail
+construction without publishing a partial graph.
+ILLink package-runtime-config checks import the actual project targets, generate
+the input through the SDK action, and request only the rewritten package config.
+Independent bytes match ordinary generation, including escaped content and
+multiple framework versions. Construction preserves stale output; inactive
+frameworks remain no-ops and write failures fail execution.
 Arcade checks compare ordinary and prepared P2P selection, platform fallback,
 RID-agnostic metadata, explicit framework overrides and incompatible references.
 They also exercise real NuGet-imported capture hooks, literal JSON transport,
@@ -383,12 +392,25 @@ Arcade's `InternalsVisibleTo` generation reuses `WriteCodeFragment` with an
 explicit output and no file inputs in hardened mode. Compile and clean items
 are published from that known path, including F#'s `CompileBefore` ordering.
 Ordinary task invocation and friend-assembly key policy are unchanged.
+ILLink's package-runtime-config rewrite now uses Arcade's `RegexReplaceFile`
+worker in hardened mode. It consumes the execution-produced runtime config and
+writes the known package-config path with the same regex and version properties.
+Ordinary builds retain the original expressions and writer. The worker preserves
+UTF-8/no-BOM output and the writer's appended newline, without reading prior output.
+Common's source-content publication uses the existing `CopyFiles` worker with
+explicit inputs/outputs and static `FileWrites` for all three copy modes.
+Ordinary copy options and incrementality remain unchanged; hardened publication
+does not depend on prior destination state and rejects link/read-only overrides.
 Construction advances through the ILLink analyzer, code-fix and linker reference
-projects, resource actions, IVT generation and Banned API config selection.
-The first remaining error is ILLink's `GeneratePackageRuntimeConfig` target:
-it reads the future runtime-config output with `File.ReadAllText` during
-construction (`MSB4287`). This transformation still needs an execution action
-with declared input and output paths.
+projects, resource actions, IVT generation, Banned API config selection,
+package-runtime-config generation and source-content copies. It reaches the
+Immutable reference project's Arcade `BinPlace` hook. Its first remaining error
+is `ChooseBestTargetFrameworksTask` lacking declared I/O (`MSB4286`), but this is
+not just an annotation: the task reads the live runtime graph, and subsequent
+binplacement discovers products with `Exists` and defaults to hardlinks.
+This needs coordinated prepared framework selection, a declared product inventory
+and explicit placement actions, rather than snapshotting future output existence
+or skipping binplacement.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

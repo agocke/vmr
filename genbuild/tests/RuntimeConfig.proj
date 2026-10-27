@@ -19,12 +19,19 @@
     <GenerateProbingPathsToRuntimeConfigDevFile Condition="'$(TestCase)' == 'package-probe'">true</GenerateProbingPathsToRuntimeConfigDevFile>
     <EnableDynamicLoading Condition="'$(TestCase)' != 'default-roll-forward'">true</EnableDynamicLoading>
     <_TemplateText>{"configProperties":{"setting":"generated after construction","count":4,"enabled":false,"text":"a+b"}}</_TemplateText>
+    <_TemplateText Condition="'$(TestCase)' == 'escaped-template'">{"configProperties":{"setting":"generated after construction","text":"a%3Bb%253Bc","path":"c:\\some\\path"}}</_TemplateText>
+    <NetCoreAppToolCurrent Condition="'$(TestPackageConfig)' == 'true'">net11.0</NetCoreAppToolCurrent>
+    <NetCoreAppToolCurrent Condition="'$(TestPackageConfig)' == 'true' and '$(TestCase)' == 'other-framework'">net12.0</NetCoreAppToolCurrent>
+    <Version Condition="'$(TestPackageConfig)' == 'true'">12.34.56-preview.1</Version>
+    <UserRuntimeConfig Condition="'$(TestCase)' == 'escaped-template'">$(MSBuildProjectDirectory)/obj/generated.template.json</UserRuntimeConfig>
     <MicrosoftNETBuildTasksAssembly>$(MSBuildSDKsPath)/Microsoft.NET.Sdk/tools/net11.0/Microsoft.NET.Build.Tasks.dll</MicrosoftNETBuildTasksAssembly>
     <_AssetsText>{"version":3,"targets":{"net11.0":{},"net11.0/linux-x64":{}},"libraries":{},"projectFileDependencyGroups":{"net11.0":[]},"packageFolders":{"$(MSBuildProjectDirectory)/machine-specific-cache/":{}},"project":{"version":"1.0.0","restore":{"projectUniqueName":"$(MSBuildProjectFullPath)","projectName":"RuntimeApp","projectPath":"$(MSBuildProjectFullPath)","projectStyle":"PackageReference"},"frameworks":{"net11.0":{"targetAlias":"net11.0"}}}}</_AssetsText>
   </PropertyGroup>
   <UsingTask TaskName="GenerateRuntimeConfigurationFiles" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="WriteRuntimeConfig" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <Import Project="RuntimeConfig.targets" />
+  <Import Project="$(ArcadeBuildTasksProps)" Condition="'$(TestPackageConfig)' == 'true'" />
+  <Import Project="RuntimePackageConfig.targets" Condition="'$(TestPackageConfig)' == 'true'" />
   <ItemGroup>
     <RuntimeFramework Include="Microsoft.NETCore.App" FrameworkName="Microsoft.NETCore.App" Version="11.0.0" />
     <RuntimeFramework Include="Microsoft.AspNetCore.App" FrameworkName="Microsoft.AspNetCore.App" Version="11.0.0" />
@@ -32,7 +39,7 @@
     <RuntimeHostConfigurationOption Include="enabled" Value="true" />
   </ItemGroup>
   <Target Name="_DefaultMicrosoftNETPlatformLibrary" />
-  <Target Name="Produce" Condition="'$(TestCase)' == 'generated' or '$(TestCase)' == 'late-parameter'">
+  <Target Name="Produce" Condition="'$(TestCase)' == 'generated' or '$(TestCase)' == 'late-parameter' or '$(TestCase)' == 'escaped-template'">
     <PropertyGroup Condition="'$(TestCase)' == 'late-parameter'">
       <UserRuntimeConfig>$(MSBuildProjectDirectory)/obj/generated.template.json</UserRuntimeConfig>
     </PropertyGroup>

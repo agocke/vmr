@@ -31,6 +31,7 @@
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.GroupItemsBy" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.InstallDotNetCore" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.LocateDotNet" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.RegexReplaceFile" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.RewriteRepositoryUrls" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.SaveItems" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="Microsoft.DotNet.Arcade.Sdk.SetCorFlags" AssemblyFile="$(ArcadeSdkBuildTasksAssembly)" Runtime="NET" Architecture="*" />
