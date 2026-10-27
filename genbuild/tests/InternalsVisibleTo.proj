@@ -1,0 +1,24 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <Language>C#</Language>
+    <DefaultLanguageSourceExtension>.cs</DefaultLanguageSourceExtension>
+    <Language Condition="'$(TestCase)' == 'visualbasic'">VisualBasic</Language>
+    <DefaultLanguageSourceExtension Condition="'$(TestCase)' == 'visualbasic'">.vb</DefaultLanguageSourceExtension>
+    <Language Condition="'$(TestCase)' == 'fsharp'">F#</Language>
+    <DefaultLanguageSourceExtension Condition="'$(TestCase)' == 'fsharp'">.fs</DefaultLanguageSourceExtension>
+    <PublicKey Condition="'$(TestCase)' == 'csharp'">abcd</PublicKey>
+  </PropertyGroup>
+  <Import Project="$(MSBuildToolsPath)/Arcade/Sdk/tools/GenerateInternalsVisibleTo.targets" />
+  <ItemGroup Condition="'$(TestCase)' != 'empty'">
+    <InternalsVisibleTo Include="ExplicitFriend" Key="0123" />
+    <InternalsVisibleTo Include="InheritedFriend" />
+  </ItemGroup>
+  <Target Name="PrepareForBuild" />
+  <Target Name="Build" DependsOnTargets="GenerateInternalsVisibleToFile">
+    <WriteLinesToFile File="items.txt"
+                      Lines="@(Compile->'Compile=%(Identity)');@(CompileBefore->'CompileBefore=%(Identity)');@(FileWrites->'FileWrites=%(Identity)')"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="items.txt" />
+  </Target>
+  <Target Name="Restore" />
+</Project>

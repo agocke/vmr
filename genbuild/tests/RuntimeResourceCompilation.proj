@@ -1,0 +1,30 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
+    <_TargetFrameworkVersionWithoutV>11.0</_TargetFrameworkVersionWithoutV>
+    <IntermediateOutputPath>obj/$(TestCase)/</IntermediateOutputPath>
+    <GenerateResourceMSBuildRuntime>CurrentRuntime</GenerateResourceMSBuildRuntime>
+    <GenerateResourceMSBuildArchitecture>CurrentArchitecture</GenerateResourceMSBuildArchitecture>
+    <UseSourcePath>true</UseSourcePath>
+    <ResGenExecuteAsTool>false</ResGenExecuteAsTool>
+  </PropertyGroup>
+  <Import Project="ResourceDefaults.props" />
+  <Import Project="ResourcePolicy.props" Condition="'$(UseRuntimePolicy)' != 'false'" />
+  <Import Project="ResourceCompilation.targets" />
+  <ItemGroup>
+    <EmbeddedResource Include="$(IntermediateOutputPath)Strings.resx" Type="Resx"
+                      WithCulture="false" ManifestResourceName="Mono.Linker.Resources.Strings" />
+    <EmbeddedResource Include="$(IntermediateOutputPath)SharedStrings.resx" Type="Resx"
+                      WithCulture="false" ManifestResourceName="ILLink.Shared.SharedStrings" />
+  </ItemGroup>
+  <Target Name="Produce">
+    <CopyFiles SourceFiles="inputs/Strings.resx;inputs/SharedStrings.resx"
+               DestinationFiles="$(IntermediateOutputPath)Strings.resx;$(IntermediateOutputPath)SharedStrings.resx"
+               DeclaredInputs="inputs/Strings.resx;inputs/SharedStrings.resx"
+               DeclaredOutputs="$(IntermediateOutputPath)Strings.resx;$(IntermediateOutputPath)SharedStrings.resx" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="Produce;CoreResGen" />
+  <Target Name="Restore">
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+  </Target>
+</Project>

@@ -774,12 +774,39 @@ the naming convention still enabled. Its hardened graph fails with `MSB3672`
 before the declarations and passes afterward; independent publication matches
 ordinary execution. The existing convention/dependent-source and machine-backed
 signing rejection cases remain intact. No task rebuild or new snapshot is needed.
+The linker project also explicitly disables preserialized-resource support.
+Its two resource files contain only inline strings; ordinary SDK-default
+compilation and ordinary compilation with this policy produce identical bytes.
+The focused regression imports the actual project policy, packaged SDK default
+and `CoreResGen` target, and compiles both actual resources. It compares both
+ordinary results with independent SDK-free action execution, using RESX inputs
+produced by earlier declared actions. Construction creates neither producer nor
+compiled resource files, and execution creates no incremental resource cache.
+The existing compiler regression still rejects preserialized mode at construction
+and linked/typed payloads at execution, before resource output or compilation.
+No worker changes, new snapshot or shared-cache edits are needed.
+Arcade's `GenerateInternalsVisibleToFile` now invokes the existing
+`WriteCodeFragment` worker with empty declared file inputs and the already named
+source file as its explicit output in hardened mode. Compile and clean items
+are published statically; F# retains `CompileBefore`. Ordinary invocation keeps
+its task-output items and does not pass the prototype-only declaration parameters.
+The focused regression imports the staged actual Arcade target. It reproduces
+the previous `MSB4286`, then checks C# and VB source bytes and compile/clean items
+against ordinary generation, including explicit friend keys, project-key
+fallback, unsigned friends and empty no-ops. Construction preserves a stale C#
+output and creates no fresh source or metadata files. F# graph construction
+checks static `CompileBefore` wiring only; F# generator execution is not proven.
+The resource/compiler regressions also pass. No worker rebuild, new capture or
+shared-cache edit is needed; source, staged and isolated-overlay IVT targets match.
 The real probe gets past analyzer-config selection, provider translation,
 mirror remapping, the marker hook, the empty resource-source batch and unrequested
-GenAPI discovery, then passes ILLink's resource naming.
+GenAPI discovery, then passes ILLink's resource naming, resource-action construction
+and IVT action construction.
 Construction advances through the ILLink analyzer, code-fix and linker reference
-projects. Its first remaining error is the hardened resource-compilation contract
-(`MSB3674`) for `Resources/Strings.resx` in `Mono.Linker.csproj`.
+projects. Its first remaining error is the Banned API analyzer package's
+`AddGlobalAnalyzerConfigForPackage_MicrosoftCodeAnalysisBannedApiAnalyzers` target:
+global-config selection uses `Exists` during construction (`MSB4287`).
+Later target-validation diagnostics are not yet isolated as independent blockers.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

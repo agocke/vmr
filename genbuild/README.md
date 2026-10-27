@@ -369,9 +369,20 @@ retains the existing path policy; hardened GenAPI execution is not implemented.
 ILLink now declares the linker and shared-resource manifest names directly in
 its project authoring. These match ordinary MSBuild's names and remove the need
 for source-dependent naming without disabling the convention globally.
+The linker also disables preserialized-resource support: both resource files
+contain only inline strings. The focused regression uses the actual resources
+and SDK default, verifying byte-identical ordinary and independent compilation,
+including deferred RESX producers. Unsupported serialization modes and non-string
+payloads remain rejected.
+Arcade's `InternalsVisibleTo` generation reuses `WriteCodeFragment` with an
+explicit output and no file inputs in hardened mode. Compile and clean items
+are published from that known path, including F#'s `CompileBefore` ordering.
+Ordinary task invocation and friend-assembly key policy are unchanged.
 Construction advances through the ILLink analyzer, code-fix and linker reference
-projects. The first remaining error is the hardened resource-compilation
-contract (`MSB3674`) for `Resources/Strings.resx` in `Mono.Linker.csproj`.
+projects, resource actions and IVT generation. The first remaining error is
+the Banned API analyzer package's global-config selection: its
+`AddGlobalAnalyzerConfigForPackage_MicrosoftCodeAnalysisBannedApiAnalyzers` target
+uses `Exists` during construction (`MSB4287`).
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

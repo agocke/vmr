@@ -25,6 +25,8 @@
     <CallTarget Targets="TestArcadeLayout" />
     <CallTarget Targets="TestArcadeTargetFrameworkInputs" />
     <CallTarget Targets="TestResourceMetadata" />
+    <CallTarget Targets="TestRuntimeResourceCompilation" />
+    <CallTarget Targets="TestInternalsVisibleTo" />
     <CallTarget Targets="TestRuntimeGenAPI" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
@@ -1269,6 +1271,132 @@
                       Exists('$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).ninja') or Exists('$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).ninja.actions') or
                       Exists('$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).txt') or Exists('$(_ResourceMetadataRoot)missing')"
            Text="Source-dependent naming and machine-backed signing must fail explicitly without partial graphs or execution." />
+  </Target>
+  <Target Name="TestRuntimeResourceCompilation">
+    <PropertyGroup>
+      <_RuntimeResourceRoot>$(_TestDirectory)runtime-resource-compilation/</_RuntimeResourceRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_RuntimeResourceRoot)inputs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeResourceCompilation.proj" DestinationFolder="$(_RuntimeResourceRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/linker/Resources/Strings.resx;$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/ILLink.Shared/SharedStrings.resx"
+          DestinationFolder="$(_RuntimeResourceRoot)inputs" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
+             Query="/Project/Target[@Name='CoreResGen']">
+      <Output TaskParameter="Result" PropertyName="_RuntimeResourceTarget" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.Sdk.targets"
+             Query="/*[local-name()='Project']/*[local-name()='PropertyGroup']/*[local-name()='GenerateResourceUsePreserializedResources']">
+      <Output TaskParameter="Result" PropertyName="_RuntimeResourceDefault" />
+    </XmlPeek>
+    <Error Condition="'$(_RuntimeResourceTarget)' == '' or '$(_RuntimeResourceDefault)' == ''"
+           Text="Runtime resource compilation must use the packaged target and SDK serialization default." />
+    <PropertyGroup>
+      <_RuntimeResourceDefault>$(_RuntimeResourceDefault.Replace(' xmlns="http://schemas.microsoft.com/developer/msbuild/2003"', ''))</_RuntimeResourceDefault>
+    </PropertyGroup>
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/linker/Mono.Linker.csproj"
+             Query="/Project/PropertyGroup/GenerateResourceUsePreserializedResources">
+      <Output TaskParameter="Result" PropertyName="_RuntimeResourcePolicy" />
+    </XmlPeek>
+    <WriteLinesToFile File="$(_RuntimeResourceRoot)ResourceDefaults.props"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;;$(_RuntimeResourceDefault);&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_RuntimeResourceRoot)ResourcePolicy.props"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;;$(_RuntimeResourcePolicy);&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_RuntimeResourceRoot)ResourceCompilation.targets"
+                      Lines="&lt;Project&gt;;$(_RuntimeResourceTarget);&lt;/Project&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -t:Build -p:TestCase=baseline -p:UseRuntimePolicy=false" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -t:Build -p:TestCase=ordinary" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -p:TestCase=graph" />
+    <Exec Command="$(_App) build &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -p:TestCase=graph -p:MSBuildEmitActionGraph=&quot;$(_RuntimeResourceRoot)build.ninja&quot;" />
+    <Error Condition="Exists('$(_RuntimeResourceRoot)obj/graph/Strings.resx') or
+                      Exists('$(_RuntimeResourceRoot)obj/graph/SharedStrings.resx') or
+                      Exists('$(_RuntimeResourceRoot)obj/graph/Mono.Linker.Resources.Strings.resources') or
+                      Exists('$(_RuntimeResourceRoot)obj/graph/ILLink.Shared.SharedStrings.resources')"
+           Text="Resource construction must not execute RESX producers or create compiled resources." />
+    <Exec WorkingDirectory="$(_RuntimeResourceRoot)" Command="ninja -f build.ninja" />
+    <ItemGroup>
+      <_RuntimeResourceFile Include="Mono.Linker.Resources.Strings.resources;ILLink.Shared.SharedStrings.resources" />
+    </ItemGroup>
+    <GetFileHash Files="@(_RuntimeResourceFile->'$(_RuntimeResourceRoot)obj/baseline/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_RuntimeResourceBaselineHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_RuntimeResourceFile->'$(_RuntimeResourceRoot)obj/ordinary/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_RuntimeResourceOrdinaryHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_RuntimeResourceFile->'$(_RuntimeResourceRoot)obj/graph/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_RuntimeResourceGraphHash" />
+    </GetFileHash>
+    <Error Condition="'@(_RuntimeResourceBaselineHash->'%(FileHash)')' != '@(_RuntimeResourceOrdinaryHash->'%(FileHash)')' or
+                      '@(_RuntimeResourceBaselineHash->'%(FileHash)')' != '@(_RuntimeResourceGraphHash->'%(FileHash)')' or
+                      Exists('$(_RuntimeResourceRoot)obj/graph/RuntimeResourceCompilation.proj.GenerateResource.cache')"
+           Text="Actual ILLink resources must preserve SDK-default preserialized bytes in ordinary and independent execution, without an action-side incremental cache." />
+  </Target>
+  <Target Name="TestInternalsVisibleTo">
+    <PropertyGroup>
+      <_IvtRoot>$(_TestDirectory)internals-visible-to/</_IvtRoot>
+      <_IvtSource>obj/InternalsVisibleTo.InternalsVisibleTo.cs</_IvtSource>
+    </PropertyGroup>
+    <ItemGroup>
+      <_IvtCase Include="csharp;visualbasic;fsharp;empty" />
+      <_IvtExecution Include="csharp;visualbasic;empty" />
+      <_IvtDirectory Include="@(_IvtCase->'$(_IvtRoot)%(Identity)/action/');@(_IvtExecution->'$(_IvtRoot)%(Identity)/ordinary/')" />
+    </ItemGroup>
+    <MakeDir Directories="@(_IvtDirectory);$(_IvtRoot)csharp/action/obj" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)InternalsVisibleTo.proj" DestinationFolder="%(_IvtDirectory.Identity)" />
+    <WriteLinesToFile File="$(_IvtRoot)csharp/action/$(_IvtSource)" Lines="stale generated attributes" Overwrite="true" />
+    <GetFileHash Files="$(_IvtRoot)csharp/action/$(_IvtSource)">
+      <Output TaskParameter="Hash" PropertyName="_IvtStaleBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_IvtRoot)%(_IvtCase.Identity)/action/InternalsVisibleTo.proj&quot; -p:TestCase=%(_IvtCase.Identity) -p:MSBuildEmitActionGraph=&quot;$(_IvtRoot)%(_IvtCase.Identity)/action/build.ninja&quot;" />
+    <GetFileHash Files="$(_IvtRoot)csharp/action/$(_IvtSource)">
+      <Output TaskParameter="Hash" PropertyName="_IvtStaleAfter" />
+    </GetFileHash>
+    <Error Condition="'$(_IvtStaleBefore)' != '$(_IvtStaleAfter)' or Exists('$(_IvtRoot)visualbasic/action/obj') or
+                      Exists('$(_IvtRoot)fsharp/action/obj') or Exists('$(_IvtRoot)empty/action/obj') or
+                      Exists('$(_IvtRoot)%(_IvtCase.Identity)/action/items.txt')"
+           Text="IVT construction must not create generated sources, change stale output or publish metadata files." />
+    <Exec WorkingDirectory="$(_IvtRoot)%(_IvtExecution.Identity)/action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_IvtRoot)%(_IvtExecution.Identity)/ordinary/InternalsVisibleTo.proj&quot; -t:Build -p:TestCase=%(_IvtExecution.Identity)" />
+    <ItemGroup>
+      <_IvtResult Include="csharp" SourceExtension=".cs" />
+      <_IvtResult Include="visualbasic" SourceExtension=".vb" />
+    </ItemGroup>
+    <GetFileHash Files="$(_IvtRoot)%(_IvtResult.Identity)/action/obj/InternalsVisibleTo.InternalsVisibleTo%(_IvtResult.SourceExtension)">
+      <Output TaskParameter="Items" ItemName="_IvtActionSourceHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_IvtRoot)%(_IvtResult.Identity)/ordinary/obj/InternalsVisibleTo.InternalsVisibleTo%(_IvtResult.SourceExtension)">
+      <Output TaskParameter="Items" ItemName="_IvtOrdinarySourceHash" />
+    </GetFileHash>
+    <Error Condition="'@(_IvtActionSourceHash->'%(FileHash)')' != '@(_IvtOrdinarySourceHash->'%(FileHash)')'"
+           Text="Independent IVT generation must match ordinary source bytes." />
+    <GetFileHash Files="$(_IvtRoot)%(_IvtExecution.Identity)/action/items.txt">
+      <Output TaskParameter="Items" ItemName="_IvtActionItemsHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_IvtRoot)%(_IvtExecution.Identity)/ordinary/items.txt">
+      <Output TaskParameter="Items" ItemName="_IvtOrdinaryItemsHash" />
+    </GetFileHash>
+    <Error Condition="'@(_IvtActionItemsHash->'%(FileHash)')' != '@(_IvtOrdinaryItemsHash->'%(FileHash)')' or
+                      Exists('$(_IvtRoot)empty/action/obj') or Exists('$(_IvtRoot)empty/ordinary/obj')"
+           Text="Static IVT compile and clean items must match ordinary publication, including empty no-ops." />
+    <PropertyGroup>
+      <_IvtCSharp>$([System.IO.File]::ReadAllText('$(_IvtRoot)csharp/action/$(_IvtSource)'))</_IvtCSharp>
+      <_IvtVisualBasic>$([System.IO.File]::ReadAllText('$(_IvtRoot)visualbasic/action/obj/InternalsVisibleTo.InternalsVisibleTo.vb'))</_IvtVisualBasic>
+    </PropertyGroup>
+    <Error Condition="!$(_IvtCSharp.Contains('ExplicitFriend, PublicKey=0123')) or !$(_IvtCSharp.Contains('InheritedFriend, PublicKey=abcd')) or
+                      !$(_IvtVisualBasic.Contains('ExplicitFriend, PublicKey=0123')) or !$(_IvtVisualBasic.Contains('&quot;InheritedFriend&quot;'))"
+           Text="IVT generation must preserve explicit keys, project-key fallback and unsigned friend names." />
+    <ItemGroup>
+      <_IvtFSharpInvocation Include="$(_IvtRoot)fsharp/action/build.ninja.actions/*.json" />
+      <_IvtFSharpItems Include="@(_IvtFSharpInvocation)"
+                       Condition="$([System.IO.File]::ReadAllText('%(_IvtFSharpInvocation.Identity)').Contains('&quot;taskType&quot;:&quot;Microsoft.Build.Tasks.WriteLinesToFile&quot;'))" />
+    </ItemGroup>
+    <Error Condition="'@(_IvtFSharpItems->Count())' != '1'" Text="F# IVT construction must emit one metadata writer." />
+    <ReadLinesFromFile File="@(_IvtFSharpItems)">
+      <Output TaskParameter="Lines" PropertyName="_IvtFSharpItemsJson" />
+    </ReadLinesFromFile>
+    <Error Condition="!$(_IvtFSharpItemsJson.Contains('&quot;itemSpec&quot;:&quot;CompileBefore=obj/InternalsVisibleTo.InternalsVisibleTo.fs&quot;')) or
+                      !$(_IvtFSharpItemsJson.Contains('&quot;itemSpec&quot;:&quot;FileWrites=obj/InternalsVisibleTo.InternalsVisibleTo.fs&quot;')) or
+                      $(_IvtFSharpItemsJson.Contains('&quot;itemSpec&quot;:&quot;Compile='))"
+           Text="F# IVT construction must statically publish CompileBefore rather than Compile." />
   </Target>
   <Target Name="TestNativeManifest">
     <PropertyGroup>

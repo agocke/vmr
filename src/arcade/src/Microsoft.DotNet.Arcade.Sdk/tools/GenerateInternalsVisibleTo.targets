@@ -36,11 +36,25 @@
 
     <WriteCodeFragment AssemblyAttributes="@(_InternalsVisibleToAttribute)"
                        Language="$(Language)"
-                       OutputFile="$(GeneratedInternalsVisibleToFile)">
+                       OutputFile="$(GeneratedInternalsVisibleToFile)"
+                       Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <Output TaskParameter="OutputFile" ItemName="CompileBefore" Condition="'$(Language)' == 'F#'" />
       <Output TaskParameter="OutputFile" ItemName="Compile" Condition="'$(Language)' != 'F#'" />
       <Output TaskParameter="OutputFile" ItemName="FileWrites" />
     </WriteCodeFragment>
+
+    <WriteCodeFragment AssemblyAttributes="@(_InternalsVisibleToAttribute)"
+                       Language="$(Language)"
+                       OutputFile="$(GeneratedInternalsVisibleToFile)"
+                       DeclaredInputs=""
+                       DeclaredOutputs="$(GeneratedInternalsVisibleToFile)"
+                       Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <CompileBefore Include="$(GeneratedInternalsVisibleToFile)" Condition="'$(Language)' == 'F#'" />
+      <Compile Include="$(GeneratedInternalsVisibleToFile)" Condition="'$(Language)' != 'F#'" />
+      <FileWrites Include="$(GeneratedInternalsVisibleToFile)" />
+    </ItemGroup>
   </Target>
 
 </Project>
