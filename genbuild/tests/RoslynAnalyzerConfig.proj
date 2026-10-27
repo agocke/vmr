@@ -1,6 +1,7 @@
 <Project DefaultTargets="Build">
   <PropertyGroup Condition="'$(CustomConfigDirectory)' != ''">
     <_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisAnalyzers>$(CustomConfigDirectory)</_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisAnalyzers>
+    <_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisBannedApiAnalyzers>$(CustomConfigDirectory)</_GlobalAnalyzerConfigDir_MicrosoftCodeAnalysisBannedApiAnalyzers>
   </PropertyGroup>
   <Import Project="$(AnalyzerTargets)" />
   <ItemGroup>

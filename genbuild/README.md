@@ -157,11 +157,13 @@ replay without the live runtime-graph file, and fail-closed prepared inputs.
 Repository-info checks preserve provider URL replay, Azure DevOps mirror
 remapping, the translation opt-out and unrelated source-root metadata, then
 independently publish metadata matching ordinary builds.
-Roslyn analyzer-config checks run the source generator, verify its declared
-inventory against every emitted file, and select configs with those files absent
-during construction. Version, mode, category, warnings-as-errors, empty and
-unsupported selections match ordinary execution. Ordinary custom directories
-remain supported and fail closed in hardened construction.
+Roslyn analyzer-config checks run the source generator for both the core and
+Banned API analyzer packages, verify declared inventories against every emitted
+file, and select configs with those files absent during construction. Banned API
+uses its actual release-tracking opt-out policy and emits an empty inventory.
+Version, mode, category, warnings-as-errors, empty and unsupported selections match
+ordinary execution for both packages. Ordinary custom directories remain supported
+even with an empty package inventory, and fail closed in hardened construction.
 Skipped-analyzer checks request the marker output alone to prove its compilation
 dependency, recreate a missing marker, and preserve its timestamp on compilation
 failure and analyzer-enabled builds. Construction leaves existing marker bytes
@@ -350,9 +352,12 @@ matching the existing SDK generator pattern. Hardened targets select from these
 items without `Exists`; ordinary policy and custom-directory behavior remain
 unchanged. This needs no new Restore snapshot. The real probe selects
 source-generated target authoring in an isolated, normally restored analyzer
-package root; its original binaries and config payload are preserved. Both
-`RestorePackagesPath` and Arcade's early `NuGetPackageRoot` are bound to this root,
-with the shared package cache retained as a read-only fallback.
+package root; original binaries and config payloads are preserved. The pinned
+Banned API package intentionally ships no global configs, so its declared
+inventory is empty; analyzer DLLs and ordinary custom-directory behavior remain
+unchanged. The existing generic generator handles this without further changes.
+`RestorePackagesPath` and Arcade's early `NuGetPackageRoot` are both bound to
+this root, with the shared package cache retained as a read-only fallback.
 Roslyn's skipped-analyzer marker uses the existing overwrite-only file writer
 in hardened mode, declaring the intermediate assembly as its input. Independent
 execution publishes an empty marker after successful compilation; ordinary builds
@@ -379,10 +384,11 @@ explicit output and no file inputs in hardened mode. Compile and clean items
 are published from that known path, including F#'s `CompileBefore` ordering.
 Ordinary task invocation and friend-assembly key policy are unchanged.
 Construction advances through the ILLink analyzer, code-fix and linker reference
-projects, resource actions and IVT generation. The first remaining error is
-the Banned API analyzer package's global-config selection: its
-`AddGlobalAnalyzerConfigForPackage_MicrosoftCodeAnalysisBannedApiAnalyzers` target
-uses `Exists` during construction (`MSB4287`).
+projects, resource actions, IVT generation and Banned API config selection.
+The first remaining error is ILLink's `GeneratePackageRuntimeConfig` target:
+it reads the future runtime-config output with `File.ReadAllText` during
+construction (`MSB4287`). This transformation still needs an execution action
+with declared input and output paths.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

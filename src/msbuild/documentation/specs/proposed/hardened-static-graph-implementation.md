@@ -718,15 +718,21 @@ explicit-inventory pattern. It records the actual emitted config filenames in a
 deterministic set and publishes package-local items. Hardened targets apply the
 existing version/mode/category/warnings-as-errors selection to those items;
 ordinary expressions and custom-directory discovery are retained.
-The standalone build includes the original Roslyn generator and a source-built
-analyzer payload for its regression. A controlled release fixture exercises the
-full generator, checks every emitted config against the declared inventory,
-constructs with config files absent, and independently publishes metadata
-matching ordinary execution. Empty/unsupported versions and opt-out behavior are
-preserved; custom-directory overrides fail without a partial graph.
-The real probe uses source-generated authoring with all 600 original analyzer
-package config assets declared. A normally restored isolated package preserves
-the original binary/config payload; the shared cache is unchanged.
+The standalone build includes the original Roslyn generator and source-built
+core and Banned API analyzer payloads for its regression. A controlled release
+fixture exercises the full generator, checks every emitted config against the
+declared inventory, constructs with config files absent, and independently
+publishes metadata matching ordinary execution. Banned API instead uses its
+actual release-tracking opt-out policy, producing an empty inventory. Six
+selection cases per package preserve version, mode, category, warnings-as-errors,
+empty/unsupported versions and selection opt-out behavior. Ordinary custom
+directories remain supported, including for the empty inventory; hardened
+custom-directory overrides fail without a partial graph.
+The real probe uses source-generated authoring with all 600 original core
+analyzer package config assets declared. Its pinned Banned API package intentionally
+ships no global configs; the existing generic generator handles its empty
+inventory without further changes. Normal isolated Restore preserves both
+packages' original binary/config payloads; the shared cache is unchanged.
 `RestorePackagesPath` and Arcade's early `NuGetPackageRoot` select the same
 isolated root. No additional preparation snapshot is introduced.
 Roslyn's skipped-analyzer hook publishes an empty marker through the existing
@@ -803,9 +809,11 @@ mirror remapping, the marker hook, the empty resource-source batch and unrequest
 GenAPI discovery, then passes ILLink's resource naming, resource-action construction
 and IVT action construction.
 Construction advances through the ILLink analyzer, code-fix and linker reference
-projects. Its first remaining error is the Banned API analyzer package's
-`AddGlobalAnalyzerConfigForPackage_MicrosoftCodeAnalysisBannedApiAnalyzers` target:
-global-config selection uses `Exists` during construction (`MSB4287`).
+projects and Banned API global-config selection. Its first remaining error is
+the linker implementation's `GeneratePackageRuntimeConfig` target: it reads the
+future `ProjectRuntimeConfigFilePath` with `File.ReadAllText` during construction
+(`MSB4287`). The existing version replacement must move to an execution action
+with declared input and output paths.
 Later target-validation diagnostics are not yet isolated as independent blockers.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
