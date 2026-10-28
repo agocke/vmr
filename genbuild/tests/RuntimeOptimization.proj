@@ -1,0 +1,20 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <EnableNgenOptimization Condition="'$(TestCase)' == 'enabled' or '$(TestCase)' == 'ineligible'">true</EnableNgenOptimization>
+    <IsEligibleForNgenOptimization Condition="'$(TestCase)' == 'ineligible'">false</IsEligibleForNgenOptimization>
+    <TargetOS>linux</TargetOS>
+    <TargetFileName>Profile.dll</TargetFileName>
+    <IbcOptimizationDataDir>$(MSBuildProjectDirectory)/../outside-workspace/</IbcOptimizationDataDir>
+    <IbcOptimizationDataDir Condition="'$(TestCase)' == 'enabled'">$(MSBuildProjectDirectory)/profiles/</IbcOptimizationDataDir>
+    <_ExpectedOptimization Condition="'$(TestCase)' == 'enabled'">full</_ExpectedOptimization>
+  </PropertyGroup>
+  <Import Project="$(RuntimeOptimizationTargets)" />
+  <Target Name="Build" DependsOnTargets="SetApplyNgenOptimization">
+    <Error Condition="'$(ApplyNgenOptimization)' != '$(_ExpectedOptimization)'"
+           Text="Optimization selection must follow the enable and eligibility switches."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(ResultFile)" Lines="$(ApplyNgenOptimization)" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
+  </Target>
+  <Target Name="Restore" />
+</Project>

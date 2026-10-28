@@ -1,0 +1,127 @@
+<Project DefaultTargets="Build">
+  <Import Project="Fixture.props" />
+  <PropertyGroup>
+    <IsSourceProject>true</IsSourceProject>
+    <IsNETCoreAppSrc Condition="'$(ProducerIsNETCoreAppSrc)' != 'false'">true</IsNETCoreAppSrc>
+    <IsNETCoreAppSrc Condition="'$(ProducerIsNETCoreAppSrc)' == 'false'">false</IsNETCoreAppSrc>
+    <TargetFrameworks Condition="'$(MSBuildProjectName)' == 'Alpha'">net11.0-linux;net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(MSBuildProjectName)' == 'Beta'">net10.0-unix;net10.0</TargetFrameworks>
+    <LibrariesAllBinArtifactsPath>$(FixtureRoot)layout/core/</LibrariesAllBinArtifactsPath>
+    <MicrosoftNetCoreAppRuntimePackRidLibTfmDir>$(FixtureRoot)layout/runtimepack/</MicrosoftNetCoreAppRuntimePackRidLibTfmDir>
+    <TargetDir>$(FixtureRoot)products/$(MSBuildProjectName)/$(Configuration)/$(Platform)/$(TargetFramework)/</TargetDir>
+    <TargetPath>$([MSBuild]::NormalizePath('$(TargetDir)', '$(MSBuildProjectName).dll'))</TargetPath>
+    <_OptionalPath>$([MSBuild]::NormalizePath('$(TargetDir)', 'optional.txt'))</_OptionalPath>
+    <GetLibraryBuildProductsDependsOn>ValidateProducerConfiguration</GetLibraryBuildProductsDependsOn>
+    <_NativeSource>$(FixtureRoot)products/shared/libmsquic.so</_NativeSource>
+    <_NativeSource Condition="'$(MSBuildProjectName)' == 'Beta' and ('$(TestCase)' == 'conflict' or '$(TestCase)' == 'case-conflict')">$(TargetDir)libmsquic.so</_NativeSource>
+    <_NativeTarget>native/libmsquic.so</_NativeTarget>
+    <_NativeTarget Condition="'$(MSBuildProjectName)' == 'Beta' and '$(TestCase)' == 'case-conflict'">native/LIBMSQUIC.SO</_NativeTarget>
+    <_NativeSource>$([MSBuild]::NormalizePath('$(_NativeSource)'))</_NativeSource>
+  </PropertyGroup>
+  <Import Project="$(RuntimeLibraryLayoutTargetsPath)" />
+  <ItemGroup>
+    <BinPlaceItem Include="$(_OptionalPath)" TargetPath="optional.txt"
+                  Condition="'$(MSBuildProjectName)' == 'Beta' and '$(DropOptional)' != 'true'" />
+    <!-- MsQuic-style custom item list, not LibraryBuildProduct or a fabricated aggregate map. -->
+    <MsQuicLibrary Include="$(_NativeSource)" TargetPath="$(_NativeTarget)" />
+    <BinPlaceDir Include="$(NetCoreAppCurrentTestHostSharedFrameworkPath)" ItemName="MsQuicLibrary" />
+    <BinPlaceDir Include="$(FixtureRoot)layout/native/" ItemName="MsQuicLibrary" Condition="'$(MSBuildProjectName)' == 'Alpha'" />
+    <BinPlaceDir Include="$(FixtureRoot)layout/testhost-neighbor/" />
+    <BinPlaceDir Include="$(FixtureRoot)layout/TESTHOST/case/" Condition="'$(TestCase)' == 'case-root' and '$(MSBuildProjectName)' == 'Alpha'" />
+    <AdditionalCleanDirectories Include="$(LibrariesAllBinArtifactsPath);$(MicrosoftNetCoreAppRuntimePackRidLibTfmDir);@(BinPlaceDir)" />
+
+    <!-- Independent expected inventory: framework and explicit destinations must remain distinct. -->
+    <_ExpectedProduct Include="$(TargetPath)" Relative="$(MSBuildProjectName).dll" SourcePath="$(TargetPath)"
+                      Payload="$(MSBuildProjectName)|$(Configuration)|$(Platform)|$(TargetFramework)|$(MSBuildProjectName).dll" />
+    <_ExpectedProduct Include="$(_OptionalPath)" Relative="optional.txt" SourcePath="$(_OptionalPath)"
+                      Payload="$(MSBuildProjectName)|$(Configuration)|$(Platform)|$(TargetFramework)|optional.txt"
+                      Condition="'$(MSBuildProjectName)' == 'Beta' and '$(DropOptional)' != 'true'" />
+    <_ExpectedLayout Include="@(_ExpectedProduct->'$(FixtureRoot)layout/core/%(Relative)')" />
+    <_ExpectedLayout Include="@(_ExpectedProduct->'$(FixtureRoot)layout/runtimepack/%(Relative)')" Condition="'$(IsNETCoreAppSrc)' == 'true'" />
+    <_ExpectedLayout Include="@(_ExpectedProduct->'$(FixtureRoot)layout/testhost-neighbor/%(Relative)')" />
+    <_ExpectedTestHost Include="@(_ExpectedProduct->'$(FixtureRoot)layout/testhost/%(Relative)')"
+                       Condition="'$(IsNETCoreAppSrc)' == 'true'" />
+    <_ExpectedTestHost Include="$(FixtureRoot)layout/testhost/$(_NativeTarget)" SourcePath="$(_NativeSource)" />
+    <_ExpectedTestHost Include="$(FixtureRoot)layout/TESTHOST/case/Alpha.dll" SourcePath="$(TargetPath)"
+                       Condition="'$(TestCase)' == 'case-root' and '$(MSBuildProjectName)' == 'Alpha'" />
+    <_ExpectedLayout Include="@(_ExpectedTestHost)" />
+    <_ExpectedLayout Include="$(FixtureRoot)layout/native/$(_NativeTarget)" SourcePath="$(_NativeSource)"
+                     Condition="'$(MSBuildProjectName)' == 'Alpha'" />
+
+    <_Produced Include="@(_ExpectedProduct)" />
+    <_Produced Include="$(_NativeSource)" Payload="native:msquic"
+               Condition="'$(MSBuildProjectName)' == 'Alpha' or '$(TestCase)' == 'conflict' or '$(TestCase)' == 'case-conflict'" />
+  </ItemGroup>
+
+  <Target Name="GetCopyToOutputDirectoryItems" />
+  <Target Name="PrepareResourceNames" />
+  <Target Name="ComputeIntermediateSatelliteAssemblies" />
+  <Target Name="Restore" DependsOnTargets="ValidateProducerConfiguration;_CaptureTargetFrameworkInputs" />
+  <Target Name="ValidateProducerConfiguration">
+    <PropertyGroup>
+      <_BadConfiguration Condition="'$(ParentOnlyProperty)' != '' or '$(ParentUndefined)' != '' or
+                                    ('$(MSBuildProjectName)' == 'Alpha' and ('$(Configuration)' != 'Release' or '$(Platform)' != 'x64' or '$(TargetFramework)' != 'net11.0-linux')) or
+                                    ('$(MSBuildProjectName)' == 'Beta' and ('$(Configuration)' != 'Checked' or '$(Platform)' != 'arm64' or '$(TargetFramework)' != 'net10.0-unix'))">true</_BadConfiguration>
+    </PropertyGroup>
+    <Error Condition="'$(_BadConfiguration)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'"
+           Text="Producer query and Build must receive selected configuration/platform/framework and both property removals: $(MSBuildProjectName)|$(Configuration)|$(Platform)|$(TargetFramework)|$(ParentOnlyProperty)|$(ParentUndefined)." />
+    <Error Condition="'$(_BadConfiguration)' == 'true' and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="Producer query and Build must receive selected configuration/platform/framework and both property removals: $(MSBuildProjectName)|$(Configuration)|$(Platform)|$(TargetFramework)|$(ParentOnlyProperty)|$(ParentUndefined)."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+
+  <Target Name="VerifyProducerQuery" AfterTargets="GetLibraryTestHostLayout">
+    <ItemGroup>
+      <_ExpectedPair Include="@(_ExpectedTestHost->'%(FullPath)|%(SourcePath)')" />
+      <_ActualPair Include="@(LibraryTestHostFile->'%(Identity)|%(SourcePath)')" />
+      <_MissingPair Include="@(_ExpectedPair)" Exclude="@(_ActualPair)" />
+      <_ExtraPair Include="@(_ActualPair)" Exclude="@(_ExpectedPair)" />
+      <_InvalidPath Include="@(LibraryTestHostFile)"
+                    Condition="'%(LibraryTestHostFile.Identity)' != '%(LibraryTestHostFile.FullPath)' or !$([System.IO.Path]::IsPathRooted('%(LibraryTestHostFile.SourcePath)'))" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_BadQuery Condition="'@(_MissingPair);@(_ExtraPair);@(_InvalidPath)' != ';;' or
+                            '@(LibraryTestHostFile->Count())' != '@(_ExpectedTestHost->Count())' or '@(FileWrites)' != ''">true</_BadQuery>
+    </PropertyGroup>
+    <Error Condition="'$(_BadQuery)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'"
+           Text="Pure producer query must return exact absolute shared-root mappings, including custom native items but not testhost-neighbor. Missing=@(_MissingPair), extra=@(_ExtraPair), invalid=@(_InvalidPath), writes=@(FileWrites)." />
+    <Error Condition="'$(_BadQuery)' == 'true' and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="Pure producer query must return exact absolute shared-root mappings, including custom native items but not testhost-neighbor. Missing=@(_MissingPair), extra=@(_ExtraPair), invalid=@(_InvalidPath), writes=@(FileWrites)."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+
+  <Target Name="Produce" Condition="'$(QueryOnly)' != 'true'">
+    <WriteLinesToFile File="%(_Produced.Identity)" Lines="%(_Produced.Payload)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="%(_Produced.Identity)" Lines="%(_Produced.Payload)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" DeclaredInputs="" DeclaredOutputs="%(_Produced.Identity)" />
+  </Target>
+  <Target Name="CopyFilesToOutputDirectory" Condition="'$(QueryOnly)' != 'true'" />
+  <Target Name="Build" DependsOnTargets="GetLibraryTestHostLayout;Produce;CopyFilesToOutputDirectory;RecordProducerWrites;RecordProducerClean"
+          Condition="'$(QueryOnly)' != 'true'" />
+  <Target Name="RecordProducerClean" DependsOnTargets="IncrementalClean;_CleanRecordFileWrites"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <Target Name="RecordProducerWrites">
+    <ItemGroup>
+      <_ExpectedWrite Include="@(_ExpectedLayout)" />
+      <_ExpectedWrite Remove="@(_ExpectedTestHost)" Condition="'$(UseAggregateLibraryTestHostLayout)' == 'true' and '$(IsNETCoreAppSrc)' == 'true'" />
+      <_MissingWrite Include="@(_ExpectedWrite)" Exclude="@(FileWrites)" />
+      <_ExtraWrite Include="@(FileWrites)" Exclude="@(_ExpectedWrite)" />
+      <_ProducerSnapshot Include="@(FileWrites)">
+        <Line>$([System.String]::Copy('%(Identity)').Replace('$(FixtureRoot)', '').Replace('\', '/'))</Line>
+      </_ProducerSnapshot>
+    </ItemGroup>
+    <PropertyGroup>
+      <_BadWrites Condition="'@(_MissingWrite);@(_ExtraWrite)' != ';' or '@(FileWrites->Count())' != '@(_ExpectedWrite->Count())'">true</_BadWrites>
+    </PropertyGroup>
+    <Error Condition="'$(_BadWrites)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'"
+           Text="Producer publication must bypass only aggregate-owned testhost mappings, not other destinations (or non-src native items). Missing=@(_MissingWrite), extra=@(_ExtraWrite)." />
+    <Error Condition="'$(_BadWrites)' == 'true' and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="Producer publication must bypass only aggregate-owned testhost mappings, not other destinations (or non-src native items). Missing=@(_MissingWrite), extra=@(_ExtraWrite)."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(FixtureRoot)producer-$(MSBuildProjectName).txt" Lines="@(_ProducerSnapshot->'%(Line)')" Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="$(FixtureRoot)producer-$(MSBuildProjectName).txt" Lines="@(_ProducerSnapshot->'%(Line)')" Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" DeclaredInputs="" DeclaredOutputs="$(FixtureRoot)producer-$(MSBuildProjectName).txt" />
+  </Target>
+</Project>

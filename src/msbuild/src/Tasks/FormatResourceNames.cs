@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.IO;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
 using Microsoft.Build.Utilities;
@@ -38,16 +39,20 @@ public sealed class FormatResourceNames : TaskExtension
     public override bool Execute()
     {
         ResourceFilesWithManifestResourceNames = [];
-        if (UseDependentUponConvention)
-        {
-            Log.LogErrorWithCodeFromResources("CommonSdk.HardenedResourceName", nameof(UseDependentUponConvention));
-            return false;
-        }
-
         ITaskItem[] result = new ITaskItem[ResourceFiles.Length];
         for (int i = 0; i < ResourceFiles.Length; i++)
         {
             ITaskItem source = ResourceFiles[i];
+            string fileType = source.GetMetadata("Type");
+            bool isResxFile = fileType.Length == 0
+                ? Path.GetExtension(source.ItemSpec) == CreateManifestResourceName.resxFileExtension
+                : fileType == "Resx";
+            if (UseDependentUponConvention && isResxFile)
+            {
+                Log.LogErrorWithCodeFromResources("CommonSdk.HardenedResourceName", nameof(UseDependentUponConvention));
+                return false;
+            }
+
             if (source.GetMetadata("DependentUpon").Length != 0)
             {
                 Log.LogErrorWithCodeFromResources("CommonSdk.HardenedResourceName", $"{source.ItemSpec}: DependentUpon");

@@ -1,0 +1,9 @@
+<Project DefaultTargets="Build">
+  <Target Name="Restore" />
+  <Target Name="Build" />
+  <Target Name="GetLibraryTestHostLayout">
+    <Error Condition="'$(MSBuildHardenedGraph)' != 'true'" Text="Excluded CoreLibProject and Build=false references must not be queried: $(MSBuildProjectName)." />
+    <Error Condition="'$(MSBuildHardenedGraph)' == 'true'" Text="Excluded CoreLibProject and Build=false references must not be queried: $(MSBuildProjectName)."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+</Project>

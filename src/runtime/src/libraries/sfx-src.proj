@@ -1,4 +1,5 @@
-<Project Sdk="Microsoft.Build.Traversal">
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.Build.Traversal" />
 
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppCurrent)-$(TargetOS)</TargetFramework>
@@ -20,5 +21,8 @@
                                shims\*\src\*.csproj"
                       Exclude="@(NonNetCoreAppProject)" />
   </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.Build.Traversal" />
+  <Import Project="$(RepositoryEngineeringDir)libraryTestHostLayout.targets" />
 
 </Project>

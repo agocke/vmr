@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>ResourceRoot</RootNamespace>
     <RootNamespace Condition="'$(TestCase)' == 'illink'">Mono.Linker</RootNamespace>
-    <EmbeddedResourceUseDependentUponConvention Condition="'$(TestCase)' == 'convention' or '$(TestCase)' == 'illink'">true</EmbeddedResourceUseDependentUponConvention>
+    <EmbeddedResourceUseDependentUponConvention Condition="'$(TestCase)' == 'convention' or '$(TestCase)' == 'convention-inferred' or '$(TestCase)' == 'non-resx-convention' or '$(TestCase)' == 'illink'">true</EmbeddedResourceUseDependentUponConvention>
     <SignAssembly>true</SignAssembly>
     <PublicSign>true</PublicSign>
     <BuildingProject>true</BuildingProject>
@@ -14,13 +14,19 @@
     <KeyContainerName Condition="'$(TestCase)' == 'container'">machine-container</KeyContainerName>
     <SignManifests Condition="'$(TestCase)' == 'manifest'">true</SignManifests>
   </PropertyGroup>
-  <ItemGroup Condition="'$(TestCase)' != 'illink'">
+  <ItemGroup Condition="'$(TestCase)' != 'illink' and '$(TestCase)' != 'non-resx-convention'">
     <EmbeddedResource Include="missing/Strings.resx" Type="Resx" WithCulture="false" TargetPath="Strings.resx">
       <DependentUpon Condition="'$(TestCase)' == 'dependent'">Form.cs</DependentUpon>
+      <Type Condition="'$(TestCase)' == 'convention-inferred'"></Type>
     </EmbeddedResource>
     <EmbeddedResource Include="missing/Strings.fr.resx" Type="Resx" WithCulture="true" Culture="fr" TargetPath="Linked/Strings.fr.resx" />
     <EmbeddedResource Include="missing/Data.fr.txt" Type="Non-Resx" WithCulture="true" Culture="fr" TargetPath="Data.fr.txt" />
     <EmbeddedResource Include="missing/Kept.resx" Type="Resx" WithCulture="false" ManifestResourceName="Explicit.Name" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TestCase)' == 'non-resx-convention'">
+    <EmbeddedResource Include="missing/Future.xml" Type="Non-Resx" WithCulture="false" LogicalName="Explicit.Xml" TargetPath="Future.xml" />
+    <EmbeddedResource Include="missing/Unclassified.xml" WithCulture="false" TargetPath="Unclassified.xml" />
+    <EmbeddedResource Include="missing/Override.resx" Type="Non-Resx" WithCulture="false" TargetPath="Override.resx" />
   </ItemGroup>
   <ItemGroup Condition="'$(TestCase)' == 'illink'">
     <EmbeddedResource Include="Resources/Strings.resx" Type="Resx" WithCulture="false" TargetPath="Resources/Strings.resx" />

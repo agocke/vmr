@@ -25,6 +25,7 @@
     <CallTarget Targets="TestArcadeLayout" />
     <CallTarget Targets="TestArcadeTargetFrameworkInputs" />
     <CallTarget Targets="TestRuntimeLibraryLayout" />
+    <CallTarget Targets="TestRuntimeLibraryTestHostLayout" />
     <CallTarget Targets="TestResourceMetadata" />
     <CallTarget Targets="TestRuntimeResourceCompilation" />
     <CallTarget Targets="TestInternalsVisibleTo" />
@@ -58,6 +59,9 @@
     <CallTarget Targets="TestDeps" />
     <CallTarget Targets="TestRuntimeConfig" />
     <CallTarget Targets="TestRuntimePackageConfig" />
+    <CallTarget Targets="TestRuntimeResourceSubstitutions" />
+    <CallTarget Targets="TestRuntimeLinkerXml" />
+    <CallTarget Targets="TestRuntimeOptimization" />
     <PropertyGroup>
       <_SdkGraph>$([System.IO.Path]::GetFullPath('$(_TestDirectory)sdk-build.ninja'))</_SdkGraph>
       <_SdkHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_SdkHostOS>
@@ -670,6 +674,209 @@
                       Exists('%(_RuntimeLayoutRejectedRun.Root)query.txt') or Exists('%(_RuntimeLayoutRejectedRun.Root)products/Layout.dll') or Exists('%(_RuntimeLayoutRejectedRun.Root)layout')"
            Text="Conflicting sources must fail ordinary planning and hardened construction with a layout diagnostic and no partial graph, actions or products (%(_RuntimeLayoutRejectedRun.Identity), %(_RuntimeLayoutRejectedRun.Mode))." />
     <Message Importance="high" Text="Runtime library layout smoke checks passed: legacy/ordinary/hardened placement and byte parity, prepared platform fallback, configured PDB/docs, inactive inner frameworks, future queries, selected-output producer ordering, stale symbol/doc exclusion, deduplication and collision rejection. $(_RuntimeLayoutRoot)" />
+  </Target>
+  <Target Name="TestRuntimeLibraryTestHostLayout">
+    <PropertyGroup>
+      <_TestHostRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'runtime-library-testhost'))</_TestHostRoot>
+      <_TestHostFullCaseRoot>$([MSBuild]::NormalizeDirectory('$(_TestHostRoot)', 'full'))</_TestHostFullCaseRoot>
+      <_TestHostFixtures>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '../../src/runtime/eng/tests/LibraryTestHostLayout'))</_TestHostFixtures>
+      <RuntimeLibraryTestHostSdk Condition="'$(RuntimeLibraryTestHostSdk)' == ''">$(DOTNET_HOST_PATH)</RuntimeLibraryTestHostSdk>
+      <_TestHostSdk>&quot;$(RuntimeLibraryTestHostSdk)&quot; msbuild</_TestHostSdk>
+      <_TestHostArguments>-p:ArcadeTargetFrameworkDirectory=&quot;$(_AppDirectory)/toolset/Arcade/TargetFramework&quot; -p:FixtureCommonTargetsPath=&quot;$(MSBuildToolsPath)/Microsoft.Common.CurrentVersion.targets&quot; -p:RuntimeLibraryLayoutTargetsPath=&quot;$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/runtime/eng/libraryLayout.targets'))&quot; -p:RuntimeLibraryTestHostLayoutTargetsPath=&quot;$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/runtime/eng/libraryTestHostLayout.targets'))&quot;</_TestHostArguments>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(GenBuildApp)') or !Exists('$(GenBuildTestHost)') or !Exists('$(RuntimeLibraryTestHostSdk)')"
+           Text="Set GenBuildApp, GenBuildTestHost (runtime-only), and RuntimeLibraryTestHostSdk (stock SDK dotnet)." />
+    <ItemGroup>
+      <_TestHostCase Include="full" ExpectedCount="14" />
+      <_TestHostCase Include="empty" ExpectedCount="0" />
+      <_TestHostCase Include="case-root" ExpectedCount="15" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+      <_TestHostRun Include="@(_TestHostCase)" Mode="ordinary" Entry="Aggregate" Publication="-p:UseAggregateLibraryTestHostLayout=true" />
+      <_TestHostRun Include="@(_TestHostCase)" Mode="action" Entry="Aggregate" Publication="-p:UseAggregateLibraryTestHostLayout=true" />
+      <!-- No opt-in property at all: this remains the ordinary/default producer publication oracle. -->
+      <_TestHostRun Include="full" Mode="legacy" Entry="Aggregate" />
+      <_TestHostRun Include="non-src" Mode="ordinary" Entry="Alpha"
+                    Publication="-p:UseAggregateLibraryTestHostLayout=true -p:ProducerIsNETCoreAppSrc=false -p:Configuration=Release -p:Platform=x64 -p:TargetFramework=net11.0-linux" />
+      <_TestHostRun Include="non-src" Mode="action" Entry="Alpha"
+                    Publication="-p:UseAggregateLibraryTestHostLayout=true -p:ProducerIsNETCoreAppSrc=false -p:Configuration=Release -p:Platform=x64 -p:TargetFramework=net11.0-linux" />
+      <_TestHostRejectCase Include="conflict" />
+      <_TestHostRejectCase Include="case-conflict" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+      <_TestHostRun Include="@(_TestHostRejectCase)" Mode="ordinary" Entry="Aggregate" Rejected="true" Publication="-p:UseAggregateLibraryTestHostLayout=true" />
+      <_TestHostRun Include="@(_TestHostRejectCase)" Mode="action" Entry="Aggregate" Rejected="true" Publication="-p:UseAggregateLibraryTestHostLayout=true" />
+      <_TestHostRun Update="@(_TestHostRun)">
+        <Root>$([MSBuild]::NormalizeDirectory('$(_TestHostRoot)', '%(Identity)', '%(Mode)'))</Root>
+        <Arguments>$(_TestHostArguments) -p:TestCase=%(Identity) %(_TestHostRun.Publication)</Arguments>
+      </_TestHostRun>
+      <_TestHostAggregateRun Include="@(_TestHostRun)" Condition="'%(_TestHostRun.Entry)' == 'Aggregate'" />
+      <_TestHostAggregateRun Update="@(_TestHostAggregateRun)">
+        <Arguments>%(_TestHostAggregateRun.Arguments) -p:ParentOnlyProperty=poison -p:ParentUndefined=poison</Arguments>
+      </_TestHostAggregateRun>
+      <_TestHostProducerRun Include="@(_TestHostRun)" Condition="'%(_TestHostRun.Entry)' == 'Alpha'" />
+      <_TestHostPreparedRun Include="@(_TestHostAggregateRun);@(_TestHostProducerRun)" />
+      <_TestHostSuccess Include="@(_TestHostPreparedRun)" Condition="'%(_TestHostPreparedRun.Rejected)' != 'true'" />
+      <_TestHostAction Include="@(_TestHostSuccess)" Condition="'%(_TestHostSuccess.Mode)' == 'action'" />
+      <_TestHostOrdinary Include="@(_TestHostSuccess)" Condition="'%(_TestHostSuccess.Mode)' != 'action'" />
+      <_TestHostQueryOrdinary Include="@(_TestHostOrdinary)" Condition="'%(_TestHostOrdinary.Entry)' == 'Aggregate'" />
+      <_TestHostQueryAction Include="@(_TestHostAction)" Condition="'%(_TestHostAction.Entry)' == 'Aggregate'" />
+      <_TestHostRejected Include="@(_TestHostPreparedRun)" Condition="'%(_TestHostPreparedRun.Rejected)' == 'true'" />
+      <_TestHostPair Include="@(_TestHostCase)" />
+      <_TestHostPair Include="non-src" ExpectedCount="4" />
+      <_TestHostPair Update="@(_TestHostPair)">
+        <Root>$([MSBuild]::NormalizeDirectory('$(_TestHostRoot)', '%(Identity)'))</Root>
+      </_TestHostPair>
+      <_TestHostMaterializedPair Include="@(_TestHostPair)" Condition="'%(_TestHostPair.ExpectedCount)' != '0'" />
+    </ItemGroup>
+    <MakeDir Directories="%(_TestHostRun.Root)" />
+    <Copy SourceFiles="$(_TestHostFixtures)Fixture.props;$(_TestHostFixtures)Aggregate.proj" DestinationFolder="%(_TestHostRun.Root)" />
+    <Copy SourceFiles="$(_TestHostFixtures)Producer.proj" DestinationFiles="%(_TestHostRun.Root)Alpha.proj" />
+    <Copy SourceFiles="$(_TestHostFixtures)Producer.proj" DestinationFiles="%(_TestHostRun.Root)Beta.proj" />
+    <Copy SourceFiles="$(_TestHostFixtures)Excluded.proj" DestinationFiles="%(_TestHostRun.Root)CoreLib.proj" />
+    <Copy SourceFiles="$(_TestHostFixtures)Excluded.proj" DestinationFiles="%(_TestHostRun.Root)Ignored.proj" />
+    <WriteLinesToFile File="%(_TestHostRun.Root)runtime.json" Overwrite="true"
+                      Lines="{&quot;runtimes&quot;:{&quot;linux&quot;:{&quot;#import&quot;:[&quot;unix&quot;]},&quot;unix&quot;:{&quot;#import&quot;:[&quot;any&quot;]},&quot;any&quot;:{}}}" />
+    <Exec Command="$(_App) restore &quot;%(_TestHostPreparedRun.Root)%(_TestHostPreparedRun.Entry).proj&quot; %(_TestHostPreparedRun.Arguments) -p:_MSBuildPreparingGraphInputs=true -bl:&quot;%(_TestHostPreparedRun.Root)restore.binlog&quot;" />
+    <Error Condition="Exists('%(_TestHostPreparedRun.Root)products') or Exists('%(_TestHostPreparedRun.Root)layout')"
+           Text="Restore must capture configured framework inputs without producing or staging anything." />
+    <Move SourceFiles="%(_TestHostPreparedRun.Root)runtime.json" DestinationFiles="%(_TestHostPreparedRun.Root)runtime.saved.json"
+          Condition="'%(_TestHostPreparedRun.Mode)' == 'action'" />
+
+    <!-- Queries are independent of opt-in. Build is intentionally inert for the CLI's added Build target. -->
+    <Exec Command="$(_TestHostSdk) &quot;%(_TestHostQueryOrdinary.Root)Aggregate.proj&quot; -t:Query %(_TestHostQueryOrdinary.Arguments) -p:UseAggregateLibraryTestHostLayout=false -bl:&quot;%(_TestHostQueryOrdinary.Root)query.binlog&quot;" />
+    <Exec Command="$(_App) build &quot;%(_TestHostQueryAction.Root)Aggregate.proj&quot; %(_TestHostQueryAction.Arguments) -p:QueryOnly=true -p:UseAggregateLibraryTestHostLayout=false -p:MSBuildEmitActionGraph=&quot;%(_TestHostQueryAction.Root)query.ninja&quot; -bl:&quot;%(_TestHostQueryAction.Root)query.binlog&quot;" />
+    <Error Condition="!Exists('%(_TestHostQueryAction.Root)query.ninja') or !Exists('%(_TestHostQueryAction.Root)query.ninja.actions') or Exists('%(_TestHostQueryAction.Root)query.txt')"
+           Text="A pure future-layout graph must emit, not execute, even its explicit snapshot action." />
+    <Exec WorkingDirectory="%(_TestHostQueryAction.Root)" Command="ninja -f query.ninja" />
+    <Error Condition="Exists('%(_TestHostSuccess.Root)products') or Exists('%(_TestHostSuccess.Root)layout') or Exists('%(_TestHostSuccess.Root)writes.txt') or Exists('%(_TestHostSuccess.Root)producer-Alpha.txt')"
+           Text="Future queries must neither build either producer nor publish outputs or FileWrites." />
+    <Error Condition="$([System.IO.File]::ReadAllText('$(_TestHostRoot)%(_TestHostCase.Identity)/ordinary/query.txt')) != $([System.IO.File]::ReadAllText('$(_TestHostRoot)%(_TestHostCase.Identity)/action/query.txt'))"
+           Text="Ordinary and prepared hardened future mappings must agree (%(_TestHostCase.Identity))." />
+
+    <Exec Command="$(_App) build &quot;%(_TestHostAction.Root)%(_TestHostAction.Entry).proj&quot; %(_TestHostAction.Arguments) -p:MSBuildEmitActionGraph=&quot;%(_TestHostAction.Root)build.ninja&quot; -bl:&quot;%(_TestHostAction.Root)build.binlog&quot;" />
+    <Error Condition="!Exists('%(_TestHostAction.Root)build.ninja') or !Exists('%(_TestHostAction.Root)build.ninja.actions') or Exists('%(_TestHostAction.Root)products') or Exists('%(_TestHostAction.Root)layout') or Exists('%(_TestHostAction.Root)writes.txt') or Exists('%(_TestHostAction.Root)runtime.json')"
+           Text="Construction must replay prepared framework inputs and leave all future products/publication untouched (%(_TestHostAction.Identity))." />
+    <Exec WorkingDirectory="$(_TestHostRoot)full/action"
+          Command="ninja -f build.ninja &quot;$([MSBuild]::NormalizePath('$(_TestHostRoot)', 'full/action/layout/testhost/Alpha.dll'))&quot;" />
+    <ReadLinesFromFile File="$(_TestHostRoot)full/action/layout/testhost/Alpha.dll">
+      <Output TaskParameter="Lines" PropertyName="_TestHostSelectedBytes" />
+    </ReadLinesFromFile>
+    <!-- The prototype conservatively preserves preceding actions; this checks the future input edge, not pruning. -->
+    <Error Condition="'$(_TestHostSelectedBytes)' != 'Alpha|Release|x64|net11.0-linux|Alpha.dll' or
+                      !Exists('$(_TestHostRoot)full/action/products/Alpha/Release/x64/net11.0-linux/Alpha.dll') or
+                      Exists('$(_TestHostRoot)full/action/writes.txt')"
+           Text="A selected future testhost destination must execute its configured producer and copy, without requiring aggregate bookkeeping. Bytes=$(_TestHostSelectedBytes)." />
+    <Exec WorkingDirectory="%(_TestHostAction.Root)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_TestHostSdk) &quot;%(_TestHostOrdinary.Root)%(_TestHostOrdinary.Entry).proj&quot; -t:Build %(_TestHostOrdinary.Arguments) -bl:&quot;%(_TestHostOrdinary.Root)build.binlog&quot;" />
+    <Error Condition="$([System.IO.File]::ReadAllText('$(_TestHostRoot)%(_TestHostCase.Identity)/ordinary/query.txt')) != $([System.IO.File]::ReadAllText('$(_TestHostRoot)%(_TestHostCase.Identity)/action/query.txt')) or
+                      $([System.IO.File]::ReadAllText('$(_TestHostRoot)%(_TestHostCase.Identity)/ordinary/writes.txt')) != $([System.IO.File]::ReadAllText('$(_TestHostRoot)%(_TestHostCase.Identity)/action/writes.txt'))"
+           Text="Independent aggregate publication must retain ordinary query and exact FileWrites parity (%(_TestHostCase.Identity))." />
+    <Error Condition="Exists('$(_TestHostRoot)full/legacy/writes.txt') or !Exists('$(_TestHostRoot)full/legacy/layout/testhost/Alpha.dll') or
+                      !Exists('$(_TestHostRoot)non-src/ordinary/layout/testhost/native/libmsquic.so') or Exists('$(_TestHostRoot)non-src/ordinary/layout/testhost/Alpha.dll')"
+           Text="Default mode must remain producer-owned; opt-in must not suppress non-IsNETCoreAppSrc custom native publication." />
+    <Error Condition="Exists('$(_TestHostRoot)empty/ordinary/products') or Exists('$(_TestHostRoot)empty/ordinary/layout') or
+                      Exists('$(_TestHostRoot)empty/action/products') or Exists('$(_TestHostRoot)empty/action/layout')"
+           Text="An empty aggregate must be a physical no-op." />
+    <ItemGroup>
+      <_TestHostBytes Include="%(_TestHostPair.Root)ordinary/layout/**/*" PairRoot="%(_TestHostPair.Root)" />
+      <_TestHostBytes Update="@(_TestHostBytes)">
+        <Relative>$([System.String]::Copy('%(FullPath)').Replace('$([MSBuild]::NormalizeDirectory('%(PairRoot)', 'ordinary'))', '').Replace('\', '/'))</Relative>
+      </_TestHostBytes>
+      <_TestHostActionBytes Include="%(_TestHostPair.Root)action/layout/**/*" />
+      <_TestHostProducerSnapshot Include="Alpha;Beta" />
+      <_TestHostLegacyBytes Include="@(_TestHostBytes)" Condition="'%(_TestHostBytes.PairRoot)' == '$(_TestHostFullCaseRoot)'" />
+    </ItemGroup>
+    <Error Condition="$([System.IO.Directory]::GetFiles('%(_TestHostMaterializedPair.Root)ordinary/layout', '*', System.IO.SearchOption.AllDirectories).Length) != '%(_TestHostMaterializedPair.ExpectedCount)'"
+           Text="Each ordinary fixture must materialize the independently expected number of placements (%(_TestHostMaterializedPair.Identity))." />
+    <GetFileHash Files="@(_TestHostBytes)">
+      <Output TaskParameter="Items" ItemName="_TestHostOrdinaryHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_TestHostBytes->'%(PairRoot)action/%(Relative)')">
+      <Output TaskParameter="Items" ItemName="_TestHostActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_TestHostLegacyBytes->'$(_TestHostRoot)full/legacy/%(Relative)')">
+      <Output TaskParameter="Items" ItemName="_TestHostLegacyHash" />
+    </GetFileHash>
+    <Error Condition="'@(_TestHostOrdinaryHash->'%(FileHash)')' != '@(_TestHostActionHash->'%(FileHash)')' or
+                      '@(_TestHostBytes->Count())' != '@(_TestHostActionBytes->Count())'"
+           Text="Ordinary and independently executed layouts must contain exactly the same bytes and file counts, including custom native and non-testhost destinations." />
+    <GetFileHash Files="@(_TestHostLegacyBytes)">
+      <Output TaskParameter="Items" ItemName="_TestHostFullHash" />
+    </GetFileHash>
+    <Error Condition="'@(_TestHostFullHash->'%(FileHash)')' != '@(_TestHostLegacyHash->'%(FileHash)')'"
+           Text="Moving ownership must preserve default/legacy layout bytes." />
+    <Error Condition="$([System.IO.File]::ReadAllText('$(_TestHostRoot)full/ordinary/producer-%(_TestHostProducerSnapshot.Identity).txt')) != $([System.IO.File]::ReadAllText('$(_TestHostRoot)full/action/producer-%(_TestHostProducerSnapshot.Identity).txt'))"
+           Text="Both producers must register exactly the same remaining owned destinations in ordinary and hardened mode." />
+    <Error Condition="$([System.IO.File]::ReadAllText('$(_TestHostRoot)non-src/ordinary/producer-Alpha.txt')) != $([System.IO.File]::ReadAllText('$(_TestHostRoot)non-src/action/producer-Alpha.txt'))"
+           Text="Non-src producer FileWrites must also agree without suppressing its native testhost mapping." />
+
+    <Exec Command="$(_TestHostSdk) &quot;%(_TestHostRejected.Root)Aggregate.proj&quot; -t:Query %(_TestHostRejected.Arguments) -flp:&quot;LogFile=%(_TestHostRejected.Root)rejection.log;Verbosity=quiet&quot;"
+          Condition="'%(_TestHostRejected.Mode)' == 'ordinary'" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_TestHostRejectedExit" />
+    </Exec>
+    <Exec Command="$(_App) build &quot;%(_TestHostRejected.Root)Aggregate.proj&quot; %(_TestHostRejected.Arguments) -p:MSBuildEmitActionGraph=&quot;%(_TestHostRejected.Root)build.ninja&quot; -flp:&quot;LogFile=%(_TestHostRejected.Root)rejection.log;Verbosity=quiet&quot;"
+          Condition="'%(_TestHostRejected.Mode)' == 'action'" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_TestHostRejectedExit" />
+    </Exec>
+    <Error Condition="@(_TestHostRejectedExit->AnyHaveMetadataValue('Identity', '0')) or
+                      !$([System.IO.File]::ReadAllText('%(_TestHostRejected.Root)rejection.log').Contains('library testhost destination has multiple sources')) or
+                      Exists('%(_TestHostRejected.Root)build.ninja') or Exists('%(_TestHostRejected.Root)build.ninja.actions') or
+                      Exists('%(_TestHostRejected.Root)products') or Exists('%(_TestHostRejected.Root)layout') or Exists('%(_TestHostRejected.Root)query.txt') or
+                      Exists('%(_TestHostRejected.Root)writes.txt') or Exists('%(_TestHostRejected.Root)producer-Alpha.txt')"
+           Text="Cross-project collisions must fail planning with the aggregate diagnostic and no partial graph/actions/products (%(_TestHostRejected.Identity), %(_TestHostRejected.Mode))." />
+
+    <PropertyGroup>
+      <_TestHostOrdinaryRoot>$(_TestHostRoot)full/ordinary/</_TestHostOrdinaryRoot>
+      <_TestHostOrdinaryArguments>$(_TestHostArguments) -p:UseAggregateLibraryTestHostLayout=true -p:ParentOnlyProperty=poison -p:ParentUndefined=poison</_TestHostOrdinaryArguments>
+      <_TestHostMainTime>$([System.IO.File]::GetLastWriteTimeUtc('$(_TestHostOrdinaryRoot)layout/testhost/Alpha.dll').Ticks)</_TestHostMainTime>
+      <_TestHostMainSource>$([MSBuild]::NormalizePath('$(_TestHostOrdinaryRoot)', 'products/Alpha/Release/x64/net11.0-linux/Alpha.dll'))</_TestHostMainSource>
+      <_TestHostMainDestination>$([MSBuild]::NormalizePath('$(_TestHostOrdinaryRoot)', 'layout/testhost/Alpha.dll'))</_TestHostMainDestination>
+    </PropertyGroup>
+    <Exec Command="$(_TestHostSdk) &quot;$(_TestHostOrdinaryRoot)Aggregate.proj&quot; -t:Build $(_TestHostOrdinaryArguments) -flp:&quot;LogFile=$(_TestHostOrdinaryRoot)unchanged.log;Verbosity=diagnostic&quot;"
+          EnvironmentVariables="DOTNET_CLI_UI_LANGUAGE=en-US" />
+    <PropertyGroup>
+      <_TestHostMainTimeAfter>$([System.IO.File]::GetLastWriteTimeUtc('$(_TestHostMainDestination)').Ticks)</_TestHostMainTimeAfter>
+      <_TestHostCopySkipped>$([System.IO.File]::ReadAllText('$(_TestHostOrdinaryRoot)unchanged.log').Contains('Did not copy from file &quot;$(_TestHostMainSource)&quot; to file &quot;$(_TestHostMainDestination)&quot;'))</_TestHostCopySkipped>
+    </PropertyGroup>
+    <Error Condition="'$(_TestHostMainTime)' != '$(_TestHostMainTimeAfter)' or '$(_TestHostCopySkipped)' != 'true'"
+           Text="An unchanged ordinary aggregate build must skip the actual testhost Copy, preserving its timestamp." />
+    <ItemGroup>
+      <_TestHostForeign Include="$(_TestHostOrdinaryRoot)layout/testhost/native/runtime-sentinel.txt;$(_TestHostOrdinaryRoot)layout/testhost/System.Private.CoreLib.dll;$(_TestHostOrdinaryRoot)layout/native/runtime-sentinel.txt;$(_TestHostOrdinaryRoot)layout/testhost-neighbor/foreign.txt" />
+    </ItemGroup>
+    <WriteLinesToFile File="%(_TestHostForeign.Identity)" Lines="foreign runtime/native staging: must survive" Overwrite="true" />
+    <GetFileHash Files="@(_TestHostForeign)">
+      <Output TaskParameter="Items" ItemName="_TestHostForeignBefore" />
+    </GetFileHash>
+    <!-- A real old producer ledger, not a mocked cleanup target. Exercise both ordinary clean paths. -->
+    <CallTarget Targets="TestRuntimeLibraryTestHostProducerLedger" />
+    <Exec Command="$(_TestHostSdk) &quot;$(_TestHostOrdinaryRoot)Aggregate.proj&quot; -t:Build $(_TestHostOrdinaryArguments) -p:DropOptional=true -bl:&quot;$(_TestHostOrdinaryRoot)dropped.binlog&quot;" />
+    <Error Condition="Exists('$(_TestHostOrdinaryRoot)layout/testhost/optional.txt') or Exists('$(_TestHostOrdinaryRoot)layout/core/optional.txt') or
+                      !Exists('$(_TestHostOrdinaryRoot)layout/testhost/Alpha.dll') or !Exists('$(_TestHostOrdinaryRoot)layout/testhost/Beta.dll') or
+                      !Exists('$(_TestHostOrdinaryRoot)layout/testhost/native/libmsquic.so')"
+           Text="Ordinary IncrementalClean must remove the dropped aggregate output, retain the current layout, and let producers clean only their other destinations." />
+    <Exec Command="$(_TestHostSdk) &quot;$(_TestHostOrdinaryRoot)Aggregate.proj&quot; -t:Clean $(_TestHostOrdinaryArguments)" />
+    <Error Condition="Exists('$(_TestHostOrdinaryRoot)layout/testhost/Alpha.dll') or Exists('$(_TestHostOrdinaryRoot)layout/testhost/Beta.dll') or
+                      Exists('$(_TestHostOrdinaryRoot)layout/testhost/native/libmsquic.so') or !Exists('$(_TestHostOrdinaryRoot)layout/core/Alpha.dll')"
+           Text="Aggregate Clean must remove its ledger-owned outputs, not the producers' other staging destinations." />
+    <GetFileHash Files="@(_TestHostForeign)">
+      <Output TaskParameter="Items" ItemName="_TestHostForeignAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_TestHostForeignBefore->'%(FileHash)')' != '@(_TestHostForeignAfter->'%(FileHash)')'"
+           Text="Incremental and explicit cleanup must preserve foreign native/runtime staging byte-for-byte." />
+    <Message Importance="high" Text="Runtime library testhost fixtures passed: two configured producers, pure future queries, ordinary/Ninja bytes and ownership, selected-output edges, default/non-src modes, custom native maps, dedup/collisions, exclusions, unchanged Copy and real ordinary clean ledgers. Windows-only cases run only on Windows. $(_TestHostRoot)" />
+  </Target>
+  <Target Name="TestRuntimeLibraryTestHostProducerLedger">
+    <PropertyGroup>
+      <_LedgerRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'runtime-library-testhost/full/ordinary'))</_LedgerRoot>
+      <RuntimeLibraryTestHostSdk Condition="'$(RuntimeLibraryTestHostSdk)' == ''">$(DOTNET_HOST_PATH)</RuntimeLibraryTestHostSdk>
+      <_LedgerSdk>&quot;$(RuntimeLibraryTestHostSdk)&quot; msbuild</_LedgerSdk>
+      <_LedgerArguments>-p:UseAggregateLibraryTestHostLayout=true -p:Configuration=Release -p:Platform=x64 -p:TargetFramework=net11.0-linux -p:ArcadeTargetFrameworkDirectory=&quot;$(_AppDirectory)/toolset/Arcade/TargetFramework&quot; -p:FixtureCommonTargetsPath=&quot;$(MSBuildToolsPath)/Microsoft.Common.CurrentVersion.targets&quot; -p:RuntimeLibraryLayoutTargetsPath=&quot;$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/runtime/eng/libraryLayout.targets'))&quot;</_LedgerArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_LedgerStep Include="IncrementalClean;Clean" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_LedgerRoot)obj/Alpha/Release/x64/net11.0-linux/Alpha.FileListAbsolute.txt"
+                      Lines="$([MSBuild]::NormalizePath('$(_LedgerRoot)', 'layout/testhost/Alpha.dll'));$([MSBuild]::NormalizePath('$(_LedgerRoot)', 'layout/testhost/native/libmsquic.so'))" Overwrite="false" />
+    <Exec Command="$(_LedgerSdk) &quot;$(_LedgerRoot)Alpha.proj&quot; -t:%(_LedgerStep.Identity) $(_LedgerArguments)" />
+    <Error Condition="!Exists('$(_LedgerRoot)layout/testhost/Alpha.dll') or !Exists('$(_LedgerRoot)layout/testhost/native/libmsquic.so')"
+           Text="A stale producer ledger must not delete now aggregate-owned testhost outputs." />
   </Target>
   <Target Name="TestRuntimeGenAPI">
     <MakeDir Directories="$(_TestDirectory)" />
@@ -1406,8 +1613,16 @@
     </GetFileHash>
     <Error Condition="'@(_IllinkResourceMetadataHash->'%(FileHash)'->Distinct()->Count())' != '1'"
            Text="Explicit ILLink resource names must match ordinary execution while the source naming convention remains enabled." />
+    <Exec Command="$(_App) build &quot;$(_ResourceMetadataRoot)ResourceMetadata.proj&quot; -p:TestCase=non-resx-convention -p:ResultFile=non-resx-graph.txt -p:MSBuildEmitActionGraph=&quot;$(_ResourceMetadataRoot)non-resx.ninja&quot;" />
+    <Exec WorkingDirectory="$(_ResourceMetadataRoot)" Command="ninja -f non-resx.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_ResourceMetadataRoot)ResourceMetadata.proj&quot; -t:Build -p:TestCase=non-resx-convention -p:ResultFile=non-resx-ordinary.txt" />
+    <GetFileHash Files="$(_ResourceMetadataRoot)non-resx-graph.txt;$(_ResourceMetadataRoot)non-resx-ordinary.txt">
+      <Output TaskParameter="Items" ItemName="_NonResxResourceMetadataHash" />
+    </GetFileHash>
+    <Error Condition="'@(_NonResxResourceMetadataHash->'%(FileHash)'->Distinct()->Count())' != '1' or Exists('$(_ResourceMetadataRoot)missing')"
+           Text="A convention unused by non-resx resources must preserve ordinary names without discovery, including extension inference and explicit Type overrides." />
     <ItemGroup>
-      <_ResourceMetadataRejected Include="convention;dependent" Code="MSB3672" />
+      <_ResourceMetadataRejected Include="convention;convention-inferred;dependent" Code="MSB3672" />
       <_ResourceMetadataRejected Include="pfx;missing-key;certificate;certificate-file;container;manifest" Code="MSB3673" />
     </ItemGroup>
     <Exec Command="$(_App) build &quot;$(_ResourceMetadataRoot)ResourceMetadata.proj&quot; -p:TestCase=%(_ResourceMetadataRejected.Identity) -p:ResultFile=%(_ResourceMetadataRejected.Identity).txt -p:MSBuildEmitActionGraph=&quot;$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).ninja&quot; -flp:&quot;LogFile=$(_ResourceMetadataRoot)%(_ResourceMetadataRejected.Identity).log;Verbosity=quiet&quot;"
@@ -1428,6 +1643,8 @@
     <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeResourceCompilation.proj" DestinationFolder="$(_RuntimeResourceRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/linker/Resources/Strings.resx;$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/ILLink.Shared/SharedStrings.resx"
           DestinationFolder="$(_RuntimeResourceRoot)inputs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../../src/runtime/src/libraries/System.Collections.Immutable/src/Resources/Strings.resx"
+          DestinationFiles="$(_RuntimeResourceRoot)inputs/ImmutableStrings.resx" />
     <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
              Query="/Project/Target[@Name='CoreResGen']">
       <Output TaskParameter="Result" PropertyName="_RuntimeResourceTarget" />
@@ -1449,6 +1666,12 @@
                       Lines="&lt;Project&gt;&lt;PropertyGroup&gt;;$(_RuntimeResourceDefault);&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_RuntimeResourceRoot)ResourcePolicy.props"
                       Lines="&lt;Project&gt;&lt;PropertyGroup&gt;;$(_RuntimeResourcePolicy);&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)../../src/runtime/src/libraries/System.Collections.Immutable/src/System.Collections.Immutable.csproj"
+             Query="/Project/PropertyGroup/GenerateResourceUsePreserializedResources">
+      <Output TaskParameter="Result" PropertyName="_ImmutableResourcePolicy" />
+    </XmlPeek>
+    <WriteLinesToFile File="$(_RuntimeResourceRoot)ImmutablePolicy.props"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;;$(_ImmutableResourcePolicy);&lt;/PropertyGroup&gt;&lt;/Project&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_RuntimeResourceRoot)ResourceCompilation.targets"
                       Lines="&lt;Project&gt;;$(_RuntimeResourceTarget);&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -t:Build -p:TestCase=baseline -p:UseRuntimePolicy=false" />
@@ -1457,12 +1680,14 @@
     <Exec Command="$(_App) build &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -p:TestCase=graph -p:MSBuildEmitActionGraph=&quot;$(_RuntimeResourceRoot)build.ninja&quot;" />
     <Error Condition="Exists('$(_RuntimeResourceRoot)obj/graph/Strings.resx') or
                       Exists('$(_RuntimeResourceRoot)obj/graph/SharedStrings.resx') or
+                      Exists('$(_RuntimeResourceRoot)obj/graph/ImmutableStrings.resx') or
                       Exists('$(_RuntimeResourceRoot)obj/graph/Mono.Linker.Resources.Strings.resources') or
-                      Exists('$(_RuntimeResourceRoot)obj/graph/ILLink.Shared.SharedStrings.resources')"
+                      Exists('$(_RuntimeResourceRoot)obj/graph/ILLink.Shared.SharedStrings.resources') or
+                      Exists('$(_RuntimeResourceRoot)obj/graph/System.Collections.Immutable.Strings.resources')"
            Text="Resource construction must not execute RESX producers or create compiled resources." />
     <Exec WorkingDirectory="$(_RuntimeResourceRoot)" Command="ninja -f build.ninja" />
     <ItemGroup>
-      <_RuntimeResourceFile Include="Mono.Linker.Resources.Strings.resources;ILLink.Shared.SharedStrings.resources" />
+      <_RuntimeResourceFile Include="Mono.Linker.Resources.Strings.resources;ILLink.Shared.SharedStrings.resources;System.Collections.Immutable.Strings.resources" />
     </ItemGroup>
     <GetFileHash Files="@(_RuntimeResourceFile->'$(_RuntimeResourceRoot)obj/baseline/%(Identity)')">
       <Output TaskParameter="Items" ItemName="_RuntimeResourceBaselineHash" />
@@ -1477,6 +1702,23 @@
                       '@(_RuntimeResourceBaselineHash->'%(FileHash)')' != '@(_RuntimeResourceGraphHash->'%(FileHash)')' or
                       Exists('$(_RuntimeResourceRoot)obj/graph/RuntimeResourceCompilation.proj.GenerateResource.cache')"
            Text="Actual ILLink resources must preserve SDK-default preserialized bytes in ordinary and independent execution, without an action-side incremental cache." />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -t:Build -p:TestCase=ordinary-immutable -p:ResourcePolicyFile=ImmutablePolicy.props" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -p:TestCase=graph-immutable -p:ResourcePolicyFile=ImmutablePolicy.props" />
+    <Exec Command="$(_App) build &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -p:TestCase=graph-immutable -p:ResourcePolicyFile=ImmutablePolicy.props -p:MSBuildEmitActionGraph=&quot;$(_RuntimeResourceRoot)immutable.ninja&quot;" />
+    <Error Condition="Exists('$(_RuntimeResourceRoot)obj/graph-immutable/ImmutableStrings.resx') or
+                      Exists('$(_RuntimeResourceRoot)obj/graph-immutable/System.Collections.Immutable.Strings.resources')"
+           Text="Immutable resource construction must not execute RESX producers or create compiled resources." />
+    <Exec WorkingDirectory="$(_RuntimeResourceRoot)" Command="ninja -f immutable.ninja" />
+    <GetFileHash Files="@(_RuntimeResourceFile->'$(_RuntimeResourceRoot)obj/ordinary-immutable/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_ImmutableResourceOrdinaryHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_RuntimeResourceFile->'$(_RuntimeResourceRoot)obj/graph-immutable/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_ImmutableResourceGraphHash" />
+    </GetFileHash>
+    <Error Condition="'@(_RuntimeResourceBaselineHash->'%(FileHash)')' != '@(_ImmutableResourceOrdinaryHash->'%(FileHash)')' or
+                      '@(_RuntimeResourceBaselineHash->'%(FileHash)')' != '@(_ImmutableResourceGraphHash->'%(FileHash)')' or
+                      Exists('$(_RuntimeResourceRoot)obj/graph-immutable/RuntimeResourceCompilation.proj.GenerateResource.cache')"
+           Text="Immutable's string-only resource policy must preserve SDK-default bytes in ordinary and independent execution without an action-side cache." />
   </Target>
   <Target Name="TestInternalsVisibleTo">
     <PropertyGroup>
@@ -1794,6 +2036,121 @@
                       Exists('$(_SourceCopyRoot)%(_SourceCopyRejected.Identity)/action/build.ninja') or
                       Exists('$(_SourceCopyRoot)%(_SourceCopyRejected.Identity)/action/build.ninja.actions')"
            Text="Unsupported source-copy link/read-only policies must fail without a partial graph." />
+  </Target>
+  <Target Name="TestRuntimeOptimization">
+    <PropertyGroup>
+      <_OptimizationRoot>$(_TestDirectory)optimization/</_OptimizationRoot>
+      <_OptimizationArguments>-p:RuntimeOptimizationTargets=&quot;$(MSBuildThisFileDirectory)../../src/runtime/eng/codeOptimization.targets&quot;</_OptimizationArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_OptimizationCase Include="disabled;ineligible;enabled" />
+    </ItemGroup>
+    <MakeDir Directories="$(_OptimizationRoot)%(_OptimizationCase.Identity)/profiles/linux" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeOptimization.proj" DestinationFolder="$(_OptimizationRoot)%(_OptimizationCase.Identity)" />
+    <WriteLinesToFile File="$(_OptimizationRoot)enabled/profiles/linux/Profile.dll" Lines="profile fixture" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_OptimizationRoot)%(_OptimizationCase.Identity)/RuntimeOptimization.proj&quot; -p:TestCase=%(_OptimizationCase.Identity) $(_OptimizationArguments) -p:ResultFile=graph.txt -p:MSBuildEmitActionGraph=&quot;$(_OptimizationRoot)%(_OptimizationCase.Identity)/build.ninja&quot;" />
+    <Exec WorkingDirectory="$(_OptimizationRoot)%(_OptimizationCase.Identity)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_OptimizationRoot)%(_OptimizationCase.Identity)/RuntimeOptimization.proj&quot; -t:Build -p:TestCase=%(_OptimizationCase.Identity) $(_OptimizationArguments) -p:ResultFile=ordinary.txt" />
+    <GetFileHash Files="$(_OptimizationRoot)%(_OptimizationCase.Identity)/graph.txt">
+      <Output TaskParameter="Items" ItemName="_OptimizationGraphHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_OptimizationRoot)%(_OptimizationCase.Identity)/ordinary.txt">
+      <Output TaskParameter="Items" ItemName="_OptimizationOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_OptimizationGraphHash->'%(FileHash)')' != '@(_OptimizationOrdinaryHash->'%(FileHash)')'"
+           Text="Disabled/ineligible optimization must avoid unused profile discovery while enabled selection preserves ordinary metadata." />
+    <Message Importance="high" Text="Runtime optimization checks passed: disabled/ineligible discovery no-ops and enabled profile selection." />
+  </Target>
+  <Target Name="TestRuntimeLinkerXml">
+    <PropertyGroup>
+      <_LinkerXmlRoot>$(_TestDirectory)linker-xml/</_LinkerXmlRoot>
+      <_LinkerXmlArguments>-p:TestCombine=true -p:MSBuildGraphRepositoryRoot=&quot;$(_LinkerXmlRoot)&quot; -p:ArcadeBuildTasksProps=&quot;$(_AppDirectory)/toolset/Arcade/Sdk/tools/BuildTasks.props&quot; -p:RuntimeILLinkTargets=&quot;$(MSBuildThisFileDirectory)../../src/runtime/eng/illink.targets&quot; -p:RuntimeResourcesTemplate=&quot;$(MSBuildThisFileDirectory)../../src/runtime/eng/ILLink.Substitutions.Resources.template&quot; -p:RuntimeILLinkSourceDirectory=&quot;$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/ILLink.Tasks/&quot; -p:TaskReferenceDirectory=&quot;$(MSBuildBinPath)&quot;</_LinkerXmlArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_LinkerXmlDirectory Include="$(_LinkerXmlRoot)action/;$(_LinkerXmlRoot)ordinary/" />
+      <_LinkerXmlImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+      <_LinkerXmlOutput Include="ILLink.Descriptors.xml;ILLink.Substitutions.xml;ILLink.LinkAttributes.xml" />
+    </ItemGroup>
+    <MakeDir Directories="%(_LinkerXmlDirectory.Identity)task" />
+    <WriteLinesToFile File="$(_LinkerXmlRoot)%(_LinkerXmlImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeResourceSubstitutions.proj" DestinationFolder="%(_LinkerXmlDirectory.Identity)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeLinkerXmlTask.csproj" DestinationFolder="%(_LinkerXmlDirectory.Identity)task" />
+    <Exec Command="$(_App) restore &quot;$(_LinkerXmlRoot)action/RuntimeResourceSubstitutions.proj&quot; $(_LinkerXmlArguments)" />
+    <Exec Command="$(_App) build &quot;$(_LinkerXmlRoot)action/RuntimeResourceSubstitutions.proj&quot; $(_LinkerXmlArguments) -p:MSBuildEmitActionGraph=&quot;$(_LinkerXmlRoot)action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_LinkerXmlRoot)action/task/bin/Debug/net11.0/Fixture.ILLink.Tasks.dll') or
+                      Exists('$(_LinkerXmlRoot)action/obj/descriptor.xml') or Exists('$(_LinkerXmlRoot)action/out/ILLink.Substitutions.xml')"
+           Text="Construction must leave the XML combiner assembly, future XML inputs and products absent." />
+    <Exec WorkingDirectory="$(_LinkerXmlRoot)action" Command="ninja -f build.ninja &quot;$(_LinkerXmlRoot)action/out/%(_LinkerXmlOutput.Identity)&quot;" />
+    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; msbuild &quot;$(_LinkerXmlRoot)ordinary/RuntimeResourceSubstitutions.proj&quot; -t:Restore,Build $(_LinkerXmlArguments) -m:1 -nr:false -v:quiet" />
+    <GetFileHash Files="$(_LinkerXmlRoot)action/out/%(_LinkerXmlOutput.Identity)">
+      <Output TaskParameter="Items" ItemName="_LinkerXmlActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_LinkerXmlRoot)ordinary/out/%(_LinkerXmlOutput.Identity)">
+      <Output TaskParameter="Items" ItemName="_LinkerXmlOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_LinkerXmlActionHash->'%(FileHash)')' != '@(_LinkerXmlOrdinaryHash->'%(FileHash)')'"
+           Text="The future XML combiner must match stock SDK descriptor/substitution/attribute bytes." />
+    <Message Importance="high" Text="Runtime linker XML checks passed: future combiner assembly and XML producers, selected outputs, descriptor/substitution/attribute bytes and static FileWrites." />
+  </Target>
+  <Target Name="TestRuntimeResourceSubstitutions">
+    <PropertyGroup>
+      <_SubstitutionRoot>$(_TestDirectory)resource-substitutions/</_SubstitutionRoot>
+      <_SubstitutionOutput>out/ILLink.Resources.Substitutions.xml</_SubstitutionOutput>
+      <_SubstitutionSdk>$(DOTNET_HOST_PATH)</_SubstitutionSdk>
+      <_SubstitutionArguments>-p:ArcadeBuildTasksProps=&quot;$(_AppDirectory)/toolset/Arcade/Sdk/tools/BuildTasks.props&quot; -p:RuntimeILLinkTargets=&quot;$(MSBuildThisFileDirectory)../../src/runtime/eng/illink.targets&quot; -p:RuntimeResourcesTemplate=&quot;$(MSBuildThisFileDirectory)../../src/runtime/eng/ILLink.Substitutions.Resources.template&quot;</_SubstitutionArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_SubstitutionCase Include="normal;literal;cascade;empty-resource;generated;disabled;missing-input;write-failure" />
+      <_SubstitutionExecution Include="normal;literal;cascade;empty-resource;generated" />
+      <_SubstitutionOrdinary Include="@(_SubstitutionExecution);disabled" />
+      <_SubstitutionDirectory Include="@(_SubstitutionCase->'$(_SubstitutionRoot)%(Identity)/action/');@(_SubstitutionOrdinary->'$(_SubstitutionRoot)%(Identity)/ordinary/')" />
+    </ItemGroup>
+    <MakeDir Directories="@(_SubstitutionDirectory);$(_SubstitutionRoot)normal/action/out" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeResourceSubstitutions.proj" DestinationFolder="%(_SubstitutionDirectory.Identity)" />
+    <WriteLinesToFile File="$(_SubstitutionRoot)normal/action/$(_SubstitutionOutput)" Lines="stale substitution" Overwrite="true" />
+    <GetFileHash Files="$(_SubstitutionRoot)normal/action/$(_SubstitutionOutput)">
+      <Output TaskParameter="Hash" PropertyName="_SubstitutionStaleBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) restore &quot;$(_SubstitutionRoot)%(_SubstitutionCase.Identity)/action/RuntimeResourceSubstitutions.proj&quot; -p:TestCase=%(_SubstitutionCase.Identity) $(_SubstitutionArguments)" />
+    <Exec Command="$(_App) build &quot;$(_SubstitutionRoot)%(_SubstitutionCase.Identity)/action/RuntimeResourceSubstitutions.proj&quot; -p:TestCase=%(_SubstitutionCase.Identity) $(_SubstitutionArguments) -p:MSBuildEmitActionGraph=&quot;$(_SubstitutionRoot)%(_SubstitutionCase.Identity)/action/build.ninja&quot;"
+          Condition="'%(_SubstitutionCase.Identity)' != 'missing-input'" />
+    <Exec Command="$(_App) build &quot;$(_SubstitutionRoot)missing-input/action/RuntimeResourceSubstitutions.proj&quot; -p:TestCase=missing-input $(_SubstitutionArguments) -p:MSBuildEmitActionGraph=&quot;$(_SubstitutionRoot)missing-input/action/build.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_SubstitutionMissingInputExitCode" />
+    </Exec>
+    <Error Condition="'$(_SubstitutionMissingInputExitCode)' == '0' or
+                      Exists('$(_SubstitutionRoot)missing-input/action/build.ninja') or
+                      Exists('$(_SubstitutionRoot)missing-input/action/build.ninja.actions')"
+           Text="A missing template without a producer must fail construction without partial publication." />
+    <GetFileHash Files="$(_SubstitutionRoot)normal/action/$(_SubstitutionOutput)">
+      <Output TaskParameter="Hash" PropertyName="_SubstitutionStaleAfter" />
+    </GetFileHash>
+    <Error Condition="'$(_SubstitutionStaleBefore)' != '$(_SubstitutionStaleAfter)' or
+                      Exists('$(_SubstitutionRoot)generated/action/obj/future.template') or
+                      Exists('$(_SubstitutionRoot)generated/action/$(_SubstitutionOutput)')"
+           Text="Construction must preserve stale substitutions and leave future templates/products absent." />
+    <Exec WorkingDirectory="$(_SubstitutionRoot)%(_SubstitutionExecution.Identity)/action"
+          Command="ninja -f build.ninja &quot;$(_SubstitutionRoot)%(_SubstitutionExecution.Identity)/action/$(_SubstitutionOutput)&quot;" />
+    <Exec Command="&quot;$(_SubstitutionSdk)&quot; msbuild &quot;$(_SubstitutionRoot)%(_SubstitutionOrdinary.Identity)/ordinary/RuntimeResourceSubstitutions.proj&quot; -t:Build -p:TestCase=%(_SubstitutionOrdinary.Identity) $(_SubstitutionArguments) -m:1 -nr:false -v:quiet" />
+    <GetFileHash Files="$(_SubstitutionRoot)%(_SubstitutionExecution.Identity)/action/$(_SubstitutionOutput)">
+      <Output TaskParameter="Items" ItemName="_SubstitutionActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_SubstitutionRoot)%(_SubstitutionExecution.Identity)/ordinary/$(_SubstitutionOutput)">
+      <Output TaskParameter="Items" ItemName="_SubstitutionOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_SubstitutionActionHash->'%(FileHash)')' != '@(_SubstitutionOrdinaryHash->'%(FileHash)')'"
+           Text="Resource-substitution execution must match ordinary template replacement bytes, including literal values, empty values and replacement order." />
+    <Exec WorkingDirectory="$(_SubstitutionRoot)disabled/action" Command="ninja -f build.ninja" />
+    <Error Condition="Exists('$(_SubstitutionRoot)disabled/action/$(_SubstitutionOutput)') or Exists('$(_SubstitutionRoot)disabled/ordinary/$(_SubstitutionOutput)')"
+           Text="Disabled resource substitution must remain a no-op." />
+    <MakeDir Directories="$(_SubstitutionRoot)write-failure/action/$(_SubstitutionOutput)" />
+    <Exec WorkingDirectory="$(_SubstitutionRoot)write-failure/action"
+          Command="ninja -f build.ninja &quot;$(_SubstitutionRoot)write-failure/action/$(_SubstitutionOutput)&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_SubstitutionFailureExitCode" />
+    </Exec>
+    <Error Condition="'$(_SubstitutionFailureExitCode)' == '0'" Text="Failed substitution writes must fail independent execution." />
+    <Message Importance="high" Text="Runtime resource-substitution checks passed: stock SDK byte parity, literal/empty/ordered replacements, future template edges, stale construction, static FileWrites, disabled no-op and execution failures. $(_SubstitutionRoot)" />
   </Target>
   <Target Name="TestRuntimePackageConfig" DependsOnTargets="TestRuntimeConfig">
     <PropertyGroup>

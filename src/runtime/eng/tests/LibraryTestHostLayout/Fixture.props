@@ -1,0 +1,36 @@
+<Project>
+  <PropertyGroup>
+    <!-- These projects deliberately do not import the runtime's root build. -->
+    <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
+    <ImportDirectoryBuildTargets>false</ImportDirectoryBuildTargets>
+    <ImportDirectoryPackagesProps>false</ImportDirectoryPackagesProps>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+    <TargetFramework Condition="'$(TargetFramework)' == ''">net11.0-linux</TargetFramework>
+    <TestCase Condition="'$(TestCase)' == ''">full</TestCase>
+    <FixtureRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)'))</FixtureRoot>
+    <MSBuildProjectExtensionsPath>$(FixtureRoot)obj/$(MSBuildProjectName)/</MSBuildProjectExtensionsPath>
+    <IntermediateOutputPath>$(MSBuildProjectExtensionsPath)$(Configuration)/$(Platform)/$(TargetFramework)/</IntermediateOutputPath>
+    <OutputPath>$(FixtureRoot)unused/$(MSBuildProjectName)/</OutputPath>
+    <OutDir>$(OutputPath)</OutDir>
+    <CleanFile>$(MSBuildProjectName).FileListAbsolute.txt</CleanFile>
+    <BundledRuntimeIdentifierGraphFile>$(FixtureRoot)runtime.json</BundledRuntimeIdentifierGraphFile>
+    <NetCoreAppCurrent>net11.0</NetCoreAppCurrent>
+    <TargetOS>linux</TargetOS>
+    <NetCoreAppCurrentTestHostSharedFrameworkPath>$(FixtureRoot)layout/testhost/</NetCoreAppCurrentTestHostSharedFrameworkPath>
+    <BinPlaceUseHardlinksIfPossible>false</BinPlaceUseHardlinksIfPossible>
+    <CopyRetryCount>0</CopyRetryCount>
+    <CopyRetryDelayMilliseconds>0</CopyRetryDelayMilliseconds>
+    <BuildInParallel>false</BuildInParallel>
+    <FixtureCommonTargetsPath Condition="'$(FixtureCommonTargetsPath)' == ''">$(MSBuildToolsPath)/Microsoft.Common.CurrentVersion.targets</FixtureCommonTargetsPath>
+  </PropertyGroup>
+
+  <!-- Ordinary cleanup uses the SDK's real common targets and Arcade's real BinPlace hooks.
+       Hardened construction must not import or replay an ordinary clean ledger. -->
+  <Import Project="$(FixtureCommonTargetsPath)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <Import Project="$(ArcadeTargetFrameworkDirectory)/build/Microsoft.DotNet.Build.Tasks.TargetFramework.props" />
+  <Import Project="$(ArcadeTargetFrameworkDirectory)/build/Microsoft.DotNet.Build.Tasks.TargetFramework.targets" />
+  <PropertyGroup>
+    <CleanDependsOn>CoreClean</CleanDependsOn>
+  </PropertyGroup>
+</Project>

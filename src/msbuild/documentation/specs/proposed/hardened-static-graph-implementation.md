@@ -841,8 +841,7 @@ inventory and destination mapping; the old `BinPlace` entry points delegate to
 that policy. Products include declared assembly, symbol, documentation, content,
 copy-local and satellite outputs. Layout queries do not build or copy them.
 They retain custom item lists and target paths, deduplicate identical placements,
-and reject conflicting sources for a destination. Aggregate consumer-owned
-layouts can consume these queries; their migration is not part of this first slice.
+and reject conflicting sources for a destination.
 Ordinary publication preserves existing paths and best-effort copy/link settings.
 Hardened publication uses explicit byte-copy actions and static `FileWrites`,
 without creating a new manifest format or adapting legacy clean ledgers.
@@ -852,14 +851,61 @@ read. The layout regression passes legacy/ordinary/independent byte and placemen
 parity, custom and escaped paths, inactive and fallback frameworks, explicit
 publication with automatic binplacing disabled, configured symbol/doc exclusion,
 duplicate mappings, compatibility aliases and fail-closed conflicts.
+The first consumer-owned aggregate is the library-produced part of the testhost.
+With `UseAggregateLibraryTestHostLayout=true`, `sfx-src.proj` queries its selected
+library builds, deduplicates complete source/destination mappings, rejects
+cross-library collisions and publishes one combined inventory. CoreLib selection
+remains with externals; native-library and external runtime/host staging have not
+been migrated. Shared-framework library producers suppress only their testhost
+publication in this mode, including custom MsQuic-style mappings, and keep their
+other destinations. Ordinary default builds retain per-library publication.
+Ordinary aggregate incrementality and cleanup reuse the existing file-write
+ledger, while old producer ledgers cannot delete the transferred destinations.
+Hardened construction skips that bookkeeping.
+The two-project regression passes stock SDK versus Ninja byte/mapping/FileWrites
+parity, configured framework/platform/property negotiation, pure future queries,
+custom native maps, identical-map deduplication, cross-project conflicts, empty
+aggregates, default/non-source compatibility and ordinary unchanged-copy,
+dropped-output, stale-producer-ledger and foreign-file cleanup checks.
+Windows-only case tests are authored but not executed on Linux.
+A selected output verifies its future producer edge, not minimal pruning:
+the prototype currently retains conservative ordering of preceding actions.
 The guarded ordinary runtime query returns the future Immutable DLL/PDB/XML
 inventory without building it. All three layout requests select `net11.0` from
 the project's supported frameworks, so the selected `net10.0` build correctly
 has no placements; positive publication is proven by the isolated fixtures.
-The real probe now passes the library binplace hooks and reaches
-`GenerateResourcesSubstitutionFile` in `eng/illink.targets`: its
-`WriteLinesToFile.Lines` still reads a template using `File.ReadAllText`
-(`MSB4287`). This template transformation needs execution-time declared I/O.
+The actual `sfx-src.proj` consumer also succeeds in a guarded query restricted
+to Immutable through the existing custom Traversal import hook. It selects the
+`net11.0` inner build and returns three future testhost placements with absent
+sources/destinations and no products built. Full-framework composition/execution
+is not established by that bounded query.
+The real probe now passes resource substitution and XML combination.
+`GenerateResourcesSubstitutionFile` uses a declared-input/output `ReplaceTextFile`
+worker in hardened mode, while ordinary builds retain their original writer.
+The template is also an ordinary incremental input. Replacement preserves
+sequential literal substitutions, empty values and the legacy writer's text-item
+conversion. Tests compare stock SDK bytes, preserve stale output during
+construction, consume a future template producer and reject missing inputs or
+failed execution writes.
+All three `CombineLinkerXmlFiles` calls declare their XML inputs and output;
+the runtime task source exposes that contract using the compatibility attribute
+pattern for older MSBuild references. An isolated SDK project builds that actual
+task source through Ninja, then selected descriptor/substitution/attribute
+outputs consume future XML inputs and match ordinary bytes and static bookkeeping.
+Metadata-only resource naming accepts the source-convention switch when a
+resource is not resx, matching ordinary type/extension classification without
+source discovery. Resx convention inference and explicit dependencies remain
+unsupported. Immutable's string-only resource policy disables object
+serialization; all three real ILLink/Immutable resource files match
+SDK-default bytes under both ordinary and independent compilation.
+Disabled or ineligible NGen optimization no longer searches unused profile
+directories; enabled bounded profile selection retains ordinary metadata.
+The current first blocker is runtime's missing-documentation warning.
+Experimental declared zero-I/O `Warning` support was held back after reproducing
+Ninja/action publication despite a nonzero warnings-as-errors result.
+Construction publication must become transactional with the final diagnostic
+outcome, including promoted warnings and project-reference failure scopes,
+before enabling this diagnostic path.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

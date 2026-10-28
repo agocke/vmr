@@ -5,6 +5,9 @@
     <BinPlaceForTargetVertical Condition="'$(BinPlaceForTargetVertical)' == ''">true</BinPlaceForTargetVertical>
     <GetLibraryBuildProductsDependsOn>GetCopyToOutputDirectoryItems;PrepareResourceNames;ComputeIntermediateSatelliteAssemblies;$(GetLibraryBuildProductsDependsOn)</GetLibraryBuildProductsDependsOn>
     <GetLibraryLayoutDirectoriesDependsOn Condition="'$(MSBuildHardenedGraph)' == 'true'">$(GetLibraryLayoutDirectoriesDependsOn);_ValidateTargetFrameworkInputs</GetLibraryLayoutDirectoriesDependsOn>
+    <_LibraryTestHostDirectory Condition="'$(NetCoreAppCurrentTestHostSharedFrameworkPath)' != ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(NetCoreAppCurrentTestHostSharedFrameworkPath)'))</_LibraryTestHostDirectory>
+    <_LibraryLayoutPathComparison>System.StringComparison.Ordinal</_LibraryLayoutPathComparison>
+    <_LibraryLayoutPathComparison Condition="$([MSBuild]::IsOSPlatform('Windows'))">System.StringComparison.OrdinalIgnoreCase</_LibraryLayoutPathComparison>
   </PropertyGroup>
 
   <ItemGroup>
@@ -85,6 +88,10 @@
           DependsOnTargets="GetLibraryLayoutDirectories;_GetLibraryLayoutFiles"
           Returns="@(LibraryLayoutFile)" />
 
+  <Target Name="GetLibraryTestHostLayout"
+          DependsOnTargets="GetLibraryLayout"
+          Returns="@(LibraryTestHostFile)" />
+
   <Target Name="_GetLibraryLayoutFiles"
           DependsOnTargets="GetLibraryBuildProducts"
           Condition="'@(LibraryLayoutDirectory)' != ''">
@@ -105,6 +112,8 @@
       </_LibraryLayoutSource>
       <LibraryLayoutFile Include="@(_LibraryLayoutSource->'%(DestinationPath)')"
                          KeepMetadata="SourcePath" KeepDuplicates="false" />
+      <LibraryTestHostFile Include="@(LibraryLayoutFile)"
+                           Condition="'$(_LibraryTestHostDirectory)' != '' and $([System.String]::new('%(LibraryLayoutFile.Identity)').StartsWith('$(_LibraryTestHostDirectory)', $(_LibraryLayoutPathComparison)))" />
     </ItemGroup>
     <PropertyGroup>
       <_LibraryLayoutConflict Condition="'@(LibraryLayoutFile->Count())' != '@(LibraryLayoutFile->DistinctWithCase()->Count())' or
@@ -118,16 +127,31 @@
   </Target>
 
   <Target Name="PublishLibraryLayout" DependsOnTargets="GetLibraryLayout">
-    <Copy SourceFiles="@(LibraryLayoutFile->'%(SourcePath)')" DestinationFiles="@(LibraryLayoutFile)"
+    <ItemGroup>
+      <_LibraryLayoutToPublish Include="@(LibraryLayoutFile)" />
+      <_LibraryLayoutToPublish Remove="@(LibraryTestHostFile)"
+                               Condition="'$(UseAggregateLibraryTestHostLayout)' == 'true' and '$(IsNETCoreAppSrc)' == 'true'" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_LibraryLayoutToPublish->'%(SourcePath)')" DestinationFiles="@(_LibraryLayoutToPublish)"
           SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true"
           Retries="$(CopyRetryCount)" RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
           UseHardlinksIfPossible="$(BinPlaceUseHardlinksIfPossible)"
           Condition="'$(MSBuildHardenedGraph)' != 'true'" />
-    <CopyFiles SourceFiles="@(LibraryLayoutFile->'%(SourcePath)')" DestinationFiles="@(LibraryLayoutFile)"
-               DeclaredInputs="@(LibraryLayoutFile->'%(SourcePath)')" DeclaredOutputs="@(LibraryLayoutFile)"
-               Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(LibraryLayoutFile)' != ''" />
+    <CopyFiles SourceFiles="@(_LibraryLayoutToPublish->'%(SourcePath)')" DestinationFiles="@(_LibraryLayoutToPublish)"
+               DeclaredInputs="@(_LibraryLayoutToPublish->'%(SourcePath)')" DeclaredOutputs="@(_LibraryLayoutToPublish)"
+               Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(_LibraryLayoutToPublish)' != ''" />
     <ItemGroup>
-      <FileWrites Include="@(LibraryLayoutFile)" />
+      <FileWrites Include="@(_LibraryLayoutToPublish)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Old producer ledgers must not delete files now owned by the aggregate. -->
+  <Target Name="ExcludeAggregateLibraryTestHostCleanDirectories"
+          BeforeTargets="_CleanGetCurrentAdditionalFileWrites;IncrementalCleanAdditionalDirectories;CleanAdditionalDirectories"
+          Condition="'$(UseAggregateLibraryTestHostLayout)' == 'true' and '$(IsNETCoreAppSrc)' == 'true' and '$(_LibraryTestHostDirectory)' != ''">
+    <ItemGroup>
+      <AdditionalCleanDirectories Remove="@(AdditionalCleanDirectories)"
+                                  Condition="$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '%(AdditionalCleanDirectories.Identity)').StartsWith('$(_LibraryTestHostDirectory)', $(_LibraryLayoutPathComparison)))" />
     </ItemGroup>
   </Target>
 

@@ -1,0 +1,107 @@
+<Project DefaultTargets="Build">
+  <Import Project="Fixture.props" />
+  <PropertyGroup>
+    <TargetFrameworkMoniker>.NETCoreApp,Version=v11.0</TargetFrameworkMoniker>
+    <TargetPlatformMoniker>linux,Version=0.0</TargetPlatformMoniker>
+    <CoreLibProject>$(FixtureRoot)CoreLib.proj</CoreLibProject>
+    <_BuildDependsOn>Query</_BuildDependsOn>
+    <_BuildDependsOn Condition="'$(QueryOnly)' != 'true'">BuildContributors;Query</_BuildDependsOn>
+  </PropertyGroup>
+  <!-- The aggregate must replace the real producer query, not merely introduce a new target. -->
+  <Import Project="$(RuntimeLibraryLayoutTargetsPath)" />
+  <ItemGroup>
+    <ProjectReference Include="$(FixtureRoot)Alpha.proj" Condition="'$(TestCase)' != 'empty'"
+                      SetConfiguration="Configuration=Release" SetPlatform="Platform=x64" SetTargetFramework="TargetFramework=net11.0-linux" />
+    <ProjectReference Include="$(FixtureRoot)Beta.proj" Condition="'$(TestCase)' != 'empty'"
+                      SetConfiguration="Configuration=Checked" SetPlatform="Platform=arm64" SetTargetFramework="TargetFramework=net10.0-unix" />
+    <ProjectReference Include="$(CoreLibProject);$(FixtureRoot)Ignored.proj" SetTargetFramework="TargetFramework=net11.0-linux" />
+    <ProjectReference Update="$(FixtureRoot)Ignored.proj" Build="false" />
+    <ProjectReference Update="@(ProjectReference)" GlobalPropertiesToRemove="ParentOnlyProperty" UndefineProperties="ParentUndefined" />
+
+    <_Expected Include="$(FixtureRoot)layout/testhost/Alpha.dll" SourcePath="$(FixtureRoot)products/Alpha/Release/x64/net11.0-linux/Alpha.dll"
+               Condition="'$(TestCase)' != 'empty'" />
+    <_Expected Include="$(FixtureRoot)layout/testhost/native/libmsquic.so" SourcePath="$(FixtureRoot)products/shared/libmsquic.so"
+               Condition="'$(TestCase)' != 'empty'" />
+    <_Expected Include="$(FixtureRoot)layout/testhost/Beta.dll" SourcePath="$(FixtureRoot)products/Beta/Checked/arm64/net10.0-unix/Beta.dll"
+               Condition="'$(TestCase)' != 'empty'" />
+    <_Expected Include="$(FixtureRoot)layout/testhost/optional.txt" SourcePath="$(FixtureRoot)products/Beta/Checked/arm64/net10.0-unix/optional.txt"
+               Condition="'$(TestCase)' != 'empty' and '$(DropOptional)' != 'true'" />
+    <_Expected Include="$(FixtureRoot)layout/TESTHOST/case/Alpha.dll" SourcePath="$(FixtureRoot)products/Alpha/Release/x64/net11.0-linux/Alpha.dll"
+               Condition="'$(TestCase)' == 'case-root'" />
+    <_Expected Update="@(_Expected)">
+      <SourcePath>$([MSBuild]::NormalizePath('%(_Expected.SourcePath)'))</SourcePath>
+    </_Expected>
+  </ItemGroup>
+
+  <Target Name="ResolvePackageDependenciesForBuild" />
+  <Target Name="_AddOutputPathToGlobalPropertiesToRemove" />
+  <Target Name="RecordFixtureP2PResolution" AfterTargets="ResolveP2PReferences">
+    <PropertyGroup>
+      <_FixtureP2PResolved>true</_FixtureP2PResolved>
+    </PropertyGroup>
+  </Target>
+  <Target Name="Restore" DependsOnTargets="_CaptureTargetFrameworkInputs;ResolveP2PReferences">
+    <MSBuild Projects="@(ProjectReference)" Targets="Restore"
+             Properties="%(ProjectReference.SetConfiguration);%(ProjectReference.SetPlatform);%(ProjectReference.SetTargetFramework)"
+             RemoveProperties="%(ProjectReference.GlobalPropertiesToRemove);%(ProjectReference.UndefineProperties)"
+             Condition="'%(ProjectReference.Build)' != 'false' and '%(ProjectReference.Identity)' != '$(CoreLibProject)'" />
+  </Target>
+  <Target Name="BuildContributors" DependsOnTargets="ResolveP2PReferences">
+    <MSBuild Projects="@(ProjectReference)" Targets="Build"
+             Properties="%(ProjectReference.SetConfiguration);%(ProjectReference.SetPlatform);%(ProjectReference.SetTargetFramework)"
+             RemoveProperties="%(ProjectReference.GlobalPropertiesToRemove);%(ProjectReference.UndefineProperties)"
+             Condition="'%(ProjectReference.Build)' != 'false' and '%(ProjectReference.Identity)' != '$(CoreLibProject)'" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="$(_BuildDependsOn)" />
+
+  <!-- Like sfx-src.proj, import the aggregate after the traversal's Build/query authoring. -->
+  <Import Project="$(RuntimeLibraryTestHostLayoutTargetsPath)" />
+
+  <Target Name="Query" DependsOnTargets="GetLibraryTestHostLayout">
+    <ItemGroup>
+      <_ExpectedPair Include="@(_Expected->'%(FullPath)|%(SourcePath)')" />
+      <_ActualPair Include="@(LibraryTestHostFile->'%(Identity)|%(SourcePath)')" />
+      <_MissingPair Include="@(_ExpectedPair)" Exclude="@(_ActualPair)" />
+      <_ExtraPair Include="@(_ActualPair)" Exclude="@(_ExpectedPair)" />
+      <_QuerySnapshot Include="@(LibraryTestHostFile)">
+        <Line>$([System.String]::Copy('%(Identity)').Replace('$(FixtureRoot)', '').Replace('\', '/'))|$([System.String]::Copy('%(SourcePath)').Replace('$(FixtureRoot)', '').Replace('\', '/'))</Line>
+      </_QuerySnapshot>
+    </ItemGroup>
+    <PropertyGroup>
+      <_BadQuery Condition="'$(_FixtureP2PResolved)' != 'true' or '@(_MissingPair);@(_ExtraPair)' != ';' or '@(LibraryTestHostFile->Count())' != '@(_Expected->Count())' or '@(FileWrites)' != ''">true</_BadQuery>
+      <_QueryCount>@(LibraryTestHostFile->Count())</_QueryCount>
+    </PropertyGroup>
+    <Error Condition="'$(_BadQuery)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'"
+           Text="Aggregate query must deduplicate identical cross-project mappings and return only the exact selected future outputs. Missing=@(_MissingPair), extra=@(_ExtraPair), writes=@(FileWrites)." />
+    <Error Condition="'$(_BadQuery)' == 'true' and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="Aggregate query must deduplicate identical cross-project mappings and return only the exact selected future outputs. Missing=@(_MissingPair), extra=@(_ExtraPair), writes=@(FileWrites)."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(FixtureRoot)query.txt" Lines="count=$(_QueryCount);@(_QuerySnapshot->'%(Line)')" Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="$(FixtureRoot)query.txt" Lines="count=$(_QueryCount);@(_QuerySnapshot->'%(Line)')" Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" DeclaredInputs="" DeclaredOutputs="$(FixtureRoot)query.txt" />
+  </Target>
+  <Target Name="RecordAggregateWrites" AfterTargets="PublishLibraryTestHostLayout"
+          Condition="'$(UseAggregateLibraryTestHostLayout)' == 'true' and '$(QueryOnly)' != 'true'">
+    <ItemGroup>
+      <_MissingWrite Include="@(_Expected)" Exclude="@(FileWrites)" />
+      <_ExtraWrite Include="@(FileWrites)" Exclude="@(_Expected)" />
+      <_WriteSnapshot Include="@(FileWrites)">
+        <Line>$([System.String]::Copy('%(Identity)').Replace('$(FixtureRoot)', '').Replace('\', '/'))</Line>
+      </_WriteSnapshot>
+    </ItemGroup>
+    <PropertyGroup>
+      <_BadWrites Condition="'@(_MissingWrite);@(_ExtraWrite)' != ';' or '@(FileWrites->Count())' != '@(_Expected->Count())'">true</_BadWrites>
+      <_WriteCount>@(FileWrites->Count())</_WriteCount>
+    </PropertyGroup>
+    <Error Condition="'$(_BadWrites)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'"
+           Text="Aggregate FileWrites must contain each owned destination exactly once and no producer products. Missing=@(_MissingWrite), extra=@(_ExtraWrite)." />
+    <Error Condition="'$(_BadWrites)' == 'true' and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="Aggregate FileWrites must contain each owned destination exactly once and no producer products. Missing=@(_MissingWrite), extra=@(_ExtraWrite)."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <WriteLinesToFile File="$(FixtureRoot)writes.txt" Lines="count=$(_WriteCount);@(_WriteSnapshot->'%(Line)')" Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="$(FixtureRoot)writes.txt" Lines="count=$(_WriteCount);@(_WriteSnapshot->'%(Line)')" Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" DeclaredInputs="" DeclaredOutputs="$(FixtureRoot)writes.txt" />
+  </Target>
+</Project>

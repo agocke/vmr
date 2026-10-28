@@ -65,3 +65,25 @@ producer dependencies before calling `PublishLibraryLayout`. Existing `BinPlace`
 entry points remain compatibility wrappers, so ordinary builds still populate
 their established test and pack paths. Consumer-owned aggregate layouts can use
 the queries without triggering publication.
+
+The shared-framework source traversal, `sfx-src.proj`, supports an experimental
+`UseAggregateLibraryTestHostLayout=true` mode. Pass this property consistently to
+restore and build at the aggregate entry point, for example
+`./build.sh libs -p:UseAggregateLibraryTestHostLayout=true`. In this mode the
+traversal queries `GetLibraryTestHostLayout` on its selected library builds,
+deduplicates identical mappings, rejects cross-library destination conflicts,
+and publishes the combined `LibraryTestHostFile` inventory. Queries still work
+without enabling publication.
+
+Participating shared-framework libraries no longer publish or clean their
+testhost mappings individually in this mode. Their other binplace destinations
+remain unchanged, including reference and runtime packs. Custom item lists,
+such as MsQuic's package-native files, participate in the aggregate too. Ordinary
+incremental and explicit cleanup use the aggregate's file-write ledger and leave
+unowned files alone; prior library ledgers cannot delete the transferred outputs.
+Default builds retain per-library publication.
+
+This owner covers library-produced testhost files, not the entire testhost:
+native-library staging and external runtime/host setup remain separate.
+In particular, `externals.csproj` still chooses the CoreLib runtime variant;
+the aggregate does not merge or replace it.

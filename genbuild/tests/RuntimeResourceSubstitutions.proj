@@ -1,0 +1,52 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/out/</IntermediateOutputPath>
+    <AssemblyName>Fixture.Library</AssemblyName>
+    <StringResourcesPath>unused.resx</StringResourcesPath>
+    <StringResourcesName>Fixture.Resources</StringResourcesName>
+    <AssemblyName Condition="'$(TestCase)' == 'literal'">Library.$1\100%25literal</AssemblyName>
+    <StringResourcesName Condition="'$(TestCase)' == 'literal'">Resources.$2\100%25literal</StringResourcesName>
+    <AssemblyName Condition="'$(TestCase)' == 'cascade'">Library.{StringResourcesName}</AssemblyName>
+    <StringResourcesName Condition="'$(TestCase)' == 'empty-resource'"></StringResourcesName>
+    <GenerateResourcesSubstitutions Condition="'$(TestCase)' == 'disabled'">false</GenerateResourcesSubstitutions>
+    <ILLinkResourcesSubstitutionTemplate Condition="'$(TestCase)' == 'generated' or '$(TestCase)' == 'missing-input'">$(MSBuildProjectDirectory)/obj/future.template</ILLinkResourcesSubstitutionTemplate>
+    <_ExpectedWrites>1</_ExpectedWrites>
+    <_ExpectedWrites Condition="'$(TestCase)' == 'disabled'">0</_ExpectedWrites>
+    <_ExpectedWrites Condition="'$(TestCombine)' == 'true'">4</_ExpectedWrites>
+    <_SubstitutionTargets>GenerateResourcesSubstitutionFile</_SubstitutionTargets>
+    <_SubstitutionTargets Condition="'$(TestCombine)' == 'true'">_EmbedILLinkXmls</_SubstitutionTargets>
+    <ILLinkTasksAssembly Condition="'$(TestCombine)' == 'true'">$(MSBuildProjectDirectory)/task/bin/Debug/net11.0/Fixture.ILLink.Tasks.dll</ILLinkTasksAssembly>
+  </PropertyGroup>
+  <Import Project="$(ArcadeBuildTasksProps)" />
+  <Import Project="$(RuntimeILLinkTargets)" />
+  <ItemGroup Condition="'$(TestCombine)' == 'true'">
+    <ProjectReference Include="task/RuntimeLinkerXmlTask.csproj" />
+    <ILLinkDescriptorsXmls Include="$(RuntimeResourcesTemplate);obj/descriptor.xml" />
+    <ILLinkSubstitutionsXmls Include="obj/substitution.xml" />
+    <ILLinkLinkAttributesXmls Include="obj/attributes.xml" />
+    <_FutureLinkerXml Include="obj/descriptor.xml;obj/substitution.xml;obj/attributes.xml">
+      <Text>&lt;linker&gt;&lt;assembly fullname="%(Filename)" /&gt;&lt;/linker&gt;</Text>
+    </_FutureLinkerXml>
+  </ItemGroup>
+  <Target Name="Restore">
+    <MSBuild Projects="@(ProjectReference)" Targets="Restore" Condition="'$(TestCombine)' == 'true'" />
+  </Target>
+  <Target Name="Produce">
+    <MakeDir Directories="$(IntermediateOutputPath)" Condition="'$(TestCombine)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
+    <MSBuild Projects="@(ProjectReference)" Targets="Build" Condition="'$(TestCombine)' == 'true'" />
+    <Copy SourceFiles="$(RuntimeResourcesTemplate)" DestinationFiles="$(ILLinkResourcesSubstitutionTemplate)"
+          Condition="'$(TestCase)' == 'generated' and '$(MSBuildHardenedGraph)' != 'true'" />
+    <CopyFiles SourceFiles="$(RuntimeResourcesTemplate)" DestinationFiles="$(ILLinkResourcesSubstitutionTemplate)"
+               DeclaredInputs="$(RuntimeResourcesTemplate)" DeclaredOutputs="$(ILLinkResourcesSubstitutionTemplate)"
+               Condition="'$(TestCase)' == 'generated' and '$(MSBuildHardenedGraph)' == 'true'" />
+    <WriteLinesToFile File="%(_FutureLinkerXml.Identity)" Lines="%(_FutureLinkerXml.Text)" Overwrite="true"
+                      Condition="'@(_FutureLinkerXml)' != '' and '$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="%(_FutureLinkerXml.Identity)" Lines="%(_FutureLinkerXml.Text)" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="%(_FutureLinkerXml.Identity)"
+                      Condition="'@(_FutureLinkerXml)' != '' and '$(MSBuildHardenedGraph)' == 'true'" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="Produce;$(_SubstitutionTargets)">
+    <Error Condition="@(FileWrites->Count()) != $(_ExpectedWrites)"
+           Text="Resource-substitution FileWrites must be static and match the active output." />
+  </Target>
+</Project>

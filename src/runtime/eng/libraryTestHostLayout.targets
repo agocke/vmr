@@ -1,0 +1,61 @@
+<Project>
+  <ItemGroup>
+    <ProjectReferenceTargets Include="GetLibraryTestHostLayout" Targets="GetLibraryTestHostLayout" SkipNonexistentTargets="true" />
+    <ProjectReferenceTargets Include="Build" Targets="GetLibraryTestHostLayout"
+                             SkipNonexistentTargets="true"
+                             Condition="'$(UseAggregateLibraryTestHostLayout)' == 'true'" />
+    <AdditionalCleanDirectories Include="$(NetCoreAppCurrentTestHostSharedFrameworkPath)"
+                                Condition="'$(UseAggregateLibraryTestHostLayout)' == 'true'" />
+  </ItemGroup>
+
+  <Target Name="GetLibraryTestHostLayout"
+          DependsOnTargets="ResolveP2PReferences"
+          Returns="@(LibraryTestHostFile)">
+    <ItemGroup>
+      <!-- CoreLib's selected runtime variant is supplied by externals, not the libraries traversal. -->
+      <_LibraryTestHostProject Include="@(ProjectReference)"
+                               Exclude="$(CoreLibProject)"
+                               Condition="'%(ProjectReference.Build)' != 'false'" />
+    </ItemGroup>
+    <MSBuild Projects="@(_LibraryTestHostProject)"
+             Targets="GetLibraryTestHostLayout"
+             BuildInParallel="$(BuildInParallel)"
+             Properties="%(_LibraryTestHostProject.SetConfiguration);%(_LibraryTestHostProject.SetPlatform);%(_LibraryTestHostProject.SetTargetFramework)"
+             RemoveProperties="%(_LibraryTestHostProject.GlobalPropertiesToRemove);%(_LibraryTestHostProject.UndefineProperties)">
+      <Output TaskParameter="TargetOutputs" ItemName="_LibraryTestHostMapping" />
+    </MSBuild>
+    <ItemGroup>
+      <LibraryTestHostFile Include="@(_LibraryTestHostMapping)" KeepMetadata="SourcePath" KeepDuplicates="false" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_LibraryTestHostConflict Condition="'@(LibraryTestHostFile->Count())' != '@(LibraryTestHostFile->DistinctWithCase()->Count())' or
+                                          ($([MSBuild]::IsOSPlatform('Windows')) and '@(LibraryTestHostFile->Count())' != '@(LibraryTestHostFile->Distinct()->Count())')">A library testhost destination has multiple sources. Select the intended artifact before composing the layout: @(LibraryTestHostFile->'%(Identity) &lt;- %(SourcePath)').</_LibraryTestHostConflict>
+    </PropertyGroup>
+    <Error Condition="'$(_LibraryTestHostConflict)' != '' and '$(MSBuildHardenedGraph)' != 'true'"
+           Text="$(_LibraryTestHostConflict)" />
+    <Error Condition="'$(_LibraryTestHostConflict)' != '' and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="$(_LibraryTestHostConflict)" DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+
+  <Target Name="PublishLibraryTestHostLayout"
+          AfterTargets="Build"
+          DependsOnTargets="GetLibraryTestHostLayout"
+          Condition="'$(UseAggregateLibraryTestHostLayout)' == 'true'">
+    <Copy SourceFiles="@(LibraryTestHostFile->'%(SourcePath)')" DestinationFiles="@(LibraryTestHostFile)"
+          SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true"
+          Retries="$(CopyRetryCount)" RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
+          UseHardlinksIfPossible="$(BinPlaceUseHardlinksIfPossible)"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CopyFiles SourceFiles="%(LibraryTestHostFile.SourcePath)" DestinationFiles="%(LibraryTestHostFile.Identity)"
+               DeclaredInputs="%(LibraryTestHostFile.SourcePath)" DeclaredOutputs="%(LibraryTestHostFile.Identity)"
+               Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(LibraryTestHostFile)' != ''" />
+    <ItemGroup>
+      <FileWrites Include="@(LibraryTestHostFile)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="RecordLibraryTestHostLayoutWrites"
+          AfterTargets="PublishLibraryTestHostLayout"
+          DependsOnTargets="IncrementalClean;_CleanRecordFileWrites"
+          Condition="'$(UseAggregateLibraryTestHostLayout)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
+</Project>

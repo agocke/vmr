@@ -36,6 +36,7 @@
     <_ILLinkTrimSymbolsInput Condition="'$(_ILLinkTrimOutputSymbols)' != ''">$(ILLinkTrimInputSymbols)</_ILLinkTrimSymbolsInput>
 
     <ILLinkResourcesSubstitutionIntermediatePath>$(IntermediateOutputPath)ILLink.Resources.Substitutions.xml</ILLinkResourcesSubstitutionIntermediatePath>
+    <ILLinkResourcesSubstitutionTemplate Condition="'$(ILLinkResourcesSubstitutionTemplate)' == ''">$(MSBuildThisFileDirectory)ILLink.Substitutions.Resources.template</ILLinkResourcesSubstitutionTemplate>
     <GenerateResourcesSubstitutions Condition="'$(GenerateResourcesSubstitutions)' == '' and '$(StringResourcesPath)' != '' and '$(OmitResources)' != 'true'">true</GenerateResourcesSubstitutions>
   </PropertyGroup>
 
@@ -113,7 +114,13 @@
     </PropertyGroup>
 
     <CombineLinkerXmlFiles LinkerXmlFiles="@(ILLinkDescriptorsXmls)"
-                           CombinedLinkerXmlFile="$(ILLinkDescriptorsXml)" />
+                           CombinedLinkerXmlFile="$(ILLinkDescriptorsXml)"
+                           Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CombineLinkerXmlFiles LinkerXmlFiles="@(ILLinkDescriptorsXmls)"
+                           CombinedLinkerXmlFile="$(ILLinkDescriptorsXml)"
+                           DeclaredInputs="@(ILLinkDescriptorsXmls)"
+                           DeclaredOutputs="$(ILLinkDescriptorsXml)"
+                           Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
     <ItemGroup>
       <FileWrites Include="$(ILLinkDescriptorsXml)" />
@@ -125,18 +132,26 @@
   from the assembly. -->
   <Target Name="GenerateResourcesSubstitutionFile"
           Condition="'$(GenerateResourcesSubstitutions)' == 'true'"
-          Inputs="$(MSBuildProjectFullPath)"
+          Inputs="$(MSBuildProjectFullPath);$(ILLinkResourcesSubstitutionTemplate)"
           Outputs="$(ILLinkResourcesSubstitutionIntermediatePath)">
-
-    <PropertyGroup>
-      <ILLinkResourcesSubstitutionTemplate>$(MSBuildThisFileDirectory)ILLink.Substitutions.Resources.template</ILLinkResourcesSubstitutionTemplate>
-    </PropertyGroup>
 
     <WriteLinesToFile File="$(ILLinkResourcesSubstitutionIntermediatePath)"
                       Lines="$([System.IO.File]::ReadAllText('$(ILLinkResourcesSubstitutionTemplate)')
                                                  .Replace('{AssemblyName}', '$(AssemblyName)')
                                                  .Replace('{StringResourcesName}', '$(StringResourcesName)'))"
-                      Overwrite="true" />
+                      Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <_ILLinkResourceSubstitution Include="{AssemblyName}" Value="$(AssemblyName)" />
+      <_ILLinkResourceSubstitution Include="{StringResourcesName}" Value="$(StringResourcesName)" />
+    </ItemGroup>
+    <ReplaceTextFile InputFile="$(ILLinkResourcesSubstitutionTemplate)"
+                     OutputFile="$(ILLinkResourcesSubstitutionIntermediatePath)"
+                     Replacements="@(_ILLinkResourceSubstitution)"
+                     DeclaredInputs="$(ILLinkResourcesSubstitutionTemplate)"
+                     DeclaredOutputs="$(ILLinkResourcesSubstitutionIntermediatePath)"
+                     Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
     <ItemGroup>
       <FileWrites Include="$(ILLinkResourcesSubstitutionIntermediatePath)" />
@@ -153,7 +168,13 @@
     </PropertyGroup>
 
     <CombineLinkerXmlFiles LinkerXmlFiles="@(ILLinkSubstitutionsXmls)"
-                           CombinedLinkerXmlFile="$(ILLinkSubstitutionsXml)" />
+                           CombinedLinkerXmlFile="$(ILLinkSubstitutionsXml)"
+                           Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CombineLinkerXmlFiles LinkerXmlFiles="@(ILLinkSubstitutionsXmls)"
+                           CombinedLinkerXmlFile="$(ILLinkSubstitutionsXml)"
+                           DeclaredInputs="@(ILLinkSubstitutionsXmls)"
+                           DeclaredOutputs="$(ILLinkSubstitutionsXml)"
+                           Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
     <ItemGroup>
       <FileWrites Include="$(ILLinkSubstitutionsXml)" />
@@ -169,7 +190,13 @@
     </PropertyGroup>
 
     <CombineLinkerXmlFiles LinkerXmlFiles="@(ILLinkLinkAttributesXmls)"
-                           CombinedLinkerXmlFile="$(ILLinkLinkAttributesXml)" />
+                           CombinedLinkerXmlFile="$(ILLinkLinkAttributesXml)"
+                           Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CombineLinkerXmlFiles LinkerXmlFiles="@(ILLinkLinkAttributesXmls)"
+                           CombinedLinkerXmlFile="$(ILLinkLinkAttributesXml)"
+                           DeclaredInputs="@(ILLinkLinkAttributesXmls)"
+                           DeclaredOutputs="$(ILLinkLinkAttributesXml)"
+                           Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
     <ItemGroup>
       <FileWrites Include="$(ILLinkLinkAttributesXml)" />

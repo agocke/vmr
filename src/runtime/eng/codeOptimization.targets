@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <Target Name="SetApplyNgenOptimization"
-          Condition="'$(IsEligibleForNgenOptimization)' == 'true'"
+          Condition="'$(EnableNgenOptimization)' == 'true' and '$(IsEligibleForNgenOptimization)' == 'true'"
           BeforeTargets="CoreCompile">
     <PropertyGroup>
       <IbcOptimizationDataDir Condition="'$(TargetOS)' == 'unix' or '$(TargetOS)' == 'linux'">$(IbcOptimizationDataDir)linux\</IbcOptimizationDataDir>

@@ -11,6 +11,7 @@ namespace ILLink.Tasks
     /// <summary>
     /// Combines multiple ILLink xml files into a single xml file.
     /// </summary>
+    [MSBuildDeclaredIOTask]
     public class CombineLinkerXmlFiles : Task
     {
         /// <summary>
@@ -24,6 +25,10 @@ namespace ILLink.Tasks
         /// </summary>
         [Required]
         public string CombinedLinkerXmlFile { get; set; }
+
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        public ITaskItem[] DeclaredOutputs { get; set; }
 
         public override bool Execute()
         {

@@ -159,6 +159,14 @@ the input through the SDK action, and request only the rewritten package config.
 Independent bytes match ordinary generation, including escaped content and
 multiple framework versions. Construction preserves stale output; inactive
 frameworks remain no-ops and write failures fail execution.
+ILLink resource-substitution checks import the actual runtime authoring and
+compare independent replacement bytes with stock SDK output, including literal
+and empty values, sequential replacements and generated templates. The XML
+combiner is itself built by Ninja from runtime's task source; selected
+descriptor/substitution/attribute outputs match ordinary bytes and static
+`FileWrites`. Non-resx naming ignores the unused source convention, while
+source-dependent resx naming remains rejected. Disabled or ineligible NGen
+optimization avoids unused profile discovery.
 Arcade checks compare ordinary and prepared P2P selection, platform fallback,
 RID-agnostic metadata, explicit framework overrides and incompatible references.
 They also exercise real NuGet-imported capture hooks, literal JSON transport,
@@ -170,6 +178,13 @@ inner frameworks, configured symbols/docs, duplicate placements and collisions.
 Explicit publication also works with automatic binplacing disabled.
 Query-only requests do not build or copy products; construction preserves stale
 destinations and execution consumes the declared producer outputs.
+Aggregate testhost fixtures import runtime's library producer and consumer
+authoring with two configured projects. They compare stock SDK publication and
+ordinary cleanup with independent Ninja execution, including custom native
+items, cross-project deduplication/conflicts, property negotiation, transferred
+clean ownership and preservation of foreign runtime files. A selected output
+exercises its future producer edge; the current emitter's conservative ordering
+can also execute preceding actions, so this is not a minimal-closure test.
 Repository-info checks preserve provider URL replay, Azure DevOps mirror
 remapping, the translation opt-out and unrelated source-root metadata, then
 independently publish metadata matching ordinary builds.
@@ -415,6 +430,12 @@ Runtime's shared `eng/libraryLayout.targets` exposes configured products and
 destination/source mappings without probing product existence. Existing
 `BinPlace` entry points delegate to these queries and publication, preserving
 ordinary paths while enabling future consumer-owned aggregate layouts.
+The first consumer is `sfx-src.proj`, behind the ordinary
+`UseAggregateLibraryTestHostLayout=true` opt-in. It owns library-produced
+testhost mappings, while native-library and external runtime/host staging remain
+separate. Participating producers retain their other binplace destinations.
+Ordinary cleanup uses the aggregate's existing file-write machinery; hardened
+construction neither reads nor emits a clean ledger.
 Hardened framework selection uses prepared runtime-graph JSON with the same
 NuGet policy; placement uses explicit `CopyFiles` actions and static `FileWrites`.
 Ordinary publication retains its copy/link options.
@@ -422,9 +443,23 @@ The guarded ordinary query returns Immutable's future assembly/PDB/XML paths
 without producing them. For the selected `net10.0` inner build, all three layout
 framework requests choose `net11.0`, so that build correctly has no placements;
 the isolated regressions exercise positive layout publication.
-The next blocker is ILLink's `GenerateResourcesSubstitutionFile`: its writer
-still reads a substitution template in a construction-time property function
-(`MSB4287`). The template transformation needs execution-time declared I/O.
+An additional guarded query of the actual `sfx-src.proj` consumer, restricted to
+Immutable through its existing custom Traversal import hook, selects `net11.0`
+and returns three future testhost mappings (assembly/PDB/XML), all with absent
+sources and destinations. This verifies positive configured composition, not a
+full-framework build or runtime execution.
+ILLink's resource-substitution template transformation now uses an execution-time
+`ReplaceTextFile` worker with distinct declared input/output paths and the
+legacy writer's text-item conversion. XML combination declares its source files
+and known outputs, and the future combiner task carries the same I/O contract.
+Non-resx manifest naming no longer rejects the unused `UseDependentUponConvention`
+flag. Immutable's inline-string resources explicitly disable object serialization;
+their ordinary and independent bytes match the SDK-default baseline.
+The next blocker is diagnostic publication. Runtime's missing-documentation
+warning is still unsupported. Experimental zero-I/O `Warning` support preserved
+the diagnostic but exposed graph/actions publication even when warnings-as-errors
+made the build fail. That support was held back: graph publication must account
+for the final promoted-diagnostic outcome before this path is enabled.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

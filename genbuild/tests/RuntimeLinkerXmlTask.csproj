@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <AssemblyName>Fixture.ILLink.Tasks</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(RuntimeILLinkSourceDirectory)CombineLinkerXmlFiles.cs;$(RuntimeILLinkSourceDirectory)MSBuildDeclaredIOTaskAttribute.cs" />
+    <Reference Include="$(TaskReferenceDirectory)/Microsoft.Build.Framework.dll" Private="false" />
+    <Reference Include="$(TaskReferenceDirectory)/Microsoft.Build.Utilities.Core.dll" Private="false" />
+  </ItemGroup>
+</Project>
