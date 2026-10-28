@@ -49,3 +49,19 @@ Library tests are driven by `dotnet build /t:test <TestProject>.csproj` (not `do
 - [Testing on WebAssembly](../../docs/workflow/testing/libraries/testing-wasm.md) · [Android](../../docs/workflow/testing/libraries/testing-android.md) · [Apple platforms](../../docs/workflow/testing/libraries/testing-apple.md)
 
 For changes to `System.Private.CoreLib`, also rebuild the `libs.pretest` subset so the new CoreLib is copied into the testhost before running tests.
+
+### Library products and layouts
+
+[`eng/libraryLayout.targets`](../../eng/libraryLayout.targets) separates product
+inventories from layout publication. `GetLibraryBuildProducts` returns
+`LibraryBuildProduct` items from the configured outputs, without checking whether
+they already exist. `GetLibraryLayout` returns `LibraryLayoutFile` items whose
+identities are destination paths and whose `SourcePath` metadata identifies the
+input artifact. It selects the compatible inner build, preserves custom item
+lists and relative target paths, and rejects conflicting sources for a destination.
+
+These queries do not build or copy the products. Consumers must arrange their
+producer dependencies before calling `PublishLibraryLayout`. Existing `BinPlace`
+entry points remain compatibility wrappers, so ordinary builds still populate
+their established test and pack paths. Consumer-owned aggregate layouts can use
+the queries without triggering publication.

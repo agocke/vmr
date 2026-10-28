@@ -1,0 +1,149 @@
+<Project>
+  <PropertyGroup>
+    <BinPlaceRef Condition="'$(BinPlaceRef)' == '' and ('$(IsReferenceAssemblyProject)' == 'true' or '$(IsRuntimeAndReferenceAssembly)' == 'true')">true</BinPlaceRef>
+    <BinPlaceRuntime Condition="'$(BinPlaceRuntime)' == '' and '$(IsSourceProject)' == 'true'">true</BinPlaceRuntime>
+    <BinPlaceForTargetVertical Condition="'$(BinPlaceForTargetVertical)' == ''">true</BinPlaceForTargetVertical>
+    <GetLibraryBuildProductsDependsOn>GetCopyToOutputDirectoryItems;PrepareResourceNames;ComputeIntermediateSatelliteAssemblies;$(GetLibraryBuildProductsDependsOn)</GetLibraryBuildProductsDependsOn>
+    <GetLibraryLayoutDirectoriesDependsOn Condition="'$(MSBuildHardenedGraph)' == 'true'">$(GetLibraryLayoutDirectoriesDependsOn);_ValidateTargetFrameworkInputs</GetLibraryLayoutDirectoriesDependsOn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- CORE_ROOT inputs, not references for compiling libraries. -->
+    <BinPlaceTargetFrameworks Include="$(NetCoreAppCurrent)-$(TargetOS)"
+                              Condition="'$(BinPlaceForTargetVertical)' == 'true'">
+      <NativePath>$(LibrariesAllBinArtifactsPath)</NativePath>
+      <RefPath>$(LibrariesAllRefArtifactsPath)</RefPath>
+      <RuntimePath>$(LibrariesAllBinArtifactsPath)</RuntimePath>
+    </BinPlaceTargetFrameworks>
+
+    <BinPlaceDir Include="$(MicrosoftNetCoreAppRefPackDir)$(GeneratorProjectBaseTargetPath)"
+                 Condition="'$(IsNETCoreAppAnalyzer)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'" />
+
+    <BinPlaceTargetFrameworks Include="$(NetCoreAppCurrent)-$(TargetOS)">
+      <NativePath>$(NetCoreAppCurrentTestHostSharedFrameworkPath)</NativePath>
+      <RuntimePath Condition="'$(IsNETCoreAppSrc)' == 'true'">$(NetCoreAppCurrentTestHostSharedFrameworkPath)</RuntimePath>
+    </BinPlaceTargetFrameworks>
+
+    <BinPlaceTargetFrameworks Include="$(NetCoreAppCurrent)-$(TargetOS)">
+      <NativePath>$(MicrosoftNetCoreAppRuntimePackNativeDir)</NativePath>
+      <RefPath Condition="'$(IsNETCoreAppRef)' == 'true'">$(MicrosoftNetCoreAppRefPackRefDir)</RefPath>
+      <RuntimePath Condition="'$(IsNETCoreAppSrc)' == 'true'">$(MicrosoftNetCoreAppRuntimePackRidLibTfmDir)</RuntimePath>
+    </BinPlaceTargetFrameworks>
+  </ItemGroup>
+
+  <Target Name="GetLibraryBuildProducts"
+          DependsOnTargets="$(GetLibraryBuildProductsDependsOn);$(GetBinPlaceItemsDependsOn)"
+          Returns="@(LibraryBuildProduct)">
+    <ItemGroup>
+      <LibraryBuildProduct Include="$(TargetPath)"
+                           Condition="'$(CopyBuildOutputToOutputDirectory)' != 'false' and '$(SkipCopyBuildProduct)' != 'true'" />
+      <LibraryBuildProduct Include="@(_DebugSymbolsOutputPath)"
+                           Condition="'$(_DebugSymbolsProduced)' == 'true' and '$(SkipCopyingSymbolsToOutputDirectory)' != 'true' and '$(CopyOutputSymbolsToOutputDirectory)' != 'false'" />
+      <LibraryBuildProduct Include="@(FinalDocFile)"
+                           Condition="'$(_DocumentationFileProduced)' == 'true' and '$(CopyDocumentationFileToOutputDirectory)' != 'false'" />
+      <LibraryBuildProduct Include="@(ReferenceCopyLocalPaths)" Condition="'$(BinPlaceReferenceCopyLocalPaths)' != 'false'" />
+      <LibraryBuildProduct Include="@(AllItemsFullPathWithTargetPath)" Condition="'$(BinPlaceCopyToOutputDirectoryItems)' != 'false'" />
+      <LibraryBuildProduct Include="@(IntermediateSatelliteAssembliesWithTargetPath)" Condition="'$(BinPlaceSatelliteAssemblies)' != 'false'" />
+      <LibraryBuildProduct Include="@(BinPlaceItem)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GetLibraryLayoutDirectories"
+          DependsOnTargets="$(GetLibraryLayoutDirectoriesDependsOn)"
+          Returns="@(LibraryLayoutDirectory)">
+    <ItemGroup>
+      <_LibrarySupportedFramework Include="$(TargetFrameworks)" Condition="'$(TargetFrameworks)' != ''" />
+      <_LibrarySupportedFramework Include="$(TargetFramework)" Condition="'@(_LibrarySupportedFramework)' == ''" />
+    </ItemGroup>
+    <ChooseBestTargetFrameworksTask BuildTargetFrameworks="@(BinPlaceTargetFrameworks)"
+                                    SupportedTargetFrameworks="@(_LibrarySupportedFramework)"
+                                    RuntimeGraph="$([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))"
+                                    Condition="'$(MSBuildHardenedGraph)' != 'true' and '@(BinPlaceTargetFrameworks)' != ''">
+      <Output TaskParameter="BestTargetFrameworks" ItemName="_LibraryLayoutFramework" />
+    </ChooseBestTargetFrameworksTask>
+    <ChooseBestTargetFrameworksFromInputs BuildTargetFrameworks="@(BinPlaceTargetFrameworks)"
+                                          SupportedTargetFrameworks="@(_LibrarySupportedFramework)"
+                                          RuntimeGraphContents="$(_TargetFrameworkInputsRuntimeGraphContents)"
+                                          DeclaredInputs="" DeclaredOutputs=""
+                                          Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(BinPlaceTargetFrameworks)' != ''">
+      <Output TaskParameter="BestTargetFrameworks" ItemName="_LibraryLayoutFramework" />
+    </ChooseBestTargetFrameworksFromInputs>
+    <ItemGroup>
+      <_CurrentLibraryLayoutFramework Include="@(_LibraryLayoutFramework)" Condition="'%(Identity)' == '$(TargetFramework)'" />
+      <LibraryLayoutDirectory Include="@(BinPlaceDir)" />
+      <LibraryLayoutDirectory Include="@(_CurrentLibraryLayoutFramework->'%(NativePath)')" Condition="'$(BinPlaceNative)' == 'true'" />
+      <LibraryLayoutDirectory Include="@(_CurrentLibraryLayoutFramework->'%(RefPath)')" Condition="'$(BinPlaceRef)' == 'true'" />
+      <LibraryLayoutDirectory Include="@(_CurrentLibraryLayoutFramework->'%(RuntimePath)')" Condition="'$(BinPlaceRuntime)' == 'true'" />
+      <LibraryLayoutDirectory Include="@(_CurrentLibraryLayoutFramework->'%(TestPath)')" Condition="'$(BinPlaceTest)' == 'true'" />
+      <LibraryLayoutDirectory Update="@(LibraryLayoutDirectory)">
+        <ItemName Condition="'%(LibraryLayoutDirectory.ItemName)' == '' or '%(LibraryLayoutDirectory.ItemName)' == 'BinPlaceItem'">LibraryBuildProduct</ItemName>
+      </LibraryLayoutDirectory>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GetLibraryLayout"
+          DependsOnTargets="GetLibraryLayoutDirectories;_GetLibraryLayoutFiles"
+          Returns="@(LibraryLayoutFile)" />
+
+  <Target Name="_GetLibraryLayoutFiles"
+          DependsOnTargets="GetLibraryBuildProducts"
+          Condition="'@(LibraryLayoutDirectory)' != ''">
+    <ItemGroup>
+      <_LibraryLayoutSource Include="@(%(LibraryLayoutDirectory.ItemName))">
+        <DestinationDirectory>%(LibraryLayoutDirectory.Identity)</DestinationDirectory>
+      </_LibraryLayoutSource>
+    </ItemGroup>
+    <ItemGroup>
+      <_LibraryLayoutSource Update="@(_LibraryLayoutSource)">
+        <TargetPath Condition="'%(_LibraryLayoutSource.TargetPath)' == ''">%(_LibraryLayoutSource.DestinationSubDirectory)%(_LibraryLayoutSource.Filename)%(_LibraryLayoutSource.Extension)</TargetPath>
+        <SourcePath>%(_LibraryLayoutSource.FullPath)</SourcePath>
+      </_LibraryLayoutSource>
+    </ItemGroup>
+    <ItemGroup>
+      <_LibraryLayoutSource Update="@(_LibraryLayoutSource)">
+        <DestinationPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '%(_LibraryLayoutSource.DestinationDirectory)', '%(_LibraryLayoutSource.TargetPath)'))</DestinationPath>
+      </_LibraryLayoutSource>
+      <LibraryLayoutFile Include="@(_LibraryLayoutSource->'%(DestinationPath)')"
+                         KeepMetadata="SourcePath" KeepDuplicates="false" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_LibraryLayoutConflict Condition="'@(LibraryLayoutFile->Count())' != '@(LibraryLayoutFile->DistinctWithCase()->Count())' or
+                                        ($([MSBuild]::IsOSPlatform('Windows')) and '@(LibraryLayoutFile->Count())' != '@(LibraryLayoutFile->Distinct()->Count())')">A library layout destination has multiple sources. Select the intended artifact before composing the layout: @(LibraryLayoutFile).</_LibraryLayoutConflict>
+    </PropertyGroup>
+    <Error Condition="'$(_LibraryLayoutConflict)' != '' and '$(MSBuildHardenedGraph)' != 'true'"
+           Text="$(_LibraryLayoutConflict)" />
+    <Error Condition="'$(_LibraryLayoutConflict)' != '' and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="$(_LibraryLayoutConflict)"
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+
+  <Target Name="PublishLibraryLayout" DependsOnTargets="GetLibraryLayout">
+    <Copy SourceFiles="@(LibraryLayoutFile->'%(SourcePath)')" DestinationFiles="@(LibraryLayoutFile)"
+          SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true"
+          Retries="$(CopyRetryCount)" RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
+          UseHardlinksIfPossible="$(BinPlaceUseHardlinksIfPossible)"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CopyFiles SourceFiles="@(LibraryLayoutFile->'%(SourcePath)')" DestinationFiles="@(LibraryLayoutFile)"
+               DeclaredInputs="@(LibraryLayoutFile->'%(SourcePath)')" DeclaredOutputs="@(LibraryLayoutFile)"
+               Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(LibraryLayoutFile)' != ''" />
+    <ItemGroup>
+      <FileWrites Include="@(LibraryLayoutFile)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Preserve existing entry points while allowing consumers to query layouts without copying. -->
+  <Target Name="BinPlace" AfterTargets="CopyFilesToOutputDirectory" DependsOnTargets="PublishLibraryLayout"
+          Condition="'$(EnableBinPlacing)' != 'false' and ('$(BinPlaceNative)' == 'true' or '$(BinPlaceRef)' == 'true' or '$(BinPlaceRuntime)' == 'true' or '$(BinPlaceTest)' == 'true' or '@(BinPlaceDir)' != '')" />
+  <Target Name="BinPlaceFiles" DependsOnTargets="PublishLibraryLayout" />
+  <Target Name="GetBinPlaceItems" DependsOnTargets="GetLibraryBuildProducts" Returns="@(BinPlaceItem)">
+    <ItemGroup>
+      <BinPlaceItem Remove="@(BinPlaceItem)" />
+      <BinPlaceItem Include="@(LibraryBuildProduct)" />
+    </ItemGroup>
+  </Target>
+  <Target Name="GetBinPlaceTargetFramework" DependsOnTargets="GetLibraryLayoutDirectories">
+    <ItemGroup>
+      <BinPlaceDir Include="@(LibraryLayoutDirectory)" Exclude="@(BinPlaceDir)" />
+    </ItemGroup>
+  </Target>
+</Project>

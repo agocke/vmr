@@ -834,17 +834,32 @@ GenAPI discovery, then passes ILLink's resource naming, resource-action construc
 and IVT action construction.
 Construction advances through the ILLink analyzer, code-fix and linker reference
 projects, Banned API global-config selection, the package-runtime-config action
-and source-content copies. It reaches the Immutable reference project's Arcade
-`BinPlace` hook. The first error is a missing `DeclaredInputs` parameter on
-`ChooseBestTargetFrameworksTask` (`MSB4286`). Its resolver reads the live runtime
-graph, so an empty-footprint annotation would be incorrect. The later
-`GetBinPlaceItems` inventory probes future assemblies, PDBs and XML files with
-`Exists`, and placement defaults to hardlinks with read-only overwrites.
-This is the next coordinated boundary: reuse prepared runtime-graph data for
-framework selection, derive products from authored metadata instead of current
-existence, and establish explicit destination ownership and copy/link policy.
-Do not snapshot future outputs or omit binplacement to advance construction.
-Later target-validation diagnostics are not yet isolated as independent blockers.
+and source-content copies. Runtime library layout policy now lives in shared
+`eng/libraryLayout.targets` authoring rather than Arcade's existence-driven
+`GetBinPlaceItems`. Ordinary and hardened builds query the same configured product
+inventory and destination mapping; the old `BinPlace` entry points delegate to
+that policy. Products include declared assembly, symbol, documentation, content,
+copy-local and satellite outputs. Layout queries do not build or copy them.
+They retain custom item lists and target paths, deduplicate identical placements,
+and reject conflicting sources for a destination. Aggregate consumer-owned
+layouts can consume these queries; their migration is not part of this first slice.
+Ordinary publication preserves existing paths and best-effort copy/link settings.
+Hardened publication uses explicit byte-copy actions and static `FileWrites`,
+without creating a new manifest format or adapting legacy clean ledgers.
+Framework selection reuses the ordinary NuGet matching policy with prepared
+runtime-graph JSON, not a restored winning framework or a live construction-time
+read. The layout regression passes legacy/ordinary/independent byte and placement
+parity, custom and escaped paths, inactive and fallback frameworks, explicit
+publication with automatic binplacing disabled, configured symbol/doc exclusion,
+duplicate mappings, compatibility aliases and fail-closed conflicts.
+The guarded ordinary runtime query returns the future Immutable DLL/PDB/XML
+inventory without building it. All three layout requests select `net11.0` from
+the project's supported frameworks, so the selected `net10.0` build correctly
+has no placements; positive publication is proven by the isolated fixtures.
+The real probe now passes the library binplace hooks and reaches
+`GenerateResourcesSubstitutionFile` in `eng/illink.targets`: its
+`WriteLinesToFile.Lines` still reads a template using `File.ReadAllText`
+(`MSB4287`). This template transformation needs execution-time declared I/O.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

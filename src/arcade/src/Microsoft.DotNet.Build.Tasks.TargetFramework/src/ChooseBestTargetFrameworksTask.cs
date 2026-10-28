@@ -32,14 +32,24 @@ public class ChooseBestTargetFrameworksTask : Task, IMultiThreadableTask
 
     public override bool Execute()
     {
-        List<ITaskItem> bestTargetFrameworkList = new(BuildTargetFrameworks!.Length);
         TargetFrameworkResolver targetframeworkResolver = TargetFrameworkResolver.CreateOrGet(TaskEnvironment.GetAbsolutePath(RuntimeGraph!));
- 
-        foreach (ITaskItem buildTargetFramework in BuildTargetFrameworks)
+        BestTargetFrameworks = ChooseFrameworks(BuildTargetFrameworks!, SupportedTargetFrameworks!, targetframeworkResolver, Distinct);
+        return !Log.HasLoggedErrors;
+    }
+
+    internal static ITaskItem[] ChooseFrameworks(
+        ITaskItem[] buildTargetFrameworks,
+        string[] supportedTargetFrameworks,
+        TargetFrameworkResolver resolver,
+        bool distinct)
+    {
+        List<ITaskItem> bestTargetFrameworkList = new(buildTargetFrameworks.Length);
+
+        foreach (ITaskItem buildTargetFramework in buildTargetFrameworks)
         {
             NuGetFramework framework = NuGetFramework.ParseFolder(buildTargetFramework.ItemSpec);
-            string? bestTargetFramework = targetframeworkResolver.GetNearest(SupportedTargetFrameworks!, framework);
-            if (bestTargetFramework != null && (!Distinct || !bestTargetFrameworkList.Any(b => b.ItemSpec == bestTargetFramework)))
+            string? bestTargetFramework = resolver.GetNearest(supportedTargetFrameworks, framework);
+            if (bestTargetFramework != null && (!distinct || !bestTargetFrameworkList.Any(b => b.ItemSpec == bestTargetFramework)))
             {
                 TaskItem item = new(bestTargetFramework);
                 buildTargetFramework.CopyMetadataTo(item);
@@ -47,7 +57,6 @@ public class ChooseBestTargetFrameworksTask : Task, IMultiThreadableTask
             }
         }
 
-        BestTargetFrameworks = bestTargetFrameworkList.ToArray(); 
-        return !Log.HasLoggedErrors;
+        return bestTargetFrameworkList.ToArray();
     }
 }

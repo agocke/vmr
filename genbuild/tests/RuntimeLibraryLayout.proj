@@ -1,0 +1,195 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <TestCase Condition="'$(TestCase)' == ''">full</TestCase>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+    <TargetFramework>net11.0-linux</TargetFramework>
+    <TargetFrameworks>net11.0-linux;net10.0</TargetFrameworks>
+    <TargetFramework Condition="'$(TestCase)' == 'fallback'">net10.0-unix</TargetFramework>
+    <TargetFramework Condition="'$(TestCase)' == 'inactive'">net10.0</TargetFramework>
+    <TargetFrameworks Condition="'$(TestCase)' == 'fallback' or '$(TestCase)' == 'inactive'">net10.0-unix;net10.0</TargetFrameworks>
+    <MSBuildProjectExtensionsPath>obj/</MSBuildProjectExtensionsPath>
+    <BundledRuntimeIdentifierGraphFile>$(MSBuildProjectDirectory)/runtime.json</BundledRuntimeIdentifierGraphFile>
+    <NetCoreAppCurrent>net11.0</NetCoreAppCurrent>
+    <TargetOS>linux</TargetOS>
+    <IsSourceProject>true</IsSourceProject>
+    <IsReferenceAssemblyProject>true</IsReferenceAssemblyProject>
+    <IsNETCoreAppSrc>true</IsNETCoreAppSrc>
+    <IsNETCoreAppRef>true</IsNETCoreAppRef>
+    <LibrariesAllBinArtifactsPath>layout/core/</LibrariesAllBinArtifactsPath>
+    <LibrariesAllRefArtifactsPath>layout/ref/</LibrariesAllRefArtifactsPath>
+    <NetCoreAppCurrentTestHostSharedFrameworkPath>layout/testhost/</NetCoreAppCurrentTestHostSharedFrameworkPath>
+    <MicrosoftNetCoreAppRefPackRefDir>layout/refpack/</MicrosoftNetCoreAppRefPackRefDir>
+    <MicrosoftNetCoreAppRuntimePackRidLibTfmDir>layout/runtimepack/</MicrosoftNetCoreAppRuntimePackRidLibTfmDir>
+    <MicrosoftNetCoreAppRuntimePackNativeDir>layout/native/</MicrosoftNetCoreAppRuntimePackNativeDir>
+    <TargetDir>$(MSBuildProjectDirectory)/products/</TargetDir>
+    <TargetName>Layout</TargetName>
+    <TargetPath>$(TargetDir)$(TargetName).dll</TargetPath>
+    <_DebugSymbolsProduced>true</_DebugSymbolsProduced>
+    <_DocumentationFileProduced>true</_DocumentationFileProduced>
+    <_DebugSymbolsProduced Condition="'$(TestCase)' == 'no-products'">false</_DebugSymbolsProduced>
+    <_DocumentationFileProduced Condition="'$(TestCase)' == 'no-products'">false</_DocumentationFileProduced>
+    <CopyOutputSymbolsToOutputDirectory Condition="'$(TestCase)' == 'no-symbol-copy'">false</CopyOutputSymbolsToOutputDirectory>
+    <CopyDocumentationFileToOutputDirectory Condition="'$(TestCase)' == 'no-symbol-copy'">false</CopyDocumentationFileToOutputDirectory>
+    <GetLibraryBuildProductsDependsOn>CheckProductQuery</GetLibraryBuildProductsDependsOn>
+    <_FixtureRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)'))</_FixtureRoot>
+    <_FixtureBuildDependsOn>Query</_FixtureBuildDependsOn>
+    <_FixtureBuildDependsOn Condition="'$(QueryOnly)' != 'true'">Query;VerifyCompatibilityItems;Produce;CopyFilesToOutputDirectory;RecordWrites</_FixtureBuildDependsOn>
+    <_FixtureBuildDependsOn Condition="'$(QueryOnly)' != 'true' and '$(EnableBinPlacing)' == 'false'">Query;VerifyCompatibilityItems;Produce;PublishLibraryLayout;RecordWrites</_FixtureBuildDependsOn>
+  </PropertyGroup>
+  <Import Project="$(ArcadeTargetFrameworkDirectory)/build/Microsoft.DotNet.Build.Tasks.TargetFramework.props" />
+  <Import Project="$(ArcadeTargetFrameworkDirectory)/build/Microsoft.DotNet.Build.Tasks.TargetFramework.targets" />
+
+  <!-- The legacy oracle uses the package's real BinPlace targets, with the old runtime authoring only. -->
+  <PropertyGroup Condition="'$(Legacy)' == 'true'">
+    <BinPlaceRef Condition="'$(BinPlaceRef)' == '' and ('$(IsReferenceAssemblyProject)' == 'true' or '$(IsRuntimeAndReferenceAssembly)' == 'true')">true</BinPlaceRef>
+    <BinPlaceRuntime Condition="'$(BinPlaceRuntime)' == '' and '$(IsSourceProject)' == 'true'">true</BinPlaceRuntime>
+    <BinPlaceForTargetVertical Condition="'$(BinPlaceForTargetVertical)' == ''">true</BinPlaceForTargetVertical>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(Legacy)' == 'true'">
+    <BinPlaceTargetFrameworks Include="$(NetCoreAppCurrent)-$(TargetOS)" Condition="'$(BinPlaceForTargetVertical)' == 'true'"
+                              NativePath="$(LibrariesAllBinArtifactsPath)" RefPath="$(LibrariesAllRefArtifactsPath)" RuntimePath="$(LibrariesAllBinArtifactsPath)" />
+    <BinPlaceDir Include="$(MicrosoftNetCoreAppRefPackDir)$(GeneratorProjectBaseTargetPath)"
+                 Condition="'$(IsNETCoreAppAnalyzer)' == 'true' and '$(TargetFramework)' == 'netstandard2.0'" />
+    <BinPlaceTargetFrameworks Include="$(NetCoreAppCurrent)-$(TargetOS)" NativePath="$(NetCoreAppCurrentTestHostSharedFrameworkPath)">
+      <RuntimePath Condition="'$(IsNETCoreAppSrc)' == 'true'">$(NetCoreAppCurrentTestHostSharedFrameworkPath)</RuntimePath>
+    </BinPlaceTargetFrameworks>
+    <BinPlaceTargetFrameworks Include="$(NetCoreAppCurrent)-$(TargetOS)" NativePath="$(MicrosoftNetCoreAppRuntimePackNativeDir)">
+      <RefPath Condition="'$(IsNETCoreAppRef)' == 'true'">$(MicrosoftNetCoreAppRefPackRefDir)</RefPath>
+      <RuntimePath Condition="'$(IsNETCoreAppSrc)' == 'true'">$(MicrosoftNetCoreAppRuntimePackRidLibTfmDir)</RuntimePath>
+    </BinPlaceTargetFrameworks>
+  </ItemGroup>
+  <Import Project="$(RuntimeLibraryLayoutTargetsPath)" Condition="'$(Legacy)' != 'true'" />
+
+  <ItemGroup>
+    <_DebugSymbolsOutputPath Include="$(TargetDir)Layout.pdb" Condition="'$(TestCase)' != 'fallback'" />
+    <FinalDocFile Include="$(TargetDir)Layout.xml" Condition="'$(TestCase)' != 'fallback'" />
+    <_DebugSymbolsOutputPath Include="products/symbols/Configured.pdb" Condition="'$(TestCase)' == 'fallback'" />
+    <FinalDocFile Include="products/docs/Configured.xml" Condition="'$(TestCase)' == 'fallback'" />
+    <BinPlaceItem Include="products/authored.txt" TargetPath="authored/extra.txt" />
+    <FixtureCustomProduct Include="products/custom.txt" TargetPath="nested/custom%25payload.txt" />
+    <BinPlaceDir Include="layout/explicit/" Condition="'$(TestCase)' != 'inactive'" />
+    <BinPlaceDir Include="layout/custom/" ItemName="FixtureCustomProduct" Condition="'$(TestCase)' != 'inactive'" />
+    <BinPlaceItem Include="$(TargetPath)" TargetPath="aliases/Layout.dll" Condition="'$(TestCase)' == 'duplicates'" />
+    <BinPlaceDir Include="layout/explicit/" Condition="'$(TestCase)' == 'duplicates'" />
+    <FixtureCustomProduct Include="products/custom.txt" TargetPath="nested/custom%25payload.txt" Condition="'$(TestCase)' == 'duplicates'" />
+    <BinPlaceItem Include="products/conflict.txt" TargetPath="assets/renamed%3B100%25content.txt" Condition="'$(TestCase)' == 'conflict'" />
+    <BinPlaceItem Include="products/conflict.txt" TargetPath="assets/RENAMED%3B100%25CONTENT.txt" Condition="'$(TestCase)' == 'case-conflict'" />
+
+    <_FakeProduct Include="products/Layout.dll;products/dependency.dll;products/content%3B100%25payload.txt;products/fr/Layout.resources.dll;products/authored.txt;products/custom.txt" />
+    <_FakeProduct Include="products/Layout.pdb;products/Layout.xml"
+                  Condition="'$(TestCase)' != 'no-products' and '$(TestCase)' != 'no-symbol-copy' and '$(TestCase)' != 'fallback'" />
+    <_FakeProduct Include="products/symbols/Configured.pdb;products/docs/Configured.xml" Condition="'$(TestCase)' == 'fallback'" />
+
+    <!-- Independent expected map: six ordinary destinations, seven products, and one custom-list file. -->
+    <_ExpectedDirectory Include="layout/core;layout/ref;layout/testhost;layout/refpack;layout/runtimepack;layout/explicit" Condition="'$(TestCase)' != 'inactive'" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/Layout.dll')" Source="products/Layout.dll" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/aliases/Layout.dll')" Source="products/Layout.dll" Condition="'$(TestCase)' == 'duplicates'" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/Layout.pdb')" Source="products/Layout.pdb"
+                        Condition="'$(TestCase)' != 'no-products' and '$(TestCase)' != 'no-symbol-copy' and '$(TestCase)' != 'fallback'" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/Layout.xml')" Source="products/Layout.xml"
+                        Condition="'$(TestCase)' != 'no-products' and '$(TestCase)' != 'no-symbol-copy' and '$(TestCase)' != 'fallback'" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/Configured.pdb')" Source="products/symbols/Configured.pdb" Condition="'$(TestCase)' == 'fallback'" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/Configured.xml')" Source="products/docs/Configured.xml" Condition="'$(TestCase)' == 'fallback'" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/dependencies/dependency.dll')" Source="products/dependency.dll" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/assets/renamed%3B100%25content.txt')" Source="products/content%3B100%25payload.txt" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/fr/Layout.resources.dll')" Source="products/fr/Layout.resources.dll" />
+    <_ExpectedPlacement Include="@(_ExpectedDirectory->'%(Identity)/authored/extra.txt')" Source="products/authored.txt" />
+    <_ExpectedPlacement Include="layout/custom/nested/custom%25payload.txt" Source="products/custom.txt" Condition="'$(TestCase)' != 'inactive'" />
+    <_ExpectedPlacement Update="@(_ExpectedPlacement)">
+      <SourcePath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '%(_ExpectedPlacement.Source)'))</SourcePath>
+    </_ExpectedPlacement>
+  </ItemGroup>
+
+  <Target Name="GetCopyToOutputDirectoryItems">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Include="products/dependency.dll" DestinationSubDirectory="dependencies/" />
+      <AllItemsFullPathWithTargetPath Include="products/content%3B100%25payload.txt"
+                                    TargetPath="assets/renamed%3B100%25content.txt" DestinationSubDirectory="must-not-win/" />
+    </ItemGroup>
+  </Target>
+  <Target Name="PrepareResourceNames" />
+  <Target Name="ComputeIntermediateSatelliteAssemblies">
+    <ItemGroup>
+      <IntermediateSatelliteAssembliesWithTargetPath Include="products/fr/Layout.resources.dll" TargetPath="fr/Layout.resources.dll" />
+    </ItemGroup>
+  </Target>
+  <Target Name="Restore" DependsOnTargets="_CaptureTargetFrameworkInputs" />
+  <Target Name="CheckProductQuery">
+    <Error Condition="'$(TestCase)' == 'inactive'" Text="An empty placement plan must not query build products."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+
+  <Target Name="Query" DependsOnTargets="GetLibraryLayout" Condition="'$(Legacy)' != 'true'">
+    <ItemGroup>
+      <_ActualMapping Include="@(LibraryLayoutFile->'%(Identity)|%(SourcePath)')" />
+      <_ExpectedMapping Include="@(_ExpectedPlacement->'%(FullPath)|%(SourcePath)')" />
+      <_MissingMapping Include="@(_ExpectedMapping)" Exclude="@(_ActualMapping)" />
+      <_UnexpectedMapping Include="@(_ActualMapping)" Exclude="@(_ExpectedMapping)" />
+    </ItemGroup>
+    <Error Condition="'@(LibraryLayoutFile->Count())' != '@(_ExpectedPlacement->Count())'"
+           Text="Unexpected $(TestCase) layout count: @(LibraryLayoutFile->Count()), expected @(_ExpectedPlacement->Count())."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'@(_MissingMapping)' != '' or '@(_UnexpectedMapping)' != ''"
+           Text="Every expected destination must map to its declared source. Missing: @(_MissingMapping). Unexpected: @(_UnexpectedMapping)."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'@(LibraryLayoutFile)' != '' and ('%(LibraryLayoutFile.Identity)' != '%(LibraryLayoutFile.FullPath)' or !$([System.IO.Path]::IsPathRooted('%(LibraryLayoutFile.SourcePath)')))"
+           Text="Layout identities and SourcePath metadata must be absolute."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'@(FileWrites)' != ''" Text="Queries must not populate FileWrites."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <ItemGroup>
+      <_QuerySnapshot Include="@(LibraryLayoutFile)" />
+      <_QuerySnapshot Update="@(_QuerySnapshot)">
+        <Line>$([System.String]::Copy('%(_QuerySnapshot.Identity)').Replace('$(_FixtureRoot)', '').Replace('\', '/'))|$([System.String]::Copy('%(_QuerySnapshot.SourcePath)').Replace('$(_FixtureRoot)', '').Replace('\', '/'))</Line>
+      </_QuerySnapshot>
+    </ItemGroup>
+    <PropertyGroup>
+      <_LayoutCount>@(LibraryLayoutFile->Count())</_LayoutCount>
+    </PropertyGroup>
+    <WriteLinesToFile File="query.txt" Lines="layout-count=$(_LayoutCount);@(_QuerySnapshot->'%(Line)')"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="query.txt" />
+  </Target>
+
+  <Target Name="Produce" Condition="'$(TestCase)' != 'inactive'">
+    <WriteLinesToFile File="%(_FakeProduct.Identity)" Lines="runtime-layout:%(_FakeProduct.Filename)%(_FakeProduct.Extension)"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="%(_FakeProduct.Identity)" />
+  </Target>
+  <Target Name="VerifyCompatibilityItems" DependsOnTargets="GetBinPlaceItems" Condition="'$(TestCase)' == 'duplicates'">
+    <ItemGroup>
+      <_DefaultAssemblyProduct Include="@(BinPlaceItem)" Condition="'%(BinPlaceItem.FullPath)' == '$(TargetPath)' and '%(BinPlaceItem.TargetPath)' == ''" />
+      <_AliasAssemblyProduct Include="@(BinPlaceItem)" Condition="'%(BinPlaceItem.FullPath)' == '$(TargetPath)' and '%(BinPlaceItem.TargetPath)' == 'aliases/Layout.dll'" />
+    </ItemGroup>
+    <Error Condition="'@(_DefaultAssemblyProduct->Count())' != '1' or '@(_AliasAssemblyProduct->Count())' != '1'"
+           Text="The compatibility inventory must preserve one source with both its default and explicit target paths."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+  <Target Name="CopyFilesToOutputDirectory" />
+  <!-- Legacy GetBinPlaceItems must run after Produce: its Exists checks are part of the oracle. -->
+  <Target Name="Build" DependsOnTargets="$(_FixtureBuildDependsOn)" />
+  <Target Name="RecordWrites">
+    <ItemGroup>
+      <_ActualWrite Include="@(FileWrites->'%(FullPath)')" />
+      <_ExpectedWrite Include="@(_ExpectedPlacement->'%(FullPath)')" />
+      <_MissingWrite Include="@(_ExpectedWrite)" Exclude="@(_ActualWrite)" />
+      <_UnexpectedWrite Include="@(_ActualWrite)" Exclude="@(_ExpectedWrite)" />
+    </ItemGroup>
+    <Error Condition="'@(_MissingWrite)' != '' or '@(_UnexpectedWrite)' != '' or '@(_ActualWrite->Distinct()->Count())' != '@(_ExpectedWrite->Count())'"
+           Text="Publication must statically register exactly the expected destinations. Missing: @(_MissingWrite). Unexpected: @(_UnexpectedWrite)."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'$(Legacy)' != 'true' and '@(FileWrites->Count())' != '@(_ExpectedWrite->Count())'"
+           Text="Identical source/destination pairs must not duplicate FileWrites."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <ItemGroup>
+      <_WriteSnapshot Include="@(_ActualWrite)" />
+      <_WriteSnapshot Update="@(_WriteSnapshot)">
+        <Line>$([System.String]::Copy('%(_WriteSnapshot.Identity)').Replace('$(_FixtureRoot)', '').Replace('\', '/'))</Line>
+      </_WriteSnapshot>
+    </ItemGroup>
+    <PropertyGroup>
+      <_WritesCount>@(_ActualWrite->Distinct()->Count())</_WritesCount>
+    </PropertyGroup>
+    <WriteLinesToFile File="writes.txt" Lines="writes-count=$(_WritesCount);@(_WriteSnapshot->Metadata('Line')->Distinct())"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="writes.txt" />
+  </Target>
+</Project>

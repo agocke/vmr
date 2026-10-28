@@ -24,6 +24,7 @@
     <CallTarget Targets="TestDirectoryImports" />
     <CallTarget Targets="TestArcadeLayout" />
     <CallTarget Targets="TestArcadeTargetFrameworkInputs" />
+    <CallTarget Targets="TestRuntimeLibraryLayout" />
     <CallTarget Targets="TestResourceMetadata" />
     <CallTarget Targets="TestRuntimeResourceCompilation" />
     <CallTarget Targets="TestInternalsVisibleTo" />
@@ -524,6 +525,151 @@
     <Error Condition="'$(_MissingFactExitCode)' == '0' or !$(_MissingFactLog.Contains('MSB4019')) or !$(_MissingFactLog.Contains('$(PreparedFactKind)')) or
                       Exists('$(_MissingFactGraph)') or Exists('$(_MissingFactGraph).actions') or Exists('$(PreparedFactsRoot)rejected-$(PreparedFactKind).txt')"
            Text="Missing $(PreparedFactKind) facts for a discovered framework must fail its required import without publishing a graph or executing actions." />
+  </Target>
+  <Target Name="TestRuntimeLibraryLayout">
+    <PropertyGroup>
+      <_RuntimeLayoutRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'runtime-library-layout'))</_RuntimeLayoutRoot>
+      <_RuntimeLayoutPackage>$([MSBuild]::NormalizeDirectory('$(_AppDirectory)', 'toolset/Arcade/TargetFramework'))</_RuntimeLayoutPackage>
+      <_RuntimeLayoutTargets>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/runtime/eng/libraryLayout.targets'))</_RuntimeLayoutTargets>
+      <_RuntimeLayoutArguments>-p:ArcadeTargetFrameworkDirectory=&quot;$(_RuntimeLayoutPackage)&quot; -p:RuntimeLibraryLayoutTargetsPath=&quot;$(_RuntimeLayoutTargets)&quot;</_RuntimeLayoutArguments>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(GenBuildApp)') or !Exists('$(GenBuildTestHost)')"
+           Text="Build genbuild.proj first and set GenBuildTestHost to an external dotnet runtime." />
+    <MakeDir Directories="$(_RuntimeLayoutRoot)" />
+    <WriteLinesToFile File="$(_RuntimeLayoutRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_RuntimeLayoutRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_RuntimeLayoutRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <ItemGroup>
+      <_RuntimeLayoutCase Include="full;fallback" ExpectedCount="43" />
+      <_RuntimeLayoutCase Include="duplicates" ExpectedCount="49" />
+      <_RuntimeLayoutCase Include="explicit" ExpectedCount="43" ExtraArguments="-p:EnableBinPlacing=false" />
+      <_RuntimeLayoutCase Include="no-products;no-symbol-copy" ExpectedCount="31" />
+      <_RuntimeLayoutCase Include="inactive" ExpectedCount="0" />
+      <_RuntimeLayoutCase Update="@(_RuntimeLayoutCase)">
+        <Root>$([MSBuild]::NormalizeDirectory('$(_RuntimeLayoutRoot)', '%(Identity)'))</Root>
+      </_RuntimeLayoutCase>
+      <_RuntimeLayoutRejectedCase Include="conflict" />
+      <_RuntimeLayoutRejectedCase Include="case-conflict" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+      <_RuntimeLayoutRun Include="@(_RuntimeLayoutCase)" Mode="ordinary" Legacy="false" />
+      <_RuntimeLayoutRun Include="@(_RuntimeLayoutCase)" Mode="action" Legacy="false" />
+      <_RuntimeLayoutRun Include="full" Mode="legacy" Legacy="true" ExpectedCount="43" />
+      <_RuntimeLayoutRun Include="@(_RuntimeLayoutRejectedCase)" Mode="ordinary" Legacy="false" Rejected="true" />
+      <_RuntimeLayoutRun Include="@(_RuntimeLayoutRejectedCase)" Mode="action" Legacy="false" Rejected="true" />
+      <_RuntimeLayoutRun Update="@(_RuntimeLayoutRun)">
+        <Root>$([MSBuild]::NormalizeDirectory('$(_RuntimeLayoutRoot)', '%(Identity)', '%(Mode)'))</Root>
+        <Arguments>$(_RuntimeLayoutArguments) -p:TestCase=%(Identity) -p:Legacy=%(Legacy) %(_RuntimeLayoutRun.ExtraArguments)</Arguments>
+      </_RuntimeLayoutRun>
+      <_RuntimeLayoutSuccessfulRun Include="@(_RuntimeLayoutRun)" Condition="'%(_RuntimeLayoutRun.Rejected)' != 'true'" />
+      <_RuntimeLayoutOrdinaryRun Include="@(_RuntimeLayoutSuccessfulRun)" Condition="'%(_RuntimeLayoutSuccessfulRun.Mode)' == 'ordinary'" />
+      <_RuntimeLayoutActionRun Include="@(_RuntimeLayoutSuccessfulRun)" Condition="'%(_RuntimeLayoutSuccessfulRun.Mode)' == 'action'" />
+      <_RuntimeLayoutRejectedRun Include="@(_RuntimeLayoutRun)" Condition="'%(_RuntimeLayoutRun.Rejected)' == 'true'" />
+    </ItemGroup>
+    <MakeDir Directories="%(_RuntimeLayoutRun.Root)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeLibraryLayout.proj" DestinationFiles="%(_RuntimeLayoutRun.Root)RuntimeLibraryLayout.proj" />
+    <WriteLinesToFile File="%(_RuntimeLayoutRun.Root)runtime.json" Overwrite="true"
+                      Lines="{&quot;runtimes&quot;:{&quot;linux&quot;:{&quot;#import&quot;:[&quot;unix&quot;]},&quot;unix&quot;:{&quot;#import&quot;:[&quot;any&quot;]},&quot;any&quot;:{}}}" />
+    <ItemGroup>
+      <_RuntimeLayoutStaleProduct Include="%(_RuntimeLayoutSuccessfulRun.Root)products/Layout.pdb;%(_RuntimeLayoutSuccessfulRun.Root)products/Layout.xml"
+                                 Condition="'%(_RuntimeLayoutSuccessfulRun.Identity)' == 'no-products' or '%(_RuntimeLayoutSuccessfulRun.Identity)' == 'no-symbol-copy'" />
+    </ItemGroup>
+    <WriteLinesToFile File="%(_RuntimeLayoutStaleProduct.Identity)" Lines="stale disabled product" Overwrite="true" />
+    <GetFileHash Files="@(_RuntimeLayoutStaleProduct)">
+      <Output TaskParameter="Items" ItemName="_RuntimeLayoutStaleProductBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) restore &quot;%(_RuntimeLayoutRun.Root)RuntimeLibraryLayout.proj&quot; %(_RuntimeLayoutRun.Arguments) -p:_MSBuildPreparingGraphInputs=true -bl:&quot;%(_RuntimeLayoutRun.Root)restore.binlog&quot;" />
+    <!-- Each ordinary oracle retains its live graph; hardened queries/publication must replay preparation. -->
+    <Move SourceFiles="%(_RuntimeLayoutRun.Root)runtime.json" DestinationFiles="%(_RuntimeLayoutRun.Root)runtime.saved.json"
+          Condition="'%(_RuntimeLayoutRun.Mode)' == 'action'" />
+    <Exec Command="$(_App) restore &quot;%(_RuntimeLayoutOrdinaryRun.Root)RuntimeLibraryLayout.proj&quot; -t:Query %(_RuntimeLayoutOrdinaryRun.Arguments) -bl:&quot;%(_RuntimeLayoutOrdinaryRun.Root)query.binlog&quot;" />
+    <Exec Command="$(_App) build &quot;%(_RuntimeLayoutActionRun.Root)RuntimeLibraryLayout.proj&quot; -p:QueryOnly=true %(_RuntimeLayoutActionRun.Arguments) -p:MSBuildEmitActionGraph=&quot;%(_RuntimeLayoutActionRun.Root)query.ninja&quot; -bl:&quot;%(_RuntimeLayoutActionRun.Root)query.binlog&quot;" />
+    <Error Condition="!Exists('%(_RuntimeLayoutActionRun.Root)query.ninja') or !Exists('%(_RuntimeLayoutActionRun.Root)query.ninja.actions') or Exists('%(_RuntimeLayoutActionRun.Root)query.txt')"
+           Text="Layout query construction must emit actions without executing even its explicit result writer (%(_RuntimeLayoutActionRun.Identity))." />
+    <Exec WorkingDirectory="%(_RuntimeLayoutActionRun.Root)" Command="ninja -f query.ninja" />
+    <ItemGroup>
+      <_RuntimeLayoutQueryProduct Include="%(_RuntimeLayoutSuccessfulRun.Root)products/**/*" Exclude="@(_RuntimeLayoutStaleProduct)" />
+    </ItemGroup>
+    <Error Condition="'@(_RuntimeLayoutQueryProduct)' != '' or Exists('%(_RuntimeLayoutSuccessfulRun.Root)layout') or Exists('%(_RuntimeLayoutSuccessfulRun.Root)writes.txt')"
+           Text="Querying future placements must neither produce inputs, copy outputs nor publish bookkeeping." />
+    <Error Condition="$([System.IO.File]::ReadAllText('%(_RuntimeLayoutCase.Root)ordinary/query.txt')) != $([System.IO.File]::ReadAllText('%(_RuntimeLayoutCase.Root)action/query.txt'))"
+           Text="Independent future-placement queries must match the ordinary, project-relative snapshot (%(_RuntimeLayoutCase.Identity))." />
+
+    <ItemGroup>
+      <_RuntimeLayoutStaleDestination Include="$(_RuntimeLayoutRoot)full/action/layout/core/Layout.dll;$(_RuntimeLayoutRoot)full/action/layout/custom/nested/custom%25payload.txt" />
+    </ItemGroup>
+    <WriteLinesToFile File="%(_RuntimeLayoutStaleDestination.Identity)" Lines="stale destination" Overwrite="true" />
+    <GetFileHash Files="@(_RuntimeLayoutStaleDestination)">
+      <Output TaskParameter="Items" ItemName="_RuntimeLayoutStaleDestinationBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;%(_RuntimeLayoutActionRun.Root)RuntimeLibraryLayout.proj&quot; %(_RuntimeLayoutActionRun.Arguments) -p:MSBuildEmitActionGraph=&quot;%(_RuntimeLayoutActionRun.Root)build.ninja&quot; -bl:&quot;%(_RuntimeLayoutActionRun.Root)build.binlog&quot;" />
+    <GetFileHash Files="@(_RuntimeLayoutStaleDestination)">
+      <Output TaskParameter="Items" ItemName="_RuntimeLayoutStaleDestinationAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_RuntimeLayoutStaleDestinationBefore->'%(FileHash)')' != '@(_RuntimeLayoutStaleDestinationAfter->'%(FileHash)')'"
+           Text="Build construction must leave stale main and custom-list destinations byte-for-byte unchanged." />
+    <Error Condition="!Exists('%(_RuntimeLayoutActionRun.Root)build.ninja') or !Exists('%(_RuntimeLayoutActionRun.Root)build.ninja.actions') or
+                      Exists('%(_RuntimeLayoutActionRun.Root)products/Layout.dll') or Exists('%(_RuntimeLayoutActionRun.Root)writes.txt') or Exists('%(_RuntimeLayoutActionRun.Root)runtime.json')"
+           Text="Layout Build must construct from prepared inputs without executing producers or publication (%(_RuntimeLayoutActionRun.Identity))." />
+    <!-- Select a single absolute layout output, not the default aggregate, to exercise input producer edges. -->
+    <Exec WorkingDirectory="$(_RuntimeLayoutRoot)full/action"
+          Command="ninja -f build.ninja &quot;$([MSBuild]::NormalizePath('$(_RuntimeLayoutRoot)', 'full/action/layout/core/Layout.dll'))&quot;" />
+    <ReadLinesFromFile File="$(_RuntimeLayoutRoot)full/action/layout/core/Layout.dll">
+      <Output TaskParameter="Lines" PropertyName="_RuntimeLayoutRequestedContents" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_RuntimeLayoutRequestedContents)' != 'runtime-layout:Layout.dll' or !Exists('$(_RuntimeLayoutRoot)full/action/products/Layout.dll') or Exists('$(_RuntimeLayoutRoot)full/action/writes.txt')"
+           Text="Requesting one layout output must execute its future producer and copy, but not unrelated bookkeeping." />
+    <Exec WorkingDirectory="%(_RuntimeLayoutActionRun.Root)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;%(_RuntimeLayoutSuccessfulRun.Root)RuntimeLibraryLayout.proj&quot; -t:Build %(_RuntimeLayoutSuccessfulRun.Arguments) -bl:&quot;%(_RuntimeLayoutSuccessfulRun.Root)ordinary.binlog&quot;"
+          Condition="'%(_RuntimeLayoutSuccessfulRun.Mode)' != 'action'" />
+    <Error Condition="$([System.IO.File]::ReadAllText('%(_RuntimeLayoutCase.Root)ordinary/query.txt')) != $([System.IO.File]::ReadAllText('%(_RuntimeLayoutCase.Root)action/query.txt')) or
+                      $([System.IO.File]::ReadAllText('%(_RuntimeLayoutCase.Root)ordinary/writes.txt')) != $([System.IO.File]::ReadAllText('%(_RuntimeLayoutCase.Root)action/writes.txt'))"
+           Text="Layout queries and static FileWrites must agree after independent execution, normalized to project-relative paths (%(_RuntimeLayoutCase.Identity))." />
+    <GetFileHash Files="@(_RuntimeLayoutStaleProduct)">
+      <Output TaskParameter="Items" ItemName="_RuntimeLayoutStaleProductAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_RuntimeLayoutStaleProductBefore->'%(FileHash)')' != '@(_RuntimeLayoutStaleProductAfter->'%(FileHash)')'"
+           Text="Disabled PDB/XML products must remain stale on disk, without being regenerated or placed." />
+    <ItemGroup>
+      <_RuntimeLayoutMaterializedRun Include="@(_RuntimeLayoutSuccessfulRun)" Condition="'%(_RuntimeLayoutSuccessfulRun.ExpectedCount)' != '0'" />
+      <_RuntimeLayoutFile Include="%(_RuntimeLayoutCase.Root)ordinary/layout/**/*" CaseRoot="%(_RuntimeLayoutCase.Root)" Case="%(_RuntimeLayoutCase.Identity)" />
+      <_RuntimeLayoutFile Update="@(_RuntimeLayoutFile)">
+        <RelativePath>$([MSBuild]::MakeRelative('%(CaseRoot)ordinary', '%(FullPath)'))</RelativePath>
+      </_RuntimeLayoutFile>
+      <_RuntimeLayoutLegacyFile Include="@(_RuntimeLayoutFile)" Condition="'%(_RuntimeLayoutFile.Case)' == 'full'" />
+    </ItemGroup>
+    <Error Condition="$([System.IO.Directory]::GetFiles('%(_RuntimeLayoutMaterializedRun.Root)layout', '*', System.IO.SearchOption.AllDirectories).Length) != '%(_RuntimeLayoutMaterializedRun.ExpectedCount)'"
+           Text="The physical layout must contain exactly the independently expected placements, with no stale symbols/docs (%(_RuntimeLayoutMaterializedRun.Identity), %(_RuntimeLayoutMaterializedRun.Mode))." />
+    <Error Condition="'%(_RuntimeLayoutSuccessfulRun.ExpectedCount)' == '0' and Exists('%(_RuntimeLayoutSuccessfulRun.Root)layout')"
+           Text="Inactive inner frameworks must not create layout directories." />
+    <GetFileHash Files="@(_RuntimeLayoutFile)">
+      <Output TaskParameter="Items" ItemName="_RuntimeLayoutOrdinaryHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_RuntimeLayoutFile->'%(CaseRoot)action/%(RelativePath)')">
+      <Output TaskParameter="Items" ItemName="_RuntimeLayoutActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_RuntimeLayoutLegacyFile)">
+      <Output TaskParameter="Items" ItemName="_RuntimeLayoutLegacyOrdinaryHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_RuntimeLayoutLegacyFile->'%(CaseRoot)legacy/%(RelativePath)')">
+      <Output TaskParameter="Items" ItemName="_RuntimeLayoutLegacyHash" />
+    </GetFileHash>
+    <Error Condition="'@(_RuntimeLayoutOrdinaryHash->'%(FileHash)')' != '@(_RuntimeLayoutActionHash->'%(FileHash)')' or
+                      '@(_RuntimeLayoutLegacyOrdinaryHash->'%(FileHash)')' != '@(_RuntimeLayoutLegacyHash->'%(FileHash)')'"
+           Text="All main/PDB/XML, content, copy-local, satellite, authored and custom-list placements must preserve independently executed legacy/ordinary/hardened bytes." />
+
+    <Exec Command="$(_App) restore &quot;%(_RuntimeLayoutRejectedRun.Root)RuntimeLibraryLayout.proj&quot; -t:Query %(_RuntimeLayoutRejectedRun.Arguments) -flp:&quot;LogFile=%(_RuntimeLayoutRejectedRun.Root)rejection.log;Verbosity=quiet&quot;"
+          Condition="'%(_RuntimeLayoutRejectedRun.Mode)' == 'ordinary'" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_RuntimeLayoutRejectedExit" />
+    </Exec>
+    <Exec Command="$(_App) build &quot;%(_RuntimeLayoutRejectedRun.Root)RuntimeLibraryLayout.proj&quot; %(_RuntimeLayoutRejectedRun.Arguments) -p:MSBuildEmitActionGraph=&quot;%(_RuntimeLayoutRejectedRun.Root)build.ninja&quot; -flp:&quot;LogFile=%(_RuntimeLayoutRejectedRun.Root)rejection.log;Verbosity=quiet&quot;"
+          Condition="'%(_RuntimeLayoutRejectedRun.Mode)' == 'action'" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_RuntimeLayoutRejectedExit" />
+    </Exec>
+    <Error Condition="@(_RuntimeLayoutRejectedExit->AnyHaveMetadataValue('Identity', '0')) or
+                      !$([System.IO.File]::ReadAllText('%(_RuntimeLayoutRejectedRun.Root)rejection.log').Contains('library layout destination has multiple sources')) or
+                      Exists('%(_RuntimeLayoutRejectedRun.Root)build.ninja') or Exists('%(_RuntimeLayoutRejectedRun.Root)build.ninja.actions') or
+                      Exists('%(_RuntimeLayoutRejectedRun.Root)query.txt') or Exists('%(_RuntimeLayoutRejectedRun.Root)products/Layout.dll') or Exists('%(_RuntimeLayoutRejectedRun.Root)layout')"
+           Text="Conflicting sources must fail ordinary planning and hardened construction with a layout diagnostic and no partial graph, actions or products (%(_RuntimeLayoutRejectedRun.Identity), %(_RuntimeLayoutRejectedRun.Mode))." />
+    <Message Importance="high" Text="Runtime library layout smoke checks passed: legacy/ordinary/hardened placement and byte parity, prepared platform fallback, configured PDB/docs, inactive inner frameworks, future queries, selected-output producer ordering, stale symbol/doc exclusion, deduplication and collision rejection. $(_RuntimeLayoutRoot)" />
   </Target>
   <Target Name="TestRuntimeGenAPI">
     <MakeDir Directories="$(_TestDirectory)" />

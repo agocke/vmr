@@ -3,7 +3,9 @@
 
   <!-- TODO: Remove Architecture="*" on Runtime="NET" UsingTask declarations below when https://github.com/dotnet/msbuild/issues/13739 is fixed and a new msbuild is consumed with the fix. -->
   <UsingTask TaskName="ChooseBestP2PTargetFrameworkTask" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="ChooseBestTargetFrameworksTask" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="ChooseBestP2PTargetFrameworkFromInputs" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" />
+  <UsingTask TaskName="ChooseBestTargetFrameworksFromInputs" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" />
   <UsingTask TaskName="WriteTargetFrameworkInputs" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" />
 
   <PropertyGroup>

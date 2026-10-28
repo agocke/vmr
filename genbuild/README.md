@@ -163,6 +163,13 @@ Arcade checks compare ordinary and prepared P2P selection, platform fallback,
 RID-agnostic metadata, explicit framework overrides and incompatible references.
 They also exercise real NuGet-imported capture hooks, literal JSON transport,
 replay without the live runtime-graph file, and fail-closed prepared inputs.
+Runtime library-layout checks import the shared runtime authoring and compare
+legacy binplace, ordinary publication and independent execution. They cover
+future products, custom item lists and target paths, platform fallback, inactive
+inner frameworks, configured symbols/docs, duplicate placements and collisions.
+Explicit publication also works with automatic binplacing disabled.
+Query-only requests do not build or copy products; construction preserves stale
+destinations and execution consumes the declared producer outputs.
 Repository-info checks preserve provider URL replay, Azure DevOps mirror
 remapping, the translation opt-out and unrelated source-root metadata, then
 independently publish metadata matching ordinary builds.
@@ -403,14 +410,21 @@ Ordinary copy options and incrementality remain unchanged; hardened publication
 does not depend on prior destination state and rejects link/read-only overrides.
 Construction advances through the ILLink analyzer, code-fix and linker reference
 projects, resource actions, IVT generation, Banned API config selection,
-package-runtime-config generation and source-content copies. It reaches the
-Immutable reference project's Arcade `BinPlace` hook. Its first remaining error
-is `ChooseBestTargetFrameworksTask` lacking declared I/O (`MSB4286`), but this is
-not just an annotation: the task reads the live runtime graph, and subsequent
-binplacement discovers products with `Exists` and defaults to hardlinks.
-This needs coordinated prepared framework selection, a declared product inventory
-and explicit placement actions, rather than snapshotting future output existence
-or skipping binplacement.
+package-runtime-config generation, source-content copies and library binplace.
+Runtime's shared `eng/libraryLayout.targets` exposes configured products and
+destination/source mappings without probing product existence. Existing
+`BinPlace` entry points delegate to these queries and publication, preserving
+ordinary paths while enabling future consumer-owned aggregate layouts.
+Hardened framework selection uses prepared runtime-graph JSON with the same
+NuGet policy; placement uses explicit `CopyFiles` actions and static `FileWrites`.
+Ordinary publication retains its copy/link options.
+The guarded ordinary query returns Immutable's future assembly/PDB/XML paths
+without producing them. For the selected `net10.0` inner build, all three layout
+framework requests choose `net11.0`, so that build correctly has no placements;
+the isolated regressions exercise positive layout publication.
+The next blocker is ILLink's `GenerateResourcesSubstitutionFile`: its writer
+still reads a substitution template in a construction-time property function
+(`MSB4287`). The template transformation needs execution-time declared I/O.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

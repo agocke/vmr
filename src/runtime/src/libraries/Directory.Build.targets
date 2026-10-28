@@ -82,40 +82,7 @@
   <Import Project="$(RepositoryEngineeringDir)versioning.targets" />
   <Import Project="$(RepositoryEngineeringDir)intellisense.targets" Condition="'$(IsSourceProject)' == 'true'" />
 
-  <!-- Libraries-specific binplacing properties -->
-  <PropertyGroup>
-    <BinPlaceRef Condition="'$(BinPlaceRef)' == '' and ('$(IsReferenceAssemblyProject)' == 'true' or '$(IsRuntimeAndReferenceAssembly)' == 'true')">true</BinPlaceRef>
-    <BinPlaceRuntime Condition="'$(BinPlaceRuntime)' == '' and '$(IsSourceProject)' == 'true'">true</BinPlaceRuntime>
-    <BinPlaceForTargetVertical Condition="'$(BinPlaceForTargetVertical)' == ''">true</BinPlaceForTargetVertical>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <!-- Used by the runtime tests to prepare the CORE_ROOT layout. Don't use in libraries. -->
-    <BinPlaceTargetFrameworks Include="$(NetCoreAppCurrent)-$(TargetOS)"
-                              Condition="'$(BinPlaceForTargetVertical)' == 'true'">
-      <NativePath>$(LibrariesAllBinArtifactsPath)</NativePath>
-      <RefPath>$(LibrariesAllRefArtifactsPath)</RefPath>
-      <RuntimePath>$(LibrariesAllBinArtifactsPath)</RuntimePath>
-    </BinPlaceTargetFrameworks>
-
-    <!-- Source generator projects might multi-target. Make sure that only the netstandard2.0 compiled assets get binplaced. -->
-    <BinPlaceDir Include="$(MicrosoftNetCoreAppRefPackDir)$(GeneratorProjectBaseTargetPath)"
-                 Condition="'$(IsNETCoreAppAnalyzer)' == 'true' and
-                            '$(TargetFramework)' == 'netstandard2.0'" />
-
-    <!-- Setup the shared framework directory for testing -->
-    <BinPlaceTargetFrameworks Include="$(NetCoreAppCurrent)-$(TargetOS)">
-      <NativePath>$(NetCoreAppCurrentTestHostSharedFrameworkPath)</NativePath>
-      <RuntimePath Condition="'$(IsNETCoreAppSrc)' == 'true'">$(NetCoreAppCurrentTestHostSharedFrameworkPath)</RuntimePath>
-    </BinPlaceTargetFrameworks>
-
-    <!-- Microsoft.NetCore.App.Ref and Microsoft.NetCore.App.Runtime targeting packs -->
-    <BinPlaceTargetFrameworks Include="$(NetCoreAppCurrent)-$(TargetOS)">
-      <NativePath>$(MicrosoftNetCoreAppRuntimePackNativeDir)</NativePath>
-      <RefPath Condition="'$(IsNETCoreAppRef)' == 'true'">$(MicrosoftNetCoreAppRefPackRefDir)</RefPath>
-      <RuntimePath Condition="'$(IsNETCoreAppSrc)' == 'true'">$(MicrosoftNetCoreAppRuntimePackRidLibTfmDir)</RuntimePath>
-    </BinPlaceTargetFrameworks>
-  </ItemGroup>
+  <Import Project="$(RepositoryEngineeringDir)libraryLayout.targets" />
 
   <Import Project="$(RepositoryEngineeringDir)targetingpacks.targets" />
 
