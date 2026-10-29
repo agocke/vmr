@@ -214,6 +214,25 @@ empty, item outputs append nothing, property outputs become empty, and
 `MSBuildLastTaskResult` becomes `true`. Unavailable project lists or request
 parameters remain unsupported.
 
+### Construction diagnostics and publication
+
+An explicitly declared zero-I/O `Warning` runs during construction with ordinary
+task semantics: it logs a warning and returns success. MSBuild's logging policy
+still controls promotion to errors, exclusions and demotion to messages.
+Diagnostics from child requests belong to the same root submission.
+
+The emitter validates and formats the complete graph into an in-memory publication
+plan. It writes no Ninja file or sidecars until root-submission completion has
+both the build result and completed logging, including warning promotion. Only a
+successful result publishes the graph. Pending publication follows in-process
+result copies, not serialized result caches; construction requires a single
+in-process node.
+
+Failed construction leaves any previous graph and manifests unchanged. Successful
+publication writes content-addressed sidecars before atomically replacing the
+Ninja entry point. Publication I/O failures fail the submission and remove newly
+created metadata, without removing pre-existing files or directories.
+
 ### Output parent directories
 
 The standalone host validates the complete invocation, then ensures the parent

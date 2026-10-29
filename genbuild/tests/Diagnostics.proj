@@ -1,0 +1,20 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <DiagnosticScope Condition="'$(DiagnosticScope)' == ''">root</DiagnosticScope>
+    <Variant Condition="'$(Variant)' == ''">original</Variant>
+    <_DiagnosticName Condition="'$(IsDiagnosticChild)' != 'true'">root</_DiagnosticName>
+    <_DiagnosticName Condition="'$(IsDiagnosticChild)' == 'true'">child</_DiagnosticName>
+    <MSBuildWarningsAsErrors Condition="'$(ProjectWarningAsError)' == 'true' and
+                                       ('$(DiagnosticScope)' == 'root' or '$(IsDiagnosticChild)' == 'true')">GBTEST001</MSBuildWarningsAsErrors>
+  </PropertyGroup>
+  <Target Name="Restore" />
+  <Target Name="Build">
+    <WriteLinesToFile File="out/$(_DiagnosticName).txt" Lines="$(Variant)" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="out/$(_DiagnosticName).txt" />
+    <Warning Code="GBTEST001" Text="Declared diagnostic warning."
+             Condition="'$(DiagnosticScope)' == 'root' or '$(IsDiagnosticChild)' == 'true'"
+             DeclaredInputs="" DeclaredOutputs="" />
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Build" Properties="IsDiagnosticChild=true"
+             Condition="'$(DiagnosticScope)' == 'child' and '$(IsDiagnosticChild)' != 'true'" />
+  </Target>
+</Project>

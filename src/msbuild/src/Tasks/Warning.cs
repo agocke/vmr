@@ -12,9 +12,14 @@ namespace Microsoft.Build.Tasks
     /// Task that simply emits a warning. Engine will add the project path because
     /// we do not specify a filename.
     /// </summary>
+    [MSBuildDeclaredIOTask]
     [MSBuildMultiThreadableTask]
     public sealed class Warning : TaskExtension
     {
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        public ITaskItem[] DeclaredOutputs { get; set; }
+
         /// <summary>
         /// Error message
         /// </summary>

@@ -53,7 +53,11 @@
                      '$(DocFileOverride)' == '' and
                      '$(IsPlatformNotSupportedAssembly)' != 'true'"
           BeforeTargets="CoreCompile">
-    <Warning Text="The 'UseCompilerGeneratedDocXmlFile' property was set to '$(UseCompilerGeneratedDocXmlFile)', but the doc team doesn't provide a file for this assembly. Remove the 'UseCompilerGeneratedDocXmlFile' property to let the compiler generate the file." />
+    <Warning Text="The 'UseCompilerGeneratedDocXmlFile' property was set to '$(UseCompilerGeneratedDocXmlFile)', but the doc team doesn't provide a file for this assembly. Remove the 'UseCompilerGeneratedDocXmlFile' property to let the compiler generate the file."
+             Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <Warning Text="The 'UseCompilerGeneratedDocXmlFile' property was set to '$(UseCompilerGeneratedDocXmlFile)', but the doc team doesn't provide a file for this assembly. Remove the 'UseCompilerGeneratedDocXmlFile' property to let the compiler generate the file."
+             DeclaredInputs="" DeclaredOutputs=""
+             Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   </Target>
 
   <!-- Copy DocFileOverride to the intermediate folder and touch it so outputs stay newer than inputs

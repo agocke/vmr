@@ -6,6 +6,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading;
 using Microsoft.Build.BackEnd;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Graph.Hardened;
 using Microsoft.Build.Shared;
 
 namespace Microsoft.Build.Execution
@@ -236,12 +238,35 @@ namespace Microsoft.Build.Execution
 
         protected internal override void OnCompletition()
         {
+            if (BuildResult is null)
+            {
+                return;
+            }
+
+            var loggingService = ((IBuildComponentHost)BuildManager).LoggingService;
             // Did this submission have warnings elevated to errors? If so, mark it as
             // failed even though it succeeded (with warnings--but they're errors).
-            if (BuildResult != null &&
-                ((IBuildComponentHost)BuildManager).LoggingService.HasBuildSubmissionLoggedErrors(BuildResult.SubmissionId))
+            if (loggingService.HasBuildSubmissionLoggedErrors(BuildResult.SubmissionId))
             {
                 BuildResult.SetOverallResult(overallResult: false);
+            }
+
+            // Completion waits for both results and logging, including diagnostics from child requests.
+            HardenedActionGraph.Publication? publication = BuildResult.ActionGraphPublication;
+            BuildResult.ActionGraphPublication = null;
+            if (publication is not null && BuildResult.OverallResult == BuildResultCode.Success)
+            {
+                try
+                {
+                    publication.Publish();
+                }
+                catch (Exception ex) when (ExceptionHandling.IsIoRelatedException(ex))
+                {
+                    BuildResult.SetOverallResult(overallResult: false);
+                    loggingService.LogErrorFromText(
+                        BuildEventContext.Invalid, null, null, null,
+                        new BuildEventFileInfo(publication.Destination), ex.Message);
+                }
             }
         }
 

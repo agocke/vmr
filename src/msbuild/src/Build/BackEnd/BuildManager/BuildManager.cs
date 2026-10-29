@@ -528,6 +528,15 @@ namespace Microsoft.Build.Execution
         [RequiresUnreferencedCode("Initializes loggers and project cache plugins by reflecting over assemblies discovered at runtime, which is incompatible with trimming.")]
         public void BeginBuild(BuildParameters parameters)
         {
+            if (parameters?.HardenedGraphValidation == true)
+            {
+                ErrorUtilities.VerifyThrowArgument(
+                    !parameters.DisableInProcNode && !Traits.Instance.InProcNodeDisabled &&
+                    parameters.MaxNodeCount == 1 && !parameters.MultiThreaded,
+                    "HardenedGraphUnsupportedConstruct",
+                    "out-of-process, multi-node or multi-threaded graph construction", "build initialization");
+            }
+
 #if NETFRAMEWORK
             // Collect telemetry unless explicitly opted out via environment variable.
             // The decision to send telemetry is made at EndBuild to avoid eager loading of telemetry assemblies.

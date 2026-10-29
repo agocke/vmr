@@ -167,6 +167,11 @@ descriptor/substitution/attribute outputs match ordinary bytes and static
 `FileWrites`. Non-resx naming ignores the unused source convention, while
 source-dependent resx naming remains rejected. Disabled or ineligible NGen
 optimization avoids unused profile discovery.
+Diagnostic checks cover ordinary warnings, global and project-local promotion,
+warning exclusions and message demotion, including child projects. Failed
+construction preserves existing graph bytes and sidecars; publication I/O errors
+fail completion and clean up new metadata. Successful graphs remain independently
+executable.
 Arcade checks compare ordinary and prepared P2P selection, platform fallback,
 RID-agnostic metadata, explicit framework overrides and incompatible references.
 They also exercise real NuGet-imported capture hooks, literal JSON transport,
@@ -455,11 +460,12 @@ and known outputs, and the future combiner task carries the same I/O contract.
 Non-resx manifest naming no longer rejects the unused `UseDependentUponConvention`
 flag. Immutable's inline-string resources explicitly disable object serialization;
 their ordinary and independent bytes match the SDK-default baseline.
-The next blocker is diagnostic publication. Runtime's missing-documentation
-warning is still unsupported. Experimental zero-I/O `Warning` support preserved
-the diagnostic but exposed graph/actions publication even when warnings-as-errors
-made the build fail. That support was held back: graph publication must account
-for the final promoted-diagnostic outcome before this path is enabled.
+Runtime's missing-documentation warning now runs as an explicit zero-I/O
+construction task. Graph validation and formatting produce an in-memory
+publication plan; only successful root-submission completion, after logging and
+warning promotion finish, publishes Ninja and its sidecars. Failed reconstruction
+leaves any previous graph untouched. The next blocker is ILLink's trim-input
+`MakeDir` in `eng/illink.targets`, which still lacks a hardened directory contract.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.
@@ -612,7 +618,7 @@ Repeated and diamond references reuse completed configured targets; skipped
 targets can run on later requests. Each action retains its own project directory.
 Intrinsic project requests bypass file-action parameter capture, preserving
 ordinary default-target outputs when `Targets` is omitted or expands to empty.
-Construction is currently single-node and single-threaded, even when an
+Construction is currently in-process, single-node and single-threaded, even when an
 `MSBuild` call requests `BuildInParallel`. Unavailable project lists and custom
 tasks merely named `MSBuild` remain unsupported.
 

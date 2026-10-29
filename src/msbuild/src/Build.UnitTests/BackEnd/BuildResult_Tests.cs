@@ -3,12 +3,15 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
 using Microsoft.Build.BackEnd;
 using Microsoft.Build.Engine.UnitTests.TestComparers;
 using Microsoft.Build.Exceptions;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Graph.Hardened;
 using Microsoft.Build.Unittest;
 using Shouldly;
 using Xunit;
@@ -358,6 +361,106 @@ namespace Microsoft.Build.UnitTests.BackEnd
             BuildResult deserializedResult = (packet as BuildResult)!;
 
             deserializedResult.EvaluationId.ShouldBe(42);
+        }
+
+        [Theory]
+        [InlineData("original")]
+        [InlineData("clone")]
+        [InlineData("filtered")]
+        [InlineData("request")]
+        [InlineData("node")]
+        [InlineData("submission")]
+        [InlineData("merge")]
+        public void CopiesPreservePendingGraphPublication(string copy)
+        {
+            using TestEnvironment env = TestEnvironment.Create();
+            string directory = env.CreateFolder().Path;
+            string graph = Path.Combine(directory, "build.ninja");
+            string manifest = Path.Combine(graph + ".actions", "action.json");
+            BuildRequest request = CreateNewBuildRequest(1, ["Build"]);
+            BuildResult original = new(request)
+            {
+                ActionGraphPublication = new(graph, "graph contents", [(manifest, Encoding.UTF8.GetBytes("manifest contents"))])
+            };
+            original.AddResultsForTarget("Build", BuildResultUtilities.GetEmptySucceedingTargetResult());
+            BuildResult result = copy switch
+            {
+                "clone" => original.Clone(),
+                "filtered" => new(original, ["Build"]),
+                "request" => new(request, original, exception: null),
+                "node" => new(original, nodeRequestId: 2),
+                "submission" => new(original, 2, 1, 2, 1, 2),
+                "merge" => new(request),
+                _ => original
+            };
+            if (copy == "merge")
+            {
+                result.MergeResults(original);
+            }
+
+            File.Exists(graph).ShouldBeFalse();
+            Directory.Exists(graph + ".actions").ShouldBeFalse();
+            result.ActionGraphPublication.ShouldNotBeNull().Publish();
+            File.ReadAllText(graph).ShouldBe("graph contents");
+            File.ReadAllText(manifest).ShouldBe("manifest contents");
+        }
+
+        [Fact]
+        public void TranslationDoesNotPersistPendingGraphPublication()
+        {
+            BuildResult result = new(CreateNewBuildRequest(1, ["Build"]))
+            {
+                ActionGraphPublication = new("unused.ninja", "graph contents", [])
+            };
+
+            ((ITranslatable)result).Translate(TranslationHelpers.GetWriteTranslator());
+            BuildResult deserialized = BuildResult.FactoryForDeserialization(TranslationHelpers.GetReadTranslator());
+
+            deserialized.ActionGraphPublication.ShouldBeNull();
+        }
+
+        [Theory]
+        [InlineData(true, 1, false)]
+        [InlineData(false, 2, false)]
+        [InlineData(false, 1, true)]
+        public void ConstructionRequiresSingleInProcessNode(bool disableInProcNode, int nodeCount, bool multiThreaded)
+        {
+            using BuildManager manager = new();
+            BuildParameters parameters = new()
+            {
+                HardenedGraphValidation = true,
+                DisableInProcNode = disableInProcNode,
+                MaxNodeCount = nodeCount,
+                MultiThreaded = multiThreaded
+            };
+
+            Should.Throw<ArgumentException>(() => manager.BeginBuild(parameters))
+                .Message.ShouldContain("out-of-process, multi-node or multi-threaded graph construction");
+        }
+
+        [Fact]
+        public void PublicationFailurePreservesExistingMetadata()
+        {
+            using TestEnvironment env = TestEnvironment.Create();
+            string graph = Path.Combine(env.CreateFolder().Path, "build.ninja");
+            string manifests = graph + ".actions";
+            Directory.CreateDirectory(manifests);
+            string existing = Path.Combine(manifests, "existing.json");
+            string added = Path.Combine(manifests, "added.json");
+            string blocked = Path.Combine(manifests, "blocked.json");
+            File.WriteAllText(graph, "existing graph");
+            File.WriteAllText(existing, "existing manifest");
+            Directory.CreateDirectory(blocked);
+            HardenedActionGraph.Publication publication = new(
+                graph, "replacement graph",
+                [(added, Encoding.UTF8.GetBytes("new manifest")), (blocked, Encoding.UTF8.GetBytes("blocked manifest"))]);
+
+            Exception exception = Should.Throw<Exception>(() => publication.Publish());
+            (exception is IOException or UnauthorizedAccessException).ShouldBeTrue();
+            File.ReadAllText(graph).ShouldBe("existing graph");
+            File.ReadAllText(existing).ShouldBe("existing manifest");
+            Directory.Exists(blocked).ShouldBeTrue();
+            File.Exists(added).ShouldBeFalse();
         }
 
         private BuildRequest CreateNewBuildRequest(int configurationId, string[] targets)

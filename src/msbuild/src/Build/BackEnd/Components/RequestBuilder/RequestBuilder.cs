@@ -1258,9 +1258,10 @@ namespace Microsoft.Build.BackEnd
                 if (emitActions)
                 {
                     ProjectErrorUtilities.VerifyThrowInvalidProject(
+                        _componentHost.BuildParameters.NodeId == Scheduler.InProcNodeId &&
                         _componentHost.BuildParameters.MaxNodeCount == 1 && !_componentHost.BuildParameters.MultiThreaded,
                         actionProject.ProjectFileLocation, "HardenedGraphUnsupportedConstruct",
-                        "multi-node or multi-threaded graph construction", "action graph construction");
+                        "out-of-process, multi-node or multi-threaded graph construction", "action graph construction");
                     ProjectErrorUtilities.VerifyThrowInvalidProject(
                         _requestEntry.Request.IsRootRequest || _requestEntry.ActionGraph is not null,
                         actionProject.ProjectFileLocation, "HardenedGraphUnsupportedConstruct",
@@ -1325,11 +1326,6 @@ namespace Microsoft.Build.BackEnd
                         throw diagnostics[0];
                     }
 
-                    if (_requestEntry.Request.IsRootRequest)
-                    {
-                        _requestEntry.ActionGraph.Publish();
-                    }
-
                     BuildResult graphResult = new(_requestEntry.Request);
                     foreach (var target in allTargets)
                     {
@@ -1337,6 +1333,11 @@ namespace Microsoft.Build.BackEnd
                         {
                             graphResult.AddResultsForTarget(target.name, validator.GetTargetResult(target.name));
                         }
+                    }
+
+                    if (_requestEntry.Request.IsRootRequest)
+                    {
+                        graphResult.ActionGraphPublication = _requestEntry.ActionGraph.PreparePublication();
                     }
 
                     graphResult.EvaluationId = project.EvaluationId;

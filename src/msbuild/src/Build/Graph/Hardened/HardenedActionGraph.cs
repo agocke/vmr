@@ -324,7 +324,7 @@ internal sealed class HardenedActionGraph
         return true;
     }
 
-    internal void Publish()
+    internal Publication PreparePublication()
     {
         Dictionary<string, int> producers = new(FileUtilities.PathComparer);
         for (int i = 0; i < _actions.Count; i++)
@@ -432,40 +432,78 @@ internal sealed class HardenedActionGraph
             ninja.Append('\n');
         }
 
-        // Validate and format the entire graph before publishing any executable entry point.
-        Directory.CreateDirectory(manifestDirectory);
-        foreach ((string path, byte[] contents) in manifests)
+        return new Publication(_destination, ninja.ToString(), manifests);
+    }
+
+    internal sealed class Publication
+    {
+        private readonly string _destination;
+        private readonly string _text;
+        private readonly List<(string Path, byte[] Contents)> _manifests;
+
+        internal Publication(string destination, string text, List<(string Path, byte[] Contents)> manifests)
         {
-            if (!File.Exists(path))
-            {
-                File.WriteAllBytes(path, contents);
-            }
+            _destination = destination;
+            _text = text;
+            _manifests = manifests;
         }
 
-        string text = ninja.ToString();
-        if (File.Exists(_destination) && File.ReadAllText(_destination) == text)
-        {
-            return;
-        }
+        internal string Destination => _destination;
 
-        string temporary = _destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
+        internal void Publish()
         {
-            File.WriteAllText(temporary, text, new UTF8Encoding(false));
-            if (File.Exists(_destination))
+            string manifestDirectory = _destination + ".actions";
+            bool newDirectory = !Directory.Exists(manifestDirectory);
+            List<string> newManifests = [];
+            string temporary = _destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            bool published = false;
+            try
             {
-                File.Replace(temporary, _destination, null);
+                Directory.CreateDirectory(manifestDirectory);
+                foreach ((string path, byte[] contents) in _manifests)
+                {
+                    if (!File.Exists(path))
+                    {
+                        using FileStream stream = new(path, FileMode.CreateNew, FileAccess.Write);
+                        newManifests.Add(path);
+                        stream.Write(contents, 0, contents.Length);
+                    }
+                }
+
+                if (!File.Exists(_destination) || File.ReadAllText(_destination) != _text)
+                {
+                    File.WriteAllText(temporary, _text, new UTF8Encoding(false));
+                    if (File.Exists(_destination))
+                    {
+                        File.Replace(temporary, _destination, null);
+                    }
+                    else
+                    {
+                        File.Move(temporary, _destination);
+                    }
+                }
+
+                published = true;
             }
-            else
+            finally
             {
-                File.Move(temporary, _destination);
-            }
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
+                if (File.Exists(temporary))
+                {
+                    File.Delete(temporary);
+                }
+
+                if (!published)
+                {
+                    foreach (string manifest in newManifests)
+                    {
+                        File.Delete(manifest);
+                    }
+
+                    if (newDirectory && Directory.Exists(manifestDirectory))
+                    {
+                        Directory.Delete(manifestDirectory);
+                    }
+                }
             }
         }
     }

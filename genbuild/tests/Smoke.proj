@@ -62,6 +62,7 @@
     <CallTarget Targets="TestRuntimeResourceSubstitutions" />
     <CallTarget Targets="TestRuntimeLinkerXml" />
     <CallTarget Targets="TestRuntimeOptimization" />
+    <CallTarget Targets="TestDiagnostics" />
     <PropertyGroup>
       <_SdkGraph>$([System.IO.Path]::GetFullPath('$(_TestDirectory)sdk-build.ninja'))</_SdkGraph>
       <_SdkHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_SdkHostOS>
@@ -2036,6 +2037,100 @@
                       Exists('$(_SourceCopyRoot)%(_SourceCopyRejected.Identity)/action/build.ninja') or
                       Exists('$(_SourceCopyRoot)%(_SourceCopyRejected.Identity)/action/build.ninja.actions')"
            Text="Unsupported source-copy link/read-only policies must fail without a partial graph." />
+  </Target>
+  <Target Name="TestDiagnostics">
+    <PropertyGroup>
+      <_DiagnosticRoot>$(_TestDirectory)diagnostics/</_DiagnosticRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <_DiagnosticSuccess Include="warning" />
+      <_DiagnosticSuccess Include="unrelated" Arguments="-warnaserror:GBOTHER" />
+      <_DiagnosticSuccess Include="not-as-error" Arguments="-warnaserror -warnnotaserror:GBTEST001" />
+      <_DiagnosticSuccess Include="as-message" Arguments="-warnaserror -warnasmessage:GBTEST001" />
+      <_DiagnosticSuccess Include="child" Arguments="-p:DiagnosticScope=child" />
+      <_DiagnosticSuccess Include="child-not-as-error" Arguments="-p:DiagnosticScope=child -warnaserror -warnnotaserror:GBTEST001" />
+      <_DiagnosticFailure Include="out-of-proc" Environment="MSBUILDNOINPROCNODE=1" />
+      <_DiagnosticFailure Include="promoted" Arguments="-warnaserror:GBTEST001" />
+      <_DiagnosticFailure Include="all-promoted" Arguments="-warnaserror" />
+      <_DiagnosticFailure Include="project-promoted" Arguments="-p:ProjectWarningAsError=true" />
+      <_DiagnosticFailure Include="child-promoted" Arguments="-p:DiagnosticScope=child -warnaserror:GBTEST001" />
+      <_DiagnosticFailure Include="child-project-promoted" Arguments="-p:DiagnosticScope=child -p:ProjectWarningAsError=true" />
+      <_DiagnosticFailure Include="out-of-proc-promoted" Arguments="-warnaserror:GBTEST001" Environment="MSBUILDNOINPROCNODE=1" />
+      <_DiagnosticDirectory Include="@(_DiagnosticSuccess->'$(_DiagnosticRoot)%(Identity)/');@(_DiagnosticFailure->'$(_DiagnosticRoot)%(Identity)/');$(_DiagnosticRoot)publication-failure/" />
+    </ItemGroup>
+    <MakeDir Directories="@(_DiagnosticDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Diagnostics.proj" DestinationFolder="%(_DiagnosticDirectory.Identity)" />
+    <Exec Command="$(_App) restore &quot;$(_DiagnosticRoot)warning/Diagnostics.proj&quot; -t:Build -flp:&quot;LogFile=$(_DiagnosticRoot)ordinary.log;Verbosity=normal&quot;" />
+    <ReadLinesFromFile File="$(_DiagnosticRoot)warning/out/root.txt">
+      <Output TaskParameter="Lines" PropertyName="_DiagnosticOrdinaryContents" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_DiagnosticOrdinaryContents)' != 'original'" Text="Ordinary Warning execution must still succeed and run its surrounding tasks." />
+    <Delete Files="$(_DiagnosticRoot)warning/out/root.txt" />
+    <Exec Command="$(_App) build &quot;$(_DiagnosticRoot)%(_DiagnosticSuccess.Identity)/Diagnostics.proj&quot; %(_DiagnosticSuccess.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_DiagnosticRoot)%(_DiagnosticSuccess.Identity)/build.ninja&quot; -flp:&quot;LogFile=$(_DiagnosticRoot)%(_DiagnosticSuccess.Identity)/build.log;Verbosity=normal&quot;"
+          EnvironmentVariables="%(_DiagnosticSuccess.Environment)" />
+    <Error Condition="!Exists('$(_DiagnosticRoot)%(_DiagnosticSuccess.Identity)/build.ninja') or
+                      Exists('$(_DiagnosticRoot)%(_DiagnosticSuccess.Identity)/out/root.txt') or
+                      Exists('$(_DiagnosticRoot)%(_DiagnosticSuccess.Identity)/out/child.txt')"
+           Text="Nonfatal warnings must publish the graph without running its root or child actions." />
+    <Exec WorkingDirectory="$(_DiagnosticRoot)%(_DiagnosticSuccess.Identity)" Command="ninja -f build.ninja" />
+    <ReadLinesFromFile File="$(_DiagnosticRoot)%(_DiagnosticSuccess.Identity)/out/root.txt">
+      <Output TaskParameter="Lines" ItemName="_DiagnosticActionContents" />
+    </ReadLinesFromFile>
+    <ReadLinesFromFile File="$(_DiagnosticRoot)child/out/child.txt">
+      <Output TaskParameter="Lines" ItemName="_DiagnosticActionContents" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_DiagnosticActionContents->Distinct())' != 'original'" Text="Successful diagnostic graphs must execute their ordinary-equivalent root and child outputs." />
+    <Exec Command="$(_App) build &quot;$(_DiagnosticRoot)%(_DiagnosticFailure.Identity)/Diagnostics.proj&quot; %(_DiagnosticFailure.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_DiagnosticRoot)%(_DiagnosticFailure.Identity)/build.ninja&quot;"
+          EnvironmentVariables="%(_DiagnosticFailure.Environment)" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_DiagnosticFailureExit" />
+    </Exec>
+    <Error Condition="@(_DiagnosticFailureExit->AnyHaveMetadataValue('Identity', '0')) or
+                      Exists('$(_DiagnosticRoot)%(_DiagnosticFailure.Identity)/build.ninja') or
+                      Exists('$(_DiagnosticRoot)%(_DiagnosticFailure.Identity)/build.ninja.actions') or
+                      Exists('$(_DiagnosticRoot)%(_DiagnosticFailure.Identity)/out/root.txt') or
+                      Exists('$(_DiagnosticRoot)%(_DiagnosticFailure.Identity)/out/child.txt')"
+           Text="Promoted root/child warnings and unsupported process nodes must fail without publishing graph metadata or executing actions." />
+    <GetFileHash Files="$(_DiagnosticRoot)warning/build.ninja">
+      <Output TaskParameter="Hash" PropertyName="_DiagnosticGraphBefore" />
+    </GetFileHash>
+    <ItemGroup>
+      <_DiagnosticExistingManifest Include="$(_DiagnosticRoot)warning/build.ninja.actions/*.json" />
+    </ItemGroup>
+    <GetFileHash Files="@(_DiagnosticExistingManifest)">
+      <Output TaskParameter="Hash" PropertyName="_DiagnosticManifestBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_DiagnosticRoot)warning/Diagnostics.proj&quot; -p:Variant=changed -warnaserror:GBTEST001 -p:MSBuildEmitActionGraph=&quot;$(_DiagnosticRoot)warning/build.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_DiagnosticStaleExit" />
+    </Exec>
+    <GetFileHash Files="$(_DiagnosticRoot)warning/build.ninja">
+      <Output TaskParameter="Hash" PropertyName="_DiagnosticGraphAfter" />
+    </GetFileHash>
+    <GetFileHash Files="@(_DiagnosticExistingManifest)">
+      <Output TaskParameter="Hash" PropertyName="_DiagnosticManifestAfter" />
+    </GetFileHash>
+    <Error Condition="'$(_DiagnosticStaleExit)' == '0' or '$(_DiagnosticGraphBefore)' != '$(_DiagnosticGraphAfter)' or
+                      '$(_DiagnosticManifestBefore)' != '$(_DiagnosticManifestAfter)' or
+                      $([System.IO.Directory]::GetFiles('$(_DiagnosticRoot)warning/build.ninja.actions', '*.json').Length) != '1'"
+           Text="A failed reconstruction must preserve the prior graph and manifests without adding new sidecars." />
+    <Delete Files="$(_DiagnosticRoot)warning/out/root.txt" />
+    <Exec WorkingDirectory="$(_DiagnosticRoot)warning" Command="ninja -f build.ninja" />
+    <ReadLinesFromFile File="$(_DiagnosticRoot)warning/out/root.txt">
+      <Output TaskParameter="Lines" PropertyName="_DiagnosticPreservedContents" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_DiagnosticPreservedContents)' != 'original'" Text="The preserved graph must remain independently executable with its original action parameters." />
+    <MakeDir Directories="$(_DiagnosticRoot)publication-failure/build.ninja" />
+    <Exec Command="$(_App) build &quot;$(_DiagnosticRoot)publication-failure/Diagnostics.proj&quot; -p:MSBuildEmitActionGraph=&quot;$(_DiagnosticRoot)publication-failure/build.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_DiagnosticPublicationExit" />
+    </Exec>
+    <Error Condition="'$(_DiagnosticPublicationExit)' == '0' or
+                      Exists('$(_DiagnosticRoot)publication-failure/build.ninja.actions') or
+                      Exists('$(_DiagnosticRoot)publication-failure/out/root.txt') or
+                      !$([System.IO.Directory]::Exists('$(_DiagnosticRoot)publication-failure/build.ninja')) or
+                      $([System.IO.Directory]::GetFiles('$(_DiagnosticRoot)publication-failure', '*.tmp').Length) != '0'"
+           Text="Publication I/O failure must fail completion, remove new metadata, and preserve pre-existing paths." />
+    <Message Importance="high" Text="Diagnostic checks passed: ordinary, promoted, suppressed and child warnings; out-of-process rejection; deferred publication; existing graph preservation; publication failure cleanup." />
   </Target>
   <Target Name="TestRuntimeOptimization">
     <PropertyGroup>

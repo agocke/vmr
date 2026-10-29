@@ -900,12 +900,19 @@ serialization; all three real ILLink/Immutable resource files match
 SDK-default bytes under both ordinary and independent compilation.
 Disabled or ineligible NGen optimization no longer searches unused profile
 directories; enabled bounded profile selection retains ordinary metadata.
-The current first blocker is runtime's missing-documentation warning.
-Experimental declared zero-I/O `Warning` support was held back after reproducing
-Ninja/action publication despite a nonzero warnings-as-errors result.
-Construction publication must become transactional with the final diagnostic
-outcome, including promoted warnings and project-reference failure scopes,
-before enabling this diagnostic path.
+Runtime's missing-documentation warning now has an explicit zero-I/O contract.
+The emitter validates and formats the complete graph into a pending in-memory
+publication plan instead of writing from `RequestBuilder`. Root-submission
+completion waits for results and logging, applies promoted-warning failure, then
+publishes only on success. Pending publication survives in-process result copies
+but is not serialized into persistent result caches. API initialization and
+request execution enforce the existing single in-process construction-node
+restriction as well as the CLI.
+Regressions cover ordinary warnings, global/project-local promotion, warning
+exclusions and message demotion, child diagnostics, preservation of a previously
+executable graph, and publication I/O failure cleanup. Ordinary `Warning.Execute`
+semantics are unchanged. The real closure now reaches ILLink's trim-input
+`MakeDir` in `eng/illink.targets`, which lacks a hardened directory contract.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

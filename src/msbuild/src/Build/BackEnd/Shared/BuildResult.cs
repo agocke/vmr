@@ -10,6 +10,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Microsoft.Build.BackEnd;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Graph.Hardened;
 using Microsoft.Build.Internal;
 using Microsoft.Build.Shared.FileSystem;
 
@@ -153,6 +154,9 @@ namespace Microsoft.Build.Execution
 
         private HashSet<string>? _projectTargets;
 
+        // Hardened construction is in-process; publication state must not enter persistent result caches.
+        internal HardenedActionGraph.Publication? ActionGraphPublication { get; set; }
+
         /// <summary>
         /// Constructor for serialization.
         /// </summary>
@@ -208,6 +212,7 @@ namespace Microsoft.Build.Execution
             _baseOverallResult = existingResults.OverallResult == BuildResultCode.Success;
             _buildRequestDataFlags = existingResults._buildRequestDataFlags;
             _projectStateAfterBuild = existingResults._projectStateAfterBuild;
+            ActionGraphPublication = existingResults.ActionGraphPublication;
 
             _circularDependency = existingResults._circularDependency;
         }
@@ -249,6 +254,7 @@ namespace Microsoft.Build.Execution
             else
             {
                 _requestException = exception ?? existingResults._requestException;
+                ActionGraphPublication = existingResults.ActionGraphPublication;
                 _resultsByTarget = targetNames == null ? existingResults._resultsByTarget : CreateTargetResultDictionaryWithContents(existingResults, targetNames);
                 if (request.RequestedProjectState != null)
                 {
@@ -273,6 +279,7 @@ namespace Microsoft.Build.Execution
             _defaultTargets = result._defaultTargets;
             _projectTargets = result._projectTargets;
             _baseOverallResult = result.OverallResult == BuildResultCode.Success;
+            ActionGraphPublication = result.ActionGraphPublication;
         }
 
         internal BuildResult(BuildResult result, int submissionId, int configurationId, int requestId, int parentRequestId, int nodeRequestId)
@@ -290,6 +297,7 @@ namespace Microsoft.Build.Execution
             _defaultTargets = result._defaultTargets;
             _projectTargets = result._projectTargets;
             _baseOverallResult = result.OverallResult == BuildResultCode.Success;
+            ActionGraphPublication = result.ActionGraphPublication;
         }
 
         /// <summary>
@@ -605,6 +613,7 @@ namespace Microsoft.Build.Execution
 
             // If there is an exception and we did not previously have one, add it in.
             _requestException ??= results.Exception;
+            ActionGraphPublication ??= results.ActionGraphPublication;
         }
 
         /// <summary>
@@ -764,7 +773,8 @@ namespace Microsoft.Build.Execution
                 _requestException = _requestException,
                 _resultsByTarget = new ConcurrentDictionary<string, TargetResult>(_resultsByTarget, StringComparer.OrdinalIgnoreCase),
                 _baseOverallResult = OverallResult == BuildResultCode.Success,
-                _circularDependency = _circularDependency
+                _circularDependency = _circularDependency,
+                ActionGraphPublication = ActionGraphPublication
             };
 
             return result;
