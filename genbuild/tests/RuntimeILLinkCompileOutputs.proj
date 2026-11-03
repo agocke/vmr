@@ -1,0 +1,45 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <TargetName>Fixture</TargetName>
+    <TargetExt>.dll</TargetExt>
+    <ILLinkTrimAssembly>true</ILLinkTrimAssembly>
+    <ILLinkTrimAssembly Condition="'$(TestCase)' == 'untrimmed'">false</ILLinkTrimAssembly>
+    <DesignTimeBuild Condition="'$(TestCase)' == 'design-time'">true</DesignTimeBuild>
+    <ILLinkRewritePDBs Condition="'$(TestCase)' == 'no-rewrite' or '$(TestCase)' == 'explicit-pdb'">false</ILLinkRewritePDBs>
+    <PdbFile Condition="'$(TestCase)' == 'explicit-pdb'">obj/custom.pdb</PdbFile>
+    <_OriginalPdbFile>$(PdbFile)</_OriginalPdbFile>
+    <_SymbolsPath>obj/Fixture.pdb</_SymbolsPath>
+    <_SymbolsPath Condition="'$(PdbFile)' != ''">$(PdbFile)</_SymbolsPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <IntermediateAssembly Include="obj/Fixture.dll" Marker="assembly" />
+    <_DebugSymbolsIntermediatePath Include="$(_SymbolsPath)" Marker="symbols" Condition="'$(TestCase)' != 'no-symbols'" />
+  </ItemGroup>
+  <Import Project="$(RuntimeILLinkTargets)" />
+  <Target Name="Restore" />
+  <Target Name="RecordCompilerOutputs" Condition="'$(TestCase)' != 'uncovered'">
+    <ItemGroup>
+      <_CompilerOutput Include="@(IntermediateAssembly);@(_DebugSymbolsIntermediatePath)" />
+      <_CompilerItems Include="@(IntermediateAssembly->'assembly|%(Identity)');@(_DebugSymbolsIntermediatePath->'symbols|%(Identity)');pdb|$(PdbFile)" />
+    </ItemGroup>
+    <WriteLinesToFile File="%(_CompilerOutput.Identity)" Lines="compiler output" Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="%(_CompilerOutput.Identity)" Lines="compiler output" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="%(_CompilerOutput.Identity)"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="_PrepareILLinkCompileOutputs;RecordCompilerOutputs;_RestoreILLinkFinalOutputs">
+    <Error DeclaredInputs="" DeclaredOutputs=""
+           Condition="'@(IntermediateAssembly)' != 'obj/Fixture.dll' or '@(IntermediateAssembly->'%(Marker)')' != 'assembly' or
+                      '$(PdbFile)' != '$(_OriginalPdbFile)' or
+                      ('$(TestCase)' != 'no-symbols' and
+                       ('@(_DebugSymbolsIntermediatePath)' != '$(_SymbolsPath)' or '@(_DebugSymbolsIntermediatePath->'%(Marker)')' != 'symbols'))"
+           Text="Linking must restore the original compiler output paths and metadata." />
+    <WriteLinesToFile File="compiler-items.txt" Lines="@(_CompilerItems)" Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="compiler-items.txt" Lines="@(_CompilerItems)" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="compiler-items.txt"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+  </Target>
+</Project>

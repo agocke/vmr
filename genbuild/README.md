@@ -167,6 +167,16 @@ descriptor/substitution/attribute outputs match ordinary bytes and static
 `FileWrites`. Non-resx naming ignores the unused source convention, while
 source-dependent resx naming remains rejected. Disabled or ineligible NGen
 optimization avoids unused profile discovery.
+ILLink compile-output checks import runtime's pre-trim authoring and use recording
+producers to compare ordinary and independent assembly/PDB paths and restored
+metadata. Construction creates no product directories; inactive trimming remains
+a no-op, and a directory requirement without a future output fails publication.
+Invocation checks build the real runtime linker task and a recording linker through
+Ninja, with both tools and compiler inputs absent during construction. They verify
+declared root/PDB/XML, reference/search-candidate, tool/runfile and external-host
+inputs, refreshed discovery after a new search candidate, ordinary output parity
+and re-execution after changing a reference sidecar. This tests the invocation
+contract, not the recording linker's trimming semantics.
 Diagnostic checks cover ordinary warnings, global and project-local promotion,
 warning exclusions and message demotion, including child projects. Failed
 construction preserves existing graph bytes and sidecars; publication I/O errors
@@ -464,8 +474,23 @@ Runtime's missing-documentation warning now runs as an explicit zero-I/O
 construction task. Graph validation and formatting produce an in-memory
 publication plan; only successful root-submission completion, after logging and
 warning promotion finish, publishes Ninja and its sidecars. Failed reconstruction
-leaves any previous graph untouched. The next blocker is ILLink's trim-input
-`MakeDir` in `eng/illink.targets`, which still lacks a hardened directory contract.
+leaves any previous graph untouched.
+ILLink's pre-compile target now records its trim-input directory as a structural
+requirement in hardened construction; future compiler execution creates the
+parent. Ordinary directory creation and assembly/PDB remapping are unchanged.
+ILLink's declared inputs now mirror runtime main's invocation-cache discovery:
+all `-d` assembly candidates, optional config/MDB/PDB sidecars, culture satellites,
+recursive metadata modules, nonmetadata assembly files, explicit XML and tools.
+Restore captures external discovery as configured facts; construction selects
+them without reading PE files or enumerating directories. Future assemblies and
+tool runfiles come from prior action outputs, conservatively including producer
+files beneath their directories. The linker keeps its existing search policy,
+uses the explicit external host and owns the final DLL/conditional PDB.
+Unknown custom input-discovery arguments fail closed. Changes to external
+directory membership require a fresh Restore, not live construction-time discovery.
+The next rejection is Common's XML-documentation `Copy` in
+`CopyFilesToOutputDirectory`, which lacks declarations and returns
+execution-time `DestinationFiles` values.
 Preparation and the failed graph attempt produce zero DLLs, binary resources,
 or generated source files, and publish no library graph.
 No runtime library graph, compilation or independent execution is established.

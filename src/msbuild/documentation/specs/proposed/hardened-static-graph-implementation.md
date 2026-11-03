@@ -911,8 +911,44 @@ restriction as well as the CLI.
 Regressions cover ordinary warnings, global/project-local promotion, warning
 exclusions and message demotion, child diagnostics, preservation of a previously
 executable graph, and publication I/O failure cleanup. Ordinary `Warning.Execute`
-semantics are unchanged. The real closure now reaches ILLink's trim-input
-`MakeDir` in `eng/illink.targets`, which lacks a hardened directory contract.
+semantics are unchanged.
+ILLink's pre-compile target records its trim-input directory through the existing
+structural-directory contract instead of executing `MakeDir` during construction.
+Recording-producer regressions verify ordinary-equivalent assembly/PDB selection,
+restored metadata, inactive trimming and rejection of uncovered directories;
+existing ordinary compilation/linker-ordering and incremental checks still pass.
+ILLink input capture mirrors runtime main's invocation-cache contract at
+[`9857961ed10086d04cf981039d12799520577055`](https://github.com/dotnet/runtime/blob/9857961ed10086d04cf981039d12799520577055/src/tools/illink/src/ILLink.Tasks/LinkTask.cs).
+`WriteILLinkInputs` inventories external assembly candidates in every reference
+search directory, config/MDB/PDB sidecars, immediate culture satellites, recursive
+metadata modules and nonmetadata `AssemblyFile` entries during configured Restore.
+`ResolveILLinkInputs` consumes those facts in memory and adds explicit XML, task,
+linker and external-host paths. The evaluator imports the configured facts, not
+selected linker results. Changed external directory membership requires Restore.
+The existing linker search/resolution policy is unchanged.
+
+Construction supplies `@(_MSBuildActionOutput)` lazily when directly referenced
+by an audited task parameter. It describes prior recorded file outputs across the
+shared configured-project graph; producing those files or opening future PE
+metadata is unnecessary. The ILLink resolver conservatively includes all producer
+files beneath each generated assembly/tool directory, covering generated
+sidecars, modules, satellites and runfiles, including separately located tools.
+Unsupported/custom discovery arguments fail closed rather than executing an
+underdeclared action. The existing pre-trim compiler mapping is retained; the
+declared linker action publishes its final DLL and conditional PDB without an
+in-place transformation or shared-directory deletion.
+
+Unit cases cover external inventories, recursive modules, escaped property
+transport, future producer/tool closure, stale-product exclusion and invalid
+inputs. A runtime-target fixture independently builds and loads the real linker
+task source and launches a recording linker, with no tool/product prebuild.
+It checks the actual declared input list, fresh candidate discovery, ordinary
+DLL/PDB parity and reference-sidecar invalidation. Existing ordinary compiler and
+linker-ordering/incremental tests still pass. This does not claim that the fixture
+performs real trimming.
+The guarded real closure now passes ILLink and fails later at Common's
+XML-documentation copy in `CopyFilesToOutputDirectory`: its `Copy` lacks declared
+footprints and returns execution-time `DestinationFiles`.
 The runtime product directory contains zero DLLs, `.resources`, or generated sources.
 Preparation and the failed graph attempt publish no library graph or action directory.
 No runtime library graph, compilation, or independent execution is proven.

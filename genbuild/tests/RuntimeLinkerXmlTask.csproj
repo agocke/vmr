@@ -4,9 +4,12 @@
     <AssemblyName>Fixture.ILLink.Tasks</AssemblyName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <OutputPath Condition="'$(TestLinkerInvocation)' == 'true'">bin/$(Configuration)/net/</OutputPath>
+    <AppendTargetFrameworkToOutputPath Condition="'$(TestLinkerInvocation)' == 'true'">false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(RuntimeILLinkSourceDirectory)CombineLinkerXmlFiles.cs;$(RuntimeILLinkSourceDirectory)MSBuildDeclaredIOTaskAttribute.cs" />
+    <Compile Include="$(RuntimeILLinkSourceDirectory)LinkTask.cs" Condition="'$(TestLinkerInvocation)' == 'true'" />
     <Reference Include="$(TaskReferenceDirectory)/Microsoft.Build.Framework.dll" Private="false" />
     <Reference Include="$(TaskReferenceDirectory)/Microsoft.Build.Utilities.Core.dll" Private="false" />
   </ItemGroup>

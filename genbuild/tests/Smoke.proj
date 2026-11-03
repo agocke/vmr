@@ -30,6 +30,8 @@
     <CallTarget Targets="TestRuntimeResourceCompilation" />
     <CallTarget Targets="TestInternalsVisibleTo" />
     <CallTarget Targets="TestRuntimeGenAPI" />
+    <CallTarget Targets="TestRuntimeILLinkCompileOutputs" />
+    <CallTarget Targets="TestRuntimeILLinkInputs" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -1044,6 +1046,98 @@
     </Exec>
     <Error Condition="'$(_ExplicitProgramOutput)' != 'Hello from a project reference.'"
            Text="Independent compilation must preserve explicit reference aliases and use the declared producer." />
+  </Target>
+  <Target Name="TestRuntimeILLinkInputs">
+    <PropertyGroup>
+      <_ILLinkInputRoot>$(_TestDirectory)illink-inputs/</_ILLinkInputRoot>
+      <_ILLinkInputArguments>-p:TestLinkerInvocation=true -p:MSBuildGraphRepositoryRoot=&quot;$(_ILLinkInputRoot)&quot; -p:RuntimeILLinkTargets=&quot;$(MSBuildThisFileDirectory)../../src/runtime/eng/illink.targets&quot; -p:RuntimeILLinkSourceDirectory=&quot;$(MSBuildThisFileDirectory)../../src/runtime/src/tools/illink/src/ILLink.Tasks/&quot; -p:TaskReferenceDirectory=&quot;$(MSBuildBinPath)&quot;</_ILLinkInputArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ILLinkInputDirectory Include="$(_ILLinkInputRoot)action/;$(_ILLinkInputRoot)ordinary/" />
+      <_ILLinkInputImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+    </ItemGroup>
+    <MakeDir Directories="%(_ILLinkInputDirectory.Identity)task;%(_ILLinkInputDirectory.Identity)tool;%(_ILLinkInputDirectory.Identity)references" />
+    <WriteLinesToFile File="$(_ILLinkInputRoot)%(_ILLinkInputImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeILLinkInputs.proj" DestinationFolder="%(_ILLinkInputDirectory.Identity)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeLinkerXmlTask.csproj" DestinationFolder="%(_ILLinkInputDirectory.Identity)task" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeILLinkTool.csproj;$(MSBuildThisFileDirectory)RuntimeILLinkTool.cs" DestinationFolder="%(_ILLinkInputDirectory.Identity)tool" />
+    <Copy SourceFiles="$(_AppDirectory)/toolset/Microsoft.Build.Tasks.Core.dll" DestinationFiles="%(_ILLinkInputDirectory.Identity)references/Reference.dll" />
+    <WriteLinesToFile File="%(_ILLinkInputDirectory.Identity)references/Reference.pdb" Lines="reference symbols" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_ILLinkInputRoot)action/RuntimeILLinkInputs.proj&quot; $(_ILLinkInputArguments)" />
+    <Copy SourceFiles="$(_AppDirectory)/toolset/Microsoft.Build.Tasks.Core.dll" DestinationFiles="$(_ILLinkInputRoot)action/references/Shadow.dll" />
+    <Exec Command="$(_App) restore &quot;$(_ILLinkInputRoot)action/RuntimeILLinkInputs.proj&quot; $(_ILLinkInputArguments)" />
+    <Exec Command="$(_App) build &quot;$(_ILLinkInputRoot)action/RuntimeILLinkInputs.proj&quot; $(_ILLinkInputArguments) -p:MSBuildEmitActionGraph=&quot;$(_ILLinkInputRoot)action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_ILLinkInputRoot)action/task/bin') or Exists('$(_ILLinkInputRoot)action/tool/bin') or
+                      Exists('$(_ILLinkInputRoot)action/obj/PreTrim') or Exists('$(_ILLinkInputRoot)action/obj/Fixture.dll')"
+           Text="ILLink preparation and construction must not prebuild tools, compiler inputs or trimmed products." />
+    <Exec WorkingDirectory="$(_ILLinkInputRoot)action" Command="ninja -f build.ninja" />
+    <Error Condition="!Exists('$(_ILLinkInputRoot)action/obj/Fixture.dll') or !Exists('$(_ILLinkInputRoot)action/obj/Fixture.pdb')"
+           Text="Independent execution must build the real linker task source and its future tool before publishing DLL/PDB outputs." />
+    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; msbuild &quot;$(_ILLinkInputRoot)ordinary/RuntimeILLinkInputs.proj&quot; -t:Restore,Build $(_ILLinkInputArguments) -m:1 -nr:false -v:quiet" />
+    <GetFileHash Files="$(_ILLinkInputRoot)action/obj/Fixture.dll;$(_ILLinkInputRoot)action/obj/Fixture.pdb">
+      <Output TaskParameter="Items" ItemName="_ILLinkInputActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_ILLinkInputRoot)ordinary/obj/Fixture.dll;$(_ILLinkInputRoot)ordinary/obj/Fixture.pdb">
+      <Output TaskParameter="Items" ItemName="_ILLinkInputOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_ILLinkInputActionHash->'%(FileHash)')' != '@(_ILLinkInputOrdinaryHash->'%(FileHash)')'"
+           Text="Independent linker invocation must match ordinary root, XML, symbols and sidecar consumption." />
+    <WriteLinesToFile File="$(_ILLinkInputRoot)action/references/Reference.pdb" Lines="changed reference symbols" Overwrite="true" />
+    <Exec WorkingDirectory="$(_ILLinkInputRoot)action" Command="ninja -f build.ninja" />
+    <ReadLinesFromFile File="$(_ILLinkInputRoot)action/obj/Fixture.dll">
+      <Output TaskParameter="Lines" ItemName="_ILLinkInputChangedContents" />
+    </ReadLinesFromFile>
+    <Error Condition="!@(_ILLinkInputChangedContents->AnyHaveMetadataValue('Identity', 'changed reference symbols'))"
+           Text="Changing a declared reference sidecar must rerun the independent linker action." />
+  </Target>
+  <Target Name="TestRuntimeILLinkCompileOutputs">
+    <PropertyGroup>
+      <_TrimCompileRoot>$(_TestDirectory)illink-compile/</_TrimCompileRoot>
+      <_TrimCompileTargets>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/runtime/eng/illink.targets'))</_TrimCompileTargets>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TrimCompileCase Include="portable;no-rewrite;explicit-pdb;no-symbols">
+        <Assembly>obj/PreTrim/Fixture.dll</Assembly>
+        <Symbols>obj/PreTrim/Fixture.pdb</Symbols>
+      </_TrimCompileCase>
+      <_TrimCompileCase Include="untrimmed;design-time">
+        <Assembly>obj/Fixture.dll</Assembly>
+        <Symbols>obj/Fixture.pdb</Symbols>
+      </_TrimCompileCase>
+      <_TrimCompileCase Update="no-rewrite" Symbols="obj/Fixture.pdb" />
+      <_TrimCompileCase Update="explicit-pdb" Symbols="obj/custom.pdb" />
+      <_TrimCompileCase Update="no-symbols" Symbols="" />
+      <_TrimCompileDirectory Include="@(_TrimCompileCase->'$(_TrimCompileRoot)%(Identity)/action/');@(_TrimCompileCase->'$(_TrimCompileRoot)%(Identity)/ordinary/');$(_TrimCompileRoot)uncovered/" />
+    </ItemGroup>
+    <MakeDir Directories="@(_TrimCompileDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeILLinkCompileOutputs.proj" DestinationFolder="%(_TrimCompileDirectory.Identity)" />
+    <Exec Command="$(_App) build &quot;$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/action/RuntimeILLinkCompileOutputs.proj&quot; -p:RuntimeILLinkTargets=&quot;$(_TrimCompileTargets)&quot; -p:TestCase=%(_TrimCompileCase.Identity) -p:MSBuildEmitActionGraph=&quot;$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/action/obj') or Exists('$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/action/compiler-items.txt')"
+           Text="Trim preparation must not create compiler directories or products during construction." />
+    <Exec WorkingDirectory="$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/action" Command="ninja -f build.ninja" />
+    <Error Condition="!Exists('$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/action/%(_TrimCompileCase.Assembly)') or
+                      ('%(_TrimCompileCase.Symbols)' != '' and !Exists('$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/action/%(_TrimCompileCase.Symbols)'))"
+           Text="Independent execution must place the compiler assembly and symbols at the selected pre-trim or ordinary paths." />
+    <Error Condition="Exists('$(_TrimCompileRoot)no-symbols/action/obj/PreTrim/Fixture.pdb') or
+                      Exists('$(_TrimCompileRoot)untrimmed/action/obj/PreTrim') or
+                      Exists('$(_TrimCompileRoot)design-time/action/obj/PreTrim')"
+           Text="Missing symbols and inactive trimming must not introduce pre-trim products or directories." />
+    <Exec Command="$(_App) restore &quot;$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/ordinary/RuntimeILLinkCompileOutputs.proj&quot; -t:Build -p:RuntimeILLinkTargets=&quot;$(_TrimCompileTargets)&quot; -p:TestCase=%(_TrimCompileCase.Identity)" />
+    <GetFileHash Files="$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/action/compiler-items.txt">
+      <Output TaskParameter="Items" ItemName="_TrimCompileActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_TrimCompileRoot)%(_TrimCompileCase.Identity)/ordinary/compiler-items.txt">
+      <Output TaskParameter="Items" ItemName="_TrimCompileOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_TrimCompileActionHash->'%(FileHash)')' != '@(_TrimCompileOrdinaryHash->'%(FileHash)')'"
+           Text="Compiler assembly, symbol and explicit PDB paths must match ordinary trim preparation." />
+    <Exec Command="$(_App) build &quot;$(_TrimCompileRoot)uncovered/RuntimeILLinkCompileOutputs.proj&quot; -p:TestCase=uncovered -p:RuntimeILLinkTargets=&quot;$(_TrimCompileTargets)&quot; -p:MSBuildEmitActionGraph=&quot;$(_TrimCompileRoot)uncovered/build.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_TrimCompileUncoveredExitCode" />
+    </Exec>
+    <Error Condition="'$(_TrimCompileUncoveredExitCode)' == '0' or Exists('$(_TrimCompileRoot)uncovered/obj') or
+                      Exists('$(_TrimCompileRoot)uncovered/build.ninja') or Exists('$(_TrimCompileRoot)uncovered/build.ninja.actions')"
+           Text="A trim-input directory without a declared future output must fail without creating directories or a partial graph." />
   </Target>
   <Target Name="TestRuntimeTrimming">
     <PropertyGroup>

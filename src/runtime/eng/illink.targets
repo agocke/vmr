@@ -17,6 +17,9 @@
     <ILLinkTrimInputAssembly>$(ILLinkTrimInputPath)$(TargetName)$(TargetExt)</ILLinkTrimInputAssembly>
     <ILLinkTrimInputSymbols>$(ILLinkTrimInputPath)$(TargetName).pdb</ILLinkTrimInputSymbols>
     <ILLinkTrimOutputPath>$(IntermediateOutputPath)</ILLinkTrimOutputPath>
+    <_ILLinkInputsPath>$(MSBuildProjectExtensionsPath)illinkinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</_ILLinkInputsPath>
+    <_ILLinkInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(_ILLinkInputsPath)'))</_ILLinkInputsPath>
+    <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_CaptureILLinkInputs</MSBuildPrepareGraphInputsDependsOn>
 
     <ILLinkDescriptorsXml Condition="'$(ILLinkDescriptorsXml)' == '' and Exists('$(ILLinkDirectory)ILLink.Descriptors.xml')">$(ILLinkDirectory)ILLink.Descriptors.xml</ILLinkDescriptorsXml>
     <ILLinkDescriptorsXmlIntermediatePath>$(IntermediateOutputPath)ILLink.Descriptors.xml</ILLinkDescriptorsXmlIntermediatePath>
@@ -39,6 +42,19 @@
     <ILLinkResourcesSubstitutionTemplate Condition="'$(ILLinkResourcesSubstitutionTemplate)' == ''">$(MSBuildThisFileDirectory)ILLink.Substitutions.Resources.template</ILLinkResourcesSubstitutionTemplate>
     <GenerateResourcesSubstitutions Condition="'$(GenerateResourcesSubstitutions)' == '' and '$(StringResourcesPath)' != '' and '$(OmitResources)' != 'true'">true</GenerateResourcesSubstitutions>
   </PropertyGroup>
+
+  <Import Project="$(_ILLinkInputsPath)" Condition="'$(MSBuildHardenedGraph)' == 'true' and Exists('$(_ILLinkInputsPath)')" />
+
+  <Target Name="_CaptureILLinkInputs"
+          DependsOnTargets="ResolvePackageAssets;ResolveTargetingPackAssets"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true' and '$(ILLinkTrimAssembly)' == 'true'">
+    <ItemGroup>
+      <_ILLinkCaptureAssembly Include="@(Reference);@(Reference->'%(HintPath)');@(_ResolvedCompileFileDefinitions)" />
+    </ItemGroup>
+    <WriteILLinkInputs AssemblyPaths="@(_ILLinkCaptureAssembly)"
+                       ExcludedDirectories="$(ArtifactsDir);$(BaseIntermediateOutputPath);$(OutputPath)"
+                       OutputFile="$(_ILLinkInputsPath)" />
+  </Target>
 
    <ItemGroup>
     <!-- ILLink.Descriptors.LibraryBuild.xml files are only used during building the library, not an app. They shouldn't be embedded into the assembly. -->
@@ -239,7 +255,12 @@
       <PdbFile Condition="'$(ILLinkRewritePDBs)' == 'true'">$(ILLinkTrimInputSymbols)</PdbFile>
       <PdbFile Condition="'$(ILLinkRewritePDBs)' != 'true' and '$(PdbFile)' == ''">@(_ILLinkFinalSymbols)</PdbFile>
     </PropertyGroup>
-    <MakeDir Directories="$(ILLinkTrimInputPath)" />
+    <MakeDir Directories="$(ILLinkTrimInputPath)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <RemoveDuplicates Inputs="$(ILLinkTrimInputPath)"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                      DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="Filtered" ItemName="_MSBuildRequiredOutputDirectory" />
+    </RemoveDuplicates>
   </Target>
 
   <Target Name="_RestoreILLinkFinalOutputs">
@@ -316,14 +337,36 @@
 
     <PropertyGroup>
       <ILLinkArgs Condition="@(_DependencyDirectories->Count()) > 0">$(ILLinkArgs) -d @(_DependencyDirectories->'"%(Identity)"', ' -d ')</ILLinkArgs>
+      <_ILLinkToolPath Condition="'$(ILLinkPath)' != ''">$(ILLinkPath)</_ILLinkToolPath>
+      <_ILLinkToolPath Condition="'$(_ILLinkToolPath)' == '' and '$(ILLinkTasksAssembly)' != ''">$([System.IO.Path]::Combine($([System.IO.Path]::GetDirectoryName('$(ILLinkTasksAssembly)')), 'illink.dll'))</_ILLinkToolPath>
     </PropertyGroup>
+
+    <ResolveILLinkInputs Data="$(_ILLinkInputsData)"
+                         AssemblyPaths="$(ILLinkTrimInputAssembly);@(ReferencePathWithRefAssemblies)"
+                         ProducedFiles="@(_MSBuildActionOutput)"
+                         ToolFiles="$(ILLinkTasksAssembly);$(_ILLinkToolPath);$(MSBuildActionDotNetHost)"
+                         ExtraArgs="$(ILLinkArgs)"
+                         DeclaredInputs="" DeclaredOutputs=""
+                         Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <Output TaskParameter="Inputs" ItemName="_ILLinkDeclaredInput" />
+    </ResolveILLinkInputs>
 
     <ILLink AssemblyPaths="$(ILLinkTrimInputPath)$(TargetName)$(TargetExt)"
             RootAssemblyNames="@(ILLinkTrimInputAssembly)"
             OutputDirectory="$(ILLinkTrimOutputPath)"
             ExtraArgs="$(ILLinkArgs)"
             ToolExe="$(_DotNetHostFileName)"
-            ToolPath="$(_DotNetHostDirectory)" />
+            ToolPath="$(_DotNetHostDirectory)"
+            Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <ILLink AssemblyPaths="$(ILLinkTrimInputAssembly)"
+            RootAssemblyNames="@(ILLinkTrimInputAssembly)"
+            OutputDirectory="$(ILLinkTrimOutputPath)"
+            ExtraArgs="$(ILLinkArgs)"
+            ILLinkPath="$(_ILLinkToolPath)"
+            DotNetHostPath="$(MSBuildActionDotNetHost)"
+            DeclaredInputs="@(_ILLinkDeclaredInput)"
+            DeclaredOutputs="$(ILLinkTrimAssemblyPath);$(_ILLinkTrimOutputSymbols)"
+            Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   </Target>
 
   <!-- ILLink reporting.

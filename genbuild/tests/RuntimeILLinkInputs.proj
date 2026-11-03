@@ -1,0 +1,63 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>obj/</MSBuildProjectExtensionsPath>
+    <TargetName>Fixture</TargetName>
+    <TargetExt>.dll</TargetExt>
+    <ILLinkTrimAssembly>true</ILLinkTrimAssembly>
+    <_DebugSymbolsProduced>true</_DebugSymbolsProduced>
+    <ILLinkTasksAssembly>$(MSBuildProjectDirectory)/task/bin/Debug/net/Fixture.ILLink.Tasks.dll</ILLinkTasksAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="task/RuntimeLinkerXmlTask.csproj;tool/RuntimeILLinkTool.csproj" />
+    <Reference Include="$(MSBuildProjectDirectory)/references/Reference.dll" />
+    <ReferencePathWithRefAssemblies Include="@(Reference)" />
+    <IntermediateAssembly Include="obj/Fixture.dll" />
+    <_DebugSymbolsIntermediatePath Include="obj/Fixture.pdb" />
+    <_ToolAsset Include="illink.dll;illink.pdb;illink.runtimeconfig.json;illink.deps.json" />
+  </ItemGroup>
+  <Import Project="$(RuntimeILLinkTargets)" />
+  <ItemGroup>
+    <ILLinkDescriptorsLibraryBuildXml Include="$(MSBuildProjectDirectory)/obj/descriptor.xml" />
+  </ItemGroup>
+  <Target Name="ResolvePackageAssets" />
+  <Target Name="ResolveTargetingPackAssets" />
+  <Target Name="Restore" DependsOnTargets="_CaptureILLinkInputs">
+    <MSBuild Projects="@(ProjectReference)" Targets="Restore" />
+  </Target>
+  <Target Name="Produce">
+    <MSBuild Projects="@(ProjectReference)" Targets="Build" />
+    <Copy SourceFiles="@(_ToolAsset->'tool/bin/Debug/net11.0/%(Identity)')"
+          DestinationFiles="@(_ToolAsset->'task/bin/Debug/net/%(Identity)')"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CopyFiles SourceFiles="@(_ToolAsset->'tool/bin/Debug/net11.0/%(Identity)')"
+               DestinationFiles="@(_ToolAsset->'task/bin/Debug/net/%(Identity)')"
+               DeclaredInputs="@(_ToolAsset->'tool/bin/Debug/net11.0/%(Identity)')"
+               DeclaredOutputs="@(_ToolAsset->'task/bin/Debug/net/%(Identity)')"
+               Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+    <ItemGroup>
+      <_CompileOutput Include="@(IntermediateAssembly);@(_DebugSymbolsIntermediatePath)" />
+      <_CompileOutput Include="obj/descriptor.xml" />
+    </ItemGroup>
+    <WriteLinesToFile File="%(_CompileOutput.Identity)" Lines="future input" Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="%(_CompileOutput.Identity)" Lines="future input" Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="%(_CompileOutput.Identity)"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+  </Target>
+  <Target Name="ValidateInputs" Condition="'$(MSBuildHardenedGraph)' == 'true'">
+    <ItemGroup>
+      <_RequiredILLinkInput Include="obj/PreTrim/Fixture.dll;obj/PreTrim/Fixture.pdb;obj/descriptor.xml;
+                                    references/Reference.dll;references/Reference.pdb;references/Shadow.dll;
+                                    task/bin/Debug/net/Fixture.ILLink.Tasks.dll;
+                                    task/bin/Debug/net/Fixture.ILLink.Tasks.deps.json;
+                                    @(_ToolAsset->'task/bin/Debug/net/%(Identity)');
+                                    $(MSBuildActionDotNetHost)" />
+      <_MissingILLinkInput Include="@(_RequiredILLinkInput->'%(FullPath)')" Exclude="@(_ILLinkDeclaredInput)" />
+    </ItemGroup>
+    <Error Condition="'@(_MissingILLinkInput)' != ''"
+           Text="ILLink omitted declared inputs '@(_MissingILLinkInput)'. Actual inputs: '@(_ILLinkDeclaredInput)'."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="_PrepareILLinkCompileOutputs;Produce;ILLinkTrimAssembly;ValidateInputs" />
+</Project>

@@ -11,8 +11,15 @@ using Microsoft.Build.Utilities;
 
 namespace ILLink.Tasks
 {
+    [MSBuildDeclaredIOTask]
     public class ILLink : ToolTask
     {
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        public ITaskItem[] DeclaredOutputs { get; set; }
+
+        public string DotNetHostPath { get; set; }
+
         /// <summary>
         ///   Paths to the assembly files that should be considered as
         ///   input to the ILLink.
@@ -240,6 +247,9 @@ namespace ILLink.Tasks
         {
             get
             {
+                if (!string.IsNullOrEmpty(DotNetHostPath))
+                    return DotNetHostPath;
+
                 if (!string.IsNullOrEmpty(_dotnetPath))
                     return _dotnetPath;
 

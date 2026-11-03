@@ -34,6 +34,7 @@ internal sealed class HardenedActionGraph
     internal const string HostArchitectureProperty = "MSBuildGraphHostArchitecture";
     internal const string HostRuntimeIdentifierProperty = "MSBuildGraphHostRuntimeIdentifier";
     internal const string RequiredOutputDirectoryItem = "_MSBuildRequiredOutputDirectory";
+    internal const string ProducedFileItem = "_MSBuildActionOutput";
 
     private static readonly HashSet<string> s_intrinsicFunctions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -218,6 +219,17 @@ internal sealed class HardenedActionGraph
             if (!_requiredOutputDirectories.ContainsKey(path))
             {
                 _requiredOutputDirectories.Add(path, location);
+            }
+        }
+    }
+
+    internal IEnumerable<string> GetProducedFiles()
+    {
+        foreach (ActionInvocation action in _actions)
+        {
+            foreach (string output in action.Outputs)
+            {
+                yield return output;
             }
         }
     }

@@ -165,6 +165,7 @@
     <Compile Include="CompileResources.cs" />
     <Compile Include="ValidateHardenedAssemblySearchPaths.cs" />
     <Compile Include="ResolveReferencePaths.cs" />
+    <Compile Include="ILLinkInputs.cs" />
     <Compile Include="CommandLineBuilderExtension.cs" />
     <Compile Include="ResourceHandling\*.cs" />
     <Compile Include="GetCompatiblePlatform.cs" />

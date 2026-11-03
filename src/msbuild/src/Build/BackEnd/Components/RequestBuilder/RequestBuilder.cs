@@ -1407,6 +1407,24 @@ namespace Microsoft.Build.BackEnd
 
                 try
                 {
+                    foreach (var parameter in task.ParametersForBuild.Values)
+                    {
+                        if (parameter.Item1.IndexOf("@(" + HardenedActionGraph.ProducedFileItem, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            lookup.RemoveItems(HardenedActionGraph.ProducedFileItem,
+                                lookup.GetItems(HardenedActionGraph.ProducedFileItem).ToArray());
+                            foreach (string output in _requestEntry.ActionGraph.GetProducedFiles())
+                            {
+                                lookup.AddNewItem(new ProjectItemInstance(
+                                    _requestEntry.RequestConfiguration.Project,
+                                    HardenedActionGraph.ProducedFileItem,
+                                    EscapingUtilities.Escape(output),
+                                    EscapingUtilities.Escape(task.Location.File)));
+                            }
+                            break;
+                        }
+                    }
+
                     WorkUnitResult result = taskBuilder.ExecuteTask(
                         targetLoggingContext,
                         _requestEntry,
