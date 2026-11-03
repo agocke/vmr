@@ -1,0 +1,38 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <XlfIntermediateOutputPath>obj/localized/</XlfIntermediateOutputPath>
+    <XlfLanguages>fr;de</XlfLanguages>
+    <CreateNeutralXlf>true</CreateNeutralXlf>
+    <_ExpectedDependentUpon>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'inputs/Other.cs'))</_ExpectedDependentUpon>
+    <_PrepareXlfTarget Condition="'$(PrepareXlf)' == 'true'">UpdateXlf</_PrepareXlfTarget>
+  </PropertyGroup>
+  <Import Project="$(XliffTargetsDirectory)/Microsoft.DotNet.XliffTasks.props" />
+  <ItemGroup>
+    <EmbeddedResource Include="inputs/Strings.resx" Link="linked/Strings.resx"
+                      ManifestResourceName="Fixture.Strings" LogicalName="Fixture.Strings.resources"
+                      DependentUpon="Other.cs" XlfPreserveFileName="$(PreserveFileName)" />
+    <Content Include="inputs/Settings.json" XlfInput="true" Link="linked/Settings.json"
+             XlfPreserveFileName="$(PreserveFileName)" />
+  </ItemGroup>
+  <Import Project="$(XliffTargetsDirectory)/Microsoft.DotNet.XliffTasks.targets" />
+  <Target Name="AssignLinkMetadata" />
+  <Target Name="Restore" DependsOnTargets="$(_PrepareXlfTarget)" />
+  <Target Name="Build" DependsOnTargets="$(_PrepareXlfTarget);TranslateSourceFromXlf">
+    <Error Condition="'@(_MSBuildXlf->Count())' != '4' and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="Neutral XLF must be validated without producing a translated resource."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="'%(EmbeddedResource.XlfLanguage)' != '' and
+                      '%(EmbeddedResource.DependentUpon)' != '$(_ExpectedDependentUpon)'"
+           Text="Translated resource dependency metadata must preserve ordinary absolute paths."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <CompileResources SourceFile="%(EmbeddedResource.Identity)"
+                      OutputFile="obj/resources/Strings.%(EmbeddedResource.XlfLanguage).resources"
+                      DeclaredInputs="%(EmbeddedResource.Identity)"
+                      DeclaredOutputs="obj/resources/Strings.%(EmbeddedResource.XlfLanguage).resources"
+                      Condition="'%(EmbeddedResource.XlfLanguage)' != ''" />
+    <WriteLinesToFile File="obj/metadata.txt"
+                     Lines="@(EmbeddedResource->'%(Filename)%(Extension)|%(Link)|%(XlfLanguage)|%(LogicalName)|%(ManifestResourceName)');@(Content->'%(Filename)%(Extension)|%(Link)|%(XlfLanguage)')"
+                     Overwrite="true" DeclaredInputs="" DeclaredOutputs="obj/metadata.txt" />
+  </Target>
+</Project>

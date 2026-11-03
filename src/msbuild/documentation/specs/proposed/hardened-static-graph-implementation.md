@@ -444,7 +444,7 @@ Clean/Rebuild and arbitrary semantic Delete remain unsupported.
 
 ## 6. Exercise dotnet/runtime
 
-The next product milestone is `System.Collections.Immutable` with
+The initial product milestone is `System.Collections.Immutable` with
 `TargetFramework=net10.0` and `BuildTargetFramework=net10.0`. This is runtime's
 `NetCoreAppMinimum`; `NetCoreAppPrevious` is empty in this checkout.
 An isolated `ArtifactsDir` separates the experiment from existing runtime products.
@@ -488,8 +488,9 @@ projects; choosing the older framework does not make those dependencies optional
   package-backed `netstandard2.0` and multiple selected targeting packs.
 - [ ] Support the actual compiler/API-tool and analyzer requirements,
   keeping generated tools connected to their producers.
-- [ ] Construct a fresh real-library graph without product binaries.
-- [ ] Execute independently with Ninja and verify output/ordinary compatibility.
+- [x] Construct a fresh real-library graph without product binaries.
+- [x] Execute independently with Ninja and verify final DLL/PDB publication.
+- [ ] Verify real-library output/ordinary compatibility.
 - [ ] Add focused library behavior checks with their genuine test prerequisites.
 
 Configured preparation is exercised by the
@@ -520,8 +521,9 @@ Framework runtime facts are captured after targeting-pack resolution filters out
 unused frameworks. Standard preparation rejects `PrepareForBuild`/`CoreCompile`
 instead of prebuilding products or tools.
 
-The real `System.Collections.Immutable` probe now passes the retained-multi-targeting
-guard and the live-tool prebuild dependency, but its closure is not enabled. Runtime's
+The real `System.Collections.Immutable` probe passes the retained-multi-targeting
+guard and the live-tool prebuild dependency; its minimum-framework closure now
+constructs and executes independently from an empty product tree. Runtime's
 [`FilterImplicitAssemblyReferences`](../../../../runtime/Directory.Build.targets)
 runs before `ResolveAssemblyReferences`, after pack candidates and project-output
 metadata are available. Framework capture retains unfiltered reference/analyzer
@@ -974,6 +976,57 @@ Graph reconstruction preserves existing product-file inventories/timestamps,
 and shared cache hashes remain unchanged. This proves the managed closure,
 not a complete runtime build.
 Native/CoreCLR/CMake integration is later.
+
+### Current-framework closure
+
+The fresh `net10.0` profile completes ordinary preparation and hardened graph
+construction without DLL/PDB/resource/generated-source products, then independently
+executes all 82 actions. Final library DLL/PDB bytes match ILLink outputs; all four
+tool manifests are declared inputs, and repeated Ninja execution has no work.
+Shared package-cache hashes remain unchanged.
+
+Selecting `net11.0` adds Immutable's in-tree framework-library references and
+reaches CoreLib and the interop source generators. CoreCLR's symbol folder
+metadata now uses pure `Path.GetDirectoryName`/`GetFileName` instead of
+`Directory.GetParent`; isolated ordinary/hardened output parity covers IL, aotsdk
+and paths with spaces.
+
+XLIFF localization now retains the existing translation and freshness behavior
+through explicit actions. `GatherXlf` and `GatherTranslatedSource` are audited
+metadata-only construction tasks. `GatherXlf.FileInputs` includes the source and
+every derived XLF, including neutral files and `SourceDocumentPath` overrides.
+`ValidateXlf` reuses ordinary `UpdateXlf`'s freshness algorithm with modification
+disabled and writes a declared success stamp. Translation actions consume their
+source/XLF pair and, when validation is enabled, that stamp. Existing schema
+validation, encoding, resource-path rewriting and output metadata are retained.
+Ordinary source-updating targets remain unchanged; explicit hardened `UpdateXlf`
+requests fail without changing sources. Template-localization workflows remain
+unsupported rather than silently omitted.
+
+The standalone profile builds and stages the selected XLIFF tasks/targets.
+The real runtime probe consumes a source-built package from an isolated feed,
+with `UpdateXlfOnBuild=false` and `ErrorOnOutOfDateXlf=true` to select the existing
+CI-style read-only policy instead of Arcade's local developer auto-update.
+Focused regressions compare ordinary and Ninja translated resx/JSON, compiled
+resources and item metadata in both filename modes, verify incremental edits and
+no-work rebuilds, and reject missing/stale/neutral-stale/malformed/schema-invalid
+XLFs without source mutation. Unit coverage verifies neutral input enumeration
+and source-document path overrides. An isolated real interop-generator
+localization graph executes one validation and 13 translations, then has no work;
+source files and shared-cache hashes remain unchanged.
+
+The full current-framework closure advances to SDK satellite generation.
+`_GetAssemblyInfoFromTemplateFile` currently fails construction at
+`GetAssemblyAttributes`' missing `DeclaredInputs`. The underlying operation reads
+the future parent DLL through `FileVersionInfo` and assembly metadata, returning
+eight possible attributes consumed by `WriteCodeFragment`. Adding a declaration
+cannot supply those values during construction. Preserve that existing behavior
+by deferring attribute extraction and satellite-source generation together into
+an action with the parent DLL as input and a known generated-source output, then
+feed that output into satellite compilation. This boundary is not yet implemented.
+Localization and validation remain enabled. Current-framework construction fails
+without publishing a graph or prebuilding products; full CoreLib/native
+integration remains unproven.
 
 ### NuGet fact capture
 

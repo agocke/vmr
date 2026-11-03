@@ -9,6 +9,7 @@ using Microsoft.Build.Utilities;
 namespace XliffTasks.Tasks;
 
 [MSBuildMultiThreadableTask]
+[MSBuildDeclaredIOTask]
 public sealed class GatherTranslatedSource : XlfTask
 {
     [Required]

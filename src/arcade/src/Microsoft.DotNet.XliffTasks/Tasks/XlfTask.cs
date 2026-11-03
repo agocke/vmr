@@ -28,6 +28,10 @@ public abstract class XlfTask : Task, IMultiThreadableTask
     /// <summary>Injected by MSBuild so paths resolve against the project directory in multithreaded builds.</summary>
     public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
 
+    public ITaskItem[] DeclaredInputs { get; set; }
+
+    public ITaskItem[] DeclaredOutputs { get; set; }
+
     public sealed override bool Execute()
     {
         try
@@ -132,4 +136,3 @@ public abstract class XlfTask : Task, IMultiThreadableTask
         return $"../{Path.GetFileName(sourcePath)}";
     }
 }
-

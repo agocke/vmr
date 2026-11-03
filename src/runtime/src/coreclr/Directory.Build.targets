@@ -4,7 +4,7 @@
 
   <ItemGroup Condition="'$(UsingMicrosoftNoTargetsSdk)' != 'true'">
     <_DebugSymbolToMove Include="@(DebugSymbolsProjectOutputGroupOutput->Metadata('FinalOutputPath'))"
-                        FolderName="$([System.IO.Directory]::GetParent('%(Identity)').Name)" />
+                        FolderName="$([System.IO.Path]::GetFileName($([System.IO.Path]::GetDirectoryName('%(Identity)'))))" />
     <_DebugSymbolToMoveToExclude Include="@(_DebugSymbolToMove->WithMetadataValue('FolderName', 'aotsdk'))" />
     <_DebugSymbolToMoveToUpdate Include="@(_DebugSymbolToMove)"
                                 Exclude="@(_DebugSymbolToMoveToExclude)" />

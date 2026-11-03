@@ -7,11 +7,15 @@
   </PropertyGroup>
 
   <!-- TODO: Remove Architecture="*" on Runtime="NET" UsingTask declarations below when https://github.com/dotnet/msbuild/issues/13739 is fixed and a new msbuild is consumed with the fix. -->
-  <UsingTask TaskName="GatherXlf" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" />
-  <UsingTask TaskName="GatherTranslatedSource" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="GatherXlf" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="GatherXlf" AssemblyFile="$(XliffTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+  <UsingTask TaskName="GatherTranslatedSource" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="GatherTranslatedSource" AssemblyFile="$(XliffTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   <UsingTask TaskName="TransformTemplates" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" />
-  <UsingTask TaskName="TranslateSource" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="TranslateSource" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="TranslateSource" AssemblyFile="$(XliffTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   <UsingTask TaskName="UpdateXlf" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="ValidateXlf" AssemblyFile="$(XliffTasksAssembly)" />
   <UsingTask TaskName="SortXlf" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="EnsureAllResourcesTranslated" AssemblyFile="$(XliffTasksAssembly)" Runtime="NET" Architecture="*" />
 
@@ -45,14 +49,17 @@
   </PropertyGroup>
 
   <Target Name="_ValidateXlfLanguages">
-    <Error Condition="$(_XlfLanguagesDelimited.Contains(';en;'))"
+    <Error Condition="$(_XlfLanguagesDelimited.Contains(';en;')) and '$(MSBuildHardenedGraph)' != 'true'"
            Text="'en' is the source language and cannot be listed in XlfLanguages. Set CreateNeutralXlf=true to produce a neutral .xlf file instead." />
+    <Error Condition="$(_XlfLanguagesDelimited.Contains(';en;')) and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="'en' is the source language and cannot be listed in XlfLanguages. Set CreateNeutralXlf=true to produce a neutral .xlf file instead."
+           DeclaredInputs="" DeclaredOutputs="" />
   </Target>
 
   <!-- Updates the list of XlfSource items that drives incremental update (see above) -->
   <Target Name="UpdateXlfSourceList"
           DependsOnTargets="GetXlfSources">
-    <MakeDir Directories="$(XlfIntermediateOutputPath)" />
+    <MakeDir Directories="$(XlfIntermediateOutputPath)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
 
     <!--
       The language list is recorded alongside the sources so that changing it (including toggling
@@ -61,7 +68,14 @@
     <WriteLinesToFile File="$(_XlfSourceList)"
                       Lines="@(XlfSource);$(_XlfLanguages)"
                       Overwrite="true"
-                      WriteOnlyWhenDifferent="true" />
+                      WriteOnlyWhenDifferent="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="$(_XlfSourceList)"
+                      Lines="@(XlfSource);$(_XlfLanguages)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true"
+                      DeclaredInputs="" DeclaredOutputs="$(_XlfSourceList)"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
     <ItemGroup>
       <FileWrites Include="$(_XlfSourceList)" />
@@ -75,12 +89,19 @@
 
   <Target Name="EnsureXlfIsUpToDate"
           Condition="'$(ErrorOnOutOfDateXlf)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(BuildingProject)' != 'false'"
-          DependsOnTargets="_DisallowXlfModification;_UpdateXlf" />
+          DependsOnTargets="_DisallowXlfModification;_UpdateXlf">
+    <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <_MSBuildXlfValidationStamp>$(_UpdateXlfLastRun)</_MSBuildXlfValidationStamp>
+    </PropertyGroup>
+  </Target>
 
   <Target Name="UpdateXlf"
           DependsOnTargets="_AllowXlfModification;_UpdateXlf" />
 
   <Target Name="_AllowXlfModification">
+    <Error Condition="'$(MSBuildHardenedGraph)' == 'true'"
+           Text="Hardened XLF actions cannot modify checked-in localization sources. Run UpdateXlf in ordinary MSBuild."
+           DeclaredInputs="" DeclaredOutputs="" />
     <PropertyGroup>
       <_AllowXlfModification>true</_AllowXlfModification>
     </PropertyGroup>
@@ -93,14 +114,24 @@
   </Target>
 
   <Target Name="_UpdateXlf"
-          DependsOnTargets="_ValidateXlfLanguages;GetXlfSources;UpdateXlfSourceList"
+          DependsOnTargets="_ValidateXlfLanguages;GetXlfSources;_GatherXlfInputs;UpdateXlfSourceList"
           Inputs="@(XlfSource);$(_XlfSourceList)"
           Outputs="$(_UpdateXlfLastRun)">
     <UpdateXlf Sources="@(XlfSource)"
                Languages="$(_XlfLanguages)"
-               AllowModification="$(_AllowXlfModification)" />
+               AllowModification="$(_AllowXlfModification)"
+               Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <Error Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(_AllowXlfModification)' == 'true'"
+           Text="Hardened XLF actions cannot modify checked-in localization sources. Run UpdateXlf in ordinary MSBuild."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <ValidateXlf Sources="@(XlfSource)"
+                 Languages="$(_XlfLanguages)"
+                 ValidationStamp="$(_UpdateXlfLastRun)"
+                 DeclaredInputs="@(_MSBuildXlfFileInputs);$(_XlfSourceList)"
+                 DeclaredOutputs="$(_UpdateXlfLastRun)"
+                 Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
-    <Touch Files="$(_UpdateXlfLastRun)" AlwaysCreate="true" />
+    <Touch Files="$(_UpdateXlfLastRun)" AlwaysCreate="true" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
 
     <ItemGroup>
       <FileWrites Include="$(_UpdateXlfLastRun)" />
@@ -131,20 +162,41 @@
     </ItemGroup>
   </Target>
 
-  <Target Name="GatherXlf"
-          DependsOnTargets="_ValidateXlfLanguages;GetXlfSources;EnsureXlfIsUpToDate">
+  <Target Name="_GatherXlfInputs"
+          DependsOnTargets="_ValidateXlfLanguages;GetXlfSources"
+          Condition="'$(MSBuildHardenedGraph)' == 'true'">
     <GatherXlf Sources="@(XlfSource)"
                Languages="$(_XlfLanguages)"
-               TranslatedOutputDirectory="$(XlfIntermediateOutputPath)">
+               TranslatedOutputDirectory="$(XlfIntermediateOutputPath)"
+               DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="Outputs" ItemName="_MSBuildXlf" />
+      <Output TaskParameter="FileInputs" ItemName="_MSBuildXlfFileInputs" />
+    </GatherXlf>
+  </Target>
+
+  <Target Name="GatherXlf"
+          DependsOnTargets="_ValidateXlfLanguages;GetXlfSources;_GatherXlfInputs;EnsureXlfIsUpToDate">
+    <GatherXlf Sources="@(XlfSource)"
+               Languages="$(_XlfLanguages)"
+               TranslatedOutputDirectory="$(XlfIntermediateOutputPath)"
+               Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <Output TaskParameter="Outputs" ItemName="Xlf" />
     </GatherXlf>
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <Xlf Include="@(_MSBuildXlf)" />
+    </ItemGroup>
   </Target>
 
   <Target Name="TranslateSourceFromXlf"
           Condition="'$(EnableXlfLocalization)' == 'true'"
           DependsOnTargets="GatherXlf;BatchTranslateSourceFromXlf"
           BeforeTargets="VSCTCompile;PrepareResourceNames;$(PrepareResourceNamesDependsOn)">
-    <GatherTranslatedSource XlfFiles="@(Xlf)" Condition="'@(Xlf)' != ''">
+    <GatherTranslatedSource XlfFiles="@(Xlf)" Condition="'@(Xlf)' != '' and '$(MSBuildHardenedGraph)' != 'true'">
+      <Output TaskParameter="Outputs" ItemName="%(Xlf.XlfOutputItem)" />
+      <Output TaskParameter="Outputs" ItemName="FileWrites" />
+    </GatherTranslatedSource>
+    <GatherTranslatedSource XlfFiles="@(Xlf)" DeclaredInputs="" DeclaredOutputs=""
+                            Condition="'@(Xlf)' != '' and '$(MSBuildHardenedGraph)' == 'true'">
       <Output TaskParameter="Outputs" ItemName="%(Xlf.XlfOutputItem)" />
       <Output TaskParameter="Outputs" ItemName="FileWrites" />
     </GatherTranslatedSource>
@@ -173,7 +225,11 @@
   <Target Name="BatchTranslateSourceFromXlf"
           Inputs="@(Xlf);%(Xlf.XlfSource)"
           Outputs="%(Xlf.XlfTranslatedFullPath)">
-    <TranslateSource XlfFile="@(Xlf)" />
+    <TranslateSource XlfFile="@(Xlf)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <TranslateSource XlfFile="@(Xlf)"
+                     DeclaredInputs="@(Xlf);%(Xlf.XlfSource);$(_MSBuildXlfValidationStamp)"
+                     DeclaredOutputs="%(Xlf.XlfTranslatedFullPath)"
+                     Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   </Target>
 
   <!--

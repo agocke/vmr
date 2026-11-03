@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Microsoft.DotNet.XliffTasks</AssemblyName>
+    <RootNamespace>XliffTasks</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>true</IsPackable>
+    <PackageId>Microsoft.DotNet.XliffTasks</PackageId>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetTaskPackageFiles</TargetsForTfmSpecificContentInPackage>
+    <_XliffSource>$(MSBuildThisFileDirectory)../../../src/arcade/src/Microsoft.DotNet.XliffTasks/</_XliffSource>
+    <_Engine>$(MSBuildThisFileDirectory)../../../src/msbuild/artifacts/bin/MSBuild/$(Configuration)/net11.0/</_Engine>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(_XliffSource)**/*.cs" Exclude="$(_XliffSource)MSBuildDeclaredIOTaskAttribute.cs;$(_XliffSource)obj/**/*.cs;$(_XliffSource)bin/**/*.cs" />
+    <Compile Include="$(_XliffSource)../Common/Internal/AbsolutePathExtensions.cs" />
+    <Reference Include="Microsoft.Build.Framework" HintPath="$(_Engine)Microsoft.Build.Framework.dll" Private="false" />
+    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(_Engine)Microsoft.Build.Utilities.Core.dll" Private="false" />
+    <EmbeddedResource Include="$(_XliffSource)Model/*.xsd" LogicalName="XliffTasks.Model.%(Filename)%(Extension)" />
+    <None Include="$(_XliffSource)build/**/*" Pack="true" PackagePath="build/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="$(_XliffSource)buildCrossTargeting/**/*" Pack="true" PackagePath="buildCrossTargeting/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Target Name="GetTaskPackageFiles">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetDir)**/*" PackagePath="tools/net/%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+  </Target>
+</Project>

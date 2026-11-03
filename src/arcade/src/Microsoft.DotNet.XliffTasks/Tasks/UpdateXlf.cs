@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Build.Framework;
@@ -26,30 +26,35 @@ public sealed class UpdateXlf : XlfTask
         + " modify source code during the build.";
 
     protected override void ExecuteCore()
+        => UpdateSources(Sources, Languages, AllowModification, TaskEnvironment);
+
+    internal static void UpdateSources(
+        ITaskItem[] sources, string[] languages, bool allowModification,
+        TaskEnvironment taskEnvironment)
     {
-        foreach (ITaskItem item in Sources)
+        foreach (ITaskItem item in sources)
         {
             string sourcePath = item.ItemSpec;
             string sourceDocumentPath = item.GetMetadataOrDefault(MetadataKey.SourceDocumentPath, item.ItemSpec);
             string sourceFormat = item.GetMetadataOrThrow(MetadataKey.XlfSourceFormat);
-            TranslatableDocument sourceDocument = XlfTask.LoadSourceDocument(TaskEnvironment.GetAbsolutePath(sourcePath), sourceFormat);
+            TranslatableDocument sourceDocument = XlfTask.LoadSourceDocument(taskEnvironment.GetAbsolutePath(sourcePath), sourceFormat);
             string sourceDocumentId = XlfTask.GetSourceDocumentId(sourcePath);
 
-            foreach (string language in Languages)
+            foreach (string language in languages)
             {
                 string xlfPath = XlfTask.GetXlfPath(sourceDocumentPath, language);
-                AbsolutePath absoluteXlfPath = TaskEnvironment.GetAbsolutePath(xlfPath);
+                AbsolutePath absoluteXlfPath = taskEnvironment.GetAbsolutePath(xlfPath);
                 XlfDocument xlfDocument;
 
                 try
                 {
-                    xlfDocument = XlfTask.LoadXlfDocument(absoluteXlfPath, language, createIfNonExistent: AllowModification);
+                    xlfDocument = XlfTask.LoadXlfDocument(absoluteXlfPath, language, createIfNonExistent: allowModification);
                 }
                 // Document.Load opens the file through FileInfo.FullName, which canonicalizes it,
                 // so compare against the canonical form rather than the raw absolute path.
                 catch (FileNotFoundException fileNotFoundEx) when (fileNotFoundEx.FileName == absoluteXlfPath.GetCanonicalForm().Value)
                 {
-                    Release.Assert(!AllowModification);
+                    Release.Assert(!allowModification);
                     throw new BuildErrorException($"'{xlfPath}' for '{sourcePath}' does not exist. {HowToUpdate}");
                 }
                 catch (System.Xml.XmlException xmlEx)
@@ -67,7 +72,7 @@ public sealed class UpdateXlf : XlfTask
                     continue; // no changes
                 }
 
-                if (!AllowModification)
+                if (!allowModification)
                 {
                     throw new BuildErrorException($"'{xlfPath}' is out-of-date with '{sourcePath}'. {HowToUpdate}");
                 }

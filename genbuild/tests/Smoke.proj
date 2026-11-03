@@ -32,6 +32,7 @@
     <CallTarget Targets="TestRuntimeGenAPI" />
     <CallTarget Targets="TestRuntimeILLinkCompileOutputs" />
     <CallTarget Targets="TestRuntimeILLinkInputs" />
+    <CallTarget Targets="TestXlfLocalization" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -1046,6 +1047,180 @@
     </Exec>
     <Error Condition="'$(_ExplicitProgramOutput)' != 'Hello from a project reference.'"
            Text="Independent compilation must preserve explicit reference aliases and use the declared producer." />
+  </Target>
+  <Target Name="TestXlfLocalization">
+    <PropertyGroup>
+      <_XlfRoot>$(_TestDirectory)xlf/</_XlfRoot>
+      <_XlfArguments>-p:XliffTargetsDirectory=&quot;$(_AppDirectory)/toolset/Arcade/XliffTasks/build&quot;</_XlfArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_XlfCase Include="normal;preserve" />
+      <_XlfDirectory Include="@(_XlfCase->'$(_XlfRoot)%(Identity)/action/');@(_XlfCase->'$(_XlfRoot)%(Identity)/ordinary/')" />
+    </ItemGroup>
+    <MakeDir Directories="%(_XlfDirectory.Identity)inputs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)XlfLocalization.proj" DestinationFolder="%(_XlfDirectory.Identity)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)XlfInputs/Strings.resx;$(MSBuildThisFileDirectory)XlfInputs/Settings.json" DestinationFolder="%(_XlfDirectory.Identity)inputs" />
+    <Exec Command="$(_App) restore &quot;%(_XlfDirectory.Identity)XlfLocalization.proj&quot; $(_XlfArguments) -p:PrepareXlf=true -p:XlfIntermediateOutputPath=prep/" />
+    <ItemGroup>
+      <_XlfFrench Include="%(_XlfDirectory.Identity)inputs/xlf/Strings.fr.xlf;%(_XlfDirectory.Identity)inputs/xlf/Settings.json.fr.xlf" Translation="Bonjour!" />
+      <_XlfGerman Include="%(_XlfDirectory.Identity)inputs/xlf/Strings.de.xlf;%(_XlfDirectory.Identity)inputs/xlf/Settings.json.de.xlf" Translation="Hallo!" />
+      <_XlfTranslation Include="@(_XlfFrench);@(_XlfGerman)" />
+      <_XlfSource Include="%(_XlfDirectory.Identity)inputs/**/*" />
+    </ItemGroup>
+    <XmlPoke XmlInputPath="%(_XlfTranslation.Identity)"
+             Query="//*[local-name()='trans-unit' and @id='Hello']/*[local-name()='target']"
+             Value="%(_XlfTranslation.Translation)" />
+    <GetFileHash Files="@(_XlfSource)">
+      <Output TaskParameter="Items" ItemName="_XlfSourceBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_XlfRoot)%(_XlfCase.Identity)/action/XlfLocalization.proj&quot; $(_XlfArguments) -p:PreserveFileName=$([System.String]::Equals('%(_XlfCase.Identity)', 'preserve')) -p:MSBuildEmitActionGraph=&quot;$(_XlfRoot)%(_XlfCase.Identity)/action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_XlfRoot)%(_XlfCase.Identity)/action/obj/localized') or Exists('$(_XlfRoot)%(_XlfCase.Identity)/action/obj/resources') or Exists('$(_XlfRoot)%(_XlfCase.Identity)/action/obj/metadata.txt')"
+           Text="XLF construction must not translate, validate source content or compile resources." />
+    <Exec WorkingDirectory="$(_XlfRoot)%(_XlfCase.Identity)/action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_XlfRoot)%(_XlfCase.Identity)/ordinary/XlfLocalization.proj&quot; $(_XlfArguments) -t:Build -p:PreserveFileName=$([System.String]::Equals('%(_XlfCase.Identity)', 'preserve'))" />
+    <ItemGroup>
+      <_XlfOutput Include="$(_XlfRoot)%(_XlfCase.Identity)/action/obj/localized/**/*.resx;$(_XlfRoot)%(_XlfCase.Identity)/action/obj/localized/**/*.json;$(_XlfRoot)%(_XlfCase.Identity)/action/obj/resources/*.resources;$(_XlfRoot)%(_XlfCase.Identity)/action/obj/metadata.txt" />
+      <_XlfOutput Update="@(_XlfOutput)">
+        <Baseline>$([System.String]::Copy('%(_XlfOutput.Identity)').Replace('/action/', '/ordinary/'))</Baseline>
+      </_XlfOutput>
+    </ItemGroup>
+    <Error Condition="'@(_XlfOutput->Count())' != '14'"
+           Text="Each filename mode must produce four translations, two compiled resources and one metadata snapshot." />
+    <GetFileHash Files="@(_XlfOutput)">
+      <Output TaskParameter="Items" ItemName="_XlfOutputHash" />
+    </GetFileHash>
+    <ItemGroup>
+      <_XlfBaseline Include="%(_XlfOutputHash.Baseline)" ExpectedHash="%(_XlfOutputHash.FileHash)" />
+    </ItemGroup>
+    <GetFileHash Files="@(_XlfBaseline)">
+      <Output TaskParameter="Items" ItemName="_XlfBaselineHash" />
+    </GetFileHash>
+    <Error Condition="'%(_XlfBaselineHash.ExpectedHash)' != '%(_XlfBaselineHash.FileHash)'"
+           Text="Translated resources, JSON, metadata and compiled resources must match ordinary XLF behavior." />
+    <GetFileHash Files="@(_XlfSourceBefore)">
+      <Output TaskParameter="Items" ItemName="_XlfSourceAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_XlfSourceBefore->'%(FileHash)')' != '@(_XlfSourceAfter->'%(FileHash)')'"
+           Text="XLF validation and translation must leave localization source files untouched." />
+    <ItemGroup>
+      <_XlfFrenchOutput Include="@(_XlfOutput)"
+                        Condition="('%(_XlfOutput.Extension)' == '.resx' or '%(_XlfOutput.Extension)' == '.json') and
+                                   ($([System.String]::Copy('%(_XlfOutput.Identity)').Contains('.fr.')) or
+                                    $([System.String]::Copy('%(_XlfOutput.Identity)').Contains('/fr/')))" />
+      <_XlfGermanOutput Include="@(_XlfOutput)"
+                        Condition="('%(_XlfOutput.Extension)' == '.resx' or '%(_XlfOutput.Extension)' == '.json') and
+                                   ($([System.String]::Copy('%(_XlfOutput.Identity)').Contains('.de.')) or
+                                    $([System.String]::Copy('%(_XlfOutput.Identity)').Contains('/de/')))" />
+    </ItemGroup>
+    <Error Condition="'@(_XlfFrenchOutput->Count())' != '4' or '@(_XlfGermanOutput->Count())' != '4'"
+           Text="Both naming modes must retain exactly two translations per culture." />
+    <Error Condition="!$([System.IO.File]::ReadAllText('%(_XlfFrenchOutput.Identity)').Contains('Bonjour!'))"
+           Text="French outputs must contain the authored translations, not English fallback strings." />
+    <Error Condition="!$([System.IO.File]::ReadAllText('%(_XlfGermanOutput.Identity)').Contains('Hallo!'))"
+           Text="German outputs must contain the authored translations, not English fallback strings." />
+    <Exec WorkingDirectory="$(_XlfRoot)%(_XlfCase.Identity)/action" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_XlfNoWork" />
+    </Exec>
+    <Error Condition="!$([System.String]::Copy('%(_XlfNoWork.Identity)').Contains('no work to do'))"
+           Text="Unchanged localization actions must be an incremental no-op." />
+    <ItemGroup>
+      <_XlfStamp Include="$(_XlfRoot)%(_XlfCase.Identity)/action/obj/localized/UpdateXlf.lastrun" />
+      <_XlfStamp Update="@(_XlfStamp)">
+        <Before>$([System.IO.File]::GetLastWriteTimeUtc('%(_XlfStamp.Identity)').Ticks)</Before>
+      </_XlfStamp>
+      <_XlfFrenchResource Include="@(_XlfOutputHash)"
+                          Condition="'%(_XlfOutputHash.Filename)%(_XlfOutputHash.Extension)' == 'Strings.fr.resources'" />
+      <_XlfFrenchResource Update="@(_XlfFrenchResource)" ExpectedHash="%(_XlfFrenchResource.FileHash)" />
+    </ItemGroup>
+    <XmlPoke XmlInputPath="%(_XlfFrench.Identity)"
+             Query="//*[local-name()='trans-unit' and @id='Hello']/*[local-name()='target']"
+             Value="Salut!" />
+    <Exec WorkingDirectory="$(_XlfRoot)%(_XlfCase.Identity)/action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_XlfRoot)%(_XlfCase.Identity)/ordinary/XlfLocalization.proj&quot; $(_XlfArguments) -t:Build -p:PreserveFileName=$([System.String]::Equals('%(_XlfCase.Identity)', 'preserve'))" />
+    <Error Condition="$([System.IO.File]::GetLastWriteTimeUtc('%(_XlfStamp.Identity)').Ticks) &lt;= '%(_XlfStamp.Before)'"
+           Text="An XLF edit must rerun read-only freshness validation." />
+    <Error Condition="!$([System.IO.File]::ReadAllText('%(_XlfFrenchOutput.Identity)').Contains('Salut!'))"
+           Text="An XLF edit must update translations." />
+    <GetFileHash Files="@(_XlfFrenchResource)">
+      <Output TaskParameter="Items" ItemName="_XlfFrenchResourceAfter" />
+    </GetFileHash>
+    <Error Condition="'%(_XlfFrenchResourceAfter.FileHash)' == '%(_XlfFrenchResourceAfter.ExpectedHash)'"
+           Text="An XLF edit must change the downstream compiled French resource." />
+    <GetFileHash Files="@(_XlfOutput)">
+      <Output TaskParameter="Items" ItemName="_XlfUpdatedHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_XlfOutput->'%(Baseline)')">
+      <Output TaskParameter="Items" ItemName="_XlfUpdatedBaselineHash" />
+    </GetFileHash>
+    <Error Condition="'@(_XlfUpdatedHash->'%(FileHash)')' != '@(_XlfUpdatedBaselineHash->'%(FileHash)')'"
+           Text="Incremental translations, compiled resources and metadata must retain ordinary byte parity." />
+
+    <ItemGroup>
+      <_XlfReject Include="missing;modify" ConstructionFailure="true" />
+      <_XlfReject Include="stale;neutral;malformed;schema" />
+      <_XlfReject Update="@(_XlfReject)">
+        <Root>$(_XlfRoot)rejected/%(_XlfReject.Identity)/</Root>
+        <Arguments>$(_XlfArguments)</Arguments>
+        <Arguments Condition="'%(_XlfReject.Identity)' == 'modify'">$(_XlfArguments) -p:PrepareXlf=true</Arguments>
+      </_XlfReject>
+      <_XlfRejectInput Include="$(_XlfRoot)normal/action/inputs/**/*" Root="%(_XlfReject.Root)" />
+      <_XlfConstructReject Include="@(_XlfReject)" Condition="'%(_XlfReject.ConstructionFailure)' == 'true'" />
+      <_XlfExecuteReject Include="@(_XlfReject)" Condition="'%(_XlfReject.ConstructionFailure)' != 'true'" />
+    </ItemGroup>
+    <MakeDir Directories="%(_XlfReject.Root)inputs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)XlfLocalization.proj" DestinationFolder="%(_XlfReject.Root)" />
+    <Copy SourceFiles="%(_XlfRejectInput.Identity)"
+          DestinationFiles="%(_XlfRejectInput.Root)inputs/%(_XlfRejectInput.RecursiveDir)%(_XlfRejectInput.Filename)%(_XlfRejectInput.Extension)" />
+    <Delete Files="$(_XlfRoot)rejected/missing/inputs/xlf/Strings.fr.xlf" />
+    <XmlPoke XmlInputPath="$(_XlfRoot)rejected/stale/inputs/Strings.resx"
+             Query="/root/data[@name='Hello']/value" Value="Changed source!" />
+    <Touch Files="$(_XlfRoot)rejected/stale/inputs/Strings.resx" Time="2000-01-01" />
+    <XmlPoke XmlInputPath="$(_XlfRoot)rejected/neutral/inputs/xlf/Strings.xlf"
+             Query="//*[local-name()='trans-unit' and @id='Hello']/*[local-name()='source']"
+             Value="Outdated neutral source!" />
+    <WriteLinesToFile File="$(_XlfRoot)rejected/malformed/inputs/xlf/Strings.fr.xlf" Lines="&lt;broken" Overwrite="true" />
+    <XmlPoke XmlInputPath="$(_XlfRoot)rejected/schema/inputs/xlf/Strings.fr.xlf"
+             Query="/*[local-name()='xliff']/@version" Value="9.9" />
+    <ItemGroup>
+      <_XlfRejectedSource Include="%(_XlfReject.Root)inputs/**/*" />
+    </ItemGroup>
+    <GetFileHash Files="@(_XlfRejectedSource)">
+      <Output TaskParameter="Items" ItemName="_XlfRejectedSourceBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;%(_XlfConstructReject.Root)XlfLocalization.proj&quot; %(_XlfConstructReject.Arguments) -p:MSBuildEmitActionGraph=&quot;%(_XlfConstructReject.Root)build.ninja&quot; -flp:&quot;LogFile=%(_XlfConstructReject.Root)rejection.log;Verbosity=normal&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_XlfConstructRejectedExit" />
+    </Exec>
+    <Error Condition="'%(_XlfConstructRejectedExit.Identity)' == '0'"
+           Text="Missing localization inputs and source-modification requests must fail construction." />
+    <Error Condition="Exists('%(_XlfConstructReject.Root)build.ninja') or Exists('%(_XlfConstructReject.Root)build.ninja.actions') or
+                      Exists('%(_XlfConstructReject.Root)obj')"
+           Text="Rejected localization construction must not publish a graph or products." />
+    <Exec Command="$(_App) build &quot;%(_XlfExecuteReject.Root)XlfLocalization.proj&quot; %(_XlfExecuteReject.Arguments) -p:MSBuildEmitActionGraph=&quot;%(_XlfExecuteReject.Root)build.ninja&quot;" />
+    <Error Condition="Exists('%(_XlfExecuteReject.Root)obj')"
+           Text="Malformed or stale localization content must not be read during construction." />
+    <Exec WorkingDirectory="%(_XlfExecuteReject.Root)"
+          Command="ninja -f build.ninja &quot;%(_XlfExecuteReject.Root)obj/resources/Strings.fr.resources&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" ItemName="_XlfExecutionRejectedExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_XlfExecutionRejectedOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_XlfFailureLog>@(_XlfExecutionRejectedOutput)</_XlfFailureLog>
+    </PropertyGroup>
+    <Error Condition="'%(_XlfExecutionRejectedExit.Identity)' == '0'"
+           Text="Freshness, XML and schema failures must fail execution." />
+    <Error Condition="Exists('%(_XlfExecuteReject.Root)obj/resources/Strings.fr.resources')"
+           Text="Freshness, XML and schema failures must block downstream resource compilation." />
+    <Error Condition="!$(_XlfFailureLog.Contains('out-of-date')) or !$(_XlfFailureLog.Contains('Strings.xlf')) or
+                      !$(_XlfFailureLog.Contains('Unable to load file')) or !$(_XlfFailureLog.Contains('9.9'))"
+           Text="Failures must retain existing stale/neutral XLF, malformed XML and schema diagnostics." />
+    <GetFileHash Files="@(_XlfRejectedSource)">
+      <Output TaskParameter="Items" ItemName="_XlfRejectedSourceAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_XlfRejectedSourceBefore->'%(FileHash)')' != '@(_XlfRejectedSourceAfter->'%(FileHash)')'"
+           Text="Failed localization actions must never repair or mutate checked-in sources." />
+    <Message Importance="high" Text="XLF localization passed ordinary/action byte parity, both filename modes, translated metadata, resource compilation, incremental edits and freshness/XML/schema rejection. $(_XlfRoot)" />
   </Target>
   <Target Name="TestRuntimeILLinkInputs">
     <PropertyGroup>

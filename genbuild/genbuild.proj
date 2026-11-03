@@ -24,6 +24,7 @@
     <Component Include="$(GenBuildRoot)src/msbuild/src/MSBuild/MSBuild.csproj;$(GenBuildRoot)src/msbuild/src/MSBuild.ActionTaskHost/MSBuild.ActionTaskHost.csproj;$(GenBuildRoot)src/sdk/src/Tasks/Microsoft.NET.Build.Tasks/Microsoft.NET.Build.Tasks.csproj" Tfm="net11.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/TargetFramework.csproj" Tfm="net11.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/sdk/ArcadeSdk.csproj" Tfm="net11.0" />
+    <Component Include="$(MSBuildThisFileDirectory)arcade/xliff/XliffTasks.csproj" Tfm="net11.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/MSBuild/Microsoft.Build.Tasks.CodeAnalysis.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/Tools/CodeStyleConfigFileGenerator.csproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Tools/GenerateDocumentationAndConfigFiles/GenerateDocumentationAndConfigFiles.csproj" Tfm="net10.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/CodeStyle/CSharp/CodeFixes/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/VisualBasic/CodeFixes/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes.vbproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Microsoft.CodeAnalysis.Analyzers/Core/Microsoft.CodeAnalysis.Analyzers.csproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers/CSharp/Microsoft.CodeAnalysis.CSharp.BannedApiAnalyzers.csproj" Tfm="netstandard2.0" />
     <Component Include="$(GenBuildRoot)src/sdk/src/Microsoft.CodeAnalysis.NetAnalyzers/src/Microsoft.CodeAnalysis.NetAnalyzers.Package.csproj" />
@@ -91,6 +92,9 @@
       <_ArcadeMultiTargetingBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/buildMultiTargeting/**/*" />
       <_ArcadeSdkTask Include="$(MSBuildThisFileDirectory)arcade/sdk/bin/$(Configuration)/net11.0/**/*" />
       <_ArcadeSdkTools Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/BuildTasks.props;$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/GenerateResxSource.targets;$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/GenerateInternalsVisibleTo.targets;$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/RepositoryInfo.targets" />
+      <_XliffTask Include="$(MSBuildThisFileDirectory)arcade/xliff/bin/$(Configuration)/net11.0/**/*" />
+      <_XliffBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.XliffTasks/build/**/*" />
+      <_XliffCrossTargetingBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.XliffTasks/buildCrossTargeting/**/*" />
     </ItemGroup>
     <Copy SourceFiles="@(_Engine)" DestinationFiles="@(_Engine->'$(GenBuildToolsetDirectory)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_CommonEntry)" DestinationFolder="$(GenBuildToolsetDirectory)Current/" SkipUnchangedFiles="true" />
@@ -111,6 +115,10 @@
     <Error Condition="!Exists('$(MSBuildThisFileDirectory)arcade/sdk/bin/$(Configuration)/net11.0/Microsoft.DotNet.Arcade.Sdk.dll')" Text="The locally-built Arcade SDK tasks are missing. Run without GenBuildSkipComponentBuild." />
     <Copy SourceFiles="@(_ArcadeSdkTask)" DestinationFiles="@(_ArcadeSdkTask->'$(GenBuildToolsetDirectory)Arcade/Sdk/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_ArcadeSdkTools)" DestinationFolder="$(GenBuildToolsetDirectory)Arcade/Sdk/tools/" SkipUnchangedFiles="true" />
+    <Error Condition="'@(_XliffTask)' == ''" Text="The locally-built XLIFF tasks are missing. Run without GenBuildSkipComponentBuild." />
+    <Copy SourceFiles="@(_XliffTask)" DestinationFiles="@(_XliffTask->'$(GenBuildToolsetDirectory)Arcade/XliffTasks/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_XliffBuild)" DestinationFiles="@(_XliffBuild->'$(GenBuildToolsetDirectory)Arcade/XliffTasks/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_XliffCrossTargetingBuild)" DestinationFiles="@(_XliffCrossTargetingBuild->'$(GenBuildToolsetDirectory)Arcade/XliffTasks/buildCrossTargeting/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <ItemGroup>
       <_NetAnalyzerBuild Include="$(_NetAnalyzers)Build/**/*" />
       <_NetAnalyzerConfig Include="$(_NetAnalyzers)GlobalAnalyzerConfigs/**/*" />

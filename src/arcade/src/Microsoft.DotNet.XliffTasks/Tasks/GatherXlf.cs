@@ -10,6 +10,7 @@ using System.Collections.Generic;
 namespace XliffTasks.Tasks;
 
 [MSBuildMultiThreadableTask]
+[MSBuildDeclaredIOTask]
 public sealed class GatherXlf : XlfTask
 {
     [Required]
@@ -24,24 +25,30 @@ public sealed class GatherXlf : XlfTask
     [Output]
     public ITaskItem[] Outputs { get; private set; }
 
+    [Output]
+    public ITaskItem[] FileInputs { get; private set; }
+
     protected override void ExecuteCore()
     {
         List<ITaskItem> outputs = new();
+        List<ITaskItem> fileInputs = new();
         HashSet<string> outputPaths = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (ITaskItem source in Sources)
         {
+            fileInputs.Add(new TaskItem(source));
             string sourceDocumentPath = source.GetMetadataOrDefault(MetadataKey.SourceDocumentPath, source.ItemSpec);
 
             foreach (string language in Languages)
             {
+                string xlfPath = XlfTask.GetXlfPath(sourceDocumentPath, language);
+                fileInputs.Add(new TaskItem(xlfPath));
                 // The neutral .xlf file is not a translation and produces no satellite assembly.
                 if (XlfTask.IsNeutralLanguage(language))
                 {
                     continue;
                 }
 
-                string xlfPath = XlfTask.GetXlfPath(sourceDocumentPath, language);
                 TaskItem xlf = new(source) { ItemSpec = xlfPath };
                 xlf.SetMetadata(MetadataKey.XlfSource, source.ItemSpec);
                 xlf.SetMetadata(MetadataKey.XlfTranslatedFullPath, GetTranslatedOutputPath(source, language, outputPaths));
@@ -51,6 +58,7 @@ public sealed class GatherXlf : XlfTask
         }
 
         Outputs = outputs.ToArray();
+        FileInputs = fileInputs.ToArray();
     }
 
     private string GetTranslatedOutputPath(ITaskItem source, string language, HashSet<string> outputPaths)

@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Build.Utilities.Core" />
     <ProjectReference Include="..\Microsoft.DotNet.XliffTasks\Microsoft.DotNet.XliffTasks.csproj" />
   </ItemGroup>
 

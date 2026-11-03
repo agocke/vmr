@@ -1,0 +1,6 @@
+<root>
+  <data name="Hello">
+    <value>Hello!</value>
+    <comment>Greeting</comment>
+  </data>
+</root>

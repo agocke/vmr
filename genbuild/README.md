@@ -508,6 +508,38 @@ real trimming and final DLL/PDB publication. Published bytes match ILLink output
 and a second Ninja invocation reports no work. Reconstruction leaves existing
 product files unchanged; shared cache hashes are unchanged. This validates the
 managed Immutable closure, not a complete native runtime build.
+An additional fresh-product probe confirms the same 82-action result from an
+empty tree: preparation/construction produce no tool or library binaries,
+independent execution publishes the final DLL/PDB, and repeated Ninja has no work.
+The current `net11.0` profile adds in-tree framework-library references and reaches
+CoreLib and interop source generators. A pure CoreCLR symbol-folder expression
+removes its first evaluation blocker, with ordinary/hardened path parity verified.
+XLIFF localization now uses audited metadata-only item derivation, a read-only
+freshness action and independent translation actions with declared source/XLF
+inputs and translated-file outputs. The app builds and stages the selected tasks
+and targets at `toolset/Arcade/XliffTasks/`. Pinned package consumers must pack
+`genbuild/arcade/xliff/XliffTasks.csproj` with a local version and select it through
+`MicrosoftDotNetXliffTasksPackageVersion` and `RestoreAdditionalProjectSources`;
+staging the toolset alone does not replace restored package imports.
+Use `UpdateXlfOnBuild=false;ErrorOnOutOfDateXlf=true` for the runtime profile:
+Arcade otherwise enables developer source updates outside CI. Explicit hardened
+`UpdateXlf` requests fail rather than modifying checked-in localization sources.
+`TestXlfLocalization` verifies ordinary/action byte and metadata parity for resx
+and JSON, both filename modes, compiled resources, neutral-XLF validation,
+incremental translation edits and missing/stale/malformed/schema-invalid XLFs.
+An isolated invocation of the real `Microsoft.Interop.SourceGeneration`
+localization target executes one validation and all 13 translation actions;
+repeated Ninja has no work and source/cache hashes remain unchanged.
+
+The full `net11.0` closure now reaches SDK satellite-assembly generation.
+`_GetAssemblyInfoFromTemplateFile` invokes `GetAssemblyAttributes`, which reads
+version and descriptive attributes from the future parent DLL and returns items
+used by `WriteCodeFragment`. Declaring the DLL input alone cannot make those
+future values available during construction. The next slice needs to defer
+attribute extraction and satellite-source generation together, preserving the
+existing parent-assembly-derived values before compiling the satellites.
+Localization remains enabled; failed current-framework construction publishes
+neither a graph nor prebuilt products.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,
