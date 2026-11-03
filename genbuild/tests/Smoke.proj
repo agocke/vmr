@@ -1998,6 +1998,10 @@
       <_CopyCase Include="disabled" Mode="disabled" />
       <_CopyCase Include="skip-product" Mode="skip-product" />
       <_CopyCase Include="no-symbols" Mode="no-symbols" />
+      <_CopyCase Include="no-docs" Mode="no-docs" />
+      <_CopyCase Include="no-doc-copy" Mode="no-doc-copy" />
+      <_CopyCase Include="doc-override" Mode="doc-override" />
+      <_CopyNegative Include="docs-only-hardlink" Mode="docs-only-hardlink" />
       <_CopyNegative Include="hardlink" Mode="hardlink" />
       <_CopyNegative Include="symlink" Mode="symlink" />
       <_CopyNegative Include="read-only" Mode="read-only" />
@@ -2005,21 +2009,22 @@
       <_CopyNegative Include="self-copy" Mode="self-copy" />
       <_CopyCase Include="@(_CopyNegative)" />
       <_CopyRoot Include="@(_CopyCase->'$(_TestDirectory)copies/%(Identity)/project/')" />
-      <_CopyExecution Include="short;another longer checkout;stale;disabled;skip-product;no-symbols" />
+      <_CopyExecution Include="short;another longer checkout;stale;disabled;skip-product;no-symbols;no-docs;no-doc-copy;doc-override" />
     </ItemGroup>
     <MakeDir Directories="@(_CopyRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)CopyOutputs.proj;$(MSBuildThisFileDirectory)Csc.proj" DestinationFolder="%(_CopyRoot.Identity)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_CopyRoot.Identity)Program.cs" />
     <Copy SourceFiles="$(_TestDirectory)copies/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_CopyRoot.Identity)FrameworkInputs.props" />
-    <WriteLinesToFile File="%(_CopyRoot.Identity)CopyOutputs.targets" Lines="&lt;Project&gt;;@(_CopyOutputTarget);&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="%(_CopyRoot.Identity)CopyOutputs.targets" Lines="&lt;Project&gt;;@(_CopyOutputTarget);&lt;Import Project=&quot;$(MSBuildThisFileDirectory)../../src/runtime/eng/intellisense.targets&quot; Condition=&quot;'%24(TestCase)' == 'doc-override'&quot; /&gt;;&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)copies/%(_CopyCase.Identity)/project/CopyOutputs.proj&quot; -p:TestCase=%(_CopyCase.Mode)" />
     <MakeDir Directories="$(_TestDirectory)copies/stale/project/out/ref;$(_TestDirectory)copies/stale/project/obj/copy.marker" />
     <WriteLinesToFile File="$(_TestDirectory)copies/stale/project/out/Hello.dll" Lines="stale main" Overwrite="true" />
     <WriteLinesToFile File="$(_TestDirectory)copies/stale/project/out/ref/renamed.dll" Lines="stale ref" Overwrite="true" />
     <WriteLinesToFile File="$(_TestDirectory)copies/stale/project/out/Hello.pdb" Lines="stale PDB" Overwrite="true" />
+    <WriteLinesToFile File="$(_TestDirectory)copies/stale/project/out/docs/Renamed.xml" Lines="stale documentation" Overwrite="true" />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)copies/%(_CopyCase.Identity)/project/CopyOutputs.proj&quot; -p:TestCase=%(_CopyCase.Mode)"
-          Condition="'%(_CopyCase.Identity)' != 'ordinary' and '%(_CopyCase.Identity)' != 'hardlink' and '%(_CopyCase.Identity)' != 'symlink' and '%(_CopyCase.Identity)' != 'read-only' and '%(_CopyCase.Identity)' != 'link-error' and '%(_CopyCase.Identity)' != 'self-copy'" />
-    <Error Condition="Exists('$(_TestDirectory)copies/short/project/obj/Hello.dll') or Exists('$(_TestDirectory)copies/short/project/out/Hello.dll') or Exists('$(_TestDirectory)copies/short/project/out/ref/renamed.dll') or Exists('$(_TestDirectory)copies/short/project/out/Hello.pdb')"
+          Condition="'%(_CopyCase.Identity)' != 'ordinary' and '%(_CopyCase.Identity)' != 'hardlink' and '%(_CopyCase.Identity)' != 'symlink' and '%(_CopyCase.Identity)' != 'read-only' and '%(_CopyCase.Identity)' != 'link-error' and '%(_CopyCase.Identity)' != 'self-copy' and '%(_CopyCase.Identity)' != 'docs-only-hardlink'" />
+    <Error Condition="Exists('$(_TestDirectory)copies/short/project/obj/Hello.dll') or Exists('$(_TestDirectory)copies/short/project/obj/Hello.xml') or Exists('$(_TestDirectory)copies/short/project/out/docs/Renamed.xml') or Exists('$(_TestDirectory)copies/doc-override/project/obj/doc-override/Hello.xml') or Exists('$(_TestDirectory)copies/short/project/out/Hello.dll') or Exists('$(_TestDirectory)copies/short/project/out/ref/renamed.dll') or Exists('$(_TestDirectory)copies/short/project/out/Hello.pdb')"
            Text="Build-output construction must not compile or copy any files." />
     <ReadLinesFromFile File="$(_TestDirectory)copies/stale/project/out/Hello.dll">
       <Output TaskParameter="Lines" PropertyName="_CopyStaleMain" />
@@ -2027,14 +2032,15 @@
     <Error Condition="'$(_CopyStaleMain)' != 'stale main'" Text="Copy construction must leave stale destination content untouched." />
     <Exec WorkingDirectory="$(_TestDirectory)copies/%(_CopyExecution.Identity)/project" Command="ninja -f obj/genbuild/build.ninja" />
     <MakeDir Directories="$(_TestDirectory)copies/ordinary/project/out/ref" />
-    <Copy SourceFiles="$(_TestDirectory)copies/short/project/obj/Hello.dll;$(_TestDirectory)copies/short/project/obj/ref/Hello.dll;$(_TestDirectory)copies/short/project/obj/Hello.pdb"
-          DestinationFiles="$(_TestDirectory)copies/ordinary/project/obj/Hello.dll;$(_TestDirectory)copies/ordinary/project/obj/ref/Hello.dll;$(_TestDirectory)copies/ordinary/project/obj/Hello.pdb" />
+    <Copy SourceFiles="$(_TestDirectory)copies/short/project/obj/Hello.dll;$(_TestDirectory)copies/short/project/obj/ref/Hello.dll;$(_TestDirectory)copies/short/project/obj/Hello.pdb;$(_TestDirectory)copies/short/project/obj/Hello.xml"
+          DestinationFiles="$(_TestDirectory)copies/ordinary/project/obj/Hello.dll;$(_TestDirectory)copies/ordinary/project/obj/ref/Hello.dll;$(_TestDirectory)copies/ordinary/project/obj/Hello.pdb;$(_TestDirectory)copies/ordinary/project/obj/Hello.xml" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)copies/ordinary/project/CopyOutputs.proj&quot; -t:CopyFilesToOutputDirectory -p:TestCase=normal" />
     <ItemGroup>
       <_CopyResult Include="short;another longer checkout;stale;ordinary" />
       <_CopyMainResult Include="@(_CopyResult->'$(_TestDirectory)copies/%(Identity)/project/out/Hello.dll')" />
       <_CopyRefResult Include="@(_CopyResult->'$(_TestDirectory)copies/%(Identity)/project/out/ref/renamed.dll')" />
       <_CopyPdbResult Include="@(_CopyResult->'$(_TestDirectory)copies/%(Identity)/project/out/Hello.pdb')" />
+      <_CopyDocResult Include="@(_CopyResult->'$(_TestDirectory)copies/%(Identity)/project/out/docs/Renamed.xml');$(_TestDirectory)copies/doc-override/project/out/docs/Renamed.xml" />
     </ItemGroup>
     <GetFileHash Files="@(_CopyMainResult)">
       <Output TaskParameter="Items" ItemName="_CopyMainHash" />
@@ -2045,6 +2051,11 @@
     <GetFileHash Files="@(_CopyPdbResult)">
       <Output TaskParameter="Items" ItemName="_CopyPdbHash" />
     </GetFileHash>
+    <GetFileHash Files="@(_CopyDocResult)">
+      <Output TaskParameter="Items" ItemName="_CopyDocHash" />
+    </GetFileHash>
+    <Error Condition="'@(_CopyDocHash->'%(FileHash)'->Distinct()->Count())' != '1' or Exists('$(_TestDirectory)copies/disabled/project/out/docs/Renamed.xml') or Exists('$(_TestDirectory)copies/no-docs/project/out/docs/Renamed.xml') or Exists('$(_TestDirectory)copies/no-doc-copy/project/out/docs/Renamed.xml')"
+           Text="Documentation copies must match ordinary bytes, replace stale files and respect both disabling conditions." />
     <Error Condition="'@(_CopyMainHash->'%(FileHash)'->Distinct()->Count())' != '1' or '@(_CopyRefHash->'%(FileHash)'->Distinct()->Count())' != '1' or '@(_CopyPdbHash->'%(FileHash)'->Distinct()->Count())' != '1'"
            Text="Relocated main/reference/PDB copies must match ordinary bytes and replace stale outputs." />
     <Error Condition="Exists('$(_TestDirectory)copies/disabled/project/out/Hello.dll') or Exists('$(_TestDirectory)copies/disabled/project/out/ref/renamed.dll') or Exists('$(_TestDirectory)copies/disabled/project/out/Hello.pdb') or Exists('$(_TestDirectory)copies/no-symbols/project/out/Hello.pdb')"

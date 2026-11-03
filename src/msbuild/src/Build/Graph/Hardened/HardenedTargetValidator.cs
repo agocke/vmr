@@ -478,7 +478,7 @@ internal sealed class HardenedTargetValidator
         }
 
         _targetResults[targetName] = targetResult;
-        if (_constructionTaskExecutor is not null && _diagnostics.Count == 0 && targetResult.IsStatic)
+        if (_diagnostics.Count == 0 && targetResult.IsStatic)
         {
             if (targetExecutes)
             {
@@ -933,6 +933,7 @@ internal sealed class HardenedTargetValidator
         }
 
         ValueState? intrinsicTaskOutputState = null;
+        List<TaskItem>? calledTargetOutputs = null;
         if (isCallTarget)
         {
             intrinsicTaskOutputState = ValidateCallTarget(
@@ -940,7 +941,8 @@ internal sealed class HardenedTargetValidator
                 task,
                 taskControlState,
                 visitedTargets,
-                callTargetScope ?? throw new InvalidOperationException("CallTarget scope was not captured."));
+                callTargetScope ?? throw new InvalidOperationException("CallTarget scope was not captured."),
+                out calledTargetOutputs);
         }
         else if (isConstructionMSBuild)
         {
@@ -1088,11 +1090,19 @@ internal sealed class HardenedTargetValidator
             {
                 outputState = ValueState.Deferred(origin);
             }
+            bool concreteCallTargetOutput = calledTargetOutputs is not null && outputState.IsStatic &&
+                MSBuildNameIgnoreCaseComparer.Default.Equals(resolvedOutputTaskParameter, "TargetOutputs");
             switch (output)
             {
                 case ProjectTaskOutputPropertyInstance propertyOutput:
                     callTargetScope?.CallerAssignedProperties.Add(destination);
-                    if (zeroIOTaskExecuted && outputState.IsStatic)
+                    if (concreteCallTargetOutput)
+                    {
+                        Context.SetConcreteProperty(destination,
+                            string.Join(";", calledTargetOutputs!.ConvertAll(item => item.IncludeEscaped)),
+                            updateLookup: true);
+                    }
+                    else if (zeroIOTaskExecuted && outputState.IsStatic)
                     {
                         Context.SetConcreteProperty(
                             destination,
@@ -1113,6 +1123,16 @@ internal sealed class HardenedTargetValidator
 
                 case ProjectTaskOutputItemInstance itemOutput:
                     callTargetScope?.CallerAssignedItemTypes.Add(destination);
+                    if (concreteCallTargetOutput)
+                    {
+                        foreach (TaskItem item in calledTargetOutputs!)
+                        {
+                            ProjectItemInstance newItem = new(project, destination, item.IncludeEscaped,
+                                EscapingUtilities.Escape(output.Location.File));
+                            newItem.SetMetadata(item.MetadataCollection);
+                            ValidationLookup.AddNewItem(newItem);
+                        }
+                    }
                     Context.AddTaskOutputItems(destination, outputState);
 
                     break;
@@ -1120,7 +1140,7 @@ internal sealed class HardenedTargetValidator
         }
 
         callTargetScope?.CallerAssignedProperties.Add(ReservedPropertyNames.lastTaskResult);
-        if (isConstructionMSBuild)
+        if (isConstructionMSBuild || (isCallTarget && intrinsicTaskOutputState is { IsStatic: true }))
         {
             Context.SetConcreteProperty(ReservedPropertyNames.lastTaskResult, "true", updateLookup: true);
         }
@@ -1277,8 +1297,10 @@ internal sealed class HardenedTargetValidator
         ProjectTaskInstance task,
         ValueState taskControlState,
         HashSet<string> visitedTargets,
-        LegacyCallTargetScope callTargetScope)
+        LegacyCallTargetScope callTargetScope,
+        out List<TaskItem> outputs)
     {
+        outputs = [];
         string? targets = null;
         IElementLocation targetsLocation = task.Location;
         foreach (KeyValuePair<string, (string, ElementLocation)> parameter in task.TestGetParameters)
@@ -1305,7 +1327,8 @@ internal sealed class HardenedTargetValidator
                 : ToBlocked(taskControlState, $"target outputs of task '{task.Name}' are unavailable");
         }
 
-        ValidatorState callerState = CaptureState();
+        // Keep the caller's live bucket so mapped outputs merge when its scope exits.
+        ValidatorState callerState = new(ValidationLookup);
         IMetadataTable? callerMetadata = _activeMetadata;
         ValueState targetOutputs = ValueState.Static;
 
@@ -1319,6 +1342,13 @@ internal sealed class HardenedTargetValidator
                 targetOutputs = ValueState.Combine(
                     targetOutputs,
                     ValidateTarget(project, calledTarget, targetsLocation, visitedTargets));
+                if (_completedTargetResults.TryGetValue(calledTarget, out TargetResult? result))
+                {
+                    foreach (ITaskItem item in result.Items)
+                    {
+                        outputs.Add((TaskItem)item);
+                    }
+                }
             }
         }
         finally
@@ -1552,6 +1582,11 @@ internal sealed class HardenedTargetValidator
 
         foreach (string itemType in callTargetScope.CallerAssignedItemTypes)
         {
+            mergedState.Lookup.RemoveItems(itemType, [.. mergedState.Lookup.GetItems(itemType)]);
+            foreach (ProjectItemInstance item in failureState.State.Lookup.GetItems(itemType))
+            {
+                mergedState.Lookup.AddNewItem(item.DeepClone());
+            }
             mergedState.Context.CopyItemFrom(failureState.State.Context, itemType);
         }
 

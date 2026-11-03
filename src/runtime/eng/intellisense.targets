@@ -66,9 +66,16 @@
           Inputs="$(DocFileOverride)"
           Outputs="$(IntermediateDocFileOverride)">
     <Copy SourceFiles="$(DocFileOverride)"
-          DestinationFiles="$(IntermediateDocFileOverride)" />
+          DestinationFiles="$(IntermediateDocFileOverride)"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'" />
 
-    <Touch Files="$(IntermediateDocFileOverride)" />
+    <CopyFiles SourceFiles="$(DocFileOverride)"
+               DestinationFiles="$(IntermediateDocFileOverride)"
+               DeclaredInputs="$(DocFileOverride)"
+               DeclaredOutputs="$(IntermediateDocFileOverride)"
+               Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+
+    <Touch Files="$(IntermediateDocFileOverride)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
   </Target>
 
   <!-- Replace the compiler generated doc xml file with DocFileOverride. -->

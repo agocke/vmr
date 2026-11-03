@@ -7,6 +7,14 @@
     <TargetRefPath>$(OutDir)ref/renamed.dll</TargetRefPath>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <_DebugSymbolsProduced>true</_DebugSymbolsProduced>
+    <_DocumentationFileProduced>true</_DocumentationFileProduced>
+    <TargetName>Hello</TargetName>
+    <DocFileOverride Condition="'$(TestCase)' == 'doc-override'">obj/Hello.xml</DocFileOverride>
+    <_DocumentationFileProduced Condition="'$(TestCase)' == 'no-docs'">false</_DocumentationFileProduced>
+    <CopyDocumentationFileToOutputDirectory Condition="'$(TestCase)' == 'disabled' or '$(TestCase)' == 'no-doc-copy'">false</CopyDocumentationFileToOutputDirectory>
+    <CopyBuildOutputToOutputDirectory Condition="'$(TestCase)' == 'docs-only-hardlink'">false</CopyBuildOutputToOutputDirectory>
+    <CopyOutputSymbolsToOutputDirectory Condition="'$(TestCase)' == 'docs-only-hardlink'">false</CopyOutputSymbolsToOutputDirectory>
+    <CreateHardLinksForCopyFilesToOutputDirectoryIfPossible Condition="'$(TestCase)' == 'docs-only-hardlink'">true</CreateHardLinksForCopyFilesToOutputDirectoryIfPossible>
     <CopyBuildOutputToOutputDirectory Condition="'$(TestCase)' == 'disabled'">false</CopyBuildOutputToOutputDirectory>
     <CopyOutputSymbolsToOutputDirectory Condition="'$(TestCase)' == 'disabled' or '$(TestCase)' == 'no-symbols'">false</CopyOutputSymbolsToOutputDirectory>
     <SkipCopyBuildProduct Condition="'$(TestCase)' == 'skip-product'">true</SkipCopyBuildProduct>
@@ -20,6 +28,8 @@
     <_DebugSymbolsIntermediatePath Include="obj/Hello.pdb" />
     <_DebugSymbolsOutputPath Include="$(OutDir)Hello.pdb" />
     <CopyUpToDateMarker Include="obj/copy.marker" />
+    <DocFileItem Include="obj/Hello.xml" />
+    <FinalDocFile Include="$(OutDir)docs/Renamed.xml" />
   </ItemGroup>
   <Import Project="CopyOutputs.targets" />
   <Target Name="ComputeIntermediateSatelliteAssemblies" />
@@ -30,8 +40,12 @@
   <Target Name="_CheckForCompileOutputs" />
   <Target Name="_SGenCheckForOutputs" />
   <Target Name="Build" DependsOnTargets="_SetPathMapFromSourceRoots;Produce;CoreCompile;CopyFilesToOutputDirectory">
+    <Error Condition="'$(TestCase)' != 'disabled' and '$(TestCase)' != 'no-docs' and '$(TestCase)' != 'no-doc-copy' and @(FileWrites->WithMetadataValue('Identity', 'out/docs/Renamed.xml')->Count()) != 1"
+           Text="Documentation FileWrites must be available without executing the copy." />
     <Error Condition="'$(MSBuildHardenedGraph)' == 'true' and @(FileWrites->AnyHaveMetadataValue('Identity', 'obj/copy.marker'))"
            Text="The copy-up-to-date marker is not a hardened artifact." />
+    <Error Condition="'$(TestCase)' == 'doc-override' and '@(DocFileItem)' != '$(IntermediateDocFileOverride)'"
+           Text="Runtime documentation override must replace the compiler documentation item statically." />
     <Error Condition="'$(TestCase)' != 'disabled' and '$(TestCase)' != 'skip-product' and ('@(MainAssembly)' != '$(OutDir)Hello.dll' or '@(MainAssembly->'%(Publication)')' != 'retained' or '@(ReferenceAssembly)' != '$(TargetRefPath)')"
            Text="Main/reference paths and source metadata must be statically available." />
     <Error Condition="'$(TestCase)' != 'disabled' and '$(TestCase)' != 'skip-product' and (@(FileWrites->WithMetadataValue('Identity', '$(OutDir)Hello.dll')->Count()) != 1 or @(FileWrites->WithMetadataValue('Identity', '$(TargetRefPath)')->Count()) != 1)"

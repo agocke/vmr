@@ -1231,6 +1231,75 @@ public sealed class HardenedTargetValidator_Tests(ITestOutputHelper output)
             new Dictionary<string, HardenedTaskClassification>());
     }
 
+    [Theory]
+    [InlineData("Returns", "true", "true")]
+    [InlineData("Returns", "false", "true")]
+    [InlineData("Outputs", "true", "true")]
+    [InlineData("Returns", "true", "false")]
+    public void ConcreteCallTargetOutputsMatchOrdinaryBuild(string returnAttribute, string keepDuplicates, string emptyTargetCondition)
+    {
+        string projectXml = $$"""
+            <Project>
+              <ItemGroup>
+                <Collected Include="existing" SourceOrder="initial" State="retained" />
+              </ItemGroup>
+              <Target Name="Build">
+                <CallTarget Targets="Outer;Empty">
+                  <Output TaskParameter="TargetOutputs" ItemName="Collected" />
+                  <Output TaskParameter="TargetOutputs" PropertyName="ReturnedProperty" />
+                  <Output TaskParameter="TargetOutputs" ItemName="NotMapped" Condition="false" />
+                </CallTarget>
+                <PropertyGroup>
+                  <FirstReturned>$(ReturnedProperty)</FirstReturned>
+                </PropertyGroup>
+                <ItemGroup>
+                  <FromFirst Include="@(Collected)" KeepDuplicates="true" />
+                  <Collected Update="@(Collected)" State="mutated" />
+                </ItemGroup>
+                <CallTarget Targets="Outer">
+                  <Output TaskParameter="TargetOutputs" ItemName="Cached" />
+                </CallTarget>
+                <CallTarget Targets="Empty">
+                  <Output TaskParameter="TargetOutputs" PropertyName="ReturnedProperty" />
+                  <Output TaskParameter="TargetOutputs" ItemName="Collected" />
+                </CallTarget>
+                <PropertyGroup>
+                  <Observed>$(ReturnedProperty)|$(MSBuildLastTaskResult)|@(NotMapped)</Observed>
+                </PropertyGroup>
+              </Target>
+              <Target Name="Outer" {{returnAttribute}}="@(Nested)" KeepDuplicateOutputs="{{keepDuplicates}}">
+                <CallTarget Targets="Inner">
+                  <Output TaskParameter="TargetOutputs" ItemName="Nested" />
+                </CallTarget>
+              </Target>
+              <Target Name="Inner" {{returnAttribute}}="@(Source)" KeepDuplicateOutputs="{{keepDuplicates}}">
+                <ItemGroup>
+                  <Source Include="first%3Bpart;second;second" KeepDuplicates="true"
+                          SourceOrder="returned" State="literal%253B%3Bvalue"
+                          TargetPath="tools/first%3Bpart.json" CopyToOutputDirectory="PreserveNewest" />
+                </ItemGroup>
+              </Target>
+              <Target Name="Empty" {{returnAttribute}}="@(Missing)" Condition="{{emptyTargetCondition}}" />
+            </Project>
+            """;
+        using TestEnvironment environment = TestEnvironment.Create(_output);
+        (ProjectInstance ordinary, Lookup hardened) = BuildOrdinaryAndValidateHardened(
+            environment, projectXml, new Dictionary<string, HardenedTaskClassification>());
+
+        foreach (string itemType in new[] { "Collected", "FromFirst", "Cached", "NotMapped", "Source" })
+        {
+            DescribeItems(hardened.GetItems(itemType)).ShouldBe(DescribeItems(ordinary.GetItems(itemType)), itemType);
+        }
+        hardened.GetItems("Cached").ShouldNotBeEmpty();
+        hardened.GetItems("Cached").First().EvaluatedInclude.ShouldBe("first;part");
+        hardened.GetItems("Cached").First().GetMetadataValue("State").ShouldBe("literal%3B;value");
+        hardened.GetItems("Cached").First().GetMetadataValue("TargetPath").ShouldBe("tools/first;part.json");
+        hardened.GetItems("Cached").First().GetMetadataValue("CopyToOutputDirectory").ShouldBe("PreserveNewest");
+        hardened.GetProperty("FirstReturned")!.EvaluatedValue.ShouldBe(ordinary.GetPropertyValue("FirstReturned"));
+        hardened.GetProperty("Observed")!.EvaluatedValue.ShouldBe(ordinary.GetPropertyValue("Observed"));
+        hardened.GetProperty("Observed")!.EvaluatedValue.ShouldBe("|true|");
+    }
+
     [Fact]
     public void CollectsMissingCallTargetTarget()
     {

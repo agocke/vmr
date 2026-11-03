@@ -5103,7 +5103,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       <FileWrites Include="@(IntermediateAssembly->'$(OutDir)%(Filename)%(Extension)')" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and (('$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true') or ('$(_DebugSymbolsProduced)' == 'true' and '$(SkipCopyingSymbolsToOutputDirectory)' != 'true' and '$(CopyOutputSymbolsToOutputDirectory)' == 'true'))">
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and (('$(CopyBuildOutputToOutputDirectory)' == 'true' and '$(SkipCopyBuildProduct)' != 'true') or ('$(_DebugSymbolsProduced)' == 'true' and '$(SkipCopyingSymbolsToOutputDirectory)' != 'true' and '$(CopyOutputSymbolsToOutputDirectory)' == 'true') or ('$(_DocumentationFileProduced)' == 'true' and '$(CopyDocumentationFileToOutputDirectory)' == 'true'))">
       <_UnsupportedBuildCopyOption Include="CreateHardLinksForCopyFilesToOutputDirectoryIfPossible" Condition="'$(CreateHardLinksForCopyFilesToOutputDirectoryIfPossible)' == 'true'" />
       <_UnsupportedBuildCopyOption Include="CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible" Condition="'$(CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible)' == 'true'" />
       <_UnsupportedBuildCopyOption Include="ErrorIfLinkFailsForCopyFilesToOutputDirectory" Condition="'$(ErrorIfLinkFailsForCopyFilesToOutputDirectory)' == 'true'" />
@@ -5239,6 +5239,10 @@ Copyright (C) Microsoft Corporation. All rights reserved.
                Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(_DebugSymbolsProduced)' == 'true' and '$(SkipCopyingSymbolsToOutputDirectory)' != 'true' and '$(CopyOutputSymbolsToOutputDirectory)' == 'true'" />
 
     <!-- Copy the resulting XML documentation file, if any. -->
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(_DocumentationFileProduced)' == 'true' and '$(CopyDocumentationFileToOutputDirectory)' == 'true'">
+      <FileWrites Include="@(FinalDocFile)" />
+    </ItemGroup>
+
     <Copy
         SourceFiles="@(DocFileItem)"
         DestinationFiles="@(FinalDocFile)"
@@ -5249,11 +5253,17 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         UseHardlinksIfPossible="$(CreateHardLinksForCopyFilesToOutputDirectoryIfPossible)"
         UseSymboliclinksIfPossible="$(CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible)"
         ErrorIfLinkFails="$(ErrorIfLinkFailsForCopyFilesToOutputDirectory)"
-        Condition="'$(_DocumentationFileProduced)'=='true' and '$(CopyDocumentationFileToOutputDirectory)'=='true'">
+        Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(_DocumentationFileProduced)'=='true' and '$(CopyDocumentationFileToOutputDirectory)'=='true'">
 
       <Output TaskParameter="DestinationFiles" ItemName="FileWrites"/>
 
     </Copy>
+
+    <CopyFiles SourceFiles="@(DocFileItem)"
+               DestinationFiles="@(FinalDocFile)"
+               DeclaredInputs="@(DocFileItem)"
+               DeclaredOutputs="@(FinalDocFile)"
+               Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(_DocumentationFileProduced)' == 'true' and '$(CopyDocumentationFileToOutputDirectory)' == 'true'" />
 
     <!-- Copy satellite assemblies. -->
     <Copy

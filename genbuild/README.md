@@ -488,12 +488,26 @@ files beneath their directories. The linker keeps its existing search policy,
 uses the explicit external host and owns the final DLL/conditional PDB.
 Unknown custom input-discovery arguments fail closed. Changes to external
 directory membership require a fresh Restore, not live construction-time discovery.
-The next rejection is Common's XML-documentation `Copy` in
-`CopyFilesToOutputDirectory`, which lacks declarations and returns
-execution-time `DestinationFiles` values.
-Preparation and the failed graph attempt produce zero DLLs, binary resources,
-or generated source files, and publish no library graph.
-No runtime library graph, compilation or independent execution is established.
+Common's XML-documentation publication now uses declared `CopyFiles` and static
+`FileWrites`; runtime's documentation override staging uses the same worker,
+without hardened timestamp touching. Ordinary copy/touch behavior is retained.
+Focused regressions cover future compiler documentation, renamed destinations,
+disabled publication, stale replacement, ordinary bytes and override staging.
+The isolated runtime profile must restore packages without fallback folders:
+runtime's `PackageDownloadAndReference` authoring addresses the explicit primary
+package root, not a shared fallback location.
+Hardened `CallTarget.TargetOutputs` now materializes returned items and properties,
+preserving escaped identities, metadata, duplicate policy and cached returns.
+Caller-scope completion carries concrete mapped items rather than availability
+alone; empty/skipped returns retain existing items and clear property outputs.
+The SDK's existing transitive-copy hooks now publish all four linker runtime
+manifests to ILLink.Tasks' live tool directory, with declared copy producers and
+ILLink input dependencies. No additional runtime copy authoring is needed.
+The Immutable closure's 82-action graph now executes successfully, including
+real trimming and final DLL/PDB publication. Published bytes match ILLink outputs,
+and a second Ninja invocation reports no work. Reconstruction leaves existing
+product files unchanged; shared cache hashes are unchanged. This validates the
+managed Immutable closure, not a complete native runtime build.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,

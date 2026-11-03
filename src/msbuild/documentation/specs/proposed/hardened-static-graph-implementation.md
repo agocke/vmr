@@ -946,12 +946,33 @@ It checks the actual declared input list, fresh candidate discovery, ordinary
 DLL/PDB parity and reference-sidecar invalidation. Existing ordinary compiler and
 linker-ordering/incremental tests still pass. This does not claim that the fixture
 performs real trimming.
-The guarded real closure now passes ILLink and fails later at Common's
-XML-documentation copy in `CopyFilesToOutputDirectory`: its `Copy` lacks declared
-footprints and returns execution-time `DestinationFiles`.
-The runtime product directory contains zero DLLs, `.resources`, or generated sources.
-Preparation and the failed graph attempt publish no library graph or action directory.
-No runtime library graph, compilation, or independent execution is proven.
+Common's documentation copy now uses declared `CopyFiles`, static `FileWrites`
+and the existing unsupported-copy-option validation. Runtime's intellisense
+override stage similarly records the copy and omits only the timestamp-only
+`Touch` in hardened mode. Ordinary behavior remains unchanged.
+The copy regressions exercise compiler-produced documentation, renamed paths,
+disabled copies, stale destinations, override staging and ordinary byte parity.
+The guarded profile restores without shared fallback folders because runtime's
+explicit package-download references address the primary `NuGetPackageRoot`.
+
+Hardened `CallTarget.TargetOutputs` now carries concrete returned items through
+output mapping and legacy caller-scope completion, not just availability state.
+Item metadata and escaped identities are retained, property outputs join escaped
+includes, and empty/skipped results clear properties without removing prior
+items. Ordinary-build parity cases cover nested calls, cached returns, duplicate
+policy, conditional mappings and caller-side metadata updates.
+This restores the SDK's existing transitive-copy hooks: the linker deps,
+runtimeconfig, dev and pack manifests are published alongside its assembly in
+ILLink.Tasks' tool directory. Their copy action is an explicit producer, and
+all four paths are ILLink declared inputs.
+
+The real Immutable closure's 82-action graph now completes independent Ninja
+execution, compiling the linker, analyzer, code-fix, task and Immutable inputs,
+performing real trimming and publishing the final library DLL/PDB.
+Published hashes match the linker outputs; a second Ninja run has no work.
+Graph reconstruction preserves existing product-file inventories/timestamps,
+and shared cache hashes remain unchanged. This proves the managed closure,
+not a complete runtime build.
 Native/CoreCLR/CMake integration is later.
 
 ### NuGet fact capture
