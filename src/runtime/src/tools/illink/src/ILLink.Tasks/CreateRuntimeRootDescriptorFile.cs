@@ -11,6 +11,7 @@ using Microsoft.Build.Utilities; // Task
 
 namespace ILLink.Tasks
 {
+    [MSBuildDeclaredIOTask]
     public class CreateRuntimeRootILLinkDescriptorFile : Task
     {
         /// <summary>
@@ -50,6 +51,10 @@ namespace ILLink.Tasks
         /// </summary>
         [Required]
         public ITaskItem RuntimeRootDescriptorFilePath { get; set; }
+
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        public ITaskItem[] DeclaredOutputs { get; set; }
 
         sealed class ClassMembers
         {

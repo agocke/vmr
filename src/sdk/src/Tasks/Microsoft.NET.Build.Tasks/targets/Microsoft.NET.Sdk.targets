@@ -1232,6 +1232,7 @@ Copyright (c) .NET Foundation. All rights reserved.
   </PropertyGroup>
 
   <UsingTask TaskName="GetAssemblyAttributes" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="GenerateSatelliteAssemblySource" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
   <Target Name="CoreGenerateSatelliteAssemblies"
           DependsOnTargets="ResolveAssemblyReferences;_GetAssemblyInfoFromTemplateFile"
@@ -1239,22 +1240,31 @@ Copyright (c) .NET Foundation. All rights reserved.
           Outputs="$(IntermediateOutputPath)%(Culture)\$(TargetName).resources.dll"
           Condition="'@(_SatelliteAssemblyResourceInputs)' != ''  and '$(GenerateSatelliteAssembliesForCore)' == 'true' ">
 
-    <MakeDir Directories="@(_SatelliteAssemblyResourceInputs->'$(IntermediateOutputPath)%(Culture)')" />
+    <MakeDir Directories="@(_SatelliteAssemblyResourceInputs->'$(IntermediateOutputPath)%(Culture)')" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
 
     <PropertyGroup>
       <_AssemblyInfoFile>$(IntermediateOutputPath)%(_SatelliteAssemblyResourceInputs.Culture)\$(TargetName).resources.cs</_AssemblyInfoFile>
       <_OutputAssembly>$(IntermediateOutputPath)%(_SatelliteAssemblyResourceInputs.Culture)\$(TargetName).resources.dll</_OutputAssembly>
     </PropertyGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <SatelliteAssemblyAttribute Include="System.Reflection.AssemblyCultureAttribute" Condition="'%(_SatelliteAssemblyResourceInputs.Culture)' != ''">
         <_Parameter1>%(_SatelliteAssemblyResourceInputs.Culture)</_Parameter1>
       </SatelliteAssemblyAttribute>
     </ItemGroup>
 
-    <WriteCodeFragment AssemblyAttributes="@(SatelliteAssemblyAttribute)" Language="C#" OutputFile="$(_AssemblyInfoFile)">
+    <WriteCodeFragment AssemblyAttributes="@(SatelliteAssemblyAttribute)" Language="C#" OutputFile="$(_AssemblyInfoFile)"
+                       Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <Output TaskParameter="OutputFile" ItemName="FileWrites" />
     </WriteCodeFragment>
+
+    <GenerateSatelliteAssemblySource PathToTemplateFile="$(IntermediateOutputPath)$(TargetName)$(TargetExt)"
+                                     AssemblyAttributes="@(SatelliteAssemblyAttribute)"
+                                     Culture="%(_SatelliteAssemblyResourceInputs.Culture)"
+                                     OutputFile="$(_AssemblyInfoFile)"
+                                     DeclaredInputs="$(IntermediateOutputPath)$(TargetName)$(TargetExt)"
+                                     DeclaredOutputs="$(_AssemblyInfoFile)"
+                                     Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
     <PropertyGroup Condition="'$(UseSharedCompilation)' == ''">
       <UseSharedCompilation>true</UseSharedCompilation>
@@ -1265,7 +1275,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       <_SatelliteAssemblyReferences Include="@(ReferencePath)" Condition="'%(Filename)' == 'mscorlib' or '%(Filename)' == 'netstandard' or '%(Filename)' == 'System.Runtime' " />
     </ItemGroup>
 
-    <Csc Resources="@(_SatelliteAssemblyResourceInputs)"
+    <Csc Condition="'$(MSBuildHardenedGraph)' != 'true'"
+         Resources="@(_SatelliteAssemblyResourceInputs)"
          Sources="$(_AssemblyInfoFile)"
          OutputAssembly="$(_OutputAssembly)"
          References="@(_SatelliteAssemblyReferences)"
@@ -1291,9 +1302,56 @@ Copyright (c) .NET Foundation. All rights reserved.
 
       <Output TaskParameter="OutputAssembly" ItemName="FileWrites"/>
     </Csc>
+
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <_HardenedSatelliteCscInput Remove="@(_HardenedSatelliteCscInput)" />
+      <_HardenedSatelliteCscOutput Remove="@(_HardenedSatelliteCscOutput)" />
+      <_HardenedSatelliteCscPathMapping Remove="@(_HardenedSatelliteCscPathMapping)" />
+    </ItemGroup>
+    <FormatCsc Condition="'$(MSBuildHardenedGraph)' == 'true'"
+               DeclaredInputs="" DeclaredOutputs=""
+               SourceRoots="@(SourceRoot)"
+               DeterministicSourcePaths="$(DeterministicSourcePaths)"
+               CompilerToolExe="$(CscToolExe)"
+               CompilerToolPath="$(CscToolPath)"
+               Resources="@(_SatelliteAssemblyResourceInputs)"
+               Sources="$(_AssemblyInfoFile)"
+               OutputAssembly="$(_OutputAssembly)"
+               References="@(_SatelliteAssemblyReferences)"
+               KeyContainer="$(KeyContainerName)"
+               KeyFile="$(KeyOriginatorFile)"
+               NoConfig="true"
+               NoLogo="$(NoLogo)"
+               NoStandardLib="$(NoCompilerStandardLib)"
+               Optimize="$(Optimize)"
+               PublicSign="$(PublicSign)"
+               PathMap="$(PathMap)"
+               Features="$(Features)"
+               DelaySign="$(DelaySign)"
+               Deterministic="$(Deterministic)"
+               DisabledWarnings="$(DisabledWarnings)"
+               WarningLevel="$(WarningLevel)"
+               WarningsAsErrors="$(WarningsAsErrors)"
+               WarningsNotAsErrors="$(WarningsNotAsErrors)"
+               TargetType="Library">
+      <Output TaskParameter="CompilerArguments" PropertyName="_HardenedSatelliteCscArguments" />
+      <Output TaskParameter="CompilerInputs" ItemName="_HardenedSatelliteCscInput" />
+      <Output TaskParameter="CompilerOutputs" ItemName="_HardenedSatelliteCscOutput" />
+      <Output TaskParameter="PathMappings" ItemName="_HardenedSatelliteCscPathMapping" />
+    </FormatCsc>
+    <CompileCsc Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                DotNetHost="$(DOTNET_HOST_PATH)"
+                CompilerAssembly="$(_BuildTasksDirectory)bincore/csc.dll"
+                CompilerArguments="$(_HardenedSatelliteCscArguments)"
+                PathMappings="@(_HardenedSatelliteCscPathMapping)"
+                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CscPreparedToolInput);@(_HardenedSatelliteCscInput)"
+                DeclaredOutputs="@(_HardenedSatelliteCscOutput)" />
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <FileWrites Include="$(_AssemblyInfoFile);@(_HardenedSatelliteCscOutput)" />
+    </ItemGroup>
   </Target>
 
-  <Target Name="_GetAssemblyInfoFromTemplateFile">
+  <Target Name="_GetAssemblyInfoFromTemplateFile" Condition="'$(MSBuildHardenedGraph)' != 'true'">
     <GetAssemblyAttributes PathToTemplateFile="$(IntermediateOutputPath)$(TargetName)$(TargetExt)" >
       <Output TaskParameter="AssemblyAttributes" ItemName="_AssemblyAttributesFromTemplateFile" />
     </GetAssemblyAttributes>

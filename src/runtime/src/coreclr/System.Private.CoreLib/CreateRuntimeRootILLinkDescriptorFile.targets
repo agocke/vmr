@@ -37,14 +37,29 @@
           DependsOnTargets="_CombineILLinkTrimXmlFilePaths;ResolveProjectReferences"
           Inputs="$(_NamespaceFilePath);$(_MscorlibFilePath);$(_CortypeFilePath);$(_RexcepFilePath);$(_ILLinkDescriptorsIntermediatePath)"
           Outputs="$(_ILLinkRuntimeRootDescriptorFilePath)">
-    <Message Text="Generating ILLink roots file: $(_ILLinkRuntimeRootDescriptorFilePath)" />
+    <Message Text="Generating ILLink roots file: $(_ILLinkRuntimeRootDescriptorFilePath)"
+             Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <Message Text="Generating ILLink roots file: $(_ILLinkRuntimeRootDescriptorFilePath)"
+             DeclaredInputs="" DeclaredOutputs=""
+             Condition="'$(MSBuildHardenedGraph)' == 'true'" />
     <CreateRuntimeRootILLinkDescriptorFile NamespaceFilePath="$(_NamespaceFilePath)"
                                            MscorlibFilePath="$(_MscorlibFilePath)"
                                            CortypeFilePath="$(_CortypeFilePath)"
                                            RexcepFilePath="$(_RexcepFilePath)"
                                            ILLinkTrimXmlFilePath="$(_ILLinkDescriptorsIntermediatePath)"
                                            DefineConstants="$(DefineConstants);FOR_ILLINK"
-                                           RuntimeRootDescriptorFilePath="$(_ILLinkRuntimeRootDescriptorFilePath)" />
+                                           RuntimeRootDescriptorFilePath="$(_ILLinkRuntimeRootDescriptorFilePath)"
+                                           Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CreateRuntimeRootILLinkDescriptorFile NamespaceFilePath="$(_NamespaceFilePath)"
+                                           MscorlibFilePath="$(_MscorlibFilePath)"
+                                           CortypeFilePath="$(_CortypeFilePath)"
+                                           RexcepFilePath="$(_RexcepFilePath)"
+                                           ILLinkTrimXmlFilePath="$(_ILLinkDescriptorsIntermediatePath)"
+                                           DefineConstants="$(DefineConstants);FOR_ILLINK"
+                                           RuntimeRootDescriptorFilePath="$(_ILLinkRuntimeRootDescriptorFilePath)"
+                                           DeclaredInputs="$(_NamespaceFilePath);$(_MscorlibFilePath);$(_CortypeFilePath);$(_RexcepFilePath);$(_ILLinkDescriptorsIntermediatePath)"
+                                           DeclaredOutputs="$(_ILLinkRuntimeRootDescriptorFilePath)"
+                                           Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   </Target>
 
   <UsingTask TaskName="CombineLinkerXmlFiles"
@@ -56,7 +71,13 @@
           Inputs="@(_ILLinkDescriptorsFilePaths)"
           Outputs="$(_ILLinkDescriptorsIntermediatePath)">
     <CombineLinkerXmlFiles LinkerXmlFiles="@(_ILLinkDescriptorsFilePaths)"
-                           CombinedLinkerXmlFile="$(_ILLinkDescriptorsIntermediatePath)" />
+                           CombinedLinkerXmlFile="$(_ILLinkDescriptorsIntermediatePath)"
+                           Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CombineLinkerXmlFiles LinkerXmlFiles="@(_ILLinkDescriptorsFilePaths)"
+                           CombinedLinkerXmlFile="$(_ILLinkDescriptorsIntermediatePath)"
+                           DeclaredInputs="@(_ILLinkDescriptorsFilePaths)"
+                           DeclaredOutputs="$(_ILLinkDescriptorsIntermediatePath)"
+                           Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
     <ItemGroup>
       <FileWrites Include="$(_ILLinkDescriptorsIntermediatePath)" />

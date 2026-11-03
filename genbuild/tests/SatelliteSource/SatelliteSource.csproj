@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>SatelliteFixture</AssemblyName>
+    <RootNamespace>SatelliteFixture</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyVersion>9.9.9.9</AssemblyVersion>
+    <UseAppHost>false</UseAppHost>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <EmbeddedResourceUseDependentUponConvention>false</EmbeddedResourceUseDependentUponConvention>
+    <GenerateResourceUsePreserializedResources>false</GenerateResourceUsePreserializedResources>
+    <GenerateResourceMSBuildRuntime>CurrentRuntime</GenerateResourceMSBuildRuntime>
+    <GenerateResourceMSBuildArchitecture>CurrentArchitecture</GenerateResourceMSBuildArchitecture>
+  </PropertyGroup>
+  <ItemGroup>
+    <SatelliteAssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>Fixture</_Parameter1>
+      <_Parameter2>authored &quot;quote&quot; \ value</_Parameter2>
+    </SatelliteAssemblyAttribute>
+  </ItemGroup>
+</Project>

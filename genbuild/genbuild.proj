@@ -75,6 +75,7 @@
       <_SdkEntry Include="$(_SdkSources)sdk/**/*" />
       <_SdkTarget Include="$(_SdkSources)targets/**/*;$(GenBuildRoot)src/sdk/src/Tasks/Common/targets/**/*" />
       <_SdkTask Include="$(_SdkOutput)tools/net11.0/**/*" />
+      <_SdkTaskDependency Include="$(_MSBuildOutput)Microsoft.Build.Tasks.Core.dll;$(_MSBuildOutput)System.CodeDom.dll" />
       <_BootstrapData Include="$(GenBuildBootstrapSdk)Microsoft.NETCoreSdk.BundledVersions.props;$(GenBuildBootstrapSdk)RuntimeIdentifierGraph.json;$(GenBuildBootstrapSdk)PortableRuntimeIdentifierGraph.json" />
       <_PruneData Include="$(GenBuildBootstrapSdk)PrunePackageData/**/*" />
       <_RoslynTask Include="$(_RoslynOutput)Microsoft.Build.Tasks.CodeAnalysis/$(Configuration)/net10.0/Microsoft.Build.Tasks.CodeAnalysis.dll;$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/*.targets" />
@@ -102,6 +103,7 @@
     <Copy SourceFiles="@(_SdkEntry)" DestinationFiles="@(_SdkEntry->'$(_Sdk)Sdk/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_SdkTarget)" DestinationFiles="@(_SdkTarget->'$(_Sdk)targets/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_SdkTask)" DestinationFiles="@(_SdkTask->'$(_Sdk)tools/net11.0/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_SdkTaskDependency)" DestinationFolder="$(_Sdk)tools/net11.0/" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_BootstrapData)" DestinationFiles="@(_BootstrapData->'$(GenBuildToolsetDirectory)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_PruneData)" DestinationFiles="@(_PruneData->'$(GenBuildToolsetDirectory)PrunePackageData/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_RoslynTask)" DestinationFolder="$(GenBuildToolsetDirectory)Roslyn/" SkipUnchangedFiles="true" />

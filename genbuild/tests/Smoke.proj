@@ -33,6 +33,7 @@
     <CallTarget Targets="TestRuntimeILLinkCompileOutputs" />
     <CallTarget Targets="TestRuntimeILLinkInputs" />
     <CallTarget Targets="TestXlfLocalization" />
+    <CallTarget Targets="TestSatelliteSource" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -1047,6 +1048,67 @@
     </Exec>
     <Error Condition="'$(_ExplicitProgramOutput)' != 'Hello from a project reference.'"
            Text="Independent compilation must preserve explicit reference aliases and use the declared producer." />
+  </Target>
+  <Target Name="TestSatelliteSource">
+    <PropertyGroup>
+      <_SatelliteRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'satellites'))</_SatelliteRoot>
+      <_SatelliteHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_SatelliteHostOS>
+      <_SatelliteHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_SatelliteHostOS>
+      <_SatelliteHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_SatelliteHostOS>
+      <_SatelliteHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_SatelliteHostOS>
+      <_SatelliteArguments>-p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:MSBuildGraphRepositoryRoot=&quot;$(_SatelliteRoot)&quot; -p:MSBuildGraphHostOS=$(_SatelliteHostOS)</_SatelliteArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_SatelliteDirectory Include="$(_SatelliteRoot)action/;$(_SatelliteRoot)ordinary/" />
+      <_SatelliteFixture Include="$(MSBuildThisFileDirectory)SatelliteSource/*" />
+      <_SatelliteImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+      <_SatelliteCulture Include="fr;de" />
+    </ItemGroup>
+    <MakeDir Directories="@(_SatelliteDirectory)" />
+    <WriteLinesToFile File="$(_SatelliteRoot)%(_SatelliteImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="@(_SatelliteFixture)" DestinationFolder="%(_SatelliteDirectory.Identity)" />
+    <Exec Command="$(_App) restore &quot;%(_SatelliteDirectory.Identity)SatelliteSource.csproj&quot; $(_SatelliteArguments)" />
+    <Error Condition="Exists('%(_SatelliteDirectory.Identity)bin') or Exists('%(_SatelliteDirectory.Identity)obj/Debug/net11.0/SatelliteFixture.dll')"
+           Text="Satellite preparation must not compile the parent or satellites." />
+    <Exec Command="$(_App) build &quot;$(_SatelliteRoot)action/SatelliteSource.csproj&quot; $(_SatelliteArguments) -p:MSBuildEmitActionGraph=&quot;$(_SatelliteRoot)action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_SatelliteRoot)action/bin') or Exists('$(_SatelliteRoot)action/obj/Debug/net11.0/SatelliteFixture.dll') or
+                      Exists('$(_SatelliteRoot)action/obj/Debug/net11.0/%(_SatelliteCulture.Identity)/SatelliteFixture.resources.cs')"
+           Text="Satellite construction must not read the future parent DLL or generate source/assemblies." />
+    <Exec WorkingDirectory="$(_SatelliteRoot)action"
+          Command="ninja -f build.ninja &quot;$([MSBuild]::NormalizePath('$(_SatelliteRoot)action/obj/Debug/net11.0/fr/SatelliteFixture.resources.dll'))&quot;" />
+    <Error Condition="!Exists('$(_SatelliteRoot)action/obj/Debug/net11.0/SatelliteFixture.dll') or
+                      !Exists('$(_SatelliteRoot)action/obj/Debug/net11.0/fr/SatelliteFixture.resources.cs')"
+           Text="A selected satellite must execute its parent and generated-source producers." />
+    <Exec WorkingDirectory="$(_SatelliteRoot)action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_SatelliteRoot)ordinary/SatelliteSource.csproj&quot; $(_SatelliteArguments) -p:MSBuildRestoreGraphInputs=false -t:Build" />
+    <GetFileHash Files="$(_SatelliteRoot)action/obj/Debug/net11.0/%(_SatelliteCulture.Identity)/SatelliteFixture.resources.cs">
+      <Output TaskParameter="Items" ItemName="_SatelliteSourceHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_SatelliteRoot)ordinary/obj/Debug/net11.0/%(_SatelliteCulture.Identity)/SatelliteFixture.resources.cs">
+      <Output TaskParameter="Items" ItemName="_SatelliteOrdinarySourceHash" />
+    </GetFileHash>
+    <Error Condition="'@(_SatelliteSourceHash->'%(FileHash)')' != '@(_SatelliteOrdinarySourceHash->'%(FileHash)')'"
+           Text="Deferred satellite source must exactly preserve ordinary attribute order, content and escaping." />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;%(_SatelliteDirectory.Identity)bin/Debug/net11.0/SatelliteFixture.dll&quot; 1.2.3.4" />
+    <Exec WorkingDirectory="$(_SatelliteRoot)action" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_SatelliteNoWork" />
+    </Exec>
+    <Error Condition="!$(_SatelliteNoWork.Contains('no work to do'))" Text="Unchanged satellites must be an incremental no-op." />
+    <WriteLinesToFile File="%(_SatelliteDirectory.Identity)AssemblyInfo.cs"
+                      Lines="[assembly: System.Reflection.AssemblyVersion(&quot;2.3.4.5&quot;)]" Overwrite="true" />
+    <Exec WorkingDirectory="$(_SatelliteRoot)action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_SatelliteRoot)ordinary/SatelliteSource.csproj&quot; $(_SatelliteArguments) -p:MSBuildRestoreGraphInputs=false -t:Build" />
+    <GetFileHash Files="$(_SatelliteRoot)action/obj/Debug/net11.0/%(_SatelliteCulture.Identity)/SatelliteFixture.resources.cs">
+      <Output TaskParameter="Items" ItemName="_SatelliteUpdatedHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_SatelliteRoot)ordinary/obj/Debug/net11.0/%(_SatelliteCulture.Identity)/SatelliteFixture.resources.cs">
+      <Output TaskParameter="Items" ItemName="_SatelliteUpdatedOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_SatelliteSourceHash->'%(FileHash)')' == '@(_SatelliteUpdatedHash->'%(FileHash)')' or
+                      '@(_SatelliteUpdatedHash->'%(FileHash)')' != '@(_SatelliteUpdatedOrdinaryHash->'%(FileHash)')'"
+           Text="Parent DLL changes must regenerate both satellite sources with ordinary byte parity." />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;%(_SatelliteDirectory.Identity)bin/Debug/net11.0/SatelliteFixture.dll&quot; 2.3.4.5" />
+    <Message Importance="high" Text="Satellite source passed deferred producer ordering, ordinary source-byte parity, all inherited/authored attributes, culture resources and incremental parent changes. $(_SatelliteRoot)" />
   </Target>
   <Target Name="TestXlfLocalization">
     <PropertyGroup>

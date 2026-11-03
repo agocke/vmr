@@ -1015,18 +1015,52 @@ and source-document path overrides. An isolated real interop-generator
 localization graph executes one validation and 13 translations, then has no work;
 source files and shared-cache hashes remain unchanged.
 
-The full current-framework closure advances to SDK satellite generation.
-`_GetAssemblyInfoFromTemplateFile` currently fails construction at
-`GetAssemblyAttributes`' missing `DeclaredInputs`. The underlying operation reads
-the future parent DLL through `FileVersionInfo` and assembly metadata, returning
-eight possible attributes consumed by `WriteCodeFragment`. Adding a declaration
-cannot supply those values during construction. Preserve that existing behavior
-by deferring attribute extraction and satellite-source generation together into
-an action with the parent DLL as input and a known generated-source output, then
-feed that output into satellite compilation. This boundary is not yet implemented.
-Localization and validation remain enabled. Current-framework construction fails
-without publishing a graph or prebuilding products; full CoreLib/native
-integration remains unproven.
+SDK satellite generation now defers the future-value boundary through
+[`GenerateSatelliteAssemblySource`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/GenerateSatelliteAssemblySource.cs).
+The action declares the parent DLL input and generated C# output, composing the
+existing `GetAssemblyAttributes` and `WriteCodeFragment` implementations without
+reading the DLL during construction. Authored attributes precede parent-derived
+attributes and the culture attribute, exactly as in the ordinary target.
+`FormatCsc` and `CompileCsc` consume that known source and the culture's resources;
+separate per-culture compiler items avoid contaminating main compilation.
+Declared `CopyFiles` actions publish the satellites. Ordinary extraction,
+compilation and copy paths retain their existing behavior.
+
+The standalone SDK task directory includes the locally built
+`Microsoft.Build.Tasks.Core` and `System.CodeDom` dependencies. The existing
+action tool-directory inventory includes both as Ninja inputs. SDK tasks use
+the centrally versioned compile reference without redistributing its runtime
+assets through ordinary SDK packaging.
+The two-culture regression compares ordinary/action source bytes and verifies
+all inherited/authored attributes, escaping, parent versions distinct from
+MSBuild properties, resource lookup, selected-output producer ordering,
+incremental parent changes and no-work rebuilds.
+The full real interop-generator project executes 67 actions, including one
+validation, 13 translations, 13 satellite-source generations and 14 compilations.
+The parent and all 13 satellites are published; repeated Ninja has no work and
+source/cache hashes remain unchanged. Unlike the earlier localization-only
+probe, this uses the project's complete Build target.
+
+CoreLib's explicit `System.Private.CoreLib.Strings` manifest name preserves
+ordinary resource metadata. Its 1,459 resource entries are inline strings and
+now select compilation without object serialization. Descriptor combination
+declares the authored XML inputs, and runtime-root generation declares the four
+headers plus combined descriptor and its exact XML output. A resource/descriptor
+target profile independently executes 221 actions, including all tool producers,
+with no products generated during preparation/construction. Both descriptors
+match ordinary task execution; resources match ordinary compilation, and a
+repeated Ninja invocation has no work. This profile does not compile CoreLib.
+
+The full current-framework closure now first fails in
+`Microsoft.Managed.Core.targets` on directory creation for CoreLib's
+`EmitCompilerGeneratedFiles=true`. `FormatCsc` also rejects
+`GeneratedFilesOutputPath`: persistent, dynamically named generator outputs need
+an explicit ownership/inventory contract before they can be independently
+scheduled. Skipping the directory task or disabling persistence would not
+preserve the authored behavior. Localization and validation remain enabled.
+Failed construction publishes no graph or prebuilt products; full CoreLib/native
+integration remains unproven. Later SourceLink, ApiCompat and copy diagnostics
+have not yet been isolated from this first failure.
 
 ### NuGet fact capture
 

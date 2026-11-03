@@ -5266,6 +5266,9 @@ Copyright (C) Microsoft Corporation. All rights reserved.
                Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(_DocumentationFileProduced)' == 'true' and '$(CopyDocumentationFileToOutputDirectory)' == 'true'" />
 
     <!-- Copy satellite assemblies. -->
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <FileWrites Include="@(IntermediateSatelliteAssembliesWithTargetPath->'$(OutDir)%(Culture)\$(TargetName).resources.dll')" />
+    </ItemGroup>
     <Copy
         SourceFiles="@(IntermediateSatelliteAssembliesWithTargetPath)"
         DestinationFiles="@(IntermediateSatelliteAssembliesWithTargetPath->'$(OutDir)%(Culture)\$(TargetName).resources.dll')"
@@ -5276,12 +5279,18 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         UseHardlinksIfPossible="$(CreateHardLinksForCopyFilesToOutputDirectoryIfPossible)"
         UseSymboliclinksIfPossible="$(CreateSymbolicLinksForCopyFilesToOutputDirectoryIfPossible)"
         ErrorIfLinkFails="$(ErrorIfLinkFailsForCopyFilesToOutputDirectory)"
-        Condition="'@(IntermediateSatelliteAssembliesWithTargetPath)' != ''"
+        Condition="'$(MSBuildHardenedGraph)' != 'true' and '@(IntermediateSatelliteAssembliesWithTargetPath)' != ''"
             >
 
       <Output TaskParameter="DestinationFiles" ItemName="FileWrites"/>
 
     </Copy>
+
+    <CopyFiles SourceFiles="@(IntermediateSatelliteAssembliesWithTargetPath)"
+               DestinationFiles="@(IntermediateSatelliteAssembliesWithTargetPath->'$(OutDir)%(Culture)\$(TargetName).resources.dll')"
+               DeclaredInputs="@(IntermediateSatelliteAssembliesWithTargetPath)"
+               DeclaredOutputs="@(IntermediateSatelliteAssembliesWithTargetPath->'$(OutDir)%(Culture)\$(TargetName).resources.dll')"
+               Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(IntermediateSatelliteAssembliesWithTargetPath)' != ''" />
 
     <!--
         Copy COM reference wrappers, isolated COM references, COM references included by

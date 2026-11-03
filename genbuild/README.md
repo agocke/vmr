@@ -531,15 +531,41 @@ An isolated invocation of the real `Microsoft.Interop.SourceGeneration`
 localization target executes one validation and all 13 translation actions;
 repeated Ninja has no work and source/cache hashes remain unchanged.
 
-The full `net11.0` closure now reaches SDK satellite-assembly generation.
-`_GetAssemblyInfoFromTemplateFile` invokes `GetAssemblyAttributes`, which reads
-version and descriptive attributes from the future parent DLL and returns items
-used by `WriteCodeFragment`. Declaring the DLL input alone cannot make those
-future values available during construction. The next slice needs to defer
-attribute extraction and satellite-source generation together, preserving the
-existing parent-assembly-derived values before compiling the satellites.
-Localization remains enabled; failed current-framework construction publishes
-neither a graph nor prebuilt products.
+SDK satellite-source generation now defers parent-DLL attribute extraction and
+source writing together through
+[`GenerateSatelliteAssemblySource`](../src/sdk/src/Tasks/Microsoft.NET.Build.Tasks/GenerateSatelliteAssemblySource.cs).
+It composes the existing `GetAssemblyAttributes` and `WriteCodeFragment` tasks,
+preserving authored attributes, parent-derived values, culture and escaping.
+Hardened satellite compilation and publication use `FormatCsc`/`CompileCsc` and
+`CopyFiles`; ordinary extraction, compilation and copy behavior remain unchanged.
+The app stages `Microsoft.Build.Tasks.Core` and `System.CodeDom` beside the SDK
+tasks; the existing tool-directory input inventory tracks both for Ninja
+invalidation. No runtime is bundled.
+`TestSatelliteSource` covers two cultures, ordinary generated-source byte parity,
+all inherited/authored attributes, parent assembly versions that differ from
+MSBuild properties, selected-output producer ordering and incremental parent-DLL
+changes. Both ordinary and action-built executables resolve the translations.
+The complete real `Microsoft.Interop.SourceGeneration` project now executes
+67 actions, including one XLF validation, 13 translations, 13 satellite-source
+generations and 14 compilations. All 13 satellites are published; repeated Ninja
+has no work, with localization sources and shared-cache hashes unchanged.
+
+CoreLib now names its string resource explicitly with its existing manifest name
+and selects inline-string resource compilation without object serialization.
+Its descriptor-combination and runtime-root-generation tasks declare their exact
+inputs and outputs. A resource/descriptor-only CoreLib profile independently
+executes 221 actions, including its tool producers; descriptor bytes match
+ordinary task execution and string-resource bytes match ordinary compilation.
+The profile excludes CoreLib compilation, and repeated Ninja has no work.
+
+The full `net11.0` closure advances to CoreLib's persistent source-generator
+outputs. `Microsoft.Managed.Core.targets` first fails on the `MakeDir` used by
+`EmitCompilerGeneratedFiles=true`; `FormatCsc` also explicitly rejects
+`GeneratedFilesOutputPath`. Supporting those dynamically named files requires
+an output-ownership/inventory contract, not simply omitting directory creation
+or disabling generated-file persistence. Localization and validation remain
+enabled. Failed current-framework construction publishes neither a graph nor
+prebuilt products; complete CoreLib/native integration remains unproven.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,
