@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
@@ -1152,6 +1153,13 @@ namespace Microsoft.CodeAnalysis
                 return;
             }
 
+            using var generatedArchiveStream = Arguments.GeneratedFilesOutputArchive is { } archivePath
+                ? OpenFile(archivePath, diagnostics, FileMode.Create, FileAccess.Write, FileShare.Read)
+                : null;
+            using var generatedArchive = generatedArchiveStream is object
+                ? new ZipArchive(generatedArchiveStream, ZipArchiveMode.Create)
+                : null;
+
             if (!analyzers.IsEmpty || !generators.IsEmpty)
             {
                 var analyzerConfigProvider =
@@ -1187,7 +1195,7 @@ namespace Microsoft.CodeAnalysis
                             }
 
                             // write out the file if an output path was explicitly provided
-                            if (hasExplicitGeneratedOutDir)
+                            if (hasExplicitGeneratedOutDir && Arguments.GeneratedFilesOutputArchive is null)
                             {
                                 var path = tree.FilePath;
                                 Debug.Assert(path.StartsWith(explicitGeneratedOutDir!));
@@ -1207,6 +1215,22 @@ namespace Microsoft.CodeAnalysis
                                     sourceText.Write(writer, cancellationToken);
                                     touchedFilesLogger?.AddWritten(path);
                                 }
+                            }
+                        }
+
+                        if (generatedArchive is object)
+                        {
+                            var archiveTrees = generatedSyntaxTrees.ToArray();
+                            Array.Sort(archiveTrees, (left, right) => StringComparer.Ordinal.Compare(left.FilePath, right.FilePath));
+                            foreach (var tree in archiveTrees)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                var relativePath = PathUtilities.GetRelativePath(baseDirectory, tree.FilePath).Replace('\\', '/');
+                                var entry = generatedArchive.CreateEntry(relativePath, CompressionLevel.Optimal);
+                                entry.LastWriteTime = new DateTimeOffset(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                                using var stream = entry.Open();
+                                using var writer = new StreamWriter(stream, tree.Encoding!);
+                                tree.GetText(cancellationToken).Write(writer, cancellationToken);
                             }
                         }
 

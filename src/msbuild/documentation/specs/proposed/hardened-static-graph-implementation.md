@@ -369,10 +369,33 @@ provider versions, metadata validation, stale replacement, and independent error
 - [x] Prove relocated PE/reference-assembly/portable-PDB byte equality and inspect
   PDB documents, CodeView paths, and `CallerFilePath`; cover embedded debug info.
 
-Native PDBs, arbitrary response files, data-dependent generated-files directories,
+Native PDBs, arbitrary response files, general directory inputs/outputs,
 rulesets, SARIF, app-config, machine signing, and execution-mode overrides remain
 outside the initial profile. Inputs use explicit paths, not SDK/LIB/default
 response-file searches. Plugin I/O enforcement is deferred like other task I/O.
+
+### Compiler-owned generated-source trees
+
+- [x] Preserve logical generator paths and ordinary source encodings while the
+  source-built C# compiler persists an ordinal-sorted, fixed-timestamp ZIP.
+- [x] Have `FormatCsc` declare a single private tree with archive, dyndep and
+  receipt paths, and validate static tree metadata and exclusive ownership.
+- [x] Write dyndep only after successful compilation; lower an independent
+  materializer edge whose dynamic outputs include all generated files and the
+  root directory, including empty trees.
+- [x] Recover deleted members without recompilation and prune only prior
+  receipt-owned files, including file/directory hint transitions.
+- [x] Reject traversal, duplicate/conflicting entries, symlinks, malformed
+  receipts and unowned contents without replacing the published tree.
+- [x] Verify ordinary source-byte/encoding, mapped `CallerFilePath` and PDB
+  document parity, deterministic archive bytes, no-work rebuilds and failed
+  compilation preserving published source bytes/timestamps.
+
+This is the single-tree `CompileCsc` profile, not general directory support,
+construction-time enumeration or generated-item discovery. Publication updates
+individual files atomically, not the whole tree in one transaction. The receipt
+is required to authorize replacement/deletion of existing files. Ninja-created
+empty parent directories are scaffolding, not ownership of arbitrary files.
 
 ### Dependency and runtime manifests
 

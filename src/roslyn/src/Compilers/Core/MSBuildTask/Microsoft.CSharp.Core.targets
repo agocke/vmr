@@ -209,6 +209,9 @@
       <Output TaskParameter="CommandLineArgs" ItemName="CscCommandLineArgs" />
     </Csc>
 
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <_HardenedCscTree Remove="@(_HardenedCscTree)" />
+    </ItemGroup>
     <FormatCsc Condition="'$(MSBuildHardenedGraph)' == 'true' and '%(_CoreCompileResourceInputs.WithCulture)' != 'true'"
          DeclaredInputs="" DeclaredOutputs=""
          CompilerToolExe="$(CscToolExe)"
@@ -296,6 +299,7 @@
       <Output TaskParameter="CompilerArguments" PropertyName="_HardenedCscArguments" />
       <Output TaskParameter="CompilerInputs" ItemName="_HardenedCscInput" />
       <Output TaskParameter="CompilerOutputs" ItemName="_HardenedCscOutput" />
+      <Output TaskParameter="CompilerOutputTrees" ItemName="_HardenedCscTree" />
       <Output TaskParameter="PathMappings" ItemName="_HardenedCscPathMapping" />
     </FormatCsc>
 
@@ -305,7 +309,12 @@
                 CompilerArguments="$(_HardenedCscArguments)"
                 PathMappings="@(_HardenedCscPathMapping)"
                 DeclaredInputs="$(DOTNET_HOST_PATH);@(_CscPreparedToolInput);@(_HardenedCscInput)"
-                DeclaredOutputs="@(_HardenedCscOutput)" />
+                DeclaredOutputs="@(_HardenedCscOutput)"
+                DeclaredOutputTrees="@(_HardenedCscTree)" />
+
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <FileWrites Include="@(_HardenedCscOutput);@(_HardenedCscTree->'%(ReceiptFile)')" />
+    </ItemGroup>
 
     <ItemGroup>
       <_CoreCompileResourceInputs Remove="@(_CoreCompileResourceInputs)" />

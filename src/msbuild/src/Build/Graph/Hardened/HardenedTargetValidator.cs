@@ -1858,6 +1858,17 @@ internal sealed class HardenedTargetValidator
             }
         }
 
+        if (TryGetTaskParameter(task, "DeclaredOutputTrees", out _, out _))
+        {
+            HardenedValue<IReadOnlyList<string>> paths =
+                ResolveDeclaredIOPathParameter(task, "DeclaredOutputTrees", "output tree");
+            state = ValueState.Combine(state, paths.State);
+            if (paths.TryGetStaticValue(out IReadOnlyList<string>? resolvedPaths))
+            {
+                AddCanonicalPaths(outputPaths, resolvedPaths);
+            }
+        }
+
         if (state.IsStatic &&
             (descriptor.InputPathParameters.Count != 0 ||
              descriptor.OutputPathParameters.Count != 0))

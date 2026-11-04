@@ -128,6 +128,8 @@ namespace Microsoft.CodeAnalysis
         /// </summary>
         public string? GeneratedFilesOutputDirectory { get; internal set; }
 
+        internal string? GeneratedFilesOutputArchive { get; set; }
+
         /// <summary>
         /// Options controlling the generation of a SARIF log file containing compilation or
         /// analysis diagnostics, or null if no log file is desired.

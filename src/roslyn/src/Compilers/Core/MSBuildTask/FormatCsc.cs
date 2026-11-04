@@ -37,10 +37,14 @@ public sealed class FormatCsc : Csc
     public ITaskItem[] CompilerOutputs { get; private set; } = Array.Empty<ITaskItem>();
 
     [Output]
+    public ITaskItem[] CompilerOutputTrees { get; private set; } = Array.Empty<ITaskItem>();
+
+    [Output]
     public ITaskItem[] PathMappings { get; private set; } = Array.Empty<ITaskItem>();
 
     public override bool Execute()
     {
+        CompilerOutputTrees = Array.Empty<ITaskItem>();
         // Captured invocations retain empty strings; ordinary MSBuild leaves those
         // parameters unset. Preserve Csc's distinction between absent and empty switches.
         foreach (var name in _store.Where(property => property.Value is string { Length: 0 }).Select(property => property.Key).ToArray())
@@ -65,7 +69,6 @@ public sealed class FormatCsc : Csc
 
         Reject(ResponseFiles?.Length > 0, nameof(ResponseFiles));
         Reject(AdditionalLibPaths?.Length > 0, nameof(AdditionalLibPaths));
-        Reject(!string.IsNullOrEmpty(GeneratedFilesOutputPath), nameof(GeneratedFilesOutputPath));
         Reject(!string.IsNullOrEmpty(KeyContainer), nameof(KeyContainer));
         Reject(!string.IsNullOrEmpty(KeyFile) && !PublicSign && !DelaySign, nameof(KeyFile));
         Reject(!string.IsNullOrEmpty(ApplicationConfiguration), nameof(ApplicationConfiguration));
@@ -137,6 +140,19 @@ public sealed class FormatCsc : Csc
             AddPath(outputs, string.IsNullOrEmpty(PdbFile) ? Path.ChangeExtension(OutputAssembly.ItemSpec, ".pdb") : PdbFile);
         }
 
+        if (!string.IsNullOrEmpty(GeneratedFilesOutputPath))
+        {
+            GeneratedFilesOutputPath = TaskEnvironment.GetAbsolutePath(GeneratedFilesOutputPath).Value
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var tree = new TaskItem(GeneratedFilesOutputPath);
+            tree.SetMetadata("ArchiveFile", GeneratedFilesOutputPath + ".tree.zip");
+            tree.SetMetadata("DyndepFile", GeneratedFilesOutputPath + ".tree.dd");
+            tree.SetMetadata("ReceiptFile", GeneratedFilesOutputPath + ".tree.json");
+            AddPath(outputs, tree.GetMetadata("ArchiveFile"));
+            AddPath(outputs, tree.GetMetadata("DyndepFile"));
+            CompilerOutputTrees = new ITaskItem[] { tree };
+        }
+
         if (!SetPathMap(outputs))
         {
             return false;
@@ -198,6 +214,11 @@ public sealed class FormatCsc : Csc
         foreach (var output in outputs)
         {
             addRoot(Path.GetDirectoryName(output.ItemSpec)!);
+        }
+
+        foreach (var tree in CompilerOutputTrees)
+        {
+            addRoot(tree.ItemSpec);
         }
 
         var mapper = new MapSourceRoots

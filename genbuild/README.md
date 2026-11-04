@@ -19,7 +19,7 @@ dotnet msbuild genbuild/genbuild.proj -m:1 -nr:false -bl:{}
 ```
 
 This builds the selected MSBuild, SDK-task, Roslyn, SourceLink, NuGet, and Arcade
-target-framework task sources and
+target-framework task sources, including the source-built C# compiler, and
 assembles the app in `artifacts/bin/genbuild/Debug/`. It does not build the full
 SDK, templates, workloads, or a runtime.
 
@@ -558,14 +558,23 @@ executes 221 actions, including its tool producers; descriptor bytes match
 ordinary task execution and string-resource bytes match ordinary compilation.
 The profile excludes CoreLib compilation, and repeated Ninja has no work.
 
-The full `net11.0` closure advances to CoreLib's persistent source-generator
-outputs. `Microsoft.Managed.Core.targets` first fails on the `MakeDir` used by
-`EmitCompilerGeneratedFiles=true`; `FormatCsc` also explicitly rejects
-`GeneratedFilesOutputPath`. Supporting those dynamically named files requires
-an output-ownership/inventory contract, not simply omitting directory creation
-or disabling generated-file persistence. Localization and validation remain
-enabled. Failed current-framework construction publishes neither a graph nor
-prebuilt products; complete CoreLib/native integration remains unproven.
+`EmitCompilerGeneratedFiles` now uses a compiler-owned output tree. The source-built
+C# compiler retains the configured logical generated-source paths, including
+analyzer-config matching, `CallerFilePath` and embedded PDB documents, while
+persisting a deterministic ZIP instead of writing the tree during compilation.
+After successful compilation, the action host writes Ninja dyndep metadata and a
+separate materializer publishes the tree and its ownership receipt. Missing files
+are recovered from the archive without recompilation; changed hints prune only
+previously owned files, and zero generated sources publish a real empty directory.
+Unowned files, symlinks and invalid archive/receipt paths are rejected. Ordinary
+Csc still writes generated sources normally, without sidecars. Tree contents are
+not construction-time item discovery or supported directory inputs.
+
+The fresh full `net11.0` closure now reaches CoreLib's ApiCompat integration,
+which reports a `CoreCompile` dependency cycle and missing declared-I/O lists.
+Localization and validation remain enabled. Failed current-framework construction
+publishes neither a graph nor prebuilt products; complete CoreLib/native
+integration remains unproven.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,
@@ -636,8 +645,9 @@ enforcement is deferred, without per-plugin gates. The action runs an explicit
 compiler on the external runtime, without compiler servers, inherited compiler
 environment, default response files, installation searches or output caches.
 Portable and embedded PDBs, reference assemblies, resources and explicit
-documentation inputs are supported. User response files, generated-files
-directories, native PDBs, rulesets, SARIF output, app-config and machine-key-container
+documentation inputs and compiler-owned generated-source trees are supported.
+User response files, arbitrary directory outputs/inputs, native PDBs, rulesets,
+SARIF output, app-config and machine-key-container
 modes remain explicitly unsupported.
 Hardened SDK Build uses `WriteDepsFile` to write the dependency manifest from
 explicit resolved metadata, assets JSON and declared runtime binaries. Generated

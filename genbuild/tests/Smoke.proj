@@ -34,6 +34,7 @@
     <CallTarget Targets="TestRuntimeILLinkInputs" />
     <CallTarget Targets="TestXlfLocalization" />
     <CallTarget Targets="TestSatelliteSource" />
+    <CallTarget Targets="TestCompilerGeneratedFiles" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -3606,5 +3607,190 @@
     </Exec>
     <Error Condition="'$(_OrdinaryWinMDExitCode)' == '0' or Exists('$(_TestDirectory)winmd-ordinary-mixed.txt') or !$([System.IO.File]::ReadAllText('$(_TestDirectory)winmd-ordinary-mixed.log').Contains('System.IO.FileNotFoundException'))"
            Text="Ordinary builds must retain the existing PE-inspecting WinMD checker." />
+  </Target>
+  <Target Name="TestCompilerGeneratedFiles">
+    <PropertyGroup>
+      <_GeneratedRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'compiler-generated-files'))</_GeneratedRoot>
+      <_GeneratedAction>$(_GeneratedRoot)action/</_GeneratedAction>
+      <_GeneratedTree>$([MSBuild]::NormalizePath('$(_GeneratedAction)', 'obj/generated tree'))</_GeneratedTree>
+      <_GeneratedOrdinaryTree>$([MSBuild]::NormalizePath('$(_GeneratedRoot)ordinary', 'obj/generated tree'))</_GeneratedOrdinaryTree>
+      <_GeneratedRepositoryRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '../..'))</_GeneratedRepositoryRoot>
+      <_GeneratedLogicalProject>/_/$([MSBuild]::MakeRelative('$(_GeneratedRepositoryRoot)', '$(_GeneratedAction)').Replace('\', '/').TrimEnd('/'))</_GeneratedLogicalProject>
+      <_GeneratedLogicalTree>$(_GeneratedLogicalProject)/obj/generated tree</_GeneratedLogicalTree>
+      <_GeneratedCompilerDll>$(_GeneratedAction)obj/Debug/net11.0/CompilerGeneratedFixture.dll</_GeneratedCompilerDll>
+      <_GeneratedProgram>&quot;$(GenBuildTestHost)&quot; &quot;$(_GeneratedAction)bin/Debug/net11.0/CompilerGeneratedFixture.dll&quot;</_GeneratedProgram>
+      <_GeneratedVerifier>&quot;$(GenBuildTestHost)&quot; &quot;$(_GeneratedRoot)Verifier.dll&quot;</_GeneratedVerifier>
+      <_GeneratedHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_GeneratedHostOS>
+      <_GeneratedHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_GeneratedHostOS>
+      <_GeneratedHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_GeneratedHostOS>
+      <_GeneratedHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_GeneratedHostOS>
+      <_GeneratedArguments>-p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:MSBuildGraphRepositoryRoot=&quot;$(_GeneratedRoot)&quot; -p:MSBuildGraphHostOS=$(_GeneratedHostOS)</_GeneratedArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_GeneratedDirectory Include="$(_GeneratedAction);$(_GeneratedRoot)ordinary/" />
+      <_GeneratedFixture Include="$(MSBuildThisFileDirectory)CompilerGeneratedFiles/*" />
+      <_GeneratedImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+    </ItemGroup>
+    <MakeDir Directories="@(_GeneratedDirectory);$(_GeneratedRoot)seed" />
+    <WriteLinesToFile File="$(_GeneratedRoot)%(_GeneratedImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="@(_GeneratedFixture)" DestinationFolder="%(_GeneratedDirectory.Identity)" />
+    <!-- Compile fixture tools explicitly; consumer Restore and construction must never compile. -->
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_GeneratedRoot)seed" />
+    <Exec Command="$(_App) restore &quot;$(_GeneratedRoot)seed/HelloWorld.csproj&quot; $(_GeneratedArguments)" />
+    <XmlPeek XmlInputPath="$(_GeneratedRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_GeneratedCompilerReference" />
+    </XmlPeek>
+    <Error Condition="'@(_GeneratedCompilerReference)' == ''" Text="Generator fixture preparation did not capture compiler references." />
+    <WriteLinesToFile File="$(_GeneratedRoot)compile.rsp" Lines="@(_GeneratedCompilerReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -deterministic+ -out:&quot;$(_GeneratedRoot)CompilerGeneratedGenerator.dll&quot; -r:&quot;$(_AppDirectory)/toolset/Roslyn/bincore/Microsoft.CodeAnalysis.dll&quot; @&quot;$(_GeneratedRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)CompilerGeneratedFiles/Generator.cs&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_GeneratedRoot)Verifier.dll&quot; @&quot;$(_GeneratedRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)CompilerGeneratedFiles/Program.cs&quot;" />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_GeneratedRoot)Verifier.runtimeconfig.json" />
+    <Exec Command="$(_App) restore &quot;%(_GeneratedDirectory.Identity)CompilerGeneratedFiles.csproj&quot; $(_GeneratedArguments)" />
+    <Error Condition="Exists('%(_GeneratedDirectory.Identity)bin') or Exists('%(_GeneratedDirectory.Identity)obj/Debug/net11.0/CompilerGeneratedFixture.dll') or Exists('%(_GeneratedDirectory.Identity)obj/generated tree') or Exists('%(_GeneratedDirectory.Identity)obj/generated tree.tree.zip') or Exists('%(_GeneratedDirectory.Identity)obj/generated tree.tree.dd') or Exists('%(_GeneratedDirectory.Identity)obj/generated tree.tree.json')"
+           Text="Consumer Restore must not compile or produce generated sources/archive." />
+    <Exec Command="$(_App) build &quot;$(_GeneratedAction)CompilerGeneratedFiles.csproj&quot; $(_GeneratedArguments) -p:MSBuildEmitActionGraph=&quot;$(_GeneratedAction)build.ninja&quot;" />
+    <Error Condition="Exists('$(_GeneratedAction)bin') or Exists('$(_GeneratedCompilerDll)') or Exists('$(_GeneratedTree)') or Exists('$(_GeneratedTree).tree.zip') or Exists('$(_GeneratedTree).tree.dd') or Exists('$(_GeneratedTree).tree.json')"
+           Text="Construction must only describe the compiler-generated tree, without compiling or publishing it." />
+    <Exec Command="$(_GeneratedVerifier) graph &quot;$(_GeneratedAction)build.ninja&quot; &quot;$(_GeneratedTree)&quot; &quot;$(_GeneratedLogicalTree)&quot;" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_GeneratedRoot)ordinary/CompilerGeneratedFiles.csproj&quot; $(_GeneratedArguments) -p:MSBuildRestoreGraphInputs=false -p:PathMap=&quot;$(_GeneratedRoot)ordinary/=$(_GeneratedLogicalProject)/&quot; -t:Build" />
+    <Exec Command="$(_GeneratedVerifier) compare &quot;$(_GeneratedTree)&quot; &quot;$(_GeneratedOrdinaryTree)&quot;" />
+    <Exec Command="$(_GeneratedProgram) run First.g.cs &quot;$(_GeneratedLogicalTree)&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_GeneratedRoot)ordinary/bin/Debug/net11.0/CompilerGeneratedFixture.dll&quot; run First.g.cs &quot;$(_GeneratedLogicalTree)&quot;" />
+    <Error Condition="!Exists('$(_GeneratedTree).tree.dd') or !Exists('$(_GeneratedTree).tree.json')"
+           Text="The action host and materializer must publish dyndep and receipt sidecars." />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GeneratedNoWork" />
+    </Exec>
+    <Error Condition="!$(_GeneratedNoWork.Contains('no work to do'))" Text="Unchanged generated trees must be a Ninja no-op." />
+    <ItemGroup>
+      <_GeneratedCompileStamp Include="$(_GeneratedCompilerDll);$(_GeneratedTree).tree.zip" />
+      <_GeneratedCompileStamp Update="@(_GeneratedCompileStamp)">
+        <Before>$([System.IO.File]::GetLastWriteTimeUtc('%(_GeneratedCompileStamp.Identity)').Ticks)</Before>
+      </_GeneratedCompileStamp>
+    </ItemGroup>
+    <Delete Files="$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/First.g.cs" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <Error Condition="!Exists('$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/First.g.cs') or
+                      $([System.IO.File]::GetLastWriteTimeUtc('%(_GeneratedCompileStamp.Identity)').Ticks) != '%(_GeneratedCompileStamp.Before)'"
+           Text="Deleting a dynamic source must re-materialize it without recompiling the DLL/archive." />
+    <Exec Command="$(_GeneratedVerifier) compare &quot;$(_GeneratedTree)&quot; &quot;$(_GeneratedOrdinaryTree)&quot;" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GeneratedRecoveredNoWork" />
+    </Exec>
+    <Error Condition="!$(_GeneratedRecoveredNoWork.Contains('no work to do'))" Text="Recovered dynamic outputs must settle to no work." />
+    <!-- A forced compile with unchanged inputs must reproduce identical archive bytes. -->
+    <GetFileHash Files="$(_GeneratedTree).tree.zip">
+      <Output TaskParameter="Items" ItemName="_GeneratedArchiveBefore" />
+    </GetFileHash>
+    <Delete Files="$(_GeneratedCompilerDll)" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <GetFileHash Files="$(_GeneratedTree).tree.zip">
+      <Output TaskParameter="Items" ItemName="_GeneratedArchiveAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_GeneratedArchiveBefore->'%(FileHash)')' != '@(_GeneratedArchiveAfter->'%(FileHash)')'"
+           Text="Repeated compilation must produce a deterministic generated-source ZIP." />
+    <Exec Command="$(_GeneratedVerifier) recovery-failures &quot;$(_GeneratedAction)build.ninja&quot; &quot;$(_GeneratedTree)&quot; &quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot;" />
+    <WriteLinesToFile File="$(_GeneratedTree)/unowned.txt" Lines="not owned by the compiler" Overwrite="true" />
+    <GetFileHash Files="$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/First.g.cs;$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/nested/Stable.g.cs;$(_GeneratedTree).tree.json">
+      <Output TaskParameter="Items" ItemName="_GeneratedOwnershipBefore" />
+    </GetFileHash>
+    <WriteLinesToFile File="$(_GeneratedAction)generator.txt" Lines="Renamed.g.cs" Overwrite="true" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_GeneratedOwnershipExitCode" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GeneratedOwnershipOutput" />
+    </Exec>
+    <Error Condition="'$(_GeneratedOwnershipExitCode)' == '0' or !$(_GeneratedOwnershipOutput.Contains('unowned.txt'))"
+           Text="Materialization must reject an unowned file, rather than adopt or delete it." />
+    <ReadLinesFromFile File="$(_GeneratedTree)/unowned.txt">
+      <Output TaskParameter="Lines" PropertyName="_GeneratedUnowned" />
+    </ReadLinesFromFile>
+    <Error Condition="'$(_GeneratedUnowned)' != 'not owned by the compiler'" Text="Materialization must never delete or overwrite unowned files." />
+    <GetFileHash Files="$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/First.g.cs;$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/nested/Stable.g.cs;$(_GeneratedTree).tree.json">
+      <Output TaskParameter="Items" ItemName="_GeneratedOwnershipAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_GeneratedOwnershipBefore->'%(FileHash)')' != '@(_GeneratedOwnershipAfter->'%(FileHash)')' or
+                      Exists('$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/Renamed.g.cs')"
+           Text="Ownership rejection must leave the published tree and receipt unchanged." />
+    <Delete Files="$(_GeneratedTree)/unowned.txt" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <Error Condition="Exists('$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/First.g.cs') or
+                      !Exists('$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/Renamed.g.cs')"
+           Text="AdditionalFiles hint changes must remove stale owned filenames and publish the new filename." />
+    <Exec Command="$(_GeneratedProgram) run Renamed.g.cs &quot;$(_GeneratedLogicalTree)&quot;" />
+    <WriteLinesToFile File="$(_GeneratedAction)generator.txt" Lines="Renamed.g.cs/Nested.g.cs" Overwrite="true" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <Error Condition="!$([System.IO.Directory]::Exists('$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/Renamed.g.cs')) or
+                      !Exists('$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/Renamed.g.cs/Nested.g.cs')"
+           Text="A changed hint must replace the prior owned file with a directory containing the new generated file." />
+    <Exec Command="$(_GeneratedProgram) run Renamed.g.cs/Nested.g.cs &quot;$(_GeneratedLogicalTree)&quot;" />
+    <WriteLinesToFile File="$(_GeneratedAction)generator.txt" Lines="Renamed.g.cs" Overwrite="true" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <Error Condition="$([System.IO.Directory]::Exists('$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/Renamed.g.cs')) or
+                      !$([System.IO.File]::Exists('$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/Renamed.g.cs'))"
+           Text="A changed hint must prune the obsolete owned directory and restore a generated file at that path." />
+    <Exec Command="$(_GeneratedProgram) run Renamed.g.cs &quot;$(_GeneratedLogicalTree)&quot;" />
+    <ItemGroup>
+      <_GeneratedPublished Include="$(_GeneratedTree)/**/*;$(_GeneratedTree).tree.json" />
+      <_GeneratedPublished Update="@(_GeneratedPublished)">
+        <Before>$([System.IO.File]::GetLastWriteTimeUtc('%(_GeneratedPublished.Identity)').Ticks)</Before>
+      </_GeneratedPublished>
+    </ItemGroup>
+    <GetFileHash Files="@(_GeneratedPublished)">
+      <Output TaskParameter="Items" ItemName="_GeneratedPublishedBefore" />
+    </GetFileHash>
+    <!-- Mutate an existing declared source; content changes must use the existing graph. -->
+    <WriteLinesToFile File="$(_GeneratedAction)Program.cs" Lines="public sealed class Broken : MissingBaseType { }" Overwrite="false" />
+    <WriteLinesToFile File="$(_GeneratedAction)generator.txt" Lines="Failed.g.cs" Overwrite="true" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_GeneratedFailureExitCode" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GeneratedFailureOutput" />
+    </Exec>
+    <Error Condition="'$(_GeneratedFailureExitCode)' == '0' or !$(_GeneratedFailureOutput.Contains('CS0246')) or Exists('$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/Failed.g.cs')"
+           Text="Failed compilation must not publish newly generated source." />
+    <GetFileHash Files="@(_GeneratedPublished)">
+      <Output TaskParameter="Items" ItemName="_GeneratedPublishedAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_GeneratedPublishedBefore->'%(FileHash)')' != '@(_GeneratedPublishedAfter->'%(FileHash)')' or
+                      $([System.IO.File]::GetLastWriteTimeUtc('%(_GeneratedPublished.Identity)').Ticks) != '%(_GeneratedPublished.Before)'"
+           Text="Failed compilation must leave the previously published tree and receipt byte/timestamp-identical." />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)CompilerGeneratedFiles/Program.cs" DestinationFiles="$(_GeneratedAction)Program.cs" />
+    <WriteLinesToFile File="$(_GeneratedAction)generator.txt" Lines="none" Overwrite="true" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_GeneratedVerifier) empty &quot;$(_GeneratedTree)&quot;" />
+    <Exec Command="$(_GeneratedProgram) run none &quot;$(_GeneratedTree)&quot;" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GeneratedEmptyNoWork" />
+    </Exec>
+    <Error Condition="!$(_GeneratedEmptyNoWork.Contains('no work to do'))" Text="A real empty tree must settle to no work." />
+    <ItemGroup>
+      <_GeneratedEmptyCompileStamp Include="$(_GeneratedCompilerDll);$(_GeneratedTree).tree.zip" />
+      <_GeneratedEmptyCompileStamp Update="@(_GeneratedEmptyCompileStamp)">
+        <Before>$([System.IO.File]::GetLastWriteTimeUtc('%(_GeneratedEmptyCompileStamp.Identity)').Ticks)</Before>
+      </_GeneratedEmptyCompileStamp>
+    </ItemGroup>
+    <RemoveDir Directories="$(_GeneratedTree)" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_GeneratedVerifier) empty &quot;$(_GeneratedTree)&quot;" />
+    <Error Condition="$([System.IO.File]::GetLastWriteTimeUtc('%(_GeneratedEmptyCompileStamp.Identity)').Ticks) != '%(_GeneratedEmptyCompileStamp.Before)'"
+           Text="Deleting an empty tree must re-materialize its root without recompiling." />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GeneratedEmptyRecoveredNoWork" />
+    </Exec>
+    <Error Condition="!$(_GeneratedEmptyRecoveredNoWork.Contains('no work to do'))" Text="A recovered empty tree must settle to no work." />
+    <ItemGroup>
+      <_GeneratedConflict Include="source" Root="$([MSBuild]::NormalizePath('$(_GeneratedRoot)', 'action'))" />
+      <_GeneratedConflict Include="output" Root="$([MSBuild]::NormalizePath('$(_GeneratedAction)', 'obj/Debug/net11.0'))" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_GeneratedAction)CompilerGeneratedFiles.csproj&quot; $(_GeneratedArguments) -p:CompilerGeneratedFilesOutputPath=&quot;%(_GeneratedConflict.Root)&quot; -p:MSBuildEmitActionGraph=&quot;$(_GeneratedAction)%(_GeneratedConflict.Identity)-conflict.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_GeneratedConflictExitCode" />
+    </Exec>
+    <Error Condition="@(_GeneratedConflictExitCode->AnyHaveMetadataValue('Identity', '0')) or
+                      Exists('$(_GeneratedAction)%(_GeneratedConflict.Identity)-conflict.ninja') or
+                      Exists('$(_GeneratedAction)%(_GeneratedConflict.Identity)-conflict.ninja.actions')"
+           Text="Trees overlapping source inputs or ordinary file outputs must fail graph construction without publication." />
+    <Message Importance="high" Text="Compiler-generated files: ordinary byte/path/PDB parity, single compile, deterministic archive, dyndep recovery, ownership, empty tree and failure preservation. $(_GeneratedRoot)" />
   </Target>
 </Project>

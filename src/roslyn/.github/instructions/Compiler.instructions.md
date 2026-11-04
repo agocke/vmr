@@ -97,6 +97,14 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
   without per-plugin gates. `CompileCsc` controls the child environment and
   uses ToolTask cancellation/private response-file scratch, never server state
   or a task-local cache. Keep ordinary Csc behavior unchanged.
+- Hardened `EmitCompilerGeneratedFiles` declares one compiler-owned output tree.
+  The source-built C# compiler's archive mode redirects physical writes only;
+  preserve `/generatedfilesout` logical paths, analyzer-config matching and PDB
+  embedding. ZIP entries retain ordinary source encodings and use ordinal order
+  and fixed timestamps. The standalone action host emits dyndep after compiler
+  success and independently materializes receipt-owned members. Do not run
+  generators twice, redirect logical paths to scratch, or enumerate future
+  generated files during construction. Ordinary compiler persistence is unchanged.
 - `MapSourceRoots` is an audited zero-I/O construction task with explicit empty
   `DeclaredInputs` and `DeclaredOutputs` at its shipped call site. It computes
   mapped paths from supplied root metadata and `TaskEnvironment` project context;

@@ -231,6 +231,10 @@ internal sealed class HardenedActionGraph
             {
                 yield return output;
             }
+            foreach (TreeOutput tree in action.Trees)
+            {
+                yield return tree.Receipt;
+            }
         }
     }
 
@@ -242,6 +246,31 @@ internal sealed class HardenedActionGraph
         Require(expressions.TryGetValue("DeclaredOutputs", out var output), "missing DeclaredOutputs", node.Location);
         string[] inputs = Paths([.. bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(input.Item1, ExpanderOptions.ExpandAll, input.Item2)]);
         string[] outputs = Paths([.. bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(output.Item1, ExpanderOptions.ExpandAll, output.Item2)]);
+        List<TreeOutput> trees = [];
+        if (expressions.TryGetValue("DeclaredOutputTrees", out var treeExpression))
+        {
+            foreach (ITaskItem tree in bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(
+                treeExpression.Item1, ExpanderOptions.ExpandAll, treeExpression.Item2))
+            {
+                Require(Path.IsPathFullyQualified(tree.ItemSpec) &&
+                    Path.IsPathFullyQualified(tree.GetMetadata("ArchiveFile")) &&
+                    Path.IsPathFullyQualified(tree.GetMetadata("DyndepFile")) &&
+                    Path.IsPathFullyQualified(tree.GetMetadata("ReceiptFile")),
+                    "nonabsolute compiler output-tree paths", node.Location);
+                string root = Path.TrimEndingDirectorySeparator(CanonicalPath(tree.ItemSpec, node.Location));
+                string archive = CanonicalPath(tree.GetMetadata("ArchiveFile"), node.Location);
+                string dyndep = CanonicalPath(tree.GetMetadata("DyndepFile"), node.Location);
+                string receipt = CanonicalPath(tree.GetMetadata("ReceiptFile"), node.Location);
+                Require(Path.GetDirectoryName(root) is not null, $"filesystem-root tree '{root}'", node.Location);
+                Require(Array.Exists(outputs, path => FileUtilities.PathsEqual(path, archive)) &&
+                    Array.Exists(outputs, path => FileUtilities.PathsEqual(path, dyndep)),
+                    "tree archive and dyndep absent from DeclaredOutputs", node.Location);
+                Require(!Array.Exists(outputs, path => FileUtilities.PathsEqual(path, receipt)),
+                    "tree receipt also declared as a compiler output", node.Location);
+                trees.Add(new(root, archive, dyndep, receipt));
+            }
+        }
+
         if (inputs.Length == 0 && outputs.Length == 0)
         {
             return false;
@@ -269,6 +298,9 @@ internal sealed class HardenedActionGraph
         Require(assembly is not null && !string.IsNullOrEmpty(assembly.AssemblyFile),
             "a task without an explicit assembly registration, a custom task factory, or specialized hosting", node.Location);
         string taskAssembly = CanonicalPath(assembly!.AssemblyFile, node.Location);
+        Require(trees.Count == 0 || (trees.Count == 1 &&
+            typeName == "Microsoft.CodeAnalysis.BuildTasks.CompileCsc"),
+            "output trees outside the single-tree CompileCsc profile", node.Location);
         foreach (string path in outputs)
         {
             Require(!Directory.Exists(path), $"directory output '{path}'", node.Location);
@@ -332,7 +364,7 @@ internal sealed class HardenedActionGraph
             json.WriteEndObject();
         }
 
-        _actions.Add(new(stream.ToArray(), [.. inputs, taskAssembly], outputs, taskAssembly));
+        _actions.Add(new(stream.ToArray(), [.. inputs, taskAssembly], outputs, taskAssembly, [.. trees]));
         return true;
     }
 
@@ -341,7 +373,7 @@ internal sealed class HardenedActionGraph
         Dictionary<string, int> producers = new(FileUtilities.PathComparer);
         for (int i = 0; i < _actions.Count; i++)
         {
-            foreach (string output in _actions[i].Outputs)
+            foreach (string output in _actions[i].OwnedPaths())
             {
                 foreach (string existing in producers.Keys)
                 {
@@ -359,7 +391,7 @@ internal sealed class HardenedActionGraph
             HashSet<string> outputParents = new(FileUtilities.PathComparer);
             foreach (string output in producers.Keys)
             {
-                string? parent = Path.GetDirectoryName(output);
+                string? parent = IsTreeRoot(output) ? output : Path.GetDirectoryName(output);
                 while (parent is not null && outputParents.Add(parent))
                 {
                     parent = Path.GetDirectoryName(parent);
@@ -380,6 +412,7 @@ internal sealed class HardenedActionGraph
             {
                 if (producers.TryGetValue(input, out int producer))
                 {
+                    Require(!IsTreeRoot(input), $"directory-tree input '{input}'");
                     Require(producer < i, $"in-place, cyclic, or forward-produced input '{input}'");
                 }
                 else
@@ -434,6 +467,22 @@ internal sealed class HardenedActionGraph
 
             ninja.Append("\n\n");
             previousOutputs = [.. action.Outputs];
+            foreach (TreeOutput tree in action.Trees)
+            {
+                string treeRule = rule + "_tree";
+                ninja.Append("rule ").Append(treeRule).Append("\n  command = ")
+                    .Append(Command(_dotnet)).Append(' ').Append(Command(_host))
+                    .Append(" --materialize-tree ").Append(Command(manifest)).Append(' ')
+                    .Append(Command(tree.Root)).Append("\n  restat = 1\nbuild");
+                AppendPaths(ninja, [tree.Receipt]);
+                ninja.Append(": ").Append(treeRule);
+                AppendPaths(ninja, [tree.Archive]);
+                ninja.Append(" |");
+                AppendPaths(ninja, [tree.Dyndep, manifest, .. sortedTools]);
+                ninja.Append("\n  dyndep = ").Append(EscapePath(tree.Dyndep)).Append("\n\n");
+                previousOutputs.Add(tree.Receipt);
+                allOutputs.Add(tree.Receipt);
+            }
             allOutputs.AddRange(action.Outputs);
         }
 
@@ -445,6 +494,22 @@ internal sealed class HardenedActionGraph
         }
 
         return new Publication(_destination, ninja.ToString(), manifests);
+    }
+
+    private bool IsTreeRoot(string path)
+    {
+        foreach (ActionInvocation action in _actions)
+        {
+            foreach (TreeOutput tree in action.Trees)
+            {
+                if (FileUtilities.PathsEqual(tree.Root, path))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     internal sealed class Publication
@@ -608,5 +673,22 @@ internal sealed class HardenedActionGraph
         => ProjectErrorUtilities.VerifyThrowInvalidProject(condition, location ?? _location,
             "HardenedGraphUnsupportedConstruct", construct, "action graph construction");
 
-    private sealed record ActionInvocation(byte[] Contents, string[] Inputs, string[] Outputs, string Assembly);
+    private sealed record TreeOutput(string Root, string Archive, string Dyndep, string Receipt);
+
+    private sealed record ActionInvocation(byte[] Contents, string[] Inputs, string[] Outputs, string Assembly, TreeOutput[] Trees)
+    {
+        internal IEnumerable<string> OwnedPaths()
+        {
+            foreach (string output in Outputs)
+            {
+                yield return output;
+            }
+
+            foreach (TreeOutput tree in Trees)
+            {
+                yield return tree.Root;
+                yield return tree.Receipt;
+            }
+        }
+    }
 }

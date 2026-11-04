@@ -42,6 +42,11 @@
         <target state="new">The environment variable "{0}" has a null value. Supply a string value or omit the variable.</target>
         <note>{0} is an environment variable name.</note>
       </trans-unit>
+      <trans-unit id="InvalidGeneratedTree">
+        <source>The generated-source tree declaration or contents are invalid, conflicting, linked, or unowned: "{0}".</source>
+        <target state="new">The generated-source tree declaration or contents are invalid, conflicting, linked, or unowned: "{0}".</target>
+        <note>{0} is a task type, declared path, or archive member name.</note>
+      </trans-unit>
       <trans-unit id="InvalidInvocation">
         <source>The invocation file "{0}" must contain a JSON invocation object.</source>
         <target state="new">The invocation file "{0}" must contain a JSON invocation object.</target>
@@ -128,9 +133,9 @@
         <note>{0} is the invocation format version.</note>
       </trans-unit>
       <trans-unit id="Usage">
-        <source>Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt;</source>
-        <target state="new">Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt;</target>
-        <note>Do not translate the executable name or the --invocation option.</note>
+        <source>Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt; | --materialize-tree &lt;invocation.json&gt; &lt;root&gt;</source>
+        <target state="new">Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt; | --materialize-tree &lt;invocation.json&gt; &lt;root&gt;</target>
+        <note>Do not translate the executable name or the --invocation and --materialize-tree options.</note>
       </trans-unit>
       <trans-unit id="WarningEvent">
         <source>{0}({1},{2}): warning {3}: {4}</source>

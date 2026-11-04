@@ -307,8 +307,17 @@ This deferral applies to general task/tool sandboxing, not just compiler plugins
 separate action processes and declaration checks are not access enforcement.
 The [deferred sandbox requirements](hardened-static-graph.md#sandbox-enforcement-deferred)
 remain part of the design, without relaxing determinism or machine independence.
-Generated syntax trees remain compiler outputs in memory/embedded PDB data;
-data-dependent generated-files directories are a different, unsupported effect.
+Generated syntax trees remain compiler outputs in memory/embedded PDB data.
+For `EmitCompilerGeneratedFiles`, `FormatCsc` declares one private
+`DeclaredOutputTrees` item with `ArchiveFile`, `DyndepFile` and `ReceiptFile`
+metadata. Retain the logical generated-source root; redirect only physical
+persistence through the source-built compiler's archive mode, not through a
+scratch logical path or a second generator run. The action host writes dyndep
+after compiler success, and Ninja runs an independent materializer to publish
+members and the ownership receipt. Missing members are recovered from the ZIP
+without recompilation; stale receipt-owned members are pruned. Do not adopt
+unowned files, follow symlinks or enumerate the tree during construction.
+An empty tree is still a real output. General directory inputs remain unsupported.
 
 The action uses an explicit compiler/runtime host and a controlled child
 environment, not server state, `LIB`, default response files or tool overrides.
@@ -319,7 +328,8 @@ task-local output caching.
 
 The initial profile supports managed assemblies, reference assemblies, portable
 or embedded debug information and statically named documentation/resource
-artifacts. User response files, native PDBs, generated-files directories, rulesets,
+artifacts and compiler-owned generated-source trees. User response files, native
+PDBs, arbitrary directory inputs/outputs, rulesets,
 SARIF output, app-config, machine key containers and non-public/non-delay signing
 remain explicit errors. Ordinary Csc is unchanged. Verify relocation with
 byte-identical PE/PDBs and mapped PDB documents, CodeView paths and CallerFilePath,

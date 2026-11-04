@@ -16,7 +16,18 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
-        if (args is not ["--invocation", string invocationFile])
+        string? materializeRoot = null;
+        string invocationFile;
+        if (args is ["--invocation", string file])
+        {
+            invocationFile = file;
+        }
+        else if (args is ["--materialize-tree", string treeFile, string root])
+        {
+            invocationFile = treeFile;
+            materializeRoot = root;
+        }
+        else
         {
             Console.Error.WriteLine(HostResources.Format("Usage"));
             return 1;
@@ -25,7 +36,7 @@ internal static class Program
         try
         {
             TaskInvocation invocation = TaskInvocation.Read(invocationFile);
-            return Execute(invocation) ? 0 : 1;
+            return Execute(invocation, materializeRoot) ? 0 : 1;
         }
         catch (Exception ex) when (!ExceptionHandling.IsCriticalException(ex))
         {
@@ -34,7 +45,7 @@ internal static class Program
         }
     }
 
-    private static bool Execute(TaskInvocation invocation)
+    private static bool Execute(TaskInvocation invocation, string? materializeRoot)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(invocation.TaskType);
         RequireAbsolutePath(invocation.TaskAssembly);
@@ -88,6 +99,20 @@ internal static class Program
         {
             Dictionary<string, object> parameters = TaskParameterBinder.Bind(task, invocation.Parameters, invocation.Version == 2);
             IReadOnlyList<string> outputs = ValidateFootprint(taskType, parameters);
+            GeneratedSourceTree[] trees = GeneratedSourceTree.Read(taskType, parameters);
+            if (materializeRoot is not null)
+            {
+                GeneratedSourceTree? selected = Array.Find(trees, tree =>
+                    FileUtilities.PathsEqual(tree.Root, materializeRoot));
+                if (selected is null)
+                {
+                    throw new InvalidDataException(HostResources.Format("InvalidGeneratedTree", materializeRoot));
+                }
+
+                selected.Materialize();
+                return true;
+            }
+
             foreach (string output in outputs)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(output)!);
@@ -102,6 +127,11 @@ internal static class Program
                 }
 
                 return false;
+            }
+
+            foreach (GeneratedSourceTree tree in trees)
+            {
+                tree.WriteDyndep();
             }
 
             foreach (string output in outputs)

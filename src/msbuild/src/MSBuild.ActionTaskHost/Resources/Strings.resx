@@ -105,11 +105,15 @@
     <comment>{0} is the invocation format version.</comment>
   </data>
   <data name="Usage" xml:space="preserve">
-    <value>Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt;</value>
-    <comment>Do not translate the executable name or the --invocation option.</comment>
+    <value>Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt; | --materialize-tree &lt;invocation.json&gt; &lt;root&gt;</value>
+    <comment>Do not translate the executable name or the --invocation and --materialize-tree options.</comment>
   </data>
   <data name="WarningEvent" xml:space="preserve">
     <value>{0}({1},{2}): warning {3}: {4}</value>
     <comment>Diagnostic format: {0} file, {1} line, {2} column, {3} warning code, {4} message. Preserve the diagnostic keyword "warning".</comment>
+  </data>
+  <data name="InvalidGeneratedTree" xml:space="preserve">
+    <value>The generated-source tree declaration or contents are invalid, conflicting, linked, or unowned: "{0}".</value>
+    <comment>{0} is a task type, declared path, or archive member name.</comment>
   </data>
 </root>

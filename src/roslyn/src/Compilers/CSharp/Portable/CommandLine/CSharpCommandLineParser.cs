@@ -82,6 +82,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             string? outputRefFilePath = null;
             bool refOnly = false;
             string? generatedFilesOutputDirectory = null;
+            string? generatedFilesOutputArchive = null;
             string? documentationPath = null;
             ErrorLogOptions? errorLogOptions = null;
             bool parseDocumentationComments = false; //Don't just null check documentationFileName because we want to do this even if the file name is invalid.
@@ -690,6 +691,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             continue;
 
                         case "generatedfilesout":
+                        case "generatedfilesarchive":
                             value = RemoveQuotesAndSlashes(valueMemory);
                             if (string.IsNullOrWhiteSpace(value))
                             {
@@ -697,7 +699,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                             }
                             else
                             {
-                                generatedFilesOutputDirectory = ParseGenericPathToFile(value, diagnostics, baseDirectory);
+                                if (name == "generatedfilesarchive")
+                                {
+                                    generatedFilesOutputArchive = ParseGenericPathToFile(value, diagnostics, baseDirectory);
+                                }
+                                else
+                                {
+                                    generatedFilesOutputDirectory = ParseGenericPathToFile(value, diagnostics, baseDirectory);
+                                }
                             }
                             continue;
 
@@ -1575,6 +1584,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             pathMap = SortPathMap(pathMap);
 
+            if (generatedFilesOutputArchive is not null && generatedFilesOutputDirectory is null)
+            {
+                AddDiagnostic(diagnostics, ErrorCode.ERR_SwitchNeedsString, MessageID.IDS_Text.Localize(), "/generatedfilesout");
+            }
+
             return new CSharpCommandLineArguments
             {
                 IsScriptRunner = IsScriptCommandLineParser,
@@ -1593,6 +1607,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 OutputDirectory = outputDirectory!, // error produced when null
                 DocumentationPath = documentationPath,
                 GeneratedFilesOutputDirectory = generatedFilesOutputDirectory,
+                GeneratedFilesOutputArchive = generatedFilesOutputArchive,
                 ErrorLogOptions = errorLogOptions,
                 AppConfigPath = appConfigPath,
                 SourceFiles = sourceFiles.AsImmutable(),

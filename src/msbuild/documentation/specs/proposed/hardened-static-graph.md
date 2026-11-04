@@ -853,9 +853,23 @@ every declared output must exist on success. Inputs are existing external
 regular files or required outputs of predecessor actions; generated inputs
 need not exist during construction.
 
+The bounded `CompileCsc` profile additionally supports one compiler-owned
+generated-source tree through `DeclaredOutputTrees`: an absolute root with
+`ArchiveFile`, `DyndepFile` and `ReceiptFile` metadata. Archive and dyndep are
+regular compiler outputs; a separate materializer owns the root, receipt and
+dynamic members. All paths are disjoint from other owned outputs, inputs and
+graph metadata. Tree item values and metadata must be static. Compilation retains
+logical generator paths and emits a deterministic archive; the host publishes
+dyndep only after compiler success. Ninja dyndep tracks every member plus the root
+directory so deletion, including an empty-tree root, reruns materialization rather
+than compilation. Replacement and pruning require prior receipt ownership;
+unowned files and linked/traversing paths are errors. Files are published
+individually, not through an atomic whole-tree transaction. Trees are outputs
+only, not directory inputs or construction-time item discovery.
+
 Reject unaudited ordinary tasks, unresolved parameters, task factories, specialized
 runtime/architecture hosting, `OnError`, non-default `ContinueOnError`,
-execution-time status control, directory outputs, optional input absences,
+execution-time status control, general directory outputs, optional input absences,
 optional/deleted outputs, in-place updates, and outputless file-I/O actions.
 Synthetic success stamps must not hide unsupported filesystem effects.
 

@@ -26,6 +26,7 @@ public sealed class CompileCsc : ToolTask
 
     public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
     public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
+    public ITaskItem[] DeclaredOutputTrees { get; set; } = Array.Empty<ITaskItem>();
 
     [Required]
     public string DotNetHost { get; set; } = "";
@@ -48,20 +49,39 @@ public sealed class CompileCsc : ToolTask
     {
         var projectDirectory = TaskEnvironment.ProjectDirectory.Value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         var comparison = Path.DirectorySeparatorChar == '\\' ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var arguments = CommandLineUtilities.SplitCommandLineIntoArguments(CompilerArguments, removeHashComments: true).ToArray();
+        var generatedDirectories = arguments.Where(argument =>
+            argument.StartsWith("/generatedfilesout:", StringComparison.OrdinalIgnoreCase) ||
+            argument.StartsWith("-generatedfilesout:", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var generatedDirectory = new CommandLineBuilder();
+        if (DeclaredOutputTrees.Length == 1)
+        {
+            generatedDirectory.AppendSwitchIfNotNull("/generatedfilesout:", DeclaredOutputTrees[0].ItemSpec);
+        }
         if (!Path.IsPathRooted(DotNetHost) || !Path.IsPathRooted(CompilerAssembly) ||
             !DeclaredInputs.Any(input => input.ItemSpec == DotNetHost) ||
             !DeclaredInputs.Any(input => input.ItemSpec == CompilerAssembly) ||
             UseCommandProcessor || EnvironmentVariables?.Length > 0 ||
             !string.IsNullOrEmpty(ToolPath) || ToolExe != ToolName || HostObject != null ||
             TaskEnvironment.GetEnvironmentVariable("MSBUILDPRESERVETOOLTEMPFILES") == "1" ||
+            DeclaredOutputTrees.Length > 1 ||
+            DeclaredOutputTrees.Any(tree => !Path.IsPathRooted(tree.ItemSpec) ||
+                !DeclaredOutputs.Any(output => output.ItemSpec == tree.GetMetadata("ArchiveFile")) ||
+                !DeclaredOutputs.Any(output => output.ItemSpec == tree.GetMetadata("DyndepFile"))) ||
+            generatedDirectories.Length != DeclaredOutputTrees.Length ||
+            generatedDirectories.Any(argument =>
+                !string.Equals(argument.Substring(argument.IndexOf(':') + 1),
+                    generatedDirectory.ToString().Substring("/generatedfilesout:".Length), comparison)) ||
+            arguments.Any(argument =>
+                argument.StartsWith("/generatedfilesarchive", StringComparison.OrdinalIgnoreCase) ||
+                argument.StartsWith("-generatedfilesarchive", StringComparison.OrdinalIgnoreCase)) ||
             PathMappings.Length == 0 ||
             !PathMappings.Any(root => projectDirectory.StartsWith(root.ItemSpec, comparison)) ||
             PathMappings.Any(root => !Path.IsPathRooted(root.ItemSpec) ||
                 !root.ItemSpec.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal) ||
                 !root.GetMetadata("MappedPath").StartsWith("/_", StringComparison.Ordinal) ||
                 !root.GetMetadata("MappedPath").EndsWith("/", StringComparison.Ordinal)) ||
-            CommandLineUtilities.SplitCommandLineIntoArguments(CompilerArguments, removeHashComments: true)
-                .Any(argument => argument.TrimStart('"').StartsWith("@", StringComparison.Ordinal)))
+            arguments.Any(argument => argument.TrimStart('"').StartsWith("@", StringComparison.Ordinal)))
         {
             Log.LogErrorFromResources("CompileCsc.ExplicitToolInputs");
             return false;
@@ -89,6 +109,10 @@ public sealed class CompileCsc : ToolTask
         var pathMap = string.Join(",", PathMappings.Select(root =>
             Escape(root.ItemSpec) + "=" + Escape(root.GetMetadata("MappedPath"))));
         commandLine.AppendSwitchIfNotNull("/pathmap:", pathMap);
+        if (DeclaredOutputTrees.Length == 1)
+        {
+            commandLine.AppendSwitchIfNotNull("/generatedfilesarchive:", DeclaredOutputTrees[0].GetMetadata("ArchiveFile"));
+        }
         return CompilerArguments + "\n" + commandLine;
     }
 

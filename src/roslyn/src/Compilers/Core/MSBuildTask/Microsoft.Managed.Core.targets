@@ -391,11 +391,19 @@
         BeforeTargets="CoreCompile"
         Condition="'$(EmitCompilerGeneratedFiles)' == 'true' and !('$(DesignTimeBuild)' == 'true' OR '$(BuildingProject)' != 'true')">
 
-    <Warning Condition="'$(CompilerGeneratedFilesOutputPath)' == ''"
+    <Warning Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(CompilerGeneratedFilesOutputPath)' == ''"
              Text="EmitCompilerGeneratedFiles was true, but no CompilerGeneratedFilesOutputPath was provided. CompilerGeneratedFilesOutputPath must be set in order to emit generated files." />
+    <Warning Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(CompilerGeneratedFilesOutputPath)' == ''"
+             Text="EmitCompilerGeneratedFiles was true, but no CompilerGeneratedFilesOutputPath was provided. CompilerGeneratedFilesOutputPath must be set in order to emit generated files."
+             DeclaredInputs="" DeclaredOutputs="" />
     
-    <MakeDir Condition="'$(CompilerGeneratedFilesOutputPath)' != ''" 
+    <MakeDir Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(CompilerGeneratedFilesOutputPath)' != ''"
              Directories="$(CompilerGeneratedFilesOutputPath)"  />
+    <RemoveDuplicates Inputs="$(CompilerGeneratedFilesOutputPath)"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(CompilerGeneratedFilesOutputPath)' != ''"
+                      DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="Filtered" ItemName="_MSBuildRequiredOutputDirectory" />
+    </RemoveDuplicates>
   </Target>
 
   <!--

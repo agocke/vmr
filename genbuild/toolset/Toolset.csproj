@@ -14,23 +14,19 @@
     <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="$(MicrosoftExtensionsDependencyModelPackageVersion)" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="$(SystemSecurityCryptographyPkcsPackageVersion)" />
     <PackageReference Include="System.IO.Hashing" Version="$(SystemIOHashingPackageVersion)" />
-    <PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="$(MicrosoftNetCompilersToolsetPackageVersion)" GeneratePathProperty="true" ExcludeAssets="all" />
     <PackageDownload Include="Microsoft.NETCore.App.Ref" Version="[$(GenBuildTargetingPackVersion)]" Condition="'$(GenBuildTargetingPackVersion)' != ''" />
   </ItemGroup>
   <Target Name="StageToolDependencies" AfterTargets="Build" Condition="'$(GenBuildToolsetDirectory)' != ''">
     <ItemGroup>
       <_Dependency Include="@(ReferenceCopyLocalPaths)" Exclude="@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Framework'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Utilities.Core'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Tasks.Core'))" />
       <_NuGetSdkResolver Include="@(_Dependency->WithMetadataValue('Filename', 'Microsoft.Build.NuGetSdkResolver')->WithMetadataValue('Extension', '.dll'))" />
-      <_Compiler Include="$(PkgMicrosoft_Net_Compilers_Toolset)/tasks/netcore/bincore/**/*" />
       <_NuGetTarget Include="$(MSBuildThisFileDirectory)../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.props;$(MSBuildThisFileDirectory)../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.targets;$(MSBuildThisFileDirectory)../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.RestoreEx.targets;$(MSBuildThisFileDirectory)../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.Build.Tasks.Pack.targets" />
     </ItemGroup>
-    <Error Condition="'@(_Compiler)' == ''" Text="The pinned compiler is missing from its package." />
     <Error Condition="'@(_NuGetSdkResolver)' == ''" Text="The source-built NuGet SDK resolver is missing." />
     <Copy SourceFiles="@(_Dependency)" DestinationFiles="@(_Dependency->'$(GenBuildToolsetDirectory)%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_NuGetSdkResolver)" DestinationFolder="$(GenBuildToolsetDirectory)SdkResolvers/Microsoft.Build.NuGetSdkResolver/" SkipUnchangedFiles="true" />
     <!-- Independent SDK task actions do not run inside the driver's additional-deps context. -->
     <Copy SourceFiles="@(_Dependency)" DestinationFiles="@(_Dependency->'$(GenBuildToolsetDirectory)Sdks/Microsoft.NET.Sdk/tools/$(TargetFramework)/%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(_Compiler)" DestinationFiles="@(_Compiler->'$(GenBuildToolsetDirectory)Roslyn/bincore/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_NuGetTarget)" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(TargetPath);$(ProjectDepsFilePath)" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />
     <Error Condition="'$(GenBuildTargetingPackVersion)' == ''" Text="Use genbuild.proj to select the targeting-pack metadata matching its bundled framework definitions." />
