@@ -10,9 +10,14 @@ namespace Microsoft.DotNet.ApiCompat.Task
     /// <summary>
     /// ApiCompat's ValidateAssemblies MSBuild frontend.
     /// </summary>
+    [MSBuildDeclaredIOTask]
     public class ValidateAssembliesTask : TaskBase
     {
         // Important: Keep properties exposed in sync with the CLI frontend.
+
+        public ITaskItem[]? DeclaredInputs { get; set; }
+        public ITaskItem[]? DeclaredOutputs { get; set; }
+        public ITaskItem[] DeclaredReferenceDirectories { get; set; } = [];
 
         /// <summary>
         /// The assemblies that represent the contract.
@@ -119,6 +124,7 @@ namespace Microsoft.DotNet.ApiCompat.Task
 
         public override bool Execute()
         {
+            ValidateDeclarations();
             RoslynResolver roslynResolver = RoslynResolver.Register(RoslynAssembliesPath!);
             try
             {
@@ -152,6 +158,8 @@ namespace Microsoft.DotNet.ApiCompat.Task
                     EnableStrictMode = EnableStrictMode,
                     LeftAssembliesReferences = ParseAssembliesReferences(LeftAssembliesReferences),
                     RightAssembliesReferences = ParseAssembliesReferences(RightAssembliesReferences),
+                    ReferenceFilePaths = DeclaredInputs is null ? null : new HashSet<string>(
+                        DeclaredInputs.Select(item => FullPath(item.ItemSpec)), ApiCompatInputPaths.Comparer),
                     CreateWorkItemPerAssembly = CreateWorkItemPerAssembly,
                     LeftAssembliesTransformationPatterns = ParseTransformationPattern(LeftAssembliesTransformationPattern),
                     RightAssembliesTransformationPatterns = ParseTransformationPattern(RightAssembliesTransformationPattern),
@@ -162,17 +170,55 @@ namespace Microsoft.DotNet.ApiCompat.Task
                 if (Log.HasLoggedErrors)
                 {
                     // To force incremental builds to show failures again, delete the passed in semaphore file.
-                    if (File.Exists(SemaphoreFile))
+                    if (DeclaredInputs is null && File.Exists(SemaphoreFile))
                         File.Delete(SemaphoreFile);
                 }
                 else
                 {
                     // If ValidateAssemblies was successful, create/update the semaphore file.
                     File.Create(SemaphoreFile).Dispose();
-                    File.SetLastWriteTimeUtc(SemaphoreFile, DateTime.UtcNow);
+                    if (DeclaredInputs is null)
+                        File.SetLastWriteTimeUtc(SemaphoreFile, DateTime.UtcNow);
                 }
             }
         }
+
+        private void ValidateDeclarations()
+        {
+            if (DeclaredInputs is null && DeclaredOutputs is null)
+                return;
+
+            if (DeclaredInputs is null || DeclaredOutputs is not [ITaskItem output] ||
+                string.IsNullOrWhiteSpace(SemaphoreFile) || GenerateSuppressionFile ||
+                !ApiCompatInputPaths.Comparer.Equals(FullPath(output.ItemSpec), FullPath(SemaphoreFile)))
+            {
+                throw ApiCompatInputPaths.Invalid(SemaphoreFile ?? nameof(DeclaredOutputs));
+            }
+
+            HashSet<string> inputs = new(DeclaredInputs.Select(item => FullPath(item.ItemSpec)),
+                ApiCompatInputPaths.Comparer);
+            HashSet<string> directories = new(DeclaredReferenceDirectories.Select(item => FullPath(item.ItemSpec)),
+                ApiCompatInputPaths.Comparer);
+            foreach (string path in (LeftAssemblies ?? []).Concat(RightAssemblies ?? [])
+                .Concat(SuppressionFiles ?? []).Concat(ExcludeAttributesFiles ?? [])
+                .Concat([Path.Combine(RoslynAssembliesPath!, "Microsoft.CodeAnalysis.dll"),
+                    Path.Combine(RoslynAssembliesPath!, "Microsoft.CodeAnalysis.CSharp.dll")]))
+            {
+                if (path.IndexOfAny(['*', '?']) >= 0 || !inputs.Contains(FullPath(path)) || Directory.Exists(path))
+                    throw ApiCompatInputPaths.Invalid(path);
+            }
+            foreach (string group in (LeftAssembliesReferences ?? []).Concat(RightAssembliesReferences ?? []))
+            {
+                foreach (string path in group.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string fullPath = FullPath(path);
+                    if (!inputs.Contains(fullPath) && !directories.Contains(fullPath))
+                        throw ApiCompatInputPaths.Invalid(path);
+                }
+            }
+        }
+
+        private static string FullPath(string path) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
 
         private static string[][]? ParseAssembliesReferences(string[]? assembliesReferences)
         {

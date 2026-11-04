@@ -24,6 +24,7 @@
     <Compile Include="$(RepoRoot)src\Tasks\Common\BuildErrorException.cs" LinkBase="Common" />
     <Compile Include="$(RepoRoot)src\Tasks\Common\Message.cs" LinkBase="Common" />
     <Compile Include="$(RepoRoot)src\Tasks\Common\MessageLevel.cs" LinkBase="Common" />
+    <Compile Include="$(RepoRoot)src\Tasks\Common\MSBuildDeclaredIOTaskAttribute.cs" LinkBase="Common" />
   </ItemGroup>
 
   <!-- Include MSBuild logger -->

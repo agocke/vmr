@@ -1074,16 +1074,59 @@ with no products generated during preparation/construction. Both descriptors
 match ordinary task execution; resources match ordinary compilation, and a
 repeated Ninja invocation has no work. This profile does not compile CoreLib.
 
-The full current-framework closure now first fails in
-`Microsoft.Managed.Core.targets` on directory creation for CoreLib's
-`EmitCompilerGeneratedFiles=true`. `FormatCsc` also rejects
-`GeneratedFilesOutputPath`: persistent, dynamically named generator outputs need
-an explicit ownership/inventory contract before they can be independently
-scheduled. Skipping the directory task or disabling persistence would not
-preserve the authored behavior. Localization and validation remain enabled.
-Failed construction publishes no graph or prebuilt products; full CoreLib/native
-integration remains unproven. Later SourceLink, ApiCompat and copy diagnostics
-have not yet been isolated from this first failure.
+Compiler-owned generated-source trees now preserve persistent generator output
+through deterministic archives, Ninja dyndep and receipt-based materialization,
+as described above. The net10 closure still independently executes 82 actions.
+Completed targets are removed from the validator's active stack before their
+after-targets run: an ApiCompat after-target may legitimately depend on the
+completed `CoreCompile`, directly or through preparation targets.
+
+ApiCompat assembly validation now captures existing reference-directory members
+and default-suppression existence during ordinary preparation. A pure
+`FormatApiCompatInputs` declares primary/reference assemblies, suppression and
+attribute-exclusion files, and both Roslyn assemblies. The existing comparison
+runs independently with a declared success semaphore, preserving reference
+precedence and restricting resolution to declared files. Failure preserves the
+previous semaphore. Ordinary behavior is unchanged; hardened suppression
+generation and primary globs/directories are explicitly unsupported.
+`TestApiCompat` exercises ordinary/action diagnostic parity, suppression edits,
+reference precedence, undeclared sibling rejection and no-work rebuilds.
+
+Source-built reference directories use `ApiCompatProducedReferenceDirectory`
+and explicit `ApiCompatProducedReferenceFile` members. Runtime exports the
+transitive `ApiCompatReferenceFiles` metadata from its reference-layout
+producers through ordinary project target outputs, flattening list-valued
+metadata before a pure, OS-case-aware formatter selects immediate pack DLLs
+and deduplicates diamond dependencies. ApiCompat consumes the
+matching contract's closure without introducing implementation-build cycles
+or changing directory fallback into explicit-file precedence.
+Preparation skips these roots even if stale files exist. The formatter adds
+their selected members as exact inputs with `RequireProducer=true` metadata;
+the graph writer requires prior declared output owners before publication.
+An unused directory may have no members, but unresolved required references
+fail closed rather than discovering ambient siblings.
+
+The actual current-framework Immutable reference closure independently
+executes 84 actions, including strict ApiCompat validation with the three
+producer-owned Immutable, Collections and Runtime pack members. Restore and
+construction produce no assemblies; repeated Ninja has no work and shared
+caches remain unchanged. Focused fixtures cover future and stale directories,
+explicit-file precedence, unused empty directories, undeclared dependencies,
+reference-only invalidation and atomic rejection of outside-root members or
+stale files without producers.
+
+The full net11 library closure now reaches resource compilation, where four
+libraries request the unsupported preserialized-resource profile; partial-facade
+source generation also remains unsupported. A whole managed CoreLib Build now
+independently executes 238 actions, including compilation, ILLink and ApiCompat.
+Its compiler-generated sources are materialized and its linked DLL/PDB and
+compiler XML are published with byte-identical copies. Repeated Ninja has no
+work and preserves the validation semaphore; shared caches remain unchanged.
+CoreLib's unused targeting-pack fallback has no members, while the separate
+Immutable reference probe verifies nonempty transitive membership.
+Localization and validation stay enabled, failed construction publishes no
+graph/products, and a full native runtime or complete net11 library build
+remains unproven.
 
 ### NuGet fact capture
 

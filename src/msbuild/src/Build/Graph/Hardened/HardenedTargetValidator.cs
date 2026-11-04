@@ -499,6 +499,7 @@ internal sealed class HardenedTargetValidator
             }
         }
 
+        _activeTargets.Remove(targetName);
         foreach (TargetSpecification afterTarget in project.GetTargetsWhichRunAfter(target.Name))
         {
             ValidateTarget(
@@ -510,7 +511,6 @@ internal sealed class HardenedTargetValidator
                 isFailureContext: isFailureContext);
         }
 
-        _activeTargets.Remove(targetName);
         if (!targetExecutes && _constructionTaskExecutor is not null)
         {
             visitedTargets.Remove(targetName);

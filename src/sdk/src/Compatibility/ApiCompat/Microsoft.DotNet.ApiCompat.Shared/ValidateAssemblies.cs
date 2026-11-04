@@ -20,7 +20,8 @@ namespace Microsoft.DotNet.ApiCompat
                     options.EnableRuleAttributesMustMatch,
                     options.EnableRuleCannotChangeParameterName),
                 options.RespectInternals,
-                options.ExcludeAttributesFiles);
+                options.ExcludeAttributesFiles,
+                options.ReferenceFilePaths);
 
             IApiCompatRunner apiCompatRunner = serviceProvider.ApiCompatRunner;
             ApiCompatRunnerOptions apiCompatOptions = new(options.EnableStrictMode);

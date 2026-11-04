@@ -21,7 +21,8 @@ namespace Microsoft.DotNet.ApiCompat
             Func<ISuppressionEngine> suppressionEngineFactory,
             Func<ISuppressibleLog, IRuleFactory> ruleFactory,
             bool respectInternals,
-            string[]? excludeAttributesFiles)
+            string[]? excludeAttributesFiles,
+            IReadOnlySet<string>? referenceFilePaths = null)
         {
             _suppressionEngine = new Lazy<ISuppressionEngine>(suppressionEngineFactory);
             _compatibilityLogger = new Lazy<ISuppressibleLog>(() => logFactory(SuppressionEngine));
@@ -48,7 +49,10 @@ namespace Microsoft.DotNet.ApiCompat
                 return new ApiCompatRunner(SuppressibleLog,
                     SuppressionEngine,
                     new ApiComparerFactory(ruleFactory(SuppressibleLog), apiComparerSettings),
-                    new AssemblySymbolLoaderFactory(SuppressibleLog, respectInternals));
+                    new AssemblySymbolLoaderFactory(SuppressibleLog, respectInternals)
+                    {
+                        ReferenceFilePaths = referenceFilePaths
+                    });
             });
         }
 

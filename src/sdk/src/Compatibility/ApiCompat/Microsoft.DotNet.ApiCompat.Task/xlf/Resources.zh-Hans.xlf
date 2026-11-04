@@ -7,6 +7,11 @@
         <target state="translated">找到 API 中断性变更。如果这些文件是有意的，可以使用“/p:ApiCompatGenerateSuppressionFile=true”重新生成以更新 APICompat 抑制文件</target>
         <note />
       </trans-unit>
+      <trans-unit id="InvalidDeclaredInputs">
+        <source>Hardened API compatibility requires exact declared file inputs, prepared reference directories, and a single semaphore output. Unsupported value: {0}.</source>
+        <target state="new">Hardened API compatibility requires exact declared file inputs, prepared reference directories, and a single semaphore output. Unsupported value: {0}.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="UnnecessarySuppressionsFoundRegenerateSuppressionFileCommandHelp">
         <source>Unnecessary suppressions found. The APICompat suppression file can be updated by rebuilding with '/p:ApiCompatGenerateSuppressionFile=true'</source>
         <target state="translated">找到不必要的抑制。可以使用“/p:ApiCompatGenerateSuppressionFile=true”重新生成以更新 APICompat 抑制文件</target>

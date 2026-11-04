@@ -1,0 +1,69 @@
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <AssemblyName>ApiCompatFixture</AssemblyName>
+    <Nullable>enable</Nullable>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ApiCompatValidateAssemblies Condition="'$(ApiCompatValidateAssemblies)' == ''">true</ApiCompatValidateAssemblies>
+    <ApiCompatContractAssembly>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../contract/ApiCompatFixture.dll'))</ApiCompatContractAssembly>
+    <ApiCompatUseImplementationReferencesForContract>false</ApiCompatUseImplementationReferencesForContract>
+    <ApiCompatEnableRuleAttributesMustMatch>true</ApiCompatEnableRuleAttributesMustMatch>
+    <ApiCompatEnableRuleCannotChangeParameterName>true</ApiCompatEnableRuleCannotChangeParameterName>
+    <DefineConstants Condition="'$(ApiCompatReferenceOrder)' == 'true'">$(DefineConstants);REFERENCE_ORDER</DefineConstants>
+    <ApiCompatCompileReference Condition="'$(ApiCompatCompileReference)' == ''">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../explicit/Dependency.dll'))</ApiCompatCompileReference>
+    <_ApiCompatFutureDirectory>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'future refs'))</_ApiCompatFutureDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Surface.cs" />
+    <ApiCompatContractAssemblyReferences Include="$(ApiCompatReferenceDirectory)" />
+    <ApiCompatExcludeAttributesFile Include="excluded-attributes.txt" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ApiCompatReferenceOrder)' == 'true'">
+    <Reference Include="$(ApiCompatCompileReference)" Private="false" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ApiCompatReferenceOrder)' == 'true' and '$(ApiCompatProducedCase)' == ''">
+    <!-- A malformed DLL in this earlier directory must lose to the explicit file. -->
+    <ApiCompatContractAssemblyReferences Include="$(MSBuildProjectDirectory)/../fallback"
+                                        Condition="'$(ApiCompatUseExplicitReferences)' != 'false'" />
+    <ApiCompatContractAssemblyReferences Include="$(MSBuildProjectDirectory)/../explicit/Dependency.dll"
+                                        Condition="'$(ApiCompatUseExplicitReferences)' != 'false'" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ApiCompatProducedCase)' != ''">
+    <ApiCompatProducedReferenceDirectory Include="$(_ApiCompatFutureDirectory)" />
+    <ApiCompatProducedReferenceFile Include="$(_ApiCompatFutureDirectory)/Dependency.dll"
+                                   Condition="'$(ApiCompatProducedCase)' == 'future' or '$(ApiCompatProducedCase)' == 'stale' or '$(ApiCompatProducedCase)' == 'precedence' or '$(ApiCompatProducedCase)' == 'producerless'" />
+    <ApiCompatProducedReferenceFile Include="$(ApiCompatCompileReference)" Condition="'$(ApiCompatProducedCase)' == 'outside'" />
+    <ApiCompatContractAssemblyReferences Include="$(_ApiCompatFutureDirectory)" />
+    <ApiCompatContractAssemblyReferences Include="$(ApiCompatCompileReference)" Condition="'$(ApiCompatProducedCase)' == 'precedence'" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <!-- Import after the SDK so the source package's real assembly-validation targets win. -->
+  <Import Project="$(ApiCompatTargetsDirectory)/Microsoft.DotNet.ApiCompat.Task.targets" />
+  <!-- Compiler references stay immutable while ApiCompat consumes the future copy on both sides. -->
+  <Target Name="UseProducedApiCompatReferences"
+          AfterTargets="GetReferencesForApiCompatValidateAssemblies"
+          Condition="'$(ApiCompatProducedCase)' != ''">
+    <ItemGroup>
+      <ApiCompatAssemblyReferences Remove="@(ApiCompatAssemblyReferences)" />
+      <ApiCompatAssemblyReferences Include="@(ApiCompatContractAssemblyReferences)" />
+    </ItemGroup>
+  </Target>
+  <Target Name="ProduceApiCompatReferences"
+          BeforeTargets="ApiCompatValidateAssembliesCore"
+          Condition="'$(ApiCompatProducedCase)' == 'future' or '$(ApiCompatProducedCase)' == 'stale' or '$(ApiCompatProducedCase)' == 'precedence'">
+    <MakeDir Directories="$(_ApiCompatFutureDirectory)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CopyFiles SourceFiles="$(ApiCompatProducerSource)" DestinationFiles="$(_ApiCompatFutureDirectory)/Dependency.dll"
+               DeclaredInputs="$(ApiCompatProducerSource)" DeclaredOutputs="$(_ApiCompatFutureDirectory)/Dependency.dll" />
+  </Target>
+  <Target Name="InvalidApiCompatPrimary"
+          BeforeTargets="ApiCompatValidateAssembliesCore"
+          Condition="'$(ApiCompatInvalidPrimary)' != ''">
+    <ItemGroup>
+      <ApiCompatLeftAssemblies Remove="@(ApiCompatLeftAssemblies)" />
+      <ApiCompatLeftAssemblies Include="$(MSBuildProjectDirectory)/../contract/%2A.dll" Condition="'$(ApiCompatInvalidPrimary)' == 'wildcard'" />
+      <ApiCompatLeftAssemblies Include="$(ApiCompatReferenceDirectory)" Condition="'$(ApiCompatInvalidPrimary)' == 'directory'" />
+    </ItemGroup>
+  </Target>
+</Project>

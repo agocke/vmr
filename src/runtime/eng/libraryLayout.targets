@@ -92,6 +92,23 @@
           DependsOnTargets="GetLibraryLayout"
           Returns="@(LibraryTestHostFile)" />
 
+  <!-- Export the reference-layout closure, not an inventory of an unbuilt targeting pack. -->
+  <Target Name="AnnotateTargetPathWithApiCompatReferenceFiles"
+          BeforeTargets="GetTargetPath"
+          DependsOnTargets="ResolveReferences;GetLibraryLayout;GetTargetPathWithTargetPlatformMoniker"
+          Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(IsCrossTargetingBuild)' != 'true'">
+    <Microsoft.DotNet.ApiCompat.Task.FormatApiCompatReferenceFiles
+      DeclaredInputs="" DeclaredOutputs=""
+      ReferenceDirectory="$(MicrosoftNetCoreAppRefPackRefDir)"
+      LayoutFiles="@(LibraryLayoutFile)"
+      TransitiveReferences="@(_ResolvedProjectReferencePaths->Metadata('ApiCompatReferenceFiles'));@(ResolvedMatchingContract->Metadata('ApiCompatReferenceFiles'))">
+      <Output TaskParameter="ReferenceFiles" ItemName="_ApiCompatReferenceLayoutFile" />
+    </Microsoft.DotNet.ApiCompat.Task.FormatApiCompatReferenceFiles>
+    <ItemGroup>
+      <TargetPathWithTargetPlatformMoniker ApiCompatReferenceFiles="@(_ApiCompatReferenceLayoutFile)" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="_GetLibraryLayoutFiles"
           DependsOnTargets="GetLibraryBuildProducts"
           Condition="'@(LibraryLayoutDirectory)' != ''">

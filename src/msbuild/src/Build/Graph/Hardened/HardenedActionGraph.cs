@@ -244,7 +244,20 @@ internal sealed class HardenedActionGraph
         Dictionary<string, (string, ElementLocation)> expressions = new(node.ParametersForBuild, MSBuildNameIgnoreCaseComparer.Default);
         Require(expressions.TryGetValue("DeclaredInputs", out var input), "missing DeclaredInputs", node.Location);
         Require(expressions.TryGetValue("DeclaredOutputs", out var output), "missing DeclaredOutputs", node.Location);
-        string[] inputs = Paths([.. bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(input.Item1, ExpanderOptions.ExpandAll, input.Item2)]);
+        ITaskItem[] inputItems = [.. bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(input.Item1, ExpanderOptions.ExpandAll, input.Item2)];
+        string[] inputs = Paths(inputItems);
+        HashSet<string> requiredProducers = new(FileUtilities.PathComparer);
+        for (int i = 0; i < inputItems.Length; i++)
+        {
+            string value = inputItems[i].GetMetadata("RequireProducer");
+            Require(value.Length == 0 || value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("false", StringComparison.OrdinalIgnoreCase),
+                $"invalid RequireProducer metadata '{value}'", node.Location);
+            if (value.Equals("true", StringComparison.OrdinalIgnoreCase))
+            {
+                requiredProducers.Add(inputs[i]);
+            }
+        }
         string[] outputs = Paths([.. bucket.Expander.ExpandIntoTaskItemsLeaveEscaped(output.Item1, ExpanderOptions.ExpandAll, output.Item2)]);
         List<TreeOutput> trees = [];
         if (expressions.TryGetValue("DeclaredOutputTrees", out var treeExpression))
@@ -364,7 +377,7 @@ internal sealed class HardenedActionGraph
             json.WriteEndObject();
         }
 
-        _actions.Add(new(stream.ToArray(), [.. inputs, taskAssembly], outputs, taskAssembly, [.. trees]));
+        _actions.Add(new(stream.ToArray(), [.. inputs, taskAssembly], outputs, taskAssembly, [.. trees], requiredProducers));
         return true;
     }
 
@@ -417,6 +430,7 @@ internal sealed class HardenedActionGraph
                 }
                 else
                 {
+                    Require(!_actions[i].RequiredProducers.Contains(input), $"input '{input}' requiring a declared producer");
                     Require(File.Exists(input) && !Directory.Exists(input), $"missing regular-file input '{input}'");
                     foreach (string output in producers.Keys)
                     {
@@ -675,7 +689,8 @@ internal sealed class HardenedActionGraph
 
     private sealed record TreeOutput(string Root, string Archive, string Dyndep, string Receipt);
 
-    private sealed record ActionInvocation(byte[] Contents, string[] Inputs, string[] Outputs, string Assembly, TreeOutput[] Trees)
+    private sealed record ActionInvocation(byte[] Contents, string[] Inputs, string[] Outputs, string Assembly, TreeOutput[] Trees,
+        HashSet<string> RequiredProducers)
     {
         internal IEnumerable<string> OwnedPaths()
         {

@@ -7,6 +7,11 @@
         <target state="translated">Zjistily se změny způsobující chybu rozhraní API. Pokud jsou záměrné, je možné soubor potlačení APICompat aktualizovat opětovným sestavením pomocí /p:ApiCompatGenerateSuppressionFile=true.</target>
         <note />
       </trans-unit>
+      <trans-unit id="InvalidDeclaredInputs">
+        <source>Hardened API compatibility requires exact declared file inputs, prepared reference directories, and a single semaphore output. Unsupported value: {0}.</source>
+        <target state="new">Hardened API compatibility requires exact declared file inputs, prepared reference directories, and a single semaphore output. Unsupported value: {0}.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="UnnecessarySuppressionsFoundRegenerateSuppressionFileCommandHelp">
         <source>Unnecessary suppressions found. The APICompat suppression file can be updated by rebuilding with '/p:ApiCompatGenerateSuppressionFile=true'</source>
         <target state="translated">Byla nalezena nepotřebná potlačení. Soubor potlačení APICompat se dá aktualizovat opětovným sestavením pomocí „/p:ApiCompatGenerateSuppressionFile=true“.</target>

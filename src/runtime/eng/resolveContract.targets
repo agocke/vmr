@@ -107,7 +107,18 @@
     <!-- Fall back to the targeting pack dir for NetCoreAppCurrent to avoid passing through dependencies from ref to src. -->
     <ApiCompatContractAssemblyReferences Include="$(MicrosoftNetCoreAppRefPackRefDir)"
                                          Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', '$(NetCoreAppCurrent)'))" />
+    <ApiCompatProducedReferenceDirectory Include="$(MicrosoftNetCoreAppRefPackRefDir)"
+                                        Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', '$(NetCoreAppCurrent)'))" />
   </ItemGroup>
+
+  <Target Name="CollectProducedApiCompatReferences"
+          BeforeTargets="CollectApiCompatInputs"
+          DependsOnTargets="ResolveProjectReferences"
+          Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true'">
+    <ItemGroup>
+      <ApiCompatProducedReferenceFile Include="@(ResolvedMatchingContract->Metadata('ApiCompatReferenceFiles'))" />
+    </ItemGroup>
+  </Target>
 
     <!-- Use the apicompat task package instead of the in-built SDK functionality to consume newer features. -->
   <ItemGroup Condition="'$(EnablePackageValidation)' == 'true' or

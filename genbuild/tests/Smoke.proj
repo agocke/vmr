@@ -25,6 +25,7 @@
     <CallTarget Targets="TestArcadeLayout" />
     <CallTarget Targets="TestArcadeTargetFrameworkInputs" />
     <CallTarget Targets="TestRuntimeLibraryLayout" />
+    <CallTarget Targets="TestRuntimeApiCompatReferenceFiles" />
     <CallTarget Targets="TestRuntimeLibraryTestHostLayout" />
     <CallTarget Targets="TestResourceMetadata" />
     <CallTarget Targets="TestRuntimeResourceCompilation" />
@@ -35,6 +36,7 @@
     <CallTarget Targets="TestXlfLocalization" />
     <CallTarget Targets="TestSatelliteSource" />
     <CallTarget Targets="TestCompilerGeneratedFiles" />
+    <CallTarget Targets="TestApiCompat" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -536,6 +538,15 @@
                       Exists('$(_MissingFactGraph)') or Exists('$(_MissingFactGraph).actions') or Exists('$(PreparedFactsRoot)rejected-$(PreparedFactKind).txt')"
            Text="Missing $(PreparedFactKind) facts for a discovered framework must fail its required import without publishing a graph or executing actions." />
   </Target>
+  <Target Name="TestRuntimeApiCompatReferenceFiles">
+    <PropertyGroup>
+      <_RuntimeApiCompatRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'runtime-apicompat-reference-files'))</_RuntimeApiCompatRoot>
+      <_RuntimeApiCompatLayoutTargets>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/runtime/eng/libraryLayout.targets'))</_RuntimeApiCompatLayoutTargets>
+    </PropertyGroup>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)RuntimeApiCompatReferenceFiles.proj" Targets="Test"
+             Properties="MSBuildHardenedGraph=true;FixtureRoot=$(_RuntimeApiCompatRoot);RuntimeLibraryLayoutTargetsPath=$(_RuntimeApiCompatLayoutTargets);ApiCompatTaskAssembly=$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/tools/net11.0/Microsoft.DotNet.ApiCompat.Task.dll" />
+  </Target>
+
   <Target Name="TestRuntimeLibraryLayout">
     <PropertyGroup>
       <_RuntimeLayoutRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'runtime-library-layout'))</_RuntimeLayoutRoot>
@@ -3607,6 +3618,348 @@
     </Exec>
     <Error Condition="'$(_OrdinaryWinMDExitCode)' == '0' or Exists('$(_TestDirectory)winmd-ordinary-mixed.txt') or !$([System.IO.File]::ReadAllText('$(_TestDirectory)winmd-ordinary-mixed.log').Contains('System.IO.FileNotFoundException'))"
            Text="Ordinary builds must retain the existing PE-inspecting WinMD checker." />
+  </Target>
+  <Target Name="TestApiCompat">
+    <PropertyGroup>
+      <_ApiCompatRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'apicompat'))</_ApiCompatRoot>
+      <_ApiCompatAction>$(_ApiCompatRoot)action/</_ApiCompatAction>
+      <_ApiCompatSemaphore>obj/Debug/net11.0/Microsoft.DotNet.ApiCompat.ValidateAssemblies.Common.semaphore</_ApiCompatSemaphore>
+      <_ApiCompatSnapshot>obj/apicompatinputs/Debug/AnyCPU/net11.0/ApiCompat.csproj.g.props</_ApiCompatSnapshot>
+      <_ApiCompatArguments>-p:MSBuildGraphRepositoryRoot=&quot;$(_ApiCompatRoot)&quot; -p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:ApiCompatTargetsDirectory=&quot;$(_AppDirectory)/toolset/ApiCompat/build&quot; -p:DotNetApiCompatTaskAssembly=&quot;$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/tools/net11.0/Microsoft.DotNet.ApiCompat.Task.dll&quot; -p:RoslynAssembliesPath=&quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot;</_ApiCompatArguments>
+      <_ApiCompatVerifier>&quot;$(GenBuildTestHost)&quot; &quot;$(_ApiCompatRoot)Verifier.dll&quot;</_ApiCompatVerifier>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ApiCompatDirectory Include="$(_ApiCompatAction);$(_ApiCompatRoot)ordinary/;$(_ApiCompatRoot)inactive/" />
+      <_ApiCompatFixture Include="$(MSBuildThisFileDirectory)ApiCompat/ApiCompat.csproj;$(MSBuildThisFileDirectory)ApiCompat/CompatibilitySuppressions.xml;$(MSBuildThisFileDirectory)ApiCompat/excluded-attributes.txt" />
+      <_ApiCompatImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+    </ItemGroup>
+    <MakeDir Directories="@(_ApiCompatDirectory);$(_ApiCompatRoot)seed;$(_ApiCompatRoot)contract" />
+    <WriteLinesToFile File="$(_ApiCompatRoot)%(_ApiCompatImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="@(_ApiCompatFixture)" DestinationFolder="%(_ApiCompatDirectory.Identity)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs" DestinationFiles="%(_ApiCompatDirectory.Identity)Surface.cs" />
+    <!-- Only the externally supplied contract and assertion helper are precompiled, never the consumer. -->
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_ApiCompatRoot)seed" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)seed/HelloWorld.csproj&quot; $(_ApiCompatArguments)" />
+    <XmlPeek XmlInputPath="$(_ApiCompatRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_ApiCompatSeedReference" />
+    </XmlPeek>
+    <Error Condition="'@(_ApiCompatSeedReference)' == ''" Text="ApiCompat fixture setup requires prepared framework references." />
+    <PropertyGroup>
+      <_ApiCompatReferenceDirectory>@(_ApiCompatSeedReference->'%(RootDir)%(Directory)'->Distinct())</_ApiCompatReferenceDirectory>
+      <_ApiCompatArguments>$(_ApiCompatArguments) -p:ApiCompatReferenceDirectory=&quot;$(_ApiCompatReferenceDirectory)&quot;</_ApiCompatArguments>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_ApiCompatRoot)compile.rsp" Lines="@(_ApiCompatSeedReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -define:CONTRACT -out:&quot;$(_ApiCompatRoot)contract/ApiCompatFixture.dll&quot; @&quot;$(_ApiCompatRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_ApiCompatRoot)Verifier.dll&quot; @&quot;$(_ApiCompatRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Verifier.cs&quot;" />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_ApiCompatRoot)Verifier.runtimeconfig.json" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatAction)ApiCompat.csproj&quot; $(_ApiCompatArguments)" />
+    <Error Condition="!Exists('$(_ApiCompatAction)$(_ApiCompatSnapshot)') or Exists('$(_ApiCompatAction)obj/Debug/net11.0/ApiCompatFixture.dll') or Exists('$(_ApiCompatAction)$(_ApiCompatSemaphore)') or Exists('$(_ApiCompatAction)bin')"
+           Text="Restore must capture ApiCompat directory inputs without building the consumer or touching its success semaphore." />
+    <Exec Command="$(_App) build &quot;$(_ApiCompatAction)ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatAction)build.ninja&quot;" />
+    <Exec Command="$(_ApiCompatVerifier) graph &quot;$(_ApiCompatAction)&quot; &quot;$(_ApiCompatReferenceDirectory)&quot; &quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot;" />
+    <Error Condition="Exists('$(_ApiCompatAction)bin')" Text="Construction must not publish the consumer assembly." />
+    <Exec WorkingDirectory="$(_ApiCompatAction)" Command="ninja -f build.ninja" />
+    <Error Condition="!Exists('$(_ApiCompatAction)$(_ApiCompatSemaphore)') or $([System.IO.File]::ReadAllBytes('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Length) != '0'"
+           Text="Successful source ApiCompat execution must publish an empty semaphore after compiling the implementation." />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)ordinary/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:MSBuildRestoreGraphInputs=false -t:Build" />
+    <Error Condition="!Exists('$(_ApiCompatRoot)ordinary/$(_ApiCompatSemaphore)') or Exists('$(_ApiCompatRoot)ordinary/$(_ApiCompatSnapshot)')"
+           Text="Ordinary assembly validation must succeed without graph-input capture." />
+    <PropertyGroup>
+      <_ApiCompatSuccessTime>$([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Ticks)</_ApiCompatSuccessTime>
+    </PropertyGroup>
+    <Exec WorkingDirectory="$(_ApiCompatAction)" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ApiCompatNoWork" />
+    </Exec>
+    <Error Condition="!$(_ApiCompatNoWork.Contains('no work to do')) or $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Ticks) != '$(_ApiCompatSuccessTime)'"
+           Text="An unchanged ApiCompat action graph must do no work and preserve the success semaphore." />
+    <PropertyGroup>
+      <_ApiCompatImplementationTime>$([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)obj/Debug/net11.0/ApiCompatFixture.dll').Ticks)</_ApiCompatImplementationTime>
+    </PropertyGroup>
+    <GetFileHash Files="$(_ApiCompatAction)obj/Debug/net11.0/ApiCompatFixture.dll">
+      <Output TaskParameter="Items" ItemName="_ApiCompatRecoveryBefore" />
+    </GetFileHash>
+    <Delete Files="$(_ApiCompatAction)$(_ApiCompatSemaphore)" />
+    <Exec WorkingDirectory="$(_ApiCompatAction)" Command="ninja -f build.ninja" />
+    <GetFileHash Files="$(_ApiCompatAction)obj/Debug/net11.0/ApiCompatFixture.dll">
+      <Output TaskParameter="Items" ItemName="_ApiCompatRecoveryAfter" />
+    </GetFileHash>
+    <Error Condition="!Exists('$(_ApiCompatAction)$(_ApiCompatSemaphore)') or $([System.IO.File]::ReadAllBytes('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Length) != '0' or
+                      $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)obj/Debug/net11.0/ApiCompatFixture.dll').Ticks) != '$(_ApiCompatImplementationTime)' or
+                      '@(_ApiCompatRecoveryBefore->'%(FileHash)')' != '@(_ApiCompatRecoveryAfter->'%(FileHash)')'"
+           Text="Deleting only the success semaphore must rerun ApiCompat successfully without recompiling or changing the implementation." />
+    <PropertyGroup>
+      <_ApiCompatSuccessTime>$([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Ticks)</_ApiCompatSuccessTime>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_ApiCompatAction)excluded-attributes.txt" Lines="" Overwrite="true" />
+    <WriteLinesToFile File="$(_ApiCompatRoot)ordinary/excluded-attributes.txt" Lines="" Overwrite="true" />
+    <Exec WorkingDirectory="$(_ApiCompatAction)" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ApiCompatActionAttributeFailure" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_ApiCompatActionAttributeDiagnostics" />
+    </Exec>
+    <!-- The ordinary target's legacy incremental inputs omit attribute files; force its diagnostic oracle. -->
+    <Delete Files="$(_ApiCompatRoot)ordinary/$(_ApiCompatSemaphore)" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)ordinary/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:MSBuildRestoreGraphInputs=false -t:Build"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ApiCompatOrdinaryAttributeFailure" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_ApiCompatOrdinaryAttributeDiagnostics" />
+    </Exec>
+    <Error Condition="'$(_ApiCompatActionAttributeFailure)' == '0' or '$(_ApiCompatOrdinaryAttributeFailure)' == '0' or
+                      !Exists('$(_ApiCompatAction)$(_ApiCompatSemaphore)') or
+                      $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Ticks) != '$(_ApiCompatSuccessTime)' or
+                      $([System.IO.File]::ReadAllBytes('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Length) != '0' or
+                      $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)obj/Debug/net11.0/ApiCompatFixture.dll').Ticks) != '$(_ApiCompatImplementationTime)'"
+           Text="Removing the Obsolete exclusion must invalidate the existing ApiCompat action, fail without recompiling, and preserve the prior semaphore timestamp and bytes." />
+    <WriteLinesToFile File="$(_ApiCompatRoot)action-attribute-diagnostics.txt" Lines="@(_ApiCompatActionAttributeDiagnostics)" Overwrite="true" />
+    <WriteLinesToFile File="$(_ApiCompatRoot)ordinary-attribute-diagnostics.txt" Lines="@(_ApiCompatOrdinaryAttributeDiagnostics)" Overwrite="true" />
+    <Exec Command="$(_ApiCompatVerifier) diagnostics &quot;$(_ApiCompatRoot)ordinary-attribute-diagnostics.txt&quot; &quot;$(_ApiCompatRoot)action-attribute-diagnostics.txt&quot; CP0014" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/excluded-attributes.txt;$(MSBuildThisFileDirectory)ApiCompat/excluded-attributes.txt"
+          DestinationFiles="$(_ApiCompatAction)excluded-attributes.txt;$(_ApiCompatRoot)ordinary/excluded-attributes.txt" />
+    <Touch Files="$(_ApiCompatAction)excluded-attributes.txt;$(_ApiCompatRoot)ordinary/excluded-attributes.txt" />
+    <Exec WorkingDirectory="$(_ApiCompatAction)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)ordinary/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:MSBuildRestoreGraphInputs=false -t:Build" />
+    <Error Condition="!Exists('$(_ApiCompatAction)$(_ApiCompatSemaphore)') or $([System.IO.File]::ReadAllBytes('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Length) != '0' or
+                      $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)obj/Debug/net11.0/ApiCompatFixture.dll').Ticks) != '$(_ApiCompatImplementationTime)'"
+           Text="Restoring the attribute exclusion must recover successful validation without recompiling the implementation." />
+    <PropertyGroup>
+      <_ApiCompatSuccessTime>$([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Ticks)</_ApiCompatSuccessTime>
+    </PropertyGroup>
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/Breaking.cs;$(MSBuildThisFileDirectory)ApiCompat/Breaking.cs"
+          DestinationFiles="$(_ApiCompatAction)Surface.cs;$(_ApiCompatRoot)ordinary/Surface.cs" />
+    <Touch Files="$(_ApiCompatAction)Surface.cs;$(_ApiCompatRoot)ordinary/Surface.cs" />
+    <Exec WorkingDirectory="$(_ApiCompatAction)" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ApiCompatActionFailure" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_ApiCompatActionDiagnostics" />
+    </Exec>
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)ordinary/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:MSBuildRestoreGraphInputs=false -t:Build"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ApiCompatOrdinaryFailure" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_ApiCompatOrdinaryDiagnostics" />
+    </Exec>
+    <Error Condition="'$(_ApiCompatActionFailure)' == '0' or '$(_ApiCompatOrdinaryFailure)' == '0' or !Exists('$(_ApiCompatAction)$(_ApiCompatSemaphore)') or
+                      $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Ticks) != '$(_ApiCompatSuccessTime)' or
+                      $([System.IO.File]::ReadAllBytes('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Length) != '0'"
+           Text="Removing an API must fail ordinary and independent execution, without deleting or rewriting the prior semaphore." />
+    <WriteLinesToFile File="$(_ApiCompatRoot)action-diagnostics.txt" Lines="@(_ApiCompatActionDiagnostics)" Overwrite="true" />
+    <WriteLinesToFile File="$(_ApiCompatRoot)ordinary-diagnostics.txt" Lines="@(_ApiCompatOrdinaryDiagnostics)" Overwrite="true" />
+    <Exec Command="$(_ApiCompatVerifier) diagnostics &quot;$(_ApiCompatRoot)ordinary-diagnostics.txt&quot; &quot;$(_ApiCompatRoot)action-diagnostics.txt&quot;" />
+    <!-- The already-declared default suppression file changes; the existing graph must observe it. -->
+    <WriteLinesToFile File="$(_ApiCompatAction)CompatibilitySuppressions.xml"
+                      Lines="&lt;Suppressions&gt;&lt;Suppression&gt;&lt;DiagnosticId&gt;CP0002&lt;/DiagnosticId&gt;&lt;Target&gt;M:ApiCompatFixture.Surface.Required(System.Int32)&lt;/Target&gt;&lt;/Suppression&gt;&lt;/Suppressions&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(_ApiCompatAction)CompatibilitySuppressions.xml" DestinationFolder="$(_ApiCompatRoot)ordinary" />
+    <Exec WorkingDirectory="$(_ApiCompatAction)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)ordinary/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:MSBuildRestoreGraphInputs=false -t:Build" />
+    <Error Condition="!Exists('$(_ApiCompatAction)$(_ApiCompatSemaphore)') or $([System.IO.File]::ReadAllBytes('$(_ApiCompatAction)$(_ApiCompatSemaphore)').Length) != '0'"
+           Text="The existing graph must honor changed suppression XML and publish success." />
+    <ItemGroup>
+      <_ApiCompatReject Include="generate" Arguments="-p:ApiCompatGenerateSuppressionFile=true -p:ApiCompatSuppressionOutputFile=&quot;$(_ApiCompatAction)generated-suppressions.xml&quot;" />
+      <_ApiCompatReject Include="wildcard" Arguments="-p:ApiCompatInvalidPrimary=wildcard" />
+      <_ApiCompatReject Include="directory" Arguments="-p:ApiCompatInvalidPrimary=directory" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_ApiCompatAction)ApiCompat.csproj&quot; $(_ApiCompatArguments) %(_ApiCompatReject.Arguments) -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatAction)rejected-%(_ApiCompatReject.Identity).ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_ApiCompatRejectedExit" />
+    </Exec>
+    <Error Condition="@(_ApiCompatRejectedExit->AnyHaveMetadataValue('Identity', '0')) or Exists('$(_ApiCompatAction)rejected-%(_ApiCompatReject.Identity).ninja') or
+                      Exists('$(_ApiCompatAction)rejected-%(_ApiCompatReject.Identity).ninja.actions') or Exists('$(_ApiCompatAction)generated-suppressions.xml')"
+           Text="Unsupported ApiCompat suppression generation and directory/wildcard primary operands must fail without publishing a partial graph." />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)inactive/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatValidateAssemblies=false" />
+    <Error Condition="Exists('$(_ApiCompatRoot)inactive/$(_ApiCompatSnapshot)') or Exists('$(_ApiCompatRoot)inactive/$(_ApiCompatSemaphore)') or Exists('$(_ApiCompatRoot)inactive/bin')"
+           Text="Inactive ApiCompat validation must not capture an unnecessary inventory or build products." />
+    <PropertyGroup>
+      <_ApiCompatOrderRoot>$(_ApiCompatRoot)reference-order/</_ApiCompatOrderRoot>
+      <_ApiCompatOrderAction>$(_ApiCompatOrderRoot)action/</_ApiCompatOrderAction>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ApiCompatOrderDirectory Include="$(_ApiCompatOrderAction);$(_ApiCompatOrderRoot)ordinary/" />
+    </ItemGroup>
+    <MakeDir Directories="@(_ApiCompatOrderDirectory);$(_ApiCompatOrderRoot)explicit;$(_ApiCompatOrderRoot)fallback;$(_ApiCompatOrderRoot)contract" />
+    <Copy SourceFiles="@(_ApiCompatFixture)" DestinationFolder="%(_ApiCompatOrderDirectory.Identity)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs" DestinationFiles="%(_ApiCompatOrderDirectory.Identity)Surface.cs" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -out:&quot;$(_ApiCompatOrderRoot)explicit/Dependency.dll&quot; @&quot;$(_ApiCompatRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Dependency.cs&quot;" />
+    <WriteLinesToFile File="$(_ApiCompatOrderRoot)fallback/Dependency.dll" Lines="This earlier directory candidate must never be loaded." Overwrite="true" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -define:CONTRACT,REFERENCE_ORDER -r:&quot;$(_ApiCompatOrderRoot)explicit/Dependency.dll&quot; -out:&quot;$(_ApiCompatOrderRoot)contract/ApiCompatFixture.dll&quot; @&quot;$(_ApiCompatRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatOrderAction)ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatReferenceOrder=true" />
+    <Exec Command="$(_App) build &quot;$(_ApiCompatOrderAction)ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatReferenceOrder=true -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatOrderAction)build.ninja&quot;" />
+    <Exec Command="$(_ApiCompatVerifier) graph &quot;$(_ApiCompatOrderAction)&quot; &quot;$(_ApiCompatReferenceDirectory)&quot; &quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot;" />
+    <Exec WorkingDirectory="$(_ApiCompatOrderAction)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatOrderRoot)ordinary/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatReferenceOrder=true -p:MSBuildRestoreGraphInputs=false -t:Build" />
+    <!-- Appears after preparation, beside the primary assembly rather than in declared reference inputs. -->
+    <Copy SourceFiles="$(_ApiCompatOrderRoot)explicit/Dependency.dll" DestinationFolder="$(_ApiCompatOrderRoot)contract" />
+    <PropertyGroup>
+      <_ApiCompatOrderSuccessTime>$([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatOrderAction)$(_ApiCompatSemaphore)').Ticks)</_ApiCompatOrderSuccessTime>
+    </PropertyGroup>
+    <Exec Command="$(_App) build &quot;$(_ApiCompatOrderAction)ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatReferenceOrder=true -p:ApiCompatUseExplicitReferences=false -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatOrderAction)undeclared.ninja&quot;" />
+    <Exec WorkingDirectory="$(_ApiCompatOrderAction)" Command="ninja -f undeclared.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ApiCompatUndeclaredExit" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ApiCompatUndeclaredDiagnostics" />
+    </Exec>
+    <Error Condition="'$(_ApiCompatUndeclaredExit)' == '0' or !$(_ApiCompatUndeclaredDiagnostics.Contains('Dependency.dll')) or
+                      !$(_ApiCompatUndeclaredDiagnostics.Contains('resolve reference')) or
+                      !Exists('$(_ApiCompatOrderAction)$(_ApiCompatSemaphore)') or
+                      $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatOrderAction)$(_ApiCompatSemaphore)').Ticks) != '$(_ApiCompatOrderSuccessTime)'"
+           Text="A newly appearing undeclared sibling must not become an implicit loader fallback or change the prior success semaphore." />
+    <CallTarget Targets="TestApiCompatProducedReferences" />
+    <Message Importance="high" Text="Source ApiCompat smoke checks passed: prepared directory inventory, explicit file footprint, future compiler output, independent validation, no-op rebuild, semaphore-only recovery, exclusion invalidation and recovery with ordinary CP0014 parity, ordinary CP0002 parity, suppression replay, failure semaphore preservation, atomic rejection, explicit-file precedence and undeclared sibling rejection. $(_ApiCompatRoot)" />
+  </Target>
+  <Target Name="TestApiCompatProducedReferences">
+    <PropertyGroup>
+      <_ApiCompatProducedRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'apicompat-produced'))</_ApiCompatProducedRoot>
+      <_ApiCompatProducedArguments>-p:MSBuildGraphRepositoryRoot=&quot;$(_ApiCompatProducedRoot)&quot; -p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:ApiCompatTargetsDirectory=&quot;$(_AppDirectory)/toolset/ApiCompat/build&quot; -p:DotNetApiCompatTaskAssembly=&quot;$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/tools/net11.0/Microsoft.DotNet.ApiCompat.Task.dll&quot; -p:RoslynAssembliesPath=&quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot;</_ApiCompatProducedArguments>
+      <_ApiCompatProducedCompiler>&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library</_ApiCompatProducedCompiler>
+      <_ApiCompatProducedVerifier>&quot;$(GenBuildTestHost)&quot; &quot;$(_ApiCompatProducedRoot)Verifier.dll&quot;</_ApiCompatProducedVerifier>
+      <_ApiCompatProducedSemaphore>obj/Debug/net11.0/Microsoft.DotNet.ApiCompat.ValidateAssemblies.Common.semaphore</_ApiCompatProducedSemaphore>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ApiCompatProducedCase Include="future;stale;precedence" Dependency="true" Success="true" />
+      <_ApiCompatProducedCase Include="empty" Dependency="false" Success="true" />
+      <_ApiCompatProducedCase Include="missing;outside;producerless" Dependency="true" Success="false" />
+      <_ApiCompatProducedCase Update="@(_ApiCompatProducedCase)">
+        <Root>$([MSBuild]::NormalizeDirectory('$(_ApiCompatProducedRoot)', '%(Identity)'))</Root>
+        <ContractDefines>CONTRACT</ContractDefines>
+        <ContractDefines Condition="'%(_ApiCompatProducedCase.Dependency)' == 'true'">CONTRACT,REFERENCE_ORDER</ContractDefines>
+        <Arguments>$(_ApiCompatProducedArguments) -p:ApiCompatProducedCase=%(Identity) -p:ApiCompatReferenceOrder=%(_ApiCompatProducedCase.Dependency) -p:ApiCompatCompileReference=&quot;$(_ApiCompatProducedRoot)compile/Dependency.dll&quot; -p:ApiCompatProducerSource=&quot;$(_ApiCompatProducedRoot)%(Identity)/inputs/Dependency.dll&quot;</Arguments>
+      </_ApiCompatProducedCase>
+      <_ApiCompatProducedFixture Include="$(MSBuildThisFileDirectory)ApiCompat/ApiCompat.csproj;$(MSBuildThisFileDirectory)ApiCompat/CompatibilitySuppressions.xml;$(MSBuildThisFileDirectory)ApiCompat/excluded-attributes.txt" />
+      <_ApiCompatProducedImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+    </ItemGroup>
+    <MakeDir Directories="$(_ApiCompatProducedRoot)seed;$(_ApiCompatProducedRoot)compile" />
+    <MakeDir Directories="%(_ApiCompatProducedCase.Root)action;%(_ApiCompatProducedCase.Root)ordinary;%(_ApiCompatProducedCase.Root)contract;%(_ApiCompatProducedCase.Root)inputs" />
+    <WriteLinesToFile File="$(_ApiCompatProducedRoot)%(_ApiCompatProducedImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="@(_ApiCompatProducedFixture)" DestinationFolder="%(_ApiCompatProducedCase.Root)action" />
+    <Copy SourceFiles="@(_ApiCompatProducedFixture)" DestinationFolder="%(_ApiCompatProducedCase.Root)ordinary" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs" DestinationFiles="%(_ApiCompatProducedCase.Root)action/Surface.cs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs" DestinationFiles="%(_ApiCompatProducedCase.Root)ordinary/Surface.cs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_ApiCompatProducedRoot)seed" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatProducedRoot)seed/HelloWorld.csproj&quot; $(_ApiCompatProducedArguments)" />
+    <XmlPeek XmlInputPath="$(_ApiCompatProducedRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_ApiCompatProducedFrameworkReference" />
+    </XmlPeek>
+    <Error Condition="'@(_ApiCompatProducedFrameworkReference)' == ''" Text="Produced-reference fixture setup requires prepared framework references." />
+    <PropertyGroup>
+      <_ApiCompatProducedFrameworkDirectory>@(_ApiCompatProducedFrameworkReference->'%(RootDir)%(Directory)'->Distinct())</_ApiCompatProducedFrameworkDirectory>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ApiCompatProducedCase Update="@(_ApiCompatProducedCase)">
+        <Arguments>%(_ApiCompatProducedCase.Arguments) -p:ApiCompatReferenceDirectory=&quot;$(_ApiCompatProducedFrameworkDirectory)&quot;</Arguments>
+      </_ApiCompatProducedCase>
+      <_ApiCompatProducedSuccess Include="@(_ApiCompatProducedCase->WithMetadataValue('Success', 'true'))" />
+      <_ApiCompatProducedCopy Include="@(_ApiCompatProducedSuccess)" Exclude="empty" />
+      <_ApiCompatProducedGraph Include="@(_ApiCompatProducedCase)" Exclude="outside;producerless" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_ApiCompatProducedRoot)compile.rsp" Lines="@(_ApiCompatProducedFrameworkReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
+    <Exec Command="$(_ApiCompatProducedCompiler) -out:&quot;$(_ApiCompatProducedRoot)compile/Dependency.dll&quot; @&quot;$(_ApiCompatProducedRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Dependency.cs&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_ApiCompatProducedRoot)Verifier.dll&quot; @&quot;$(_ApiCompatProducedRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Verifier.cs&quot;" />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_ApiCompatProducedRoot)Verifier.runtimeconfig.json" />
+    <Exec Command="$(_ApiCompatProducedCompiler) -define:%(_ApiCompatProducedCase.ContractDefines) -r:&quot;$(_ApiCompatProducedRoot)compile/Dependency.dll&quot; -out:&quot;%(_ApiCompatProducedCase.Root)contract/ApiCompatFixture.dll&quot; @&quot;$(_ApiCompatProducedRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs&quot;" />
+    <Copy SourceFiles="$(_ApiCompatProducedRoot)compile/Dependency.dll" DestinationFiles="%(_ApiCompatProducedCopy.Root)inputs/Dependency.dll" />
+    <WriteLinesToFile File="$(_ApiCompatProducedRoot)precedence/inputs/Dependency.dll" Lines="An explicit reference must win over this produced directory candidate." Overwrite="true" />
+    <!-- These existing files must neither enter the preparation inventory nor be rewritten by producers. -->
+    <MakeDir Directories="$(_ApiCompatProducedRoot)stale/action/future refs;$(_ApiCompatProducedRoot)missing/action/future refs;$(_ApiCompatProducedRoot)producerless/action/future refs" />
+    <WriteLinesToFile File="$(_ApiCompatProducedRoot)stale/action/future refs/Undeclared.dll" Lines="Unowned stale sibling." Overwrite="true" />
+    <Copy SourceFiles="$(_ApiCompatProducedRoot)compile/Dependency.dll" DestinationFolder="$(_ApiCompatProducedRoot)missing/action/future refs" />
+    <Copy SourceFiles="$(_ApiCompatProducedRoot)compile/Dependency.dll" DestinationFolder="$(_ApiCompatProducedRoot)producerless/action/future refs" />
+    <ItemGroup>
+      <_ApiCompatProducedUnowned Include="$(_ApiCompatProducedRoot)stale/action/future refs/Undeclared.dll;$(_ApiCompatProducedRoot)missing/action/future refs/Dependency.dll;$(_ApiCompatProducedRoot)producerless/action/future refs/Dependency.dll" />
+      <_ApiCompatProducedUnowned Update="@(_ApiCompatProducedUnowned)">
+        <Before>$([System.IO.File]::GetLastWriteTimeUtc('%(Identity)').Ticks)</Before>
+      </_ApiCompatProducedUnowned>
+    </ItemGroup>
+    <GetFileHash Files="@(_ApiCompatProducedUnowned)">
+      <Output TaskParameter="Items" ItemName="_ApiCompatProducedUnownedBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) restore &quot;%(_ApiCompatProducedCase.Root)action/ApiCompat.csproj&quot; %(_ApiCompatProducedCase.Arguments)" />
+    <Exec Command="$(_ApiCompatProducedVerifier) produced-prepared &quot;%(_ApiCompatProducedCase.Root)action&quot; &quot;$(_ApiCompatProducedFrameworkDirectory)&quot; &quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot; %(_ApiCompatProducedCase.Identity) &quot;$(_ApiCompatProducedRoot)compile/Dependency.dll&quot;" />
+    <Exec Command="$(_App) build &quot;%(_ApiCompatProducedGraph.Root)action/ApiCompat.csproj&quot; %(_ApiCompatProducedGraph.Arguments) -p:MSBuildEmitActionGraph=&quot;%(_ApiCompatProducedGraph.Root)action/build.ninja&quot;" />
+    <Exec Command="$(_ApiCompatProducedVerifier) produced-graph &quot;%(_ApiCompatProducedGraph.Root)action&quot; &quot;$(_ApiCompatProducedFrameworkDirectory)&quot; &quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot; %(_ApiCompatProducedGraph.Identity) &quot;$(_ApiCompatProducedRoot)compile/Dependency.dll&quot;" />
+    <Exec Command="$(_App) build &quot;$(_ApiCompatProducedRoot)outside/action/ApiCompat.csproj&quot; @(_ApiCompatProducedCase->WithMetadataValue('Identity', 'outside')->'%(Arguments)') -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatProducedRoot)outside/action/rejected.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ApiCompatProducedOutsideExit" />
+    </Exec>
+    <Error Condition="'$(_ApiCompatProducedOutsideExit)' == '0' or Exists('$(_ApiCompatProducedRoot)outside/action/rejected.ninja') or
+                      Exists('$(_ApiCompatProducedRoot)outside/action/rejected.ninja.actions') or Exists('$(_ApiCompatProducedRoot)outside/action/$(_ApiCompatProducedSemaphore)') or
+                      Exists('$(_ApiCompatProducedRoot)outside/action/obj/Debug/net11.0/ApiCompatFixture.dll')"
+           Text="A produced reference outside its declared root must fail construction without publishing a partial graph or products." />
+    <Exec Command="$(_App) build &quot;$(_ApiCompatProducedRoot)producerless/action/ApiCompat.csproj&quot; @(_ApiCompatProducedCase->WithMetadataValue('Identity', 'producerless')->'%(Arguments)') -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatProducedRoot)producerless/action/rejected.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ApiCompatProducedProducerlessExit" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ApiCompatProducedProducerlessOutput" />
+    </Exec>
+    <Error Condition="'$(_ApiCompatProducedProducerlessExit)' == '0' or !$(_ApiCompatProducedProducerlessOutput.Contains('requiring a declared producer')) or
+                      Exists('$(_ApiCompatProducedRoot)producerless/action/rejected.ninja') or Exists('$(_ApiCompatProducedRoot)producerless/action/rejected.ninja.actions') or
+                      Exists('$(_ApiCompatProducedRoot)producerless/action/$(_ApiCompatProducedSemaphore)') or Exists('$(_ApiCompatProducedRoot)producerless/action/obj/Debug/net11.0/ApiCompatFixture.dll')"
+           Text="A stale regular DLL must not satisfy RequireProducer without a declared CopyFiles producer; rejection must not publish a partial graph or products." />
+    <Exec WorkingDirectory="%(_ApiCompatProducedSuccess.Root)action" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_ApiCompatProducedActionOutput" />
+    </Exec>
+    <WriteLinesToFile File="$(_ApiCompatProducedRoot)initial-action.txt" Lines="@(_ApiCompatProducedActionOutput)" Overwrite="true" />
+    <Exec Command="$(_ApiCompatProducedVerifier) produced-execution &quot;%(_ApiCompatProducedSuccess.Root)action&quot; &quot;$(_ApiCompatProducedRoot)initial-action.txt&quot; %(_ApiCompatProducedSuccess.Identity) true" />
+    <Exec Command="$(_App) restore &quot;%(_ApiCompatProducedSuccess.Root)ordinary/ApiCompat.csproj&quot; %(_ApiCompatProducedSuccess.Arguments) -p:MSBuildRestoreGraphInputs=false -t:Build" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_ApiCompatProducedOrdinaryOutput" />
+    </Exec>
+    <Error Condition="!Exists('%(_ApiCompatProducedSuccess.Root)ordinary/$(_ApiCompatProducedSemaphore)') or
+                      $([System.IO.File]::ReadAllBytes('%(_ApiCompatProducedSuccess.Root)ordinary/$(_ApiCompatProducedSemaphore)').Length) != '0'"
+           Text="Ordinary producer-owned reference validation must also succeed (%(_ApiCompatProducedSuccess.Identity))." />
+    <WriteLinesToFile File="$(_ApiCompatProducedRoot)initial-ordinary.txt" Lines="@(_ApiCompatProducedOrdinaryOutput)" Overwrite="true" />
+    <Exec Command="$(_ApiCompatProducedVerifier) success-diagnostics &quot;$(_ApiCompatProducedRoot)initial-ordinary.txt&quot; &quot;$(_ApiCompatProducedRoot)initial-action.txt&quot;" />
+    <ItemGroup>
+      <_ApiCompatProducedStable Include="@(_ApiCompatProducedSuccess->'%(Root)action/obj/Debug/net11.0/ApiCompatFixture.dll');@(_ApiCompatProducedSuccess->'%(Root)action/$(_ApiCompatProducedSemaphore)');@(_ApiCompatProducedCopy->'%(Root)action/future refs/Dependency.dll')" />
+      <_ApiCompatProducedStable Update="@(_ApiCompatProducedStable)">
+        <Before>$([System.IO.File]::GetLastWriteTimeUtc('%(Identity)').Ticks)</Before>
+      </_ApiCompatProducedStable>
+    </ItemGroup>
+    <GetFileHash Files="@(_ApiCompatProducedStable)">
+      <Output TaskParameter="Items" ItemName="_ApiCompatProducedStableBefore" />
+    </GetFileHash>
+    <Exec WorkingDirectory="%(_ApiCompatProducedSuccess.Root)action" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_ApiCompatProducedNoWorkOutput" />
+    </Exec>
+    <WriteLinesToFile File="$(_ApiCompatProducedRoot)no-work.txt" Lines="@(_ApiCompatProducedNoWorkOutput)" Overwrite="true" />
+    <Exec Command="$(_ApiCompatProducedVerifier) no-work &quot;$(_ApiCompatProducedRoot)no-work.txt&quot; @(_ApiCompatProducedSuccess->Count())" />
+    <GetFileHash Files="@(_ApiCompatProducedStable)">
+      <Output TaskParameter="Items" ItemName="_ApiCompatProducedStableAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_ApiCompatProducedStableBefore->'%(Identity)=%(FileHash)')' != '@(_ApiCompatProducedStableAfter->'%(Identity)=%(FileHash)')' or
+                      $([System.IO.File]::GetLastWriteTimeUtc('%(_ApiCompatProducedStable.Identity)').Ticks) != '%(_ApiCompatProducedStable.Before)'"
+           Text="An unchanged produced-reference graph must preserve DLL/reference/semaphore bytes and timestamps." />
+    <PropertyGroup>
+      <_ApiCompatProducedEditedAction>$(_ApiCompatProducedRoot)future/action/</_ApiCompatProducedEditedAction>
+      <_ApiCompatProducedImplementationTime>$([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatProducedEditedAction)obj/Debug/net11.0/ApiCompatFixture.dll').Ticks)</_ApiCompatProducedImplementationTime>
+      <_ApiCompatProducedSuccessTime>$([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatProducedEditedAction)$(_ApiCompatProducedSemaphore)').Ticks)</_ApiCompatProducedSuccessTime>
+    </PropertyGroup>
+    <GetFileHash Files="$(_ApiCompatProducedEditedAction)obj/Debug/net11.0/ApiCompatFixture.dll;$(_ApiCompatProducedEditedAction)future refs/Dependency.dll">
+      <Output TaskParameter="Items" ItemName="_ApiCompatProducedEditBefore" />
+    </GetFileHash>
+    <Exec Command="$(_ApiCompatProducedCompiler) -define:UPDATED -out:&quot;$(_ApiCompatProducedRoot)future/inputs/Dependency.dll&quot; @&quot;$(_ApiCompatProducedRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Dependency.cs&quot;" />
+    <Exec WorkingDirectory="$(_ApiCompatProducedEditedAction)" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_ApiCompatProducedEditOutput" />
+    </Exec>
+    <WriteLinesToFile File="$(_ApiCompatProducedRoot)reference-edit.txt" Lines="@(_ApiCompatProducedEditOutput)" Overwrite="true" />
+    <Exec Command="$(_ApiCompatProducedVerifier) produced-execution &quot;$(_ApiCompatProducedEditedAction)&quot; &quot;$(_ApiCompatProducedRoot)reference-edit.txt&quot; future false" />
+    <GetFileHash Files="$(_ApiCompatProducedEditedAction)obj/Debug/net11.0/ApiCompatFixture.dll;$(_ApiCompatProducedEditedAction)future refs/Dependency.dll">
+      <Output TaskParameter="Items" ItemName="_ApiCompatProducedEditAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_ApiCompatProducedEditBefore->WithMetadataValue('Filename', 'ApiCompatFixture')->'%(FileHash)')' != '@(_ApiCompatProducedEditAfter->WithMetadataValue('Filename', 'ApiCompatFixture')->'%(FileHash)')' or
+                      '@(_ApiCompatProducedEditBefore->WithMetadataValue('Filename', 'Dependency')->'%(FileHash)')' == '@(_ApiCompatProducedEditAfter->WithMetadataValue('Filename', 'Dependency')->'%(FileHash)')' or
+                      $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatProducedEditedAction)obj/Debug/net11.0/ApiCompatFixture.dll').Ticks) != '$(_ApiCompatProducedImplementationTime)' or
+                      $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatProducedEditedAction)$(_ApiCompatProducedSemaphore)').Ticks) == '$(_ApiCompatProducedSuccessTime)'"
+           Text="A changed producer seed must update the reference and rerun ApiCompat, without recompiling or changing the consumer DLL." />
+    <Exec WorkingDirectory="$(_ApiCompatProducedRoot)missing/action" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ApiCompatProducedMissingExit" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ApiCompatProducedMissingOutput" />
+    </Exec>
+    <Error Condition="'$(_ApiCompatProducedMissingExit)' == '0' or !$(_ApiCompatProducedMissingOutput.Contains('Dependency.dll')) or
+                      !$(_ApiCompatProducedMissingOutput.Contains('resolve reference')) or
+                      Exists('$(_ApiCompatProducedRoot)missing/action/$(_ApiCompatProducedSemaphore)')"
+           Text="An empty produced-member set must fail closed for a required dependency, even if a stale sibling existed during preparation." />
+    <GetFileHash Files="@(_ApiCompatProducedUnowned)">
+      <Output TaskParameter="Items" ItemName="_ApiCompatProducedUnownedAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_ApiCompatProducedUnownedBefore->'%(Identity)=%(FileHash)')' != '@(_ApiCompatProducedUnownedAfter->'%(Identity)=%(FileHash)')' or
+                      $([System.IO.File]::GetLastWriteTimeUtc('%(_ApiCompatProducedUnowned.Identity)').Ticks) != '%(_ApiCompatProducedUnowned.Before)'"
+           Text="Preparation, construction and independent execution must not adopt or modify stale undeclared siblings." />
+    <Message Importance="high" Text="Producer-owned ApiCompat reference checks passed: absent future roots, exact CopyFiles edges and RequireProducer footprints, ordinary parity, stale-input exclusion, no-work, reference-only invalidation, empty/required directories and atomic out-of-root/missing-producer rejection. $(_ApiCompatProducedRoot)" />
   </Target>
   <Target Name="TestCompilerGeneratedFiles">
     <PropertyGroup>

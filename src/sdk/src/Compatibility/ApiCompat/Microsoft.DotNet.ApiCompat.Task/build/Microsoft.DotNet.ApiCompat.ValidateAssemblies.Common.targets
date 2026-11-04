@@ -13,7 +13,29 @@
           Outputs="$(_ApiCompatValidateAssembliesSemaphoreFile)"
           Condition="'@(ApiCompatLeftAssemblies)' != '' and '@(ApiCompatRightAssemblies)' != '' and '$(DesignTimeBuild)' != 'true'"
           DependsOnTargets="$(ApiCompatValidateAssembliesDependsOn)">
+    <Microsoft.DotNet.ApiCompat.Task.FormatApiCompatInputs
+      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+      DeclaredInputs="" DeclaredOutputs=""
+      LeftAssemblies="@(ApiCompatLeftAssemblies)"
+      RightAssemblies="@(ApiCompatRightAssemblies)"
+      LeftAssembliesReferences="@(ApiCompatLeftAssembliesReferences)"
+      RightAssembliesReferences="@(ApiCompatRightAssembliesReferences)"
+      SuppressionFiles="@(ApiCompatSuppressionFile)"
+      ExcludeAttributesFiles="@(ApiCompatExcludeAttributesFile)"
+      PreparedReferenceDirectories="@(_ApiCompatPreparedReferenceDirectory)"
+      PreparedReferenceFiles="@(_ApiCompatPreparedReferenceFile)"
+      ProducedReferenceDirectories="@(ApiCompatProducedReferenceDirectory)"
+      ProducedReferenceFiles="@(ApiCompatProducedReferenceFile)"
+      RoslynAssembliesPath="$(RoslynAssembliesPath)"
+      GenerateSuppressionFile="$(ApiCompatGenerateSuppressionFile)"
+      SemaphoreFile="$(_ApiCompatValidateAssembliesSemaphoreFile)">
+      <Output TaskParameter="FileInputs" ItemName="_ApiCompatDeclaredInput" />
+      <Output TaskParameter="FileOutputs" ItemName="_ApiCompatDeclaredOutput" />
+    </Microsoft.DotNet.ApiCompat.Task.FormatApiCompatInputs>
     <Microsoft.DotNet.ApiCompat.Task.ValidateAssembliesTask
+      DeclaredInputs="@(_ApiCompatDeclaredInput)"
+      DeclaredOutputs="@(_ApiCompatDeclaredOutput)"
+      DeclaredReferenceDirectories="@(_ApiCompatPreparedReferenceDirectory);@(ApiCompatProducedReferenceDirectory)"
       RoslynAssembliesPath="$(RoslynAssembliesPath)"
       LeftAssemblies="@(ApiCompatLeftAssemblies)"
       RightAssemblies="@(ApiCompatRightAssemblies)"

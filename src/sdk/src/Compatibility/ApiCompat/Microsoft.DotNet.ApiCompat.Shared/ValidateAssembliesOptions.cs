@@ -89,6 +89,8 @@ namespace Microsoft.DotNet.ApiCompat
         /// </summary>
         public string[][]? RightAssembliesReferences { get; set; }
 
+        public IReadOnlySet<string>? ReferenceFilePaths { get; set; }
+
         /// <summary>
         /// Create dedicated api compatibility checks for each left and right assembly tuple.
         /// </summary>

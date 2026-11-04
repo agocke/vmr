@@ -1,0 +1,65 @@
+<Project DefaultTargets="Test">
+  <PropertyGroup>
+    <MicrosoftNetCoreAppRefPackRefDir>$([MSBuild]::NormalizeDirectory('$(FixtureRoot)', 'pack/ref/net11.0'))</MicrosoftNetCoreAppRefPackRefDir>
+    <TargetPath>$([MSBuild]::NormalizePath('$(FixtureRoot)', 'products', '$(Node).dll'))</TargetPath>
+  </PropertyGroup>
+  <UsingTask TaskName="Microsoft.DotNet.ApiCompat.Task.FormatApiCompatReferenceFiles" AssemblyFile="$(ApiCompatTaskAssembly)" />
+  <Import Project="$(RuntimeLibraryLayoutTargetsPath)" />
+
+  <!-- Supply layouts, not files: neither the pack nor any build product need exist. -->
+  <Target Name="GetLibraryLayout" Returns="@(LibraryLayoutFile)">
+    <ItemGroup>
+      <LibraryLayoutFile Include="$(MicrosoftNetCoreAppRefPackRefDir)$(Node).dll" />
+      <LibraryLayoutFile Include="$(MicrosoftNetCoreAppRefPackRefDir)$(Node).pdb;$(MicrosoftNetCoreAppRefPackRefDir)$(Node).xml" />
+      <LibraryLayoutFile Include="$(MicrosoftNetCoreAppRefPackRefDir)nested/NotImmediate.dll" />
+      <LibraryLayoutFile Include="$(MicrosoftNetCoreAppRefPackRefDir)../net11.0-sibling/NotInPack.dll" />
+      <LibraryLayoutFile Include="$(FixtureRoot)Pack/ref/net11.0/CaseSibling.dll" />
+      <LibraryLayoutFile Include="$(FixtureRoot)runtime-layout/$(Node).dll" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Root -> Middle -> Leaf, with a second direct Root -> Leaf edge.
+       Exercise both child-return boundaries; Middle's metadata is list-valued. -->
+  <Target Name="ResolveReferences">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Build" Properties="Node=Middle"
+             Condition="'$(Node)' == 'Root'">
+      <Output TaskParameter="TargetOutputs" ItemName="_ResolvedProjectReferencePaths" />
+    </MSBuild>
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="GetTargetPath" Properties="Node=Leaf"
+             Condition="'$(Node)' == 'Root' or '$(Node)' == 'Middle'">
+      <Output TaskParameter="TargetOutputs" ItemName="_ResolvedProjectReferencePaths" />
+    </MSBuild>
+  </Target>
+  <Target Name="GetTargetPathWithTargetPlatformMoniker" Returns="@(TargetPathWithTargetPlatformMoniker)">
+    <ItemGroup>
+      <TargetPathWithTargetPlatformMoniker Include="$(TargetPath)" TargetFrameworkIdentifier=".NETCoreApp" />
+    </ItemGroup>
+  </Target>
+  <!-- The imported BeforeTargets hook must annotate the returned item itself. -->
+  <Target Name="GetTargetPath" DependsOnTargets="GetTargetPathWithTargetPlatformMoniker"
+          Returns="@(TargetPathWithTargetPlatformMoniker)" />
+  <Target Name="Build" DependsOnTargets="GetTargetPath" Returns="@(TargetPathWithTargetPlatformMoniker)" />
+
+  <Target Name="Test">
+    <Error Condition="'$(MSBuildHardenedGraph)' != 'true'" Text="The runtime annotation must run in its hardened profile." />
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Build" Properties="Node=Root">
+      <Output TaskParameter="TargetOutputs" ItemName="_ReturnedRoot" />
+    </MSBuild>
+    <ItemGroup>
+      <!-- Do not deduplicate here: repeated Leaf entries must fail the assertion. -->
+      <_ActualReference Include="@(_ReturnedRoot->Metadata('ApiCompatReferenceFiles'))" />
+      <_ExpectedReference Include="$(MicrosoftNetCoreAppRefPackRefDir)Root.dll;$(MicrosoftNetCoreAppRefPackRefDir)Middle.dll;$(MicrosoftNetCoreAppRefPackRefDir)Leaf.dll" />
+      <!-- Windows treats Pack and pack as the same root; other hosts use ordinal comparison. -->
+      <_ExpectedReference Include="$(FixtureRoot)Pack/ref/net11.0/CaseSibling.dll" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+      <_MissingReference Include="@(_ExpectedReference)" Exclude="@(_ActualReference)" />
+      <_UnexpectedReference Include="@(_ActualReference)" Exclude="@(_ExpectedReference)" />
+    </ItemGroup>
+    <Error Condition="'@(_ReturnedRoot->Count())' != '1' or '@(_ReturnedRoot)' != '$(FixtureRoot)products/Root.dll'"
+           Text="Build/GetTargetPath must return exactly the root target item: @(_ReturnedRoot)." />
+    <Error Condition="'@(_ActualReference->Count())' != '@(_ExpectedReference->Count())' or '@(_MissingReference)' != '' or '@(_UnexpectedReference)' != ''"
+           Text="Actual runtime annotation must export exactly the distinct immediate pack DLLs across the diamond using OS path comparison and preserve returned metadata. Actual: @(_ActualReference). Missing: @(_MissingReference). Unexpected: @(_UnexpectedReference)." />
+    <Error Condition="Exists('$(MicrosoftNetCoreAppRefPackRefDir)') or Exists('$(FixtureRoot)products') or '@(FileWrites)' != ''"
+           Text="Reference closure queries must not create or require pack/build products." />
+    <Message Importance="high" Text="Actual runtime ApiCompat annotation preserved the @(_ExpectedReference->Count())-member diamond closure across Build/GetTargetPath using OS path comparison." />
+  </Target>
+</Project>

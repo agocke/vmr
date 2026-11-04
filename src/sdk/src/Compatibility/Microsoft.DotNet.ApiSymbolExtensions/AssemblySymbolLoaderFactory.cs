@@ -12,8 +12,16 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
     /// <param name="includeInternalSymbols">True to include internal API when reading assemblies from the <see cref="AssemblySymbolLoader"/> created.</param>
     public sealed class AssemblySymbolLoaderFactory(ILog log, bool includeInternalSymbols = false) : IAssemblySymbolLoaderFactory
     {
+        /// <summary>
+        /// An optional exact file inventory shared by the created loaders.
+        /// </summary>
+        public IReadOnlySet<string>? ReferenceFilePaths { get; init; }
+
         /// <inheritdoc />
         public IAssemblySymbolLoader Create(bool shouldResolveReferences) =>
-            new AssemblySymbolLoader(log, resolveAssemblyReferences: shouldResolveReferences, includeInternalSymbols: includeInternalSymbols);
+            new AssemblySymbolLoader(log, resolveAssemblyReferences: shouldResolveReferences, includeInternalSymbols: includeInternalSymbols)
+            {
+                ReferenceFilePaths = ReferenceFilePaths
+            };
     }
 }

@@ -42,6 +42,11 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
         private CSharpCompilation _cSharpCompilation;
 
         /// <summary>
+        /// An optional exact file inventory for reference resolution, instead of probing undeclared siblings.
+        /// </summary>
+        public IReadOnlySet<string>? ReferenceFilePaths { get; init; }
+
+        /// <summary>
         /// Error code that is emitted when an assembly isn't found.
         /// </summary>
         public const string AssemblyNotFoundErrorCode = "CP1001";
@@ -129,7 +134,7 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
         {
             foreach (string path in paths)
             {
-                if (Directory.Exists(path))
+                if (ReferenceFilePaths is null ? Directory.Exists(path) : !ReferenceFilePaths.Contains(Path.GetFullPath(path)))
                 {
                     _referencePathDirectories.Add(path);
                 }
@@ -316,7 +321,7 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
                         {
                             if (validateMatchingIdentity && !matchingAssembly.Identity.Equals(assembly.Identity))
                             {
-                                _cSharpCompilation = _cSharpCompilation.RemoveReferences([ reference ]);
+                                _cSharpCompilation = _cSharpCompilation.RemoveReferences([reference]);
                                 _loadedAssemblies.Remove(name);
                                 continue;
                             }
@@ -348,6 +353,11 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
             List<MetadataReference> result = [];
             foreach (string path in paths)
             {
+                if (ReferenceFilePaths is not null && !ReferenceFilePaths.Contains(Path.GetFullPath(path)))
+                {
+                    throw new FileNotFoundException(string.Format(Resources.ProvidedPathToLoadBinariesFromNotFound, path));
+                }
+
                 if (Directory.Exists(path))
                 {
                     // If a directory is passed in as a path, add that to the reference paths.
@@ -407,7 +417,7 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
             PEMemoryBlock image = reader.GetEntireImage();
             MetadataReference metadataReference = MetadataReference.CreateFromImage(image.GetContent());
             _loadedAssemblies.Add(assemblyName, metadataReference);
-            _cSharpCompilation = _cSharpCompilation.AddReferences([ metadataReference ]);
+            _cSharpCompilation = _cSharpCompilation.AddReferences([metadataReference]);
 
             if (referenceeAssemblyName is null)
             {
@@ -453,7 +463,13 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
                 if (_referencePathFiles.TryGetValue(assemblyReferenceName, out string? fullReferencePath))
                 {
                     // TODO: add version check and add a warning if it doesn't match?
-                    using FileStream resolvedStream = File.OpenRead(Path.Combine(fullReferencePath, assemblyReferenceName));
+                    string referenceFile = Path.Combine(fullReferencePath, assemblyReferenceName);
+                    if (ReferenceFilePaths is not null && !ReferenceFilePaths.Contains(Path.GetFullPath(referenceFile)))
+                    {
+                        throw new FileNotFoundException(string.Format(
+                            Resources.CouldNotResolveReference, assemblyReferenceName, rootAssemblyDisplayString));
+                    }
+                    using FileStream resolvedStream = File.OpenRead(referenceFile);
                     CreateAndAddReferenceToCompilation(assemblyReferenceName, rootAssemblyDisplayString, resolvedStream, referenceAssemblyNamesToIgnore, assemblyName);
                 }
                 // If we can't find a specific reference path for the dependency, then we look in the folders where the
@@ -465,7 +481,8 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
                     foreach (string referencePathDirectory in _referencePathDirectories)
                     {
                         string potentialPath = Path.Combine(referencePathDirectory, assemblyReferenceName);
-                        if (File.Exists(potentialPath))
+                        if ((ReferenceFilePaths is null || ReferenceFilePaths.Contains(Path.GetFullPath(potentialPath))) &&
+                            File.Exists(potentialPath))
                         {
                             // TODO: add version check and add a warning if it doesn't match?
                             using FileStream resolvedStream = File.OpenRead(potentialPath);
@@ -477,6 +494,12 @@ namespace Microsoft.DotNet.ApiSymbolExtensions
 
                     if (!found)
                     {
+                        if (ReferenceFilePaths is not null)
+                        {
+                            throw new FileNotFoundException(string.Format(
+                                Resources.CouldNotResolveReference, assemblyReferenceName, rootAssemblyDisplayString));
+                        }
+
                         // Temporarily downgrade assembly reference load warnings to messages: https://github.com/dotnet/sdk/issues/46236
                         // _log.LogWarning(AssemblyReferenceNotFoundErrorCode,
                         //     string.Format(Resources.CouldNotResolveReference, assemblyReferenceName, rootAssemblyDisplayString));

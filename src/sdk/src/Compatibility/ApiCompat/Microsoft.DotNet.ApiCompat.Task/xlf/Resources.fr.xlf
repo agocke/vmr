@@ -7,6 +7,11 @@
         <target state="translated">Changements cassants d’API trouvés. Si elles sont intentionnelles, le fichier de suppression APICompat peut être mis à jour en reconstruisant avec '/p:ApiCompatGenerateSuppressionFile=true'</target>
         <note />
       </trans-unit>
+      <trans-unit id="InvalidDeclaredInputs">
+        <source>Hardened API compatibility requires exact declared file inputs, prepared reference directories, and a single semaphore output. Unsupported value: {0}.</source>
+        <target state="new">Hardened API compatibility requires exact declared file inputs, prepared reference directories, and a single semaphore output. Unsupported value: {0}.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="UnnecessarySuppressionsFoundRegenerateSuppressionFileCommandHelp">
         <source>Unnecessary suppressions found. The APICompat suppression file can be updated by rebuilding with '/p:ApiCompatGenerateSuppressionFile=true'</source>
         <target state="translated">Suppressions inutiles trouvées. Le fichier de suppression APICompat peut être mis à jour en reconstruisant avec '/p:ApiCompatGenerateSuppressionFile=true'</target>

@@ -505,6 +505,39 @@ public sealed class HardenedTargetValidator_Tests(ITestOutputHelper output)
             new Dictionary<string, HardenedTaskClassification>());
     }
 
+    [Theory]
+    [InlineData("CoreCompile")]
+    [InlineData("PrepareValidation")]
+    public void AfterTargetCanDependOnCompletedTrigger(string dependency)
+    {
+        string projectXml = $$"""
+            <Project>
+              <Target Name="Build" DependsOnTargets="CoreCompile">
+                <ItemGroup><Trace Include="build" /></ItemGroup>
+              </Target>
+              <Target Name="CoreCompile">
+                <ItemGroup><Trace Include="compile" /></ItemGroup>
+              </Target>
+              <Target Name="PrepareValidation" DependsOnTargets="CoreCompile">
+                <ItemGroup><Trace Include="prepare" /></ItemGroup>
+              </Target>
+              <Target Name="Validate" AfterTargets="CoreCompile" DependsOnTargets="{{dependency}}">
+                <ItemGroup><Trace Include="validate" /></ItemGroup>
+              </Target>
+            </Project>
+            """;
+        using TestEnvironment environment = TestEnvironment.Create(_output);
+
+        (ProjectInstance ordinaryProject, Lookup validationLookup) = BuildOrdinaryAndValidateHardened(
+            environment, projectXml, new Dictionary<string, HardenedTaskClassification>());
+
+        string[] trace = DescribeItemSpecs(validationLookup.GetItems("Trace"));
+        trace.ShouldBe(DescribeItemSpecs(ordinaryProject.GetItems("Trace")));
+        trace.ShouldBe(dependency == "CoreCompile"
+            ? ["compile", "validate", "build"]
+            : ["compile", "prepare", "validate", "build"]);
+    }
+
     [Fact]
     public void TargetAssignedPropertyCanDetermineLaterTargetDependency()
     {

@@ -24,7 +24,13 @@
           Condition="'$(_DebugSymbolsProduced)' == 'true'">
     <Copy SourceFiles="@(_DebugSymbolToMove)"
           DestinationFiles="@(_DebugSymbolToMove->Metadata('Destination'))"
-          UseHardlinksIfPossible="false" />
+          UseHardlinksIfPossible="false"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CopyFiles SourceFiles="@(_DebugSymbolToMove)"
+               DestinationFiles="@(_DebugSymbolToMove->Metadata('Destination'))"
+               DeclaredInputs="@(_DebugSymbolToMove)"
+               DeclaredOutputs="@(_DebugSymbolToMove->Metadata('Destination'))"
+               Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(_DebugSymbolToMove)' != ''" />
   </Target>
 
   <!-- Import targets here to have TargetPath and other macros defined. Limit to CoreLib. -->

@@ -17,8 +17,30 @@ Copyright (c) .NET Foundation. All rights reserved.
        defaults to looking for an x86 task host that doesn't exist and fails with MSB4216).
        TODO: Remove Architecture="*" once https://github.com/dotnet/msbuild/issues/13739 is fixed
        and a new MSBuild with that fix is consumed. -->
-  <UsingTask TaskName="Microsoft.DotNet.ApiCompat.Task.ValidateAssembliesTask" AssemblyFile="$(DotNetApiCompatTaskAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="Microsoft.DotNet.ApiCompat.Task.ValidateAssembliesTask" AssemblyFile="$(DotNetApiCompatTaskAssembly)" Runtime="NET" Architecture="*" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="Microsoft.DotNet.ApiCompat.Task.ValidateAssembliesTask" AssemblyFile="$(DotNetApiCompatTaskAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   <UsingTask TaskName="Microsoft.DotNet.ApiCompat.Task.ValidatePackageTask" AssemblyFile="$(DotNetApiCompatTaskAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="Microsoft.DotNet.ApiCompat.Task.FormatApiCompatInputs" AssemblyFile="$(DotNetApiCompatTaskAssembly)" />
+  <UsingTask TaskName="Microsoft.DotNet.ApiCompat.Task.FormatApiCompatReferenceFiles" AssemblyFile="$(DotNetApiCompatTaskAssembly)" />
+  <UsingTask TaskName="Microsoft.DotNet.ApiCompat.Task.PrepareApiCompatInputs" AssemblyFile="$(DotNetApiCompatTaskAssembly)" />
+
+  <PropertyGroup>
+    <_ApiCompatInputsPath>$(MSBuildProjectExtensionsPath)apicompatinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</_ApiCompatInputsPath>
+  </PropertyGroup>
+  <Import Project="$(_ApiCompatInputsPath)" Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(_ApiCompatInputsImported)' != 'true'" />
+  <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true'">
+    <_ApiCompatInputsImported>true</_ApiCompatInputsImported>
+  </PropertyGroup>
+
+  <Target Name="_CaptureApiCompatInputs"
+          AfterTargets="_CaptureCscToolInputs"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true' and '$(ApiCompatValidateAssemblies)' == 'true'">
+    <Microsoft.DotNet.ApiCompat.Task.PrepareApiCompatInputs
+      ReferencePaths="$(ApiCompatContractAssembly);@(ApiCompatContractAssemblyReferences);@(ApiCompatAssemblyReferences);@(Reference);@(ReferencePathWithRefAssemblies);@(_ResolvedCompileFileDefinitions)"
+      ProducedReferenceDirectories="@(ApiCompatProducedReferenceDirectory)"
+      DefaultSuppressionFile="$(MSBuildProjectDirectory)/CompatibilitySuppressions.xml"
+      OutputFile="$(_ApiCompatInputsPath)" />
+  </Target>
 
   <Target Name="CollectApiCompatInputs">
     <PropertyGroup Condition="'$(RoslynAssembliesPath)' == ''">
@@ -57,7 +79,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     <!-- Pass in a default suppression file, if it exists. -->
     <ItemGroup Condition="'@(ApiCompatSuppressionFile)' == ''">
       <ApiCompatSuppressionFile Include="$(_apiCompatDefaultProjectSuppressionFile)"
-                                Condition="Exists($(_apiCompatDefaultProjectSuppressionFile))" />
+                                Condition="'$(MSBuildHardenedGraph)' != 'true' and Exists($(_apiCompatDefaultProjectSuppressionFile))" />
+      <ApiCompatSuppressionFile Include="$(_ApiCompatPreparedDefaultSuppressionFile)"
+                                Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(_ApiCompatPreparedDefaultSuppressionFile)' != ''" />
     </ItemGroup>
   </Target>
 
