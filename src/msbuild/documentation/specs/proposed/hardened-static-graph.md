@@ -529,6 +529,11 @@ being copied, and a losing direct reference's symbols are not published.
 Noncolliding producer outputs require no version facts. Collisions can use declared
 version metadata or prepared external facts; missing/invalid facts and unresolved
 distinct-artifact ties fail with NETSDK1255 rather than falling back to discovery.
+SDK project-output queries propagate the producer's generated assembly/file
+versions, normalized to four numeric parts through zero-I/O tasks. An attribute
+disabled by `GenerateAssemblyInfo`, `GenerateAssemblyVersionAttribute` or
+`GenerateAssemblyFileVersionAttribute` supplies no inferred fact; custom
+assembly-info producers remain responsible for truthful output metadata.
 The ordinary SDK conflict target remains unchanged for non-hardened builds.
 Package/package compile, analyzer and runtime duplicates still fail in the bounded
 package-selection profile; this is not a general replacement for RAR.

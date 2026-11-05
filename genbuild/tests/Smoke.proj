@@ -113,6 +113,7 @@
     </Exec>
     <Error Condition="'@(_SdkProgramOutput)' != 'Hello from genbuild.'" Text="The program built by the SDK action graph did not run correctly on the external runtime." />
     <CallTarget Targets="TestProjectReferences" />
+    <CallTarget Targets="TestAnalyzerProjectReferences" />
     <CallTarget Targets="TestConfiguredPreparation" />
     <CallTarget Targets="TestDiscoveryPreparation" />
     <CallTarget Targets="TestFrameworkBasics" />
@@ -1811,6 +1812,61 @@
     </GetFileHash>
     <Error Condition="@(_SdkProjectReferenceDepsHash->'%(FileHash)'->Distinct()->Count()) != '1'"
            Text="Project-reference dependency manifests must match ordinary Build, including renamed outputs and versions." />
+  </Target>
+  <Target Name="TestAnalyzerProjectReferences">
+    <PropertyGroup>
+      <_AnalyzerRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'analyzer-project-references'))</_AnalyzerRoot>
+      <_AnalyzerAction>$(_AnalyzerRoot)action/</_AnalyzerAction>
+      <_AnalyzerFixture>$(MSBuildThisFileDirectory)AnalyzerProjectReference/</_AnalyzerFixture>
+      <_AnalyzerHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_AnalyzerHostOS>
+      <_AnalyzerHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_AnalyzerHostOS>
+      <_AnalyzerHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_AnalyzerHostOS>
+      <_AnalyzerHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_AnalyzerHostOS>
+      <_AnalyzerArguments>-p:Configuration=Debug -p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:MSBuildGraphRepositoryRoot=&quot;$(_AnalyzerRoot)&quot; -p:MSBuildGraphHostOS=$(_AnalyzerHostOS)</_AnalyzerArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_AnalyzerDirectory Include="$(_AnalyzerAction);$(_AnalyzerRoot)ordinary/" />
+      <_AnalyzerImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+      <_AnalyzerInvalid Include="no-assembly-version;no-file-version;no-assembly-info" />
+    </ItemGroup>
+    <MakeDir Directories="@(_AnalyzerDirectory->'%(Identity)app');@(_AnalyzerDirectory->'%(Identity)low');@(_AnalyzerDirectory->'%(Identity)high')" />
+    <WriteLinesToFile File="$(_AnalyzerRoot)%(_AnalyzerImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(_AnalyzerFixture)App.csproj;$(_AnalyzerFixture)Program.cs" DestinationFolder="%(_AnalyzerDirectory.Identity)app" />
+    <Copy SourceFiles="$(_AnalyzerFixture)Generator.csproj" DestinationFiles="%(_AnalyzerDirectory.Identity)low/Low.csproj" />
+    <Copy SourceFiles="$(_AnalyzerFixture)Generator.csproj" DestinationFiles="%(_AnalyzerDirectory.Identity)high/High.csproj" />
+    <Copy SourceFiles="$(_AnalyzerFixture)Generator.cs" DestinationFolder="%(_AnalyzerDirectory.Identity)low" />
+    <Copy SourceFiles="$(_AnalyzerFixture)Generator.cs" DestinationFolder="%(_AnalyzerDirectory.Identity)high" />
+    <Exec Command="$(_App) restore &quot;%(_AnalyzerDirectory.Identity)app/App.csproj&quot; $(_AnalyzerArguments) -bl:&quot;%(_AnalyzerDirectory.Identity)restore.binlog&quot;" />
+    <Error Condition="Exists('%(_AnalyzerDirectory.Identity)app/bin') or Exists('%(_AnalyzerDirectory.Identity)low/bin') or Exists('%(_AnalyzerDirectory.Identity)high/bin')"
+           Text="Analyzer preparation must not build the consumer or its future generators." />
+    <Exec Command="$(_App) build &quot;$(_AnalyzerAction)app/App.csproj&quot; $(_AnalyzerArguments) -p:MSBuildEmitActionGraph=&quot;$(_AnalyzerAction)build.ninja&quot; -bl:&quot;$(_AnalyzerAction)build.binlog&quot;" />
+    <Exec Command="$(_App) build &quot;$(_AnalyzerAction)app/App.csproj&quot; $(_AnalyzerArguments) -p:TestCase=%(_AnalyzerInvalid.Identity) -p:MSBuildEmitActionGraph=&quot;$(_AnalyzerAction)%(_AnalyzerInvalid.Identity).ninja&quot; -flp:&quot;LogFile=$(_AnalyzerAction)%(_AnalyzerInvalid.Identity).log;Verbosity=quiet&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_AnalyzerInvalidExit" />
+    </Exec>
+    <Error Condition="'$(_AnalyzerInvalidExit)' == '0' or Exists('$(_AnalyzerAction)%(_AnalyzerInvalid.Identity).ninja') or
+                      !$([System.IO.File]::ReadAllText('$(_AnalyzerAction)%(_AnalyzerInvalid.Identity).log').Contains('NETSDK1255'))"
+           Text="Disabled generated version attributes must not be advertised as future assembly facts." />
+    <Error Condition="Exists('$(_AnalyzerAction)app/bin') or Exists('$(_AnalyzerAction)low/bin') or Exists('$(_AnalyzerAction)high/bin') or
+                      Exists('$(_AnalyzerAction)low/obj/Debug/net11.0/Conflict.Generator.dll') or Exists('$(_AnalyzerAction)high/obj/Debug/net11.0/Conflict.Generator.dll')"
+           Text="Analyzer conflict selection must not compile or read the future generators." />
+    <Exec WorkingDirectory="$(_AnalyzerAction)" Command="ninja -f build.ninja" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AnalyzerAction)app/bin/Debug/net11.0/App.dll&quot; &quot;$(_AnalyzerAction)high/bin/Debug/net11.0/Conflict.Generator.dll&quot;"
+          ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_AnalyzerOutput" />
+    </Exec>
+    <Error Condition="'$(_AnalyzerOutput)' != 'high%3B1.0.0.0%3B2.0.0.0'"
+           Text="The independent consumer must run the selected generated source and the actual producer versions must match its metadata." />
+    <Exec WorkingDirectory="$(_AnalyzerAction)" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_AnalyzerNoWork" />
+    </Exec>
+    <Error Condition="!$(_AnalyzerNoWork.Contains('no work to do'))" Text="The analyzer project-reference graph must settle to no work." />
+    <Exec Command="$(_App) restore &quot;$(_AnalyzerRoot)ordinary/app/App.csproj&quot; $(_AnalyzerArguments) -t:Build -p:MSBuildRestoreGraphInputs=false -p:UseSharedCompilation=false -bl:&quot;$(_AnalyzerRoot)ordinary/build.binlog&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_AnalyzerRoot)ordinary/app/bin/Debug/net11.0/App.dll&quot; &quot;$(_AnalyzerRoot)ordinary/high/bin/Debug/net11.0/Conflict.Generator.dll&quot;"
+          ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_AnalyzerOrdinaryOutput" />
+    </Exec>
+    <Error Condition="'$(_AnalyzerOrdinaryOutput)' != '$(_AnalyzerOutput)'" Text="Future analyzer version arbitration must match ordinary Build." />
   </Target>
   <Target Name="TestReferencePaths">
     <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"

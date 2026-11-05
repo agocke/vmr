@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <AssemblyName>Conflict.Generator</AssemblyName>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <AssemblyVersion Condition="'$(MSBuildProjectName)' == 'High'">1.0</AssemblyVersion>
+    <FileVersion>1.0</FileVersion>
+    <FileVersion Condition="'$(MSBuildProjectName)' == 'High'">2.0</FileVersion>
+    <GenerateAssemblyVersionAttribute Condition="'$(TestCase)' == 'no-assembly-version'">false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute Condition="'$(TestCase)' == 'no-file-version'">false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInfo Condition="'$(TestCase)' == 'no-assembly-info'">false</GenerateAssemblyInfo>
+    <DefineConstants Condition="'$(MSBuildProjectName)' == 'High'">$(DefineConstants);WINNER</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <_CompilerDirectory>$(MSBuildSDKsPath)/../Roslyn/bincore/</_CompilerDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Generator.cs" />
+    <Reference Include="$(_CompilerDirectory)Microsoft.CodeAnalysis.dll" Private="false" />
+  </ItemGroup>
+</Project>

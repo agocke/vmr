@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <_HighProducer>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../high/High.csproj'))</_HighProducer>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <ProjectReference Include="../low/Low.csproj;../high/High.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+    <ProjectReference Include="../high/High.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" SetConfiguration="Configuration=$(Configuration)" />
+  </ItemGroup>
+  <Target Name="CheckSelectedAnalyzer" AfterTargets="_HandlePreparedReferenceConflicts" Condition="'$(MSBuildHardenedGraph)' == 'true'">
+    <ItemGroup>
+      <_SelectedGenerator Include="@(Analyzer)" Condition="'%(Analyzer.Filename)' == 'Conflict.Generator'" />
+    </ItemGroup>
+    <Error Condition="'@(_SelectedGenerator->Distinct()->Count())' != '1' or
+                      '%(_SelectedGenerator.MSBuildSourceProjectFile)' != '$(_HighProducer)' or
+                      '%(_SelectedGenerator.AssemblyVersion)' != '1.0.0.0' or '%(_SelectedGenerator.FileVersion)' != '2.0.0.0'"
+           Text="Analyzer conflicts must select the future producer by its actual generated versions and retain project identity." />
+  </Target>
+</Project>

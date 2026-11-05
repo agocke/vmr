@@ -152,6 +152,11 @@ execution through final artifact publication and program startup on the external
 runtime. A clean SDK executable/library closure also constructs and executes
 without prebuilding references, including renamed library outputs, copy-local
 symbols and ordinary-equivalent dependency manifests.
+Analyzer project-reference checks build competing source generators with repeated
+references and short-form assembly/file versions. Construction selects using
+producer-owned, normalized versions without opening future DLLs; disabled generated
+version attributes fail closed. Ninja-generated consumer code and actual binary
+versions agree with ordinary SDK selection, and a second run is a no-op.
 Source-content copies cover `PreserveNewest`, `Always` and `IfDifferent` with
 existing and execution-produced inputs, stale destinations, static `FileWrites`,
 ordinary byte parity and empty no-ops. Unsupported link/read-only overrides fail

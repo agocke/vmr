@@ -256,4 +256,24 @@ Copyright (c) .NET Foundation. All rights reserved.
     </PropertyGroup>
   </Target>
 
+  <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(GenerateAssemblyInfo)' == 'true'">
+    <GetTargetPathWithTargetPlatformMonikerDependsOn>$(GetTargetPathWithTargetPlatformMonikerDependsOn);_GetHardenedProjectOutputVersions</GetTargetPathWithTargetPlatformMonikerDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_GetHardenedProjectOutputVersions"
+          DependsOnTargets="GetAssemblyVersion"
+          Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(GenerateAssemblyInfo)' == 'true'">
+    <!-- Match the compiler's four-part versions, without reading the future assembly. -->
+    <GetAssemblyVersion NuGetVersion="$(AssemblyVersion)"
+                        Condition="'$(GenerateAssemblyVersionAttribute)' == 'true' and '$(AssemblyVersion)' != ''"
+                        DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="AssemblyVersion" PropertyName="_HardenedProjectOutputAssemblyVersion" />
+    </GetAssemblyVersion>
+    <GetAssemblyVersion NuGetVersion="$(FileVersion)"
+                        Condition="'$(GenerateAssemblyFileVersionAttribute)' == 'true' and '$(FileVersion)' != ''"
+                        DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="AssemblyVersion" PropertyName="_HardenedProjectOutputFileVersion" />
+    </GetAssemblyVersion>
+  </Target>
+
 </Project>

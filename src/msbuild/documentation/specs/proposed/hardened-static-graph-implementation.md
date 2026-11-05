@@ -1231,16 +1231,25 @@ SDK/runtime lookup, response files, nondeterminism and source-dependent naming
 reject construction. C#, generated-tree, satellite-source and ApiCompat regressions
 also pass.
 
-A fresh whole traversal passes resource, partial-facade, platform-stub, template
-and VB integration. Restore succeeds; construction now first fails with
-NETSDK1255 for missing conflict version facts on the future-produced
-`Microsoft.Interop.SourceGeneration.dll` consumed by
-System.Runtime.InteropServices.JavaScript. Producer version metadata is the next
-frontier, not permission to open a nonexistent assembly during construction.
+SDK project-output queries now carry producer-owned assembly/file versions when
+the corresponding assembly-info attributes are generated. Pure version
+initialization and four-part normalization avoid opening future analyzer binaries;
+disabled attribute generation does not advertise unknown facts. Focused Ninja
+execution builds competing source generators, checks ordinary selection parity,
+short-version normalization, repeated references, actual emitted versions and
+fail-closed disabled attributes.
+
+A fresh isolated System.Runtime.InteropServices.JavaScript Restore and graph
+construction produce no product DLLs. Its 502-action Ninja graph then builds the
+source-generation tools, CoreLib/library dependencies and the JavaScript library;
+the second execution reports no work. The whole libraries traversal passes the
+interop conflict frontier and now first fails at the shim's in-place
+`ClearAssemblyReferenceVersions` task, whose call lacks explicit declarations.
+Further deferred-item diagnostics on that failed path are not yet classified.
 The previously reported networking Build cycles do not recur. No whole-partition
-Ninja graph has been produced or executed; preparation and failed construction
-produce no assemblies/resources or partial graph and preserve the recorded shared
-cache hashes.
+Ninja graph has been produced or executed; its preparation and failed construction
+produce no assemblies/resources or partial graph. Both profiles preserve the
+recorded shared cache hashes.
 
 ### NuGet fact capture
 
@@ -1355,6 +1364,21 @@ future producers, platform-only runtime provision and direct-reference symbols.
 Missing/invalid facts and unresolved distinct-artifact ties report NETSDK1255.
 Generated or explicit candidates involved in collisions need declared version
 metadata or prepared external facts; no construction-time inspection is added.
+
+For SDK project outputs,
+[`GetTargetPathWithTargetPlatformMoniker`](../../../src/Tasks/Microsoft.Common.CurrentVersion.targets)
+propagates versions initialized by
+[`_GetHardenedProjectOutputVersions`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.GenerateAssemblyInfo.targets).
+Only versions emitted through enabled SDK assembly-info attributes are inferred.
+Short forms are normalized to the compiler's four-part numeric versions, without
+changing the producer's properties or generated attributes. Non-SDK/custom
+assembly-info producers must supply their own truthful output metadata or facts.
+The [analyzer fixture](../../../../../genbuild/tests/AnalyzerProjectReference/App.csproj)
+builds two future generators with equal emitted assembly versions but different
+file versions, including a repeated project reference. It checks metadata and
+producer identity before execution, rejects disabled generated version attributes,
+then executes generated code and compares actual binary versions and ordinary
+selection. Restore and construction never prebuild those tools.
 
 ## After the prototype
 
