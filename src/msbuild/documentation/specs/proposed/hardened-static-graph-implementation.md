@@ -93,7 +93,19 @@ Semantic transformations belong to declared actions, not timestamp-cache wrapper
 Hardened targets retain semantic prerequisites but omit hash stamps, copy markers,
 and automatic clean-ledger machinery. Scheduling, content caching, cleaning, and
 safe obsolete-output pruning belong to the execution system; Ninja currently
-provides scheduling and timestamp-based incrementality, not all of those services.
+provides scheduling and timestamp-based incrementality and a generated `clean`
+target, not all of those services.
+
+Run `ninja -f <graph> clean` separately from builds to remove current declared
+outputs. Its host preflights all generated-source trees before any deletion,
+using the same receipt validation as materialization without loading compiler
+tasks or requiring their inputs/products to exist. It removes receipt-owned
+files and empty directory scaffolding bottom-up, then invokes Ninja's ordinary
+file cleaner. Unexpected files, links or malformed receipts stop cleaning before
+outputs change. Repeated cleaning, missing owned files, empty trees and empty
+scaffolding left by raw Ninja cleaning are supported. Graph bundles, prepared
+inputs, shared caches and inactive invocation sidecars remain intact. Raw
+`ninja -t clean` bypasses this hook and is not the supported tree cleaner.
 
 DeclaredIO asserts deterministic results from explicit data and fixed host context,
 not merely a list of paths. C# compilation mandates determinism and stable path
@@ -144,6 +156,29 @@ dotnet msbuild ../../genbuild/genbuild.proj -m:1 -nr:false -bl:{}
 `GenBuildBootstrapSdk` and `GenBuildDotNetHost` select explicit build-time paths.
 `GenBuildSkipComponentBuild=true` reassembles already-built components; the default
 builds them from this VMR. The old composite-SDK script is not the entry point.
+
+An optional NativeAOT action host accelerates `CopyFiles` and `WriteLinesToFile`:
+
+```sh
+dotnet msbuild ../../genbuild/genbuild.proj -p:GenBuildNativeTaskHost=true -m:1 -nr:false -bl:{}
+```
+
+Publishing it requires the platform's NativeAOT compiler/linker prerequisites.
+The app and general action host remain framework-dependent; only the specialty
+host includes the NativeAOT runtime. The driver discovers the staged native host
+and supplies `MSBuildNativeActionTaskHost`; pass that property empty to select
+managed-only execution. Direct MSBuild callers can supply its absolute path.
+
+The native executable has a versioned catalog pinned to its binary and the exact
+source-built task, Framework, Utilities, and StringTools assemblies. Construction
+selects it only for supported task types with matching assembly bytes and no
+graph-produced replacement dependencies. Other tasks go directly to the managed
+host, without launching a native dispatcher. Native invocations recheck their
+assembly identities and share invocation decoding, parameter interpretation,
+footprint validation, environment replay, and diagnostics with the managed host.
+Identity drift, invalid declarations, and task failures fail without retrying
+through another host. Both the native executable and its catalog are Ninja inputs.
+Tree materialization and ownership-aware cleaning remain on the managed path.
 
 From the VMR root, run with an external .NET 11 runtime:
 
@@ -1247,8 +1282,10 @@ metadata or prepared external facts; no construction-time inspection is added.
 - [ ] Add general sandbox enforcement for task/tool/plugin reads, output/private-
   scratch writes, aliases/symlinks, network, and ambient context. Violations must
   fail, not expand declarations. The action host is not a security sandbox.
-- [ ] Add executor-owned cleaning and persistent ownership for safe obsolete-
-  output pruning; never infer ownership from arbitrary directory contents.
+- [x] Add executor-owned current-graph cleaning with receipt-validated trees,
+  nested/empty directory removal and clean/rebuild/no-work coverage.
+- [ ] Add persistent cross-graph ownership for safe obsolete-output pruning;
+  never infer file ownership from arbitrary directory contents.
 - [ ] Integrate content caching and lazy artifact materialization independently
   of task implementations and Ninja's timestamp rules.
 - [ ] Add [named products](hardened-named-products.md): catalog validation,

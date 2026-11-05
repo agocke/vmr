@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Preserve the managed host's existing Framework friend access. -->
+    <AssemblyName>MSBuild.ActionTaskHost</AssemblyName>
+    <RootNamespace>Microsoft.Build.ActionTaskHost</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <UseAppHost>true</UseAppHost>
+    <Optimize>true</Optimize>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</RuntimeIdentifier>
+    <SignAssembly>true</SignAssembly>
+    <PublicSign>true</PublicSign>
+    <AssemblyOriginatorKeyFile>../../src/msbuild/src/MSFT.snk</AssemblyOriginatorKeyFile>
+    <GenBuildToolsetDirectory Condition="'$(GenBuildToolsetDirectory)' == ''">$(MSBuildThisFileDirectory)../../artifacts/bin/genbuild/$(Configuration)/toolset/</GenBuildToolsetDirectory>
+    <_HostSource>$(MSBuildThisFileDirectory)../../src/msbuild/src/MSBuild.ActionTaskHost/</_HostSource>
+  </PropertyGroup>
+  <ItemGroup>
+    <_PinnedAssembly Include="$(GenBuildToolsetDirectory)Microsoft.Build.Framework.dll;$(GenBuildToolsetDirectory)Microsoft.Build.Utilities.Core.dll;$(GenBuildToolsetDirectory)Microsoft.Build.Tasks.Core.dll;$(GenBuildToolsetDirectory)Microsoft.NET.StringTools.dll" />
+    <Reference Include="@(_PinnedAssembly)" />
+    <Compile Include="$(_HostSource)ActionBuildEngine.cs;$(_HostSource)ActionExecution.cs;$(_HostSource)HostResources.cs;$(_HostSource)TaskInvocation.cs;$(_HostSource)TaskParameterReader.cs" Link="Shared/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="$(_HostSource)Resources/Strings.resx" LogicalName="Microsoft.Build.ActionTaskHost.Resources.Strings.resources" />
+  </ItemGroup>
+  <Target Name="CaptureBuiltInAssemblies" BeforeTargets="CoreCompile">
+    <GetFileHash Files="@(_PinnedAssembly)">
+      <Output TaskParameter="Items" ItemName="_AssemblyHash" />
+    </GetFileHash>
+    <PropertyGroup>
+      <_AssemblyIdentitySource>namespace Microsoft.Build.ActionTaskHost%3B internal static class BuiltInAssemblies { internal static readonly (string Name, string Sha256)[] Files = [@(_AssemblyHash->'(&quot;%(Filename)%(Extension)&quot;, &quot;%(FileHash)&quot;)', ', ')]%3B }</_AssemblyIdentitySource>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)BuiltInAssemblies.g.cs"
+                      Lines="$(_AssemblyIdentitySource)"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)BuiltInAssemblies.g.cs" />
+    </ItemGroup>
+  </Target>
+  <Target Name="WriteNativeCatalog" AfterTargets="Publish">
+    <Exec Command="&quot;$(PublishDir)$(AssemblyName)$(NativeBinaryExt)&quot; --write-catalog &quot;$(PublishDir)$(AssemblyName)$(NativeBinaryExt).json&quot;" />
+  </Target>
+</Project>

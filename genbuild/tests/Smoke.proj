@@ -36,6 +36,7 @@
     <CallTarget Targets="TestXlfLocalization" />
     <CallTarget Targets="TestSatelliteSource" />
     <CallTarget Targets="TestCompilerGeneratedFiles" />
+    <CallTarget Targets="TestNativeTaskHost" />
     <CallTarget Targets="TestApiCompat" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
@@ -3961,6 +3962,28 @@
            Text="Preparation, construction and independent execution must not adopt or modify stale undeclared siblings." />
     <Message Importance="high" Text="Producer-owned ApiCompat reference checks passed: absent future roots, exact CopyFiles edges and RequireProducer footprints, ordinary parity, stale-input exclusion, no-work, reference-only invalidation, empty/required directories and atomic out-of-root/missing-producer rejection. $(_ApiCompatProducedRoot)" />
   </Target>
+  <Target Name="TestNativeTaskHost" Condition="Exists('$(_AppDirectory)/toolset/native-action-host/MSBuild.ActionTaskHost')">
+    <PropertyGroup>
+      <_NativeRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'native-task-host'))</_NativeRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_NativeRoot)seed;$(_NativeRoot)custom" />
+    <WriteLinesToFile File="$(_NativeRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_NativeRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_NativeRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_NativeRoot)seed" />
+    <Exec Command="$(_App) restore &quot;$(_NativeRoot)seed/HelloWorld.csproj&quot;" />
+    <XmlPeek XmlInputPath="$(_NativeRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_NativeReference" />
+    </XmlPeek>
+    <Error Condition="'@(_NativeReference)' == ''" Text="Native-host fixture preparation did not capture compiler references." />
+    <WriteLinesToFile File="$(_NativeRoot)compile.rsp" Lines="@(_NativeReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_NativeRoot)Verifier.dll&quot; @&quot;$(_NativeRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)NativeTaskHost/Program.cs&quot;" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -out:&quot;$(_NativeRoot)custom/Microsoft.Build.Tasks.Core.dll&quot; -r:&quot;$(_AppDirectory)/toolset/Microsoft.Build.Framework.dll&quot; @&quot;$(_NativeRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)NativeTaskHost/CustomTask.cs&quot;" />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_NativeRoot)Verifier.runtimeconfig.json" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_NativeRoot)Verifier.dll&quot; &quot;$(GenBuildTestHost)&quot; &quot;$(GenBuildApp)&quot; &quot;$(_AppDirectory)/toolset/native-action-host/MSBuild.ActionTaskHost&quot; &quot;$(_NativeRoot)&quot;" />
+  </Target>
+
   <Target Name="TestCompilerGeneratedFiles">
     <PropertyGroup>
       <_GeneratedRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'compiler-generated-files'))</_GeneratedRoot>
@@ -4045,6 +4068,14 @@
     <Error Condition="'@(_GeneratedArchiveBefore->'%(FileHash)')' != '@(_GeneratedArchiveAfter->'%(FileHash)')'"
            Text="Repeated compilation must produce a deterministic generated-source ZIP." />
     <Exec Command="$(_GeneratedVerifier) recovery-failures &quot;$(_GeneratedAction)build.ninja&quot; &quot;$(_GeneratedTree)&quot; &quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot;" />
+    <Exec Command="$(_GeneratedVerifier) clean &quot;$(_GeneratedAction)build.ninja&quot; &quot;$(_GeneratedTree)&quot; &quot;$(GenBuildTestHost)&quot; &quot;$(_AppDirectory)/toolset/action-host/MSBuild.ActionTaskHost.dll&quot;" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_GeneratedVerifier) compare &quot;$(_GeneratedTree)&quot; &quot;$(_GeneratedOrdinaryTree)&quot;" />
+    <Exec Command="$(_GeneratedProgram) run First.g.cs &quot;$(_GeneratedLogicalTree)&quot;" />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GeneratedCleanNoWork" />
+    </Exec>
+    <Error Condition="!$(_GeneratedCleanNoWork.Contains('no work to do'))" Text="Clean/rebuild must settle to no work." />
     <WriteLinesToFile File="$(_GeneratedTree)/unowned.txt" Lines="not owned by the compiler" Overwrite="true" />
     <GetFileHash Files="$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/First.g.cs;$(_GeneratedTree)/CompilerGeneratedGenerator/ConfigurableGenerator/nested/Stable.g.cs;$(_GeneratedTree).tree.json">
       <Output TaskParameter="Items" ItemName="_GeneratedOwnershipBefore" />
@@ -4132,6 +4163,11 @@
       <Output TaskParameter="ConsoleOutput" PropertyName="_GeneratedEmptyRecoveredNoWork" />
     </Exec>
     <Error Condition="!$(_GeneratedEmptyRecoveredNoWork.Contains('no work to do'))" Text="A recovered empty tree must settle to no work." />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja clean" />
+    <Error Condition="Exists('$(_GeneratedTree)') or Exists('$(_GeneratedTree).tree.json') or Exists('$(_GeneratedTree).tree.zip') or Exists('$(_GeneratedTree).tree.dd') or Exists('$(_GeneratedCompilerDll)')"
+           Text="Clean must remove an empty generated tree, its sidecars and regular outputs." />
+    <Exec WorkingDirectory="$(_GeneratedAction)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_GeneratedVerifier) empty &quot;$(_GeneratedTree)&quot;" />
     <ItemGroup>
       <_GeneratedConflict Include="source" Root="$([MSBuild]::NormalizePath('$(_GeneratedRoot)', 'action'))" />
       <_GeneratedConflict Include="output" Root="$([MSBuild]::NormalizePath('$(_GeneratedAction)', 'obj/Debug/net11.0'))" />
@@ -4144,6 +4180,6 @@
                       Exists('$(_GeneratedAction)%(_GeneratedConflict.Identity)-conflict.ninja') or
                       Exists('$(_GeneratedAction)%(_GeneratedConflict.Identity)-conflict.ninja.actions')"
            Text="Trees overlapping source inputs or ordinary file outputs must fail graph construction without publication." />
-    <Message Importance="high" Text="Compiler-generated files: ordinary byte/path/PDB parity, single compile, deterministic archive, dyndep recovery, ownership, empty tree and failure preservation. $(_GeneratedRoot)" />
+    <Message Importance="high" Text="Compiler-generated files: ordinary byte/path/PDB parity, single compile, deterministic archive, dyndep recovery, ownership, tree-aware clean/rebuild, empty tree and failure preservation. $(_GeneratedRoot)" />
   </Target>
 </Project>

@@ -56,51 +56,14 @@ internal static class TaskParameterBinder
                         throw new NotSupportedException(HostResources.Format("UnsupportedParameterType", type));
                     }
 
-                    ExpandedValue expanded = concrete.Deserialize<ExpandedValue>(TaskInvocation.JsonOptions) ?? throw new JsonException();
-                    JsonElement items = expanded.Items;
                     bool vector = property.PropertyType.IsArray || property.PropertyType == typeof(ITaskItem);
                     bool declaration = property.Name.Equals("DeclaredInputs", StringComparison.OrdinalIgnoreCase) ||
                         property.Name.Equals("DeclaredOutputs", StringComparison.OrdinalIgnoreCase);
-                    if (vector)
+                    if (!TaskParameterReader.TryUnwrap(concrete, expanded: true, vector,
+                        property.PropertyType == typeof(ITaskItem),
+                        property.IsDefined(typeof(RequiredAttribute), inherit: true), declaration, out concrete))
                     {
-                        if (items.ValueKind != JsonValueKind.Array)
-                        {
-                            throw new JsonException();
-                        }
-
-                        if (items.GetArrayLength() == 0 && !declaration &&
-                            !property.IsDefined(typeof(RequiredAttribute), inherit: true))
-                        {
-                            continue;
-                        }
-
-                        if (property.PropertyType == typeof(ITaskItem))
-                        {
-                            if (items.GetArrayLength() == 0)
-                            {
-                                continue;
-                            }
-
-                            if (items.GetArrayLength() != 1)
-                            {
-                                throw new JsonException();
-                            }
-
-                            concrete = items[0];
-                        }
-                        else
-                        {
-                            concrete = items;
-                        }
-                    }
-                    else
-                    {
-                        if (expanded.Scalar.Length == 0)
-                        {
-                            continue;
-                        }
-
-                        concrete = concrete.GetProperty("scalar");
+                        continue;
                     }
                 }
 
@@ -125,6 +88,9 @@ internal static class TaskParameterBinder
 
         return bound;
     }
+
+    internal static ITaskItem[] ReadItems(JsonElement value, bool expanded)
+        => TaskParameterReader.ReadItems(value, expanded);
 
     private static object ConvertValue(JsonElement value, Type type, bool expandedItems = false)
     {
@@ -160,7 +126,7 @@ internal static class TaskParameterBinder
 
         if (type == typeof(ITaskItem))
         {
-            return ConvertItem(value);
+            return TaskParameterReader.ReadItem(value);
         }
 
         if (!IsSupportedScalarType(type))
@@ -168,14 +134,7 @@ internal static class TaskParameterBinder
             throw new NotSupportedException(HostResources.Format("UnsupportedParameterType", type));
         }
 
-        string text = value.ValueKind switch
-        {
-            JsonValueKind.String => value.GetString()!,
-            JsonValueKind.Number => value.GetRawText(),
-            JsonValueKind.True => bool.TrueString,
-            JsonValueKind.False => bool.FalseString,
-            _ => throw new JsonException(),
-        };
+        string text = TaskParameterReader.ReadScalar(value);
 
         if (type == typeof(AbsolutePath) || type == typeof(FileInfo) || type == typeof(DirectoryInfo))
         {
@@ -187,42 +146,4 @@ internal static class TaskParameterBinder
 
     private static bool IsSupportedScalarType(Type type)
         => type == typeof(ITaskItem) || ValueTypeParser.IsSupportedType(type) || type.IsEnum;
-
-    private static ITaskItem ConvertItem(JsonElement value)
-    {
-        if (value.ValueKind == JsonValueKind.String)
-        {
-            return new TaskItem(EscapingUtilities.Escape(value.GetString()!), treatAsFilePath: false);
-        }
-
-        ItemValue item = value.Deserialize<ItemValue>(TaskInvocation.JsonOptions) ?? throw new JsonException();
-        TaskItem result = new(EscapingUtilities.Escape(item.ItemSpec), treatAsFilePath: false);
-        HashSet<string> metadataNames = new(MSBuildNameIgnoreCaseComparer.Default);
-        foreach (KeyValuePair<string, string> metadata in item.Metadata)
-        {
-            ArgumentNullException.ThrowIfNull(metadata.Value);
-            if (!metadataNames.Add(metadata.Key))
-            {
-                throw new InvalidDataException(HostResources.Format("DuplicateParameter", metadata.Key));
-            }
-
-            ((ITaskItem2)result).SetMetadataValueLiteral(metadata.Key, metadata.Value);
-        }
-
-        return result;
-    }
-
-    private sealed class ItemValue
-    {
-        public required string ItemSpec { get; init; }
-
-        public Dictionary<string, string> Metadata { get; init; } = [];
-    }
-
-    private sealed class ExpandedValue
-    {
-        public required string Scalar { get; init; }
-
-        public required JsonElement Items { get; init; }
-    }
 }

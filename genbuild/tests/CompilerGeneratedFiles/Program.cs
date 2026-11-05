@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 internal static class Program
 {
@@ -30,6 +31,9 @@ internal static class Program
                 break;
             case "recovery-failures":
                 CheckRecoveryFailures(args[1], args[2], args[3], args[4]);
+                break;
+            case "clean":
+                CheckCleaning(args[1], args[2], args[3], args[4]);
                 break;
             case "empty":
                 Require(Directory.Exists(args[1]), "Zero sources must publish a real directory.");
@@ -272,6 +276,161 @@ internal static class Program
             Reject(label);
             File.WriteAllBytes(root + ".tree.zip", archive);
             File.SetLastWriteTimeUtc(root + ".tree.zip", archiveTime);
+        }
+    }
+
+    private static void CheckCleaning(string graph, string root, string host, string actionHost)
+    {
+        Require(root.Contains("/genbuild-smoke/", StringComparison.Ordinal) ||
+            root.Contains("\\genbuild-smoke\\", StringComparison.Ordinal), "Cleaning tests require an isolated smoke fixture.");
+        string[] manifests = Directory.GetFiles(graph + ".actions", "*.json");
+        string invocation = manifests.Single(file =>
+            JsonNode.Parse(File.ReadAllText(file))!["taskType"]!.GetValue<string>() == "Microsoft.CodeAnalysis.BuildTasks.CompileCsc");
+        string[] outputs = manifests.SelectMany(file => DeclaredFiles(file, "DeclaredOutputs")).Distinct().ToArray();
+        string[] inputs = manifests.SelectMany(file => DeclaredFiles(file, "DeclaredInputs"))
+            .Where(file => !outputs.Contains(file)).Distinct().ToArray();
+        string[] published = outputs.Concat(RelativeFiles(root).Select(name => Path.Combine(root, name)))
+            .Append(root + ".tree.json").Distinct().ToArray();
+        string[] inputHashes = inputs.Select(Hash).ToArray();
+        byte[] receipt = File.ReadAllBytes(root + ".tree.json");
+        DateTime receiptTime = File.GetLastWriteTimeUtc(root + ".tree.json");
+        string source = Path.Combine(root, RelativeFiles(root)[0]);
+        byte[] sourceBytes = File.ReadAllBytes(source);
+        DateTime sourceTime = File.GetLastWriteTimeUtc(source);
+        string unowned = Path.Combine(root, "unowned.txt");
+        string inactiveRoot = root + ".inactive";
+        string inactiveManifest = Path.Combine(graph + ".actions", "inactive.json");
+        Require(!Directory.Exists(inactiveRoot) && !File.Exists(inactiveManifest), "Inactive fixture already exists.");
+        Directory.CreateDirectory(inactiveRoot);
+        string sentinel = Path.Combine(inactiveRoot, "unowned.txt");
+        File.WriteAllText(sentinel, "not owned by the active graph");
+        JsonNode inactive = JsonNode.Parse(File.ReadAllText(invocation))!;
+        JsonNode tree = inactive["parameters"]!["DeclaredOutputTrees"]!["items"]![0]!;
+        tree["itemSpec"] = inactiveRoot;
+        foreach (string metadata in new[] { "ArchiveFile", "DyndepFile", "ReceiptFile" })
+        {
+            tree["metadata"]![metadata] = inactiveRoot + tree["metadata"]![metadata]!.GetValue<string>()[root.Length..];
+        }
+        foreach (JsonNode? item in inactive["parameters"]!["DeclaredOutputs"]!["items"]!.AsArray())
+        {
+            string path = item!["itemSpec"]!.GetValue<string>();
+            if (path == root + ".tree.zip" || path == root + ".tree.dd")
+            {
+                item["itemSpec"] = inactiveRoot + path[root.Length..];
+            }
+        }
+        File.WriteAllText(inactiveManifest, inactive.ToJsonString());
+
+        try
+        {
+            File.WriteAllText(unowned, "unowned file");
+            Reject("unowned file");
+            Require(File.ReadAllText(unowned) == "unowned file", "Clean deleted an unowned file.");
+            File.Delete(unowned);
+
+            foreach (string invalid in new[] { "{ malformed", "null", Encoding.UTF8.GetString(receipt).Replace(
+                "\"files\":[", "\"files\":[\"../escaped.g.cs\",", StringComparison.Ordinal) })
+            {
+                File.WriteAllText(root + ".tree.json", invalid);
+                Reject("malformed or traversing receipt");
+            }
+            RestoreReceipt();
+            File.Delete(root + ".tree.json");
+            Reject("missing receipt with existing generated files");
+            RestoreReceipt();
+
+            if (!OperatingSystem.IsWindows())
+            {
+                File.Delete(source);
+                File.CreateSymbolicLink(source, sentinel);
+                Reject("generated-file symlink");
+                File.Delete(source);
+                File.CreateSymbolicLink(source, sentinel + ".missing");
+                Reject("broken generated-file symlink");
+                File.Delete(source);
+                File.WriteAllBytes(source, sourceBytes);
+                File.SetLastWriteTimeUtc(source, sourceTime);
+                string link = Path.Combine(root, "linked-directory");
+                Directory.CreateSymbolicLink(link, inactiveRoot);
+                Reject("directory symlink");
+                Directory.Delete(link);
+            }
+
+            // A later invalid tree must not allow an earlier valid one to be removed.
+            Reject("batch preflight", host, actionHost, "--clean-trees", invocation, inactiveManifest);
+            File.Delete(source);
+            RunClean();
+            Require(outputs.All(file => !File.Exists(file)), "Clean retained a declared regular output.");
+            Require(!Directory.Exists(root) && !File.Exists(root + ".tree.json"),
+                "Clean retained the generated root, nested directories or receipt.");
+            Require(File.Exists(graph) && File.Exists(invocation) && File.Exists(inactiveManifest) &&
+                File.ReadAllText(sentinel) == "not owned by the active graph",
+                "Clean removed graph metadata or followed an inactive invocation.");
+            Require(inputs.Select(Hash).SequenceEqual(inputHashes), "Clean changed prepared/source inputs.");
+            RunClean();
+            Directory.CreateDirectory(Path.Combine(root, "empty", "nested"));
+            RunClean();
+            Require(!Directory.Exists(root), "Clean retained empty scaffolding without a receipt.");
+        }
+        finally
+        {
+            File.Delete(inactiveManifest);
+            File.Delete(sentinel);
+            Directory.Delete(inactiveRoot);
+        }
+
+        void RestoreReceipt()
+        {
+            File.WriteAllBytes(root + ".tree.json", receipt);
+            File.SetLastWriteTimeUtc(root + ".tree.json", receiptTime);
+        }
+
+        void RunClean()
+        {
+            (int exitCode, string output) = Run("ninja", "-f", graph, "clean");
+            Require(exitCode == 0, "Tree-aware clean failed: " + output);
+        }
+
+        void Reject(string label, string executable = "ninja", params string[] arguments)
+        {
+            string[] files = published.Where(file => File.Exists(file) || new FileInfo(file).LinkTarget is not null).ToArray();
+            string[] before = files.Select(Hash).ToArray();
+            DateTime[] times = files.Select(File.GetLastWriteTimeUtc).ToArray();
+            (int exitCode, string output) = Run(executable, arguments.Length == 0 ? ["-f", graph, "clean"] : arguments);
+            Require(exitCode != 0, $"Clean accepted {label}: {output}");
+            Require(files.Select(Hash).SequenceEqual(before) && files.Select(File.GetLastWriteTimeUtc).SequenceEqual(times),
+                $"Rejected {label} modified published outputs or the receipt.");
+        }
+
+        (int ExitCode, string Output) Run(string executable, params string[] arguments)
+        {
+            var start = new ProcessStartInfo(executable)
+            {
+                WorkingDirectory = Path.GetDirectoryName(graph)!,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            foreach (string argument in arguments)
+            {
+                start.ArgumentList.Add(argument);
+            }
+            using Process process = Process.Start(start)!;
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            process.WaitForExit();
+            return (process.ExitCode, stdout.Result + stderr.Result);
+        }
+
+        static string Hash(string file) => new FileInfo(file).LinkTarget is string target
+            ? "symlink:" + target
+            : Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(file)));
+
+        static string[] DeclaredFiles(string file, string parameter)
+        {
+            JsonNode action = JsonNode.Parse(File.ReadAllText(file))!;
+            string directory = action["workingDirectory"]!.GetValue<string>();
+            return action["parameters"]![parameter]!["items"]!.AsArray()
+                .Select(item => Path.GetFullPath(item!["itemSpec"]!.GetValue<string>(), directory)).ToArray();
         }
     }
 

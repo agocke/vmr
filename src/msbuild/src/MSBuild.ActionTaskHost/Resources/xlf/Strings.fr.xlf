@@ -133,9 +133,9 @@
         <note>{0} is the invocation format version.</note>
       </trans-unit>
       <trans-unit id="Usage">
-        <source>Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt; | --materialize-tree &lt;invocation.json&gt; &lt;root&gt;</source>
-        <target state="new">Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt; | --materialize-tree &lt;invocation.json&gt; &lt;root&gt;</target>
-        <note>Do not translate the executable name or the --invocation and --materialize-tree options.</note>
+        <source>Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt; | --materialize-tree &lt;invocation.json&gt; &lt;root&gt; | --clean-trees &lt;invocation.json&gt; [...]</source>
+        <target state="new">Usage: MSBuild.ActionTaskHost --invocation &lt;invocation.json&gt; | --materialize-tree &lt;invocation.json&gt; &lt;root&gt; | --clean-trees &lt;invocation.json&gt; [...]</target>
+        <note>Do not translate the executable name or the --invocation, --materialize-tree and --clean-trees options.</note>
       </trans-unit>
       <trans-unit id="WarningEvent">
         <source>{0}({1},{2}): warning {3}: {4}</source>

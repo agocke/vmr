@@ -10,6 +10,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Build.Collections;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
 
@@ -40,16 +41,38 @@ internal sealed class GeneratedSourceTree
     }
 
     internal static GeneratedSourceTree[] Read(Type taskType, Dictionary<string, object> parameters)
+        => Read(taskType.FullName!, parameters);
+
+    internal static GeneratedSourceTree[] ReadForCleanup(TaskInvocation invocation)
+    {
+        Dictionary<string, object> parameters = new(MSBuildNameIgnoreCaseComparer.Default);
+        foreach (KeyValuePair<string, JsonElement> parameter in invocation.Parameters)
+        {
+            if (parameter.Key.Equals("DeclaredInputs", StringComparison.OrdinalIgnoreCase) ||
+                parameter.Key.Equals("DeclaredOutputs", StringComparison.OrdinalIgnoreCase) ||
+                parameter.Key.Equals("DeclaredOutputTrees", StringComparison.OrdinalIgnoreCase))
+            {
+                Require(parameters.TryAdd(parameter.Key,
+                    TaskParameterBinder.ReadItems(parameter.Value, invocation.Version == 2)), parameter.Key);
+            }
+        }
+
+        Require(parameters.ContainsKey("DeclaredInputs") && parameters.ContainsKey("DeclaredOutputs") &&
+            parameters.ContainsKey("DeclaredOutputTrees"), invocation.TaskType);
+        return Read(invocation.TaskType, parameters);
+    }
+
+    private static GeneratedSourceTree[] Read(string taskType, Dictionary<string, object> parameters)
     {
         if (!parameters.TryGetValue("DeclaredOutputTrees", out object? value))
         {
             return [];
         }
 
-        Require(value is ITaskItem[], taskType.FullName!);
+        Require(value is ITaskItem[], taskType);
         ITaskItem[] items = (ITaskItem[])value;
         Require(items.Length == 0 || (items.Length == 1 &&
-            taskType.FullName == "Microsoft.CodeAnalysis.BuildTasks.CompileCsc"), taskType.FullName!);
+            taskType == "Microsoft.CodeAnalysis.BuildTasks.CompileCsc"), taskType);
         GeneratedSourceTree[] trees = new GeneratedSourceTree[items.Length];
         for (int i = 0; i < items.Length; i++)
         {
@@ -100,11 +123,7 @@ internal sealed class GeneratedSourceTree
         using ZipArchive archive = ZipFile.OpenRead(Archive);
         Dictionary<string, ZipArchiveEntry> entries = Entries(archive);
         string[] files = entries.Keys.OrderBy(name => name, StringComparer.Ordinal).ToArray();
-        bool hasReceipt = File.Exists(Receipt);
-        TreeReceipt? previous = hasReceipt
-            ? JsonSerializer.Deserialize<TreeReceipt>(File.ReadAllText(Receipt), TaskInvocation.JsonOptions)
-            : null;
-        Require(!hasReceipt || previous is not null, Receipt);
+        TreeReceipt? previous = ReadReceipt();
         HashSet<string> allowed = new(FileUtilities.PathComparer);
         HashSet<string> allowedDirectories = new(FileUtilities.PathComparer);
         foreach (string name in files)
@@ -114,18 +133,9 @@ internal sealed class GeneratedSourceTree
 
         if (previous is not null)
         {
-            Require(previous.Version == 1 && previous.Root == Root && previous.Archive == Archive &&
-                previous.Files is not null, Receipt);
-            HashSet<string> previousPaths = new(FileUtilities.PathComparer);
             foreach (string name in previous.Files)
             {
                 string path = MemberPath(name);
-                foreach (string existing in previousPaths)
-                {
-                    Require(!Conflict(existing, path), path);
-                }
-
-                Require(previousPaths.Add(path), path);
                 allowed.Add(path);
                 AllowParents(path);
             }
@@ -202,6 +212,95 @@ internal sealed class GeneratedSourceTree
                 directory = Path.GetDirectoryName(directory);
             }
         }
+    }
+
+    internal Action PrepareCleanup()
+    {
+        RejectLinks(Root);
+        Require(!File.Exists(Root), Root);
+        TreeReceipt? receipt = ReadReceipt();
+        HashSet<string> owned = new(FileUtilities.PathComparer);
+        if (receipt is not null)
+        {
+            foreach (string name in receipt.Files)
+            {
+                owned.Add(MemberPath(name));
+            }
+        }
+
+        List<string> files = [];
+        List<string> directories = [];
+        if (Directory.Exists(Root))
+        {
+            Stack<string> pending = new();
+            pending.Push(Root);
+            while (pending.TryPop(out string? directory))
+            {
+                directories.Add(directory);
+                foreach (string path in Directory.EnumerateFileSystemEntries(directory))
+                {
+                    RejectLinks(path);
+                    if (Directory.Exists(path))
+                    {
+                        pending.Push(path);
+                    }
+                    else
+                    {
+                        Require(owned.Contains(path), path);
+                        files.Add(path);
+                    }
+                }
+            }
+        }
+
+        // All trees are preflighted before any cleanup plan is executed.
+        return () =>
+        {
+            foreach (string file in files)
+            {
+                RejectLinks(file);
+                File.Delete(file);
+            }
+
+            for (int i = directories.Count - 1; i >= 0; i--)
+            {
+                RejectLinks(directories[i]);
+                if (Directory.Exists(directories[i]))
+                {
+                    Directory.Delete(directories[i], recursive: false);
+                }
+            }
+
+            RejectLinks(Receipt);
+            File.Delete(Receipt);
+        };
+    }
+
+    private TreeReceipt? ReadReceipt()
+    {
+        RejectLinks(Receipt);
+        Require(!Directory.Exists(Receipt), Receipt);
+        if (!File.Exists(Receipt))
+        {
+            return null;
+        }
+
+        TreeReceipt? receipt = JsonSerializer.Deserialize<TreeReceipt>(File.ReadAllText(Receipt), TaskInvocation.JsonOptions);
+        Require(receipt is not null && receipt.Version == 1 && receipt.Root == Root &&
+            receipt.Archive == Archive && receipt.Files is not null, Receipt);
+        HashSet<string> paths = new(FileUtilities.PathComparer);
+        foreach (string name in receipt.Files)
+        {
+            string path = MemberPath(name);
+            foreach (string existing in paths)
+            {
+                Require(!Conflict(existing, path), path);
+            }
+
+            Require(paths.Add(path), path);
+        }
+
+        return receipt;
     }
 
     private Dictionary<string, ZipArchiveEntry> Entries(ZipArchive archive)

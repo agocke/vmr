@@ -529,8 +529,10 @@ ordinary-only. Hardened Restore does not capture the ledger, and fresh Build
 does not import old clean snapshots. Preserve product `FileWrites` and
 semantic producers; only the automatic cleanup/bookkeeping closure is omitted.
 
-An executor can clean current outputs from graph declarations. Pruning obsolete
-outputs additionally needs persistent ownership records for previous graphs,
+Use the generated `ninja -f <graph> clean` target to clean current graph outputs,
+including receipt-owned generated-source trees and their empty directory
+scaffolding. Raw `ninja -t clean` bypasses tree ownership checks.
+Pruning obsolete outputs additionally needs persistent ownership records for previous graphs,
 with protection for inputs, shared outputs and unowned files. That is separate
 executor work, not a task-local cache or a reason to inspect/delete arbitrary
 directory contents. Until implemented, stale outputs remain untouched.

@@ -170,12 +170,20 @@ and `_CleanRecordFileWrites`, without reading, replaying or updating the legacy
 clean ledger. Product `FileWrites` and semantic producer prerequisites remain
 available independently of that bookkeeping.
 
-A future executor can clean the current graph's declared outputs; safely
-pruning outputs absent from a later graph requires persistent output ownership.
-It must not infer ownership from arbitrary directory contents or delete
-unowned files. This functionality is deferred: current execution leaves stale
-outputs untouched. Explicit MSBuild Clean/Rebuild and arbitrary semantic
-Delete operations are not supported by omitting automatic cleanup.
+Generated Ninja graphs expose `ninja -f <graph> clean` for current declared
+outputs. Before Ninja removes regular outputs, the action host preflights every
+current generated-source tree against its ownership receipt. It rejects unowned
+files, invalid receipts and links without changing outputs, then deletes owned
+members and removes empty directories bottom-up, including the root. Missing
+owned members are harmless; an absent receipt permits only empty scaffolding.
+Cleaning uses only invocations referenced by the current graph, not stale
+sidecars. Use this target rather than raw `ninja -t clean`, which cannot run the
+ownership preflight or recursively remove directory scaffolding. Run cleaning
+separately from builds of the same outputs.
+
+Safely pruning outputs absent from a later graph still requires persistent
+cross-graph ownership; stale outputs remain untouched. Explicit MSBuild
+Clean/Rebuild and arbitrary semantic Delete operations remain unsupported.
 
 File-I/O actions cannot return MSBuild values in the prototype. A generator's
 output path, for example, must be established through static items or

@@ -131,6 +131,8 @@ internal sealed class HardenedActionGraph
     private readonly string _destination;
     private readonly string _host;
     private readonly string _dotnet;
+    private readonly string _nativeHost;
+    private readonly NativeTaskHostCatalog? _nativeCatalog;
     private readonly string _directory;
     private readonly string _hostOS;
     private readonly Architecture _hostArchitecture;
@@ -161,6 +163,7 @@ internal sealed class HardenedActionGraph
         _destination = Path.GetFullPath(project.GetPropertyValue("MSBuildEmitActionGraph"));
         _host = project.GetPropertyValue("MSBuildActionTaskHost");
         _dotnet = project.GetPropertyValue("MSBuildActionDotNetHost");
+        _nativeHost = project.GetPropertyValue("MSBuildNativeActionTaskHost");
         Dictionary<string, string> actionEnvironment = new(StringComparer.Ordinal);
         foreach (string name in ExpressionShredder.SplitSemiColonSeparatedList(project.GetPropertyValue("MSBuildActionEnvironment")))
         {
@@ -175,6 +178,7 @@ internal sealed class HardenedActionGraph
             Require(FileUtilities.PathsEqual(_destination, parent._destination) &&
                 FileUtilities.PathsEqual(_host, parent._host) &&
                 FileUtilities.PathsEqual(_dotnet, parent._dotnet) &&
+                _nativeHost == parent._nativeHost &&
                 _hostOS == parent._hostOS &&
                 _hostArchitecture == parent._hostArchitecture &&
                 _hostRuntimeIdentifier == parent._hostRuntimeIdentifier,
@@ -194,6 +198,12 @@ internal sealed class HardenedActionGraph
         Require(!NativeMethodsShared.IsWindows, "Windows action command quoting");
         Require(Path.IsPathRooted(_host) && File.Exists(_host), "a missing or nonabsolute MSBuildActionTaskHost");
         Require(Path.IsPathRooted(_dotnet) && File.Exists(_dotnet), "a missing or nonabsolute MSBuildActionDotNetHost");
+        if (_nativeHost.Length != 0)
+        {
+            Require(Path.IsPathRooted(_nativeHost) && File.Exists(_nativeHost) && File.Exists(_nativeHost + ".json"),
+                "a missing or nonabsolute MSBuildNativeActionTaskHost or its catalog");
+            _nativeCatalog = parent?._nativeCatalog ?? new NativeTaskHostCatalog(_nativeHost);
+        }
     }
 
     internal TaskEnvironment CreateConstructionEnvironment()
@@ -377,7 +387,7 @@ internal sealed class HardenedActionGraph
             json.WriteEndObject();
         }
 
-        _actions.Add(new(stream.ToArray(), [.. inputs, taskAssembly], outputs, taskAssembly, [.. trees], requiredProducers));
+        _actions.Add(new(stream.ToArray(), [.. inputs, taskAssembly], outputs, taskAssembly, typeName, [.. trees], requiredProducers));
         return true;
     }
 
@@ -447,6 +457,7 @@ internal sealed class HardenedActionGraph
         ninja.Append("msbuild_construction_host_runtime_identifier = ").Append(_hostRuntimeIdentifier).Append("\n\n");
         List<string> previousOutputs = [];
         List<string> allOutputs = [];
+        List<string> treeManifests = [];
         List<(string Path, byte[] Contents)> manifests = [];
         for (int i = 0; i < _actions.Count; i++)
         {
@@ -455,17 +466,36 @@ internal sealed class HardenedActionGraph
             string digest = BitConverter.ToString(hash.ComputeHash(action.Contents)).Replace("-", "").ToLowerInvariant();
             string manifest = Path.Combine(manifestDirectory, $"{i}-{digest}.json");
             manifests.Add((manifest, action.Contents));
+            bool native = !producers.ContainsKey(action.Assembly) && action.Trees.Length == 0 &&
+                _nativeCatalog?.Supports(action.TaskType, action.Assembly, producers) == true;
             string rule = "action_" + i.ToString(CultureInfo.InvariantCulture);
-            ninja.Append("rule ").Append(rule).Append("\n  command = ")
-                .Append(Command(_dotnet)).Append(' ').Append(Command(_host))
-                .Append(" --invocation ").Append(Command(manifest)).Append('\n');
+            ninja.Append("rule ").Append(rule).Append("\n  command = ");
+            if (native)
+            {
+                ninja.Append(Command(_nativeHost));
+            }
+            else
+            {
+                ninja.Append(Command(_dotnet)).Append(' ').Append(Command(_host));
+            }
+            ninja.Append(" --invocation ").Append(Command(manifest)).Append('\n');
             ninja.Append("build");
             AppendPaths(ninja, action.Outputs);
             ninja.Append(": ").Append(rule);
             AppendPaths(ninja, action.Inputs);
             ninja.Append(" | ").Append(EscapePath(manifest));
-            HashSet<string> tools = new(FileUtilities.PathComparer) { _host, _dotnet };
-            AddToolDirectory(tools, Path.GetDirectoryName(_host)!);
+            HashSet<string> tools = new(FileUtilities.PathComparer);
+            if (native)
+            {
+                tools.Add(_nativeHost);
+                tools.Add(_nativeHost + ".json");
+            }
+            else
+            {
+                tools.Add(_host);
+                tools.Add(_dotnet);
+                AddToolDirectory(tools, Path.GetDirectoryName(_host)!);
+            }
             if (!producers.ContainsKey(action.Assembly))
             {
                 AddToolDirectory(tools, Path.GetDirectoryName(action.Assembly)!);
@@ -483,6 +513,7 @@ internal sealed class HardenedActionGraph
             previousOutputs = [.. action.Outputs];
             foreach (TreeOutput tree in action.Trees)
             {
+                treeManifests.Add(manifest);
                 string treeRule = rule + "_tree";
                 ninja.Append("rule ").Append(treeRule).Append("\n  command = ")
                     .Append(Command(_dotnet)).Append(' ').Append(Command(_host))
@@ -502,6 +533,26 @@ internal sealed class HardenedActionGraph
 
         if (allOutputs.Count != 0)
         {
+            string cleanOutput = Path.Combine(manifestDirectory, "clean");
+            ninja.Append("rule msbuild_clean\n  command = ");
+            if (treeManifests.Count != 0)
+            {
+                ninja.Append(Command(_dotnet)).Append(' ').Append(Command(_host)).Append(" --clean-trees");
+                foreach (string manifest in treeManifests)
+                {
+                    ninja.Append(' ').Append(Command(manifest));
+                }
+                ninja.Append(" && ");
+            }
+            ninja.Append("ninja -f ").Append(Command(_destination)).Append(" -t clean")
+                .Append("\n  description = Cleaning declared outputs\nbuild ").Append(EscapePath(cleanOutput))
+                .Append(": msbuild_clean");
+            if (treeManifests.Count != 0)
+            {
+                ninja.Append(" |");
+                AppendPaths(ninja, treeManifests);
+            }
+            ninja.Append("\nbuild clean: phony ").Append(EscapePath(cleanOutput)).Append("\n\n");
             ninja.Append("default");
             AppendPaths(ninja, allOutputs);
             ninja.Append('\n');
@@ -689,7 +740,7 @@ internal sealed class HardenedActionGraph
 
     private sealed record TreeOutput(string Root, string Archive, string Dyndep, string Receipt);
 
-    private sealed record ActionInvocation(byte[] Contents, string[] Inputs, string[] Outputs, string Assembly, TreeOutput[] Trees,
+    private sealed record ActionInvocation(byte[] Contents, string[] Inputs, string[] Outputs, string Assembly, string TaskType, TreeOutput[] Trees,
         HashSet<string> RequiredProducers)
     {
         internal IEnumerable<string> OwnedPaths()

@@ -62,6 +62,10 @@
     <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)toolset/Toolset.csproj&quot; -t:Build -p:GenBuildTargetingPackVersion=$(GenBuildTargetingPackVersion) -p:GenBuildToolsetDirectory=&quot;$(GenBuildToolsetDirectory)&quot; $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/tools-build-{}.binlog&quot;" />
   </Target>
 
+  <Target Name="BuildNativeTaskHost" DependsOnTargets="Assemble" Condition="'$(GenBuildNativeTaskHost)' == 'true'">
+    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)native-host/NativeTaskHost.csproj&quot; -restore -t:Publish -p:GenBuildToolsetDirectory=&quot;$(GenBuildToolsetDirectory)&quot; -p:PublishDir=&quot;$(GenBuildToolsetDirectory)native-action-host/&quot; $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/native-host-{}.binlog&quot;" />
+  </Target>
+
   <Target Name="GenerateAnalyzerManifests" DependsOnTargets="BuildComponents">
     <Exec Command="&quot;$(GenBuildDotNetHost)&quot; --roll-forward Major &quot;$(_RoslynOutput)CodeStyleConfigFileGenerator/$(Configuration)/net10.0/CodeStyleConfigFileGenerator.dll&quot; CSharp &quot;$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes/$(Configuration)/netstandard2.0&quot; Microsoft.CodeAnalysis.CSharp.CodeStyle.targets &quot;$(_RoslynOutput)Microsoft.CodeAnalysis.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.CodeStyle.dll&quot;" />
     <Exec Command="&quot;$(GenBuildDotNetHost)&quot; --roll-forward Major &quot;$(_RoslynOutput)CodeStyleConfigFileGenerator/$(Configuration)/net10.0/CodeStyleConfigFileGenerator.dll&quot; VisualBasic &quot;$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes/$(Configuration)/netstandard2.0&quot; Microsoft.CodeAnalysis.VisualBasic.CodeStyle.targets &quot;$(_RoslynOutput)Microsoft.CodeAnalysis.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.dll&quot;" />
@@ -157,5 +161,5 @@
     <Message Importance="high" Text="genbuild app: $(GenBuildOutputDirectory)genbuild.dll (external .NET runtime required; no SDK redist)" />
   </Target>
 
-  <Target Name="Build" DependsOnTargets="Assemble" />
+  <Target Name="Build" DependsOnTargets="Assemble;BuildNativeTaskHost" />
 </Project>

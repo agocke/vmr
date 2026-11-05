@@ -56,6 +56,11 @@ try
         start.ArgumentList.Add($"-p:MSBuildEmitActionGraph={graph}");
         start.ArgumentList.Add($"-p:MSBuildActionTaskHost={Path.Combine(toolset, "action-host", "MSBuild.ActionTaskHost.dll")}");
         start.ArgumentList.Add($"-p:MSBuildActionDotNetHost={host}");
+        string nativeHost = Path.Combine(toolset, "native-action-host", "MSBuild.ActionTaskHost");
+        if (File.Exists(nativeHost))
+        {
+            start.ArgumentList.Add($"-p:MSBuildNativeActionTaskHost={nativeHost}");
+        }
     }
 
     foreach (string argument in args.AsSpan(2))

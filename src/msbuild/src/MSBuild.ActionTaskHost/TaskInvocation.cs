@@ -18,6 +18,9 @@ internal sealed class TaskInvocation
         AllowDuplicateProperties = false,
     };
 
+    // A context installs its resolver; keep the receipt serializer's options independent.
+    internal static readonly InvocationJsonContext JsonContext = new(new JsonSerializerOptions(JsonOptions));
+
     public required int Version { get; init; }
 
     public required string TaskAssembly { get; init; }
@@ -39,7 +42,7 @@ internal sealed class TaskInvocation
     internal static TaskInvocation Read(string path)
     {
         using FileStream stream = File.OpenRead(path);
-        TaskInvocation invocation = JsonSerializer.Deserialize<TaskInvocation>(stream, JsonOptions)
+        TaskInvocation invocation = JsonSerializer.Deserialize(stream, JsonContext.TaskInvocation)
             ?? throw new InvalidDataException(HostResources.Format("InvalidInvocation", path));
 
         if (invocation.Version is not (1 or 2))
@@ -50,3 +53,8 @@ internal sealed class TaskInvocation
         return invocation;
     }
 }
+
+[JsonSerializable(typeof(TaskInvocation))]
+[JsonSerializable(typeof(TaskParameterReader.ItemValue))]
+[JsonSerializable(typeof(TaskParameterReader.ExpandedValue))]
+internal sealed partial class InvocationJsonContext : JsonSerializerContext;
