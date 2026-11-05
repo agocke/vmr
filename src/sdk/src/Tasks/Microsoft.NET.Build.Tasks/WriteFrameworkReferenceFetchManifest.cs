@@ -20,6 +20,12 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
     [Required]
     public string TargetFramework { get; set; } = null!;
 
+    public string TargetPlatformIdentifier { get; set; } = "";
+
+    public string TargetPlatformVersion { get; set; } = "";
+
+    public string TargetPlatformDisplayName { get; set; } = "";
+
     public ITaskItem[] CompileReferences { get; set; } = [];
 
     public ITaskItem[] Analyzers { get; set; } = [];
@@ -67,6 +73,10 @@ public sealed class WriteFrameworkReferenceFetchManifest : TaskBase
             writer.WriteStartElement("PropertyGroup");
             WriteProperty(writer, "_FrameworkReferenceFetchManifestVersion", "1");
             WriteProperty(writer, "_FrameworkReferenceConflictFactsVersion", "1");
+            WriteProperty(writer, "_FrameworkReferencePlatformSDKFactsVersion", "1");
+            WriteProperty(writer, "_FrameworkReferenceManifestTargetPlatformIdentifier", TargetPlatformIdentifier);
+            WriteProperty(writer, "_FrameworkReferenceManifestTargetPlatformVersion", TargetPlatformVersion);
+            WriteProperty(writer, "_FrameworkReferenceManifestTargetPlatformDisplayName", TargetPlatformDisplayName);
             WriteProperty(writer, "_UsingFrameworkReferenceManifest", "true");
             writer.WriteStartElement("SkipResolvePackageAssets");
             writer.WriteAttributeString("Condition", "'$(MSBuildHardenedGraph)' != 'true'");

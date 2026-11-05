@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
@@ -10,7 +11,9 @@ namespace Microsoft.NET.Build.Tasks.UnitTests;
 public class GivenAWriteFrameworkReferenceFetchManifest
 {
     [TestMethod]
-    public void ItWritesImportableFrameworkCandidateItems()
+    [DataRow("")]
+    [DataRow("Windows SDK 7.0 (a;b) & %$(literal)")]
+    public void ItWritesImportableFrameworkCandidateItems(string platformDisplayName)
     {
         string testDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         string outputFile = Path.Combine(testDirectory, "framework-reference-manifest.props");
@@ -32,6 +35,9 @@ public class GivenAWriteFrameworkReferenceFetchManifest
                 BuildEngine = new MockBuildEngine(),
                 OutputFile = outputFile,
                 TargetFramework = "net11.0",
+                TargetPlatformIdentifier = "Windows",
+                TargetPlatformVersion = "7.0",
+                TargetPlatformDisplayName = platformDisplayName,
                 CompileReferences = [compileReference],
                 RuntimeFrameworks = [runtimeFramework],
                 ResolvedFrameworkReferences = [resolvedFrameworkReference],
@@ -44,6 +50,12 @@ public class GivenAWriteFrameworkReferenceFetchManifest
             XDocument manifest = XDocument.Load(outputFile);
             XElement project = manifest.Root!;
             project.Element("PropertyGroup")!.Element("_UsingFrameworkReferenceManifest")!.Value.Should().Be("true");
+            XElement properties = project.Element("PropertyGroup")!;
+            properties.Element("_FrameworkReferencePlatformSDKFactsVersion")!.Value.Should().Be("1");
+            properties.Element("_FrameworkReferenceManifestTargetPlatformIdentifier")!.Value.Should().Be("Windows");
+            properties.Element("_FrameworkReferenceManifestTargetPlatformVersion")!.Value.Should().Be("7.0");
+            ProjectCollection.Unescape(properties.Element("_FrameworkReferenceManifestTargetPlatformDisplayName")!.Value)
+                .Should().Be(platformDisplayName);
 
             XElement itemGroup = project.Element("ItemGroup")!;
             XElement compileCandidate = itemGroup.Element("_FrameworkReferenceManifestCompileReference")!;

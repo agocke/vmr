@@ -47,6 +47,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     <WriteFrameworkReferenceFetchManifest
       OutputFile="$(FrameworkReferenceFetchManifestPath)"
       TargetFramework="$(TargetFramework)"
+      TargetPlatformIdentifier="$(TargetPlatformIdentifier)"
+      TargetPlatformVersion="$(TargetPlatformVersion)"
+      TargetPlatformDisplayName="$(TargetPlatformDisplayName)"
       CompileReferences="@(_FrameworkReferenceFetchManifestCompileReference)"
       Analyzers="@(_FrameworkReferenceFetchManifestAnalyzer)"
       RuntimeFrameworks="@(_FrameworkReferenceFetchManifestRuntimeFramework)"

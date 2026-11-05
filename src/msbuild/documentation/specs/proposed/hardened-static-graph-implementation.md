@@ -1163,6 +1163,34 @@ Localization and validation stay enabled, failed construction publishes no
 graph/products, and a full native runtime or complete net11 library build
 remains unproven.
 
+The whole shared-framework traversal (`src/runtime/src/libraries/sfx-src.proj`)
+now completes isolated Restore preparation. ApiCompat snapshot imports and
+capture are limited to configured inner builds: framework-neutral
+`GetTargetFrameworks` evaluation needs no outer snapshot. The regression queries
+C# and Visual Basic projects targeting `net11.0` and `net11.0-windows` through
+a traversal, verifies the configured C# validation action, and rejects a missing
+inner snapshot without publishing a partial graph. ApiCompat preparation runs
+after framework-reference capture rather than the C#-only compiler-input hook,
+so both languages receive configured snapshots without compiling products.
+
+[`WriteFrameworkReferenceFetchManifest`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkReferenceFetchManifest.cs)
+also captures platform SDK display metadata with its platform identifier/version.
+Hardened evaluation replays it instead of calling ambient platform discovery;
+missing facts or mismatched identities fail metadata queries with NETSDK1256.
+The regression verifies byte-identical ordinary/prepared framework metadata,
+including display names, and all three invalid-fact cases reject construction
+without partial graphs. The existing ordinary/action ApiCompat smoke suite passes.
+
+The whole traversal now prepares 633 framework-reference and 297 ApiCompat
+snapshots, including both Visual Basic Core frameworks. The former platform
+discovery and missing VB snapshot errors are gone. Construction first reaches
+the unsupported preserialized-resource profile in System.Collections and partial
+facade generation in System.Diagnostics.Tracing. It also reports a Build target
+cycle and downstream deferred-value diagnostics; these have not yet been
+classified as independent failures or cascades. This traversal has not executed
+Ninja; preparation and failed construction produce no assemblies/resources and
+preserve the recorded shared cache hashes.
+
 ### NuGet fact capture
 
 - [x] Capture the complete ordered assets JSON through

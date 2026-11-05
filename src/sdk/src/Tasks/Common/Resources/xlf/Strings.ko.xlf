@@ -592,6 +592,11 @@ The following are names of parameters or literal values and should not be transl
         <target state="translated">NETSDK1018: NuGet 버전 문자열 '{0}'이(가) 잘못되었습니다.</target>
         <note>{StrBegins="NETSDK1018: "}</note>
       </trans-unit>
+      <trans-unit id="InvalidPlatformSDKInputFacts">
+        <source>NETSDK1256: Prepared platform SDK metadata is missing or does not match platform '{0}' version '{1}'. Run Restore with graph-input preparation enabled before constructing the build graph.</source>
+        <target state="new">NETSDK1256: Prepared platform SDK metadata is missing or does not match platform '{0}' version '{1}'. Run Restore with graph-input preparation enabled before constructing the build graph.</target>
+        <note>{StrBegins="NETSDK1256: "}{Locked="{0}"}{Locked="{1}"}</note>
+      </trans-unit>
       <trans-unit id="InvalidReferenceConflictFacts">
         <source>NETSDK1255: Prepared reference conflict inputs are invalid or unsupported: {0} Capture external conflict facts during Restore and supply version metadata for generated candidates.</source>
         <target state="new">NETSDK1255: Prepared reference conflict inputs are invalid or unsupported: {0} Capture external conflict facts during Restore and supply version metadata for generated candidates.</target>

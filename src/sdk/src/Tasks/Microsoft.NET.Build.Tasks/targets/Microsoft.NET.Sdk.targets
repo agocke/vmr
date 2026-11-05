@@ -1672,8 +1672,21 @@ Copyright (c) .NET Foundation. All rights reserved.
          workloads. -->
     <TargetPlatformVersion Condition="'$(TargetPlatformVersion)' == ''">0.0</TargetPlatformVersion>
     <TargetPlatformMoniker>$(TargetPlatformIdentifier),Version=$(TargetPlatformVersion)</TargetPlatformMoniker>
-    <TargetPlatformDisplayName>$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformSDKDisplayName($(TargetPlatformIdentifier), $(TargetPlatformVersion)))</TargetPlatformDisplayName>
+    <TargetPlatformDisplayName Condition="'$(MSBuildHardenedGraph)' != 'true'">$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformSDKDisplayName($(TargetPlatformIdentifier), $(TargetPlatformVersion)))</TargetPlatformDisplayName>
+    <_UsingPreparedTargetPlatformDisplayName Condition="'$(MSBuildHardenedGraph)' == 'true'">true</_UsingPreparedTargetPlatformDisplayName>
+    <TargetPlatformDisplayName Condition="'$(MSBuildHardenedGraph)' == 'true'">$(_FrameworkReferenceManifestTargetPlatformDisplayName)</TargetPlatformDisplayName>
   </PropertyGroup>
+
+  <Target Name="_ValidatePreparedTargetPlatformDisplayName"
+          BeforeTargets="GetTargetFrameworksWithPlatformForSingleTargetFramework;GetTargetPathWithTargetPlatformMoniker;_CheckForInvalidConfigurationAndPlatform;Build"
+          Condition="'$(_UsingPreparedTargetPlatformDisplayName)' == 'true'">
+    <NETSdkError Condition="'$(_FrameworkReferencePlatformSDKFactsVersion)' != '1' or
+                           '$(_FrameworkReferenceManifestTargetPlatformIdentifier)' != '$(TargetPlatformIdentifier)' or
+                           '$(_FrameworkReferenceManifestTargetPlatformVersion)' != '$(TargetPlatformVersion)'"
+                 ResourceName="InvalidPlatformSDKInputFacts"
+                 DeclaredInputs="" DeclaredOutputs=""
+                 FormatArguments="$(TargetPlatformIdentifier);$(TargetPlatformVersion)" />
+  </Target>
 
   <PropertyGroup>
     <!-- If the Windows targets wasn't called to default it, then just default it to the TargetPlatformVersion. -->

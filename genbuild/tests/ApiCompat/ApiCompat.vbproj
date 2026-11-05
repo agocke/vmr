@@ -1,0 +1,15 @@
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net11.0-windows</TargetFrameworks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ApiCompatValidateAssemblies>true</ApiCompatValidateAssemblies>
+    <ApiCompatContractAssembly>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../contract/ApiCompatFixture.dll'))</ApiCompatContractAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <AdditionalTargetFrameworkInfoProperty Include="TargetPlatformDisplayName" />
+    <ApiCompatContractAssemblyReferences Include="$(ApiCompatReferenceDirectory)" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="$(ApiCompatTargetsDirectory)/Microsoft.DotNet.ApiCompat.Task.targets" />
+</Project>

@@ -3630,13 +3630,15 @@
       <_ApiCompatVerifier>&quot;$(GenBuildTestHost)&quot; &quot;$(_ApiCompatRoot)Verifier.dll&quot;</_ApiCompatVerifier>
     </PropertyGroup>
     <ItemGroup>
-      <_ApiCompatDirectory Include="$(_ApiCompatAction);$(_ApiCompatRoot)ordinary/;$(_ApiCompatRoot)inactive/" />
+      <_ApiCompatDirectory Include="$(_ApiCompatAction);$(_ApiCompatRoot)ordinary/;$(_ApiCompatRoot)inactive/;$(_ApiCompatRoot)cross-targeting/" />
       <_ApiCompatFixture Include="$(MSBuildThisFileDirectory)ApiCompat/ApiCompat.csproj;$(MSBuildThisFileDirectory)ApiCompat/CompatibilitySuppressions.xml;$(MSBuildThisFileDirectory)ApiCompat/excluded-attributes.txt" />
       <_ApiCompatImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
     </ItemGroup>
     <MakeDir Directories="@(_ApiCompatDirectory);$(_ApiCompatRoot)seed;$(_ApiCompatRoot)contract" />
     <WriteLinesToFile File="$(_ApiCompatRoot)%(_ApiCompatImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Copy SourceFiles="@(_ApiCompatFixture)" DestinationFolder="%(_ApiCompatDirectory.Identity)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/FrameworkSelection.proj" DestinationFolder="$(_ApiCompatRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/ApiCompat.vbproj" DestinationFolder="$(_ApiCompatRoot)cross-visualbasic/" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs" DestinationFiles="%(_ApiCompatDirectory.Identity)Surface.cs" />
     <!-- Only the externally supplied contract and assertion helper are precompiled, never the consumer. -->
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_ApiCompatRoot)seed" />
@@ -3654,6 +3656,63 @@
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -define:CONTRACT -out:&quot;$(_ApiCompatRoot)contract/ApiCompatFixture.dll&quot; @&quot;$(_ApiCompatRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs&quot;" />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_ApiCompatRoot)Verifier.dll&quot; @&quot;$(_ApiCompatRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)ApiCompat/Verifier.cs&quot;" />
     <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_ApiCompatRoot)Verifier.runtimeconfig.json" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)cross-targeting/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatCrossTargeting=true -p:TargetFramework=net11.0" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)cross-targeting/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatCrossTargeting=true -p:TargetFramework=net11.0-windows" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)cross-visualbasic/ApiCompat.vbproj&quot; $(_ApiCompatArguments) -p:TargetFramework=net11.0" />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)cross-visualbasic/ApiCompat.vbproj&quot; $(_ApiCompatArguments) -p:TargetFramework=net11.0-windows" />
+    <Error Condition="Exists('$(_ApiCompatRoot)cross-targeting/obj/apicompatinputs/Debug/AnyCPU/ApiCompat.csproj.g.props') or
+                      !Exists('$(_ApiCompatRoot)cross-targeting/$(_ApiCompatSnapshot)') or
+                      !Exists('$(_ApiCompatRoot)cross-targeting/obj/apicompatinputs/Debug/AnyCPU/net11.0-windows/ApiCompat.csproj.g.props') or
+                      Exists('$(_ApiCompatRoot)cross-visualbasic/obj/apicompatinputs/Debug/AnyCPU/ApiCompat.vbproj.g.props') or
+                      !Exists('$(_ApiCompatRoot)cross-visualbasic/obj/apicompatinputs/Debug/AnyCPU/net11.0/ApiCompat.vbproj.g.props') or
+                      !Exists('$(_ApiCompatRoot)cross-visualbasic/obj/apicompatinputs/Debug/AnyCPU/net11.0-windows/ApiCompat.vbproj.g.props')"
+           Text="C# and VB preparation must capture per-framework ApiCompat inputs, not outer-build snapshots." />
+    <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)FrameworkSelection.proj&quot; $(_ApiCompatArguments) -p:MSBuildRestoreGraphInputs=false -t:Build -p:FrameworkSelectionOutput=ordinary-metadata.txt" />
+    <Exec Command="$(_App) build &quot;$(_ApiCompatRoot)FrameworkSelection.proj&quot; $(_ApiCompatArguments) -p:FrameworkSelectionOutput=metadata.txt -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatRoot)metadata.ninja&quot;" />
+    <Error Condition="Exists('$(_ApiCompatRoot)cross-targeting/bin') or Exists('$(_ApiCompatRoot)cross-visualbasic/bin')"
+           Text="Framework selection must not build the consumer." />
+    <Error Condition="Exists('$(_ApiCompatRoot)metadata.txt')"
+           Text="Framework selection graph construction must not execute its metadata output action." />
+    <Exec WorkingDirectory="$(_ApiCompatRoot)" Command="ninja -f metadata.ninja" />
+    <PropertyGroup>
+      <_ApiCompatFrameworkMetadata>$([System.Convert]::ToBase64String($([System.IO.File]::ReadAllBytes('$(_ApiCompatRoot)metadata.txt'))))</_ApiCompatFrameworkMetadata>
+      <_ApiCompatOrdinaryFrameworkMetadata>$([System.Convert]::ToBase64String($([System.IO.File]::ReadAllBytes('$(_ApiCompatRoot)ordinary-metadata.txt'))))</_ApiCompatOrdinaryFrameworkMetadata>
+    </PropertyGroup>
+    <Error Condition="'$(_ApiCompatFrameworkMetadata)' != '$(_ApiCompatOrdinaryFrameworkMetadata)'"
+           Text="Prepared C# and VB platform display names and framework metadata must match ordinary evaluation." />
+    <ItemGroup>
+      <_ApiCompatInvalidPlatformFact Include="_FrameworkReferencePlatformSDKFactsVersion;_FrameworkReferenceManifestTargetPlatformIdentifier;_FrameworkReferenceManifestTargetPlatformVersion">
+        <Value>invalid</Value>
+      </_ApiCompatInvalidPlatformFact>
+      <_ApiCompatInvalidPlatformFact Update="_FrameworkReferencePlatformSDKFactsVersion">
+        <Value></Value>
+      </_ApiCompatInvalidPlatformFact>
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_ApiCompatRoot)FrameworkSelection.proj&quot; $(_ApiCompatArguments) -p:%(_ApiCompatInvalidPlatformFact.Identity)=%(_ApiCompatInvalidPlatformFact.Value) -p:FrameworkSelectionOutput=invalid-metadata.txt -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatRoot)%(_ApiCompatInvalidPlatformFact.Identity).ninja&quot; -flp:&quot;LogFile=$(_ApiCompatRoot)%(_ApiCompatInvalidPlatformFact.Identity).log;Verbosity=quiet&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_ApiCompatInvalidPlatformExit" />
+    </Exec>
+    <Error Condition="'%(_ApiCompatInvalidPlatformExit.Identity)' == '0'"
+           Text="Missing or mismatched prepared platform SDK facts must fail graph construction." />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_ApiCompatRoot)%(_ApiCompatInvalidPlatformFact.Identity).log').Contains('NETSDK1256')) or
+                      Exists('$(_ApiCompatRoot)%(_ApiCompatInvalidPlatformFact.Identity).ninja') or
+                      Exists('$(_ApiCompatRoot)%(_ApiCompatInvalidPlatformFact.Identity).ninja.actions')"
+           Text="Invalid platform SDK facts must report the preparation diagnostic without publishing a partial graph." />
+    <Exec Command="$(_App) build &quot;$(_ApiCompatRoot)cross-targeting/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatCrossTargeting=true -p:TargetFramework=net11.0 -p:RunApiCompatValidateAssembliesInInnerBuild=true -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatRoot)cross-targeting/build.ninja&quot;" />
+    <Exec Command="$(_ApiCompatVerifier) graph &quot;$(_ApiCompatRoot)cross-targeting&quot; &quot;$(_ApiCompatReferenceDirectory)&quot; &quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot;" />
+    <Copy SourceFiles="$(_ApiCompatRoot)cross-targeting/$(_ApiCompatSnapshot)" DestinationFiles="$(_ApiCompatRoot)cross-targeting/snapshot.backup" />
+    <Delete Files="$(_ApiCompatRoot)cross-targeting/$(_ApiCompatSnapshot)" />
+    <Exec Command="$(_App) build &quot;$(_ApiCompatRoot)cross-targeting/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatCrossTargeting=true -p:TargetFramework=net11.0 -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatRoot)cross-targeting/missing-snapshot.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ApiCompatMissingSnapshotExit" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ApiCompatMissingSnapshotDiagnostics" />
+    </Exec>
+    <Error Condition="'$(_ApiCompatMissingSnapshotExit)' == '0' or !$(_ApiCompatMissingSnapshotDiagnostics.Contains('MSB4019')) or
+                      Exists('$(_ApiCompatRoot)cross-targeting/missing-snapshot.ninja') or
+                      Exists('$(_ApiCompatRoot)cross-targeting/missing-snapshot.ninja.actions')"
+           Text="Configured inner builds must still reject missing ApiCompat snapshots without publishing a partial graph." />
+    <Copy SourceFiles="$(_ApiCompatRoot)cross-targeting/snapshot.backup" DestinationFiles="$(_ApiCompatRoot)cross-targeting/$(_ApiCompatSnapshot)" />
+    <Delete Files="$(_ApiCompatRoot)cross-targeting/snapshot.backup" />
     <Exec Command="$(_App) restore &quot;$(_ApiCompatAction)ApiCompat.csproj&quot; $(_ApiCompatArguments)" />
     <Error Condition="!Exists('$(_ApiCompatAction)$(_ApiCompatSnapshot)') or Exists('$(_ApiCompatAction)obj/Debug/net11.0/ApiCompatFixture.dll') or Exists('$(_ApiCompatAction)$(_ApiCompatSemaphore)') or Exists('$(_ApiCompatAction)bin')"
            Text="Restore must capture ApiCompat directory inputs without building the consumer or touching its success semaphore." />
@@ -3801,7 +3860,7 @@
                       $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatOrderAction)$(_ApiCompatSemaphore)').Ticks) != '$(_ApiCompatOrderSuccessTime)'"
            Text="A newly appearing undeclared sibling must not become an implicit loader fallback or change the prior success semaphore." />
     <CallTarget Targets="TestApiCompatProducedReferences" />
-    <Message Importance="high" Text="Source ApiCompat smoke checks passed: prepared directory inventory, explicit file footprint, future compiler output, independent validation, no-op rebuild, semaphore-only recovery, exclusion invalidation and recovery with ordinary CP0014 parity, ordinary CP0002 parity, suppression replay, failure semaphore preservation, atomic rejection, explicit-file precedence and undeclared sibling rejection. $(_ApiCompatRoot)" />
+    <Message Importance="high" Text="Source ApiCompat smoke checks passed: C#/VB cross-targeting metadata parity, prepared platform SDK validation, required inner snapshots, prepared directory inventory, explicit file footprint, future compiler output, independent validation, no-op rebuild, semaphore-only recovery, exclusion invalidation and recovery with ordinary CP0014 parity, ordinary CP0002 parity, suppression replay, failure semaphore preservation, atomic rejection, explicit-file precedence and undeclared sibling rejection. $(_ApiCompatRoot)" />
   </Target>
   <Target Name="TestApiCompatProducedReferences">
     <PropertyGroup>

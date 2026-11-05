@@ -1,0 +1,15 @@
+<Project>
+  <Target Name="Restore" />
+  <Target Name="Build">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)cross-targeting/ApiCompat.csproj;$(MSBuildThisFileDirectory)cross-visualbasic/ApiCompat.vbproj"
+             Targets="GetTargetFrameworks"
+             Properties="ApiCompatCrossTargeting=true">
+      <Output TaskParameter="TargetOutputs" ItemName="_ApiCompatFrameworkMetadata" />
+    </MSBuild>
+    <Error Condition="'@(_ApiCompatFrameworkMetadata->Count())' != '2' or '%(_ApiCompatFrameworkMetadata.TargetFrameworks)' != 'net11.0;net11.0-windows'"
+           Text="C# and VB framework-neutral evaluation must return both target frameworks without outer ApiCompat snapshots or ambient platform discovery." />
+    <WriteLinesToFile File="$(FrameworkSelectionOutput)" Overwrite="true"
+                      Lines="@(_ApiCompatFrameworkMetadata->'%(TargetFrameworks)|%(TargetPlatformMonikers)|%(AdditionalPropertiesFromProject)')"
+                      DeclaredInputs="" DeclaredOutputs="$(FrameworkSelectionOutput)" />
+  </Target>
+</Project>

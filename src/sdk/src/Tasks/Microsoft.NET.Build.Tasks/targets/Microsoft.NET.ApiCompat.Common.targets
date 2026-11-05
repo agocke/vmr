@@ -27,14 +27,15 @@ Copyright (c) .NET Foundation. All rights reserved.
   <PropertyGroup>
     <_ApiCompatInputsPath>$(MSBuildProjectExtensionsPath)apicompatinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</_ApiCompatInputsPath>
   </PropertyGroup>
-  <Import Project="$(_ApiCompatInputsPath)" Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(_ApiCompatInputsImported)' != 'true'" />
-  <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true'">
+  <Import Project="$(_ApiCompatInputsPath)" Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(IsCrossTargetingBuild)' != 'true' and '$(_ApiCompatInputsImported)' != 'true'" />
+  <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(IsCrossTargetingBuild)' != 'true'">
     <_ApiCompatInputsImported>true</_ApiCompatInputsImported>
   </PropertyGroup>
 
   <Target Name="_CaptureApiCompatInputs"
-          AfterTargets="_CaptureCscToolInputs"
-          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true' and '$(ApiCompatValidateAssemblies)' == 'true'">
+          AfterTargets="_GenerateFrameworkReferenceFetchManifest"
+          DependsOnTargets="ResolvePackageAssets;ResolveTargetingPackAssets"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(IsCrossTargetingBuild)' != 'true'">
     <Microsoft.DotNet.ApiCompat.Task.PrepareApiCompatInputs
       ReferencePaths="$(ApiCompatContractAssembly);@(ApiCompatContractAssemblyReferences);@(ApiCompatAssemblyReferences);@(Reference);@(ReferencePathWithRefAssemblies);@(_ResolvedCompileFileDefinitions)"
       ProducedReferenceDirectories="@(ApiCompatProducedReferenceDirectory)"

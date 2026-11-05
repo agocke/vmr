@@ -1098,5 +1098,9 @@ You may need to build the project on another operating system or architecture, o
     <value>NETSDK1255: Prepared reference conflict inputs are invalid or unsupported: {0} Capture external conflict facts during Restore and supply version metadata for generated candidates.</value>
     <comment>{StrBegins="NETSDK1255: "}{Locked="{0}"}</comment>
   </data>
-  <!-- The latest message added is InvalidReferenceConflictFacts. Please update this value with each PR to catch parallel PRs both adding a new message -->
+  <data name="InvalidPlatformSDKInputFacts" xml:space="preserve">
+    <value>NETSDK1256: Prepared platform SDK metadata is missing or does not match platform '{0}' version '{1}'. Run Restore with graph-input preparation enabled before constructing the build graph.</value>
+    <comment>{StrBegins="NETSDK1256: "}{Locked="{0}"}{Locked="{1}"}</comment>
+  </data>
+  <!-- The latest message added is InvalidPlatformSDKInputFacts. Please update this value with each PR to catch parallel PRs both adding a new message -->
 </root>
