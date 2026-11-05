@@ -1150,9 +1150,9 @@ explicit-file precedence, unused empty directories, undeclared dependencies,
 reference-only invalidation and atomic rejection of outside-root members or
 stale files without producers.
 
-The full net11 library closure now reaches resource compilation, where four
-libraries request the unsupported preserialized-resource profile; partial-facade
-source generation also remains unsupported. A whole managed CoreLib Build now
+The full net11 library closure includes string resources with the SDK's
+preserialized-resource option and source-built GenFacades generation.
+A whole managed CoreLib Build now
 independently executes 238 actions, including compilation, ILLink and ApiCompat.
 Its compiler-generated sources are materialized and its linked DLL/PDB and
 compiler XML are published with byte-identical copies. Repeated Ninja has no
@@ -1183,13 +1183,36 @@ without partial graphs. The existing ordinary/action ApiCompat smoke suite passe
 
 The whole traversal now prepares 633 framework-reference and 297 ApiCompat
 snapshots, including both Visual Basic Core frameworks. The former platform
-discovery and missing VB snapshot errors are gone. Construction first reaches
-the unsupported preserialized-resource profile in System.Collections and partial
-facade generation in System.Diagnostics.Tracing. It also reports a Build target
-cycle and downstream deferred-value diagnostics; these have not yet been
-classified as independent failures or cascades. This traversal has not executed
-Ninja; preparation and failed construction produce no assemblies/resources and
-preserve the recorded shared cache hashes.
+discovery and missing VB snapshot errors are gone. String-only resource actions
+now accept the preserialization option: inline strings preserve ordinary
+`ResourceWriter` bytes even when ordinary execution selects
+`PreserializedResourceWriter`. Real Collections, Immutable and ILLink RESX files
+verify this with and without a System.Resources.Extensions reference. Linked and
+typed payloads remain rejected, including typed preserialized inputs.
+
+The standalone toolset also builds GenFacades from source. Partial-facade
+generation declares its contract, seeds, compile sources and both Roslyn
+assemblies as individual inputs, with one generated source output; generated
+compile/clean items no longer require output existence during construction.
+Platform-not-supported rewriting declares its source files, optional API
+exclusion file, both Roslyn assemblies and exact per-source output paths.
+These tasks retain isolated managed execution, and the shared Roslyn path
+selection now appends `bincore` to its own selected path. Focused independent
+execution matches ordinary source bytes and compile/clean items, consumes
+future producers, invalidates on source/exclusion changes, rejects invalid
+declarations or missing required inputs, and preserves prior partial-facade
+source on semantic failure. Unchanged facade actions have no Ninja work.
+
+A fresh whole traversal passes those resource, partial-facade and platform-stub
+blockers. Its next first failure is `GenerateFileFromTemplate` in
+System.Diagnostics.DiagnosticSource, followed by deferred-value diagnostics.
+Build cycles are reported in System.Net.NameResolution, System.Net.Sockets and
+System.Net.Security; their independence from the template failure is not yet
+established. This traversal has not executed Ninja; preparation and failed
+construction produce no assemblies/resources or partial graph and preserve
+the recorded shared cache hashes. The broad compiler smoke also retains an
+unrelated stale rejection expectation for generated-source directories;
+its resource regressions pass before that failure.
 
 ### NuGet fact capture
 

@@ -19,12 +19,15 @@
                       WithCulture="false" ManifestResourceName="ILLink.Shared.SharedStrings" />
     <EmbeddedResource Include="$(IntermediateOutputPath)ImmutableStrings.resx" Type="Resx"
                       WithCulture="false" ManifestResourceName="System.Collections.Immutable.Strings" />
+    <EmbeddedResource Include="$(IntermediateOutputPath)CollectionsStrings.resx" Type="Resx"
+                      WithCulture="false" ManifestResourceName="System.Collections.Strings" />
+    <ReferencePathWithRefAssemblies Include="$(ResourcesExtensionsReference)" Condition="'$(ResourcesExtensionsReference)' != ''" />
   </ItemGroup>
   <Target Name="Produce">
-    <CopyFiles SourceFiles="inputs/Strings.resx;inputs/SharedStrings.resx;inputs/ImmutableStrings.resx"
-               DestinationFiles="$(IntermediateOutputPath)Strings.resx;$(IntermediateOutputPath)SharedStrings.resx;$(IntermediateOutputPath)ImmutableStrings.resx"
-               DeclaredInputs="inputs/Strings.resx;inputs/SharedStrings.resx;inputs/ImmutableStrings.resx"
-               DeclaredOutputs="$(IntermediateOutputPath)Strings.resx;$(IntermediateOutputPath)SharedStrings.resx;$(IntermediateOutputPath)ImmutableStrings.resx" />
+    <CopyFiles SourceFiles="inputs/Strings.resx;inputs/SharedStrings.resx;inputs/ImmutableStrings.resx;inputs/CollectionsStrings.resx"
+               DestinationFiles="$(IntermediateOutputPath)Strings.resx;$(IntermediateOutputPath)SharedStrings.resx;$(IntermediateOutputPath)ImmutableStrings.resx;$(IntermediateOutputPath)CollectionsStrings.resx"
+               DeclaredInputs="inputs/Strings.resx;inputs/SharedStrings.resx;inputs/ImmutableStrings.resx;inputs/CollectionsStrings.resx"
+               DeclaredOutputs="$(IntermediateOutputPath)Strings.resx;$(IntermediateOutputPath)SharedStrings.resx;$(IntermediateOutputPath)ImmutableStrings.resx;$(IntermediateOutputPath)CollectionsStrings.resx" />
   </Target>
   <Target Name="Build" DependsOnTargets="Produce;CoreResGen" />
   <Target Name="Restore">

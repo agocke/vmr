@@ -16,6 +16,7 @@ namespace Microsoft.DotNet.GenFacades;
 /// <summary>
 /// The class generates an NotSupportedAssembly from the reference sources.
 /// </summary>
+[MSBuildDeclaredIOTask]
 public class NotSupportedAssemblyGenerator : RoslynBuildTask
 {
     [Required]
@@ -33,6 +34,17 @@ public class NotSupportedAssemblyGenerator : RoslynBuildTask
         if (SourceFiles == null || SourceFiles.Length == 0)
         {
             Log.LogError("There are no ref source files.");
+            return false;
+        }
+
+        IEnumerable<string> inputs = SourceFiles.Select(item => item.ItemSpec);
+        if (!string.IsNullOrEmpty(ApiExclusionListPath))
+        {
+            inputs = inputs.Append(ApiExclusionListPath);
+        }
+
+        if (!ValidateDeclaredFiles(inputs, SourceFiles.Select(item => item.GetMetadata("OutputPath"))))
+        {
             return false;
         }
 

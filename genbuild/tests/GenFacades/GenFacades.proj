@@ -1,0 +1,49 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IsPartialFacadeAssembly>true</IsPartialFacadeAssembly>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <AssemblyTitle>Fixture</AssemblyTitle>
+    <DefineConstants>OWN_IMPLEMENTATION</DefineConstants>
+    <LangVersion>preview</LangVersion>
+    <RoslynTargetsPath>$(MSBuildToolsPath)/Roslyn</RoslynTargetsPath>
+    <GenFacadesTargetsPath>$(MSBuildToolsPath)/Arcade/GenFacades/build/Microsoft.DotNet.GenFacades.targets</GenFacadesTargetsPath>
+    <_InvalidTarget Condition="'$(TestCase)' == 'undeclared-input' or '$(TestCase)' == 'wrong-output'">InvalidDeclaration</_InvalidTarget>
+  </PropertyGroup>
+  <Import Project="$(GenFacadesTargetsPath)" />
+  <ItemGroup>
+    <ResolvedMatchingContract Include="obj/contract/Contract.dll" />
+    <ReferencePath Include="obj/seeds/Seed.dll" />
+    <Compile Include="obj/sources/Existing.cs" />
+    <Compile Include="missing-excluded.cs" ExcludeFromGenFacades="true" />
+    <_FixtureInput Include="../inputs/Contract.dll;../inputs/Seed.dll;../inputs/Existing.cs" />
+    <_FixtureOutput Include="obj/contract/Contract.dll;obj/seeds/Seed.dll;obj/sources/Existing.cs" />
+    <_ExtraInput Include="obj/sources/Existing.cs" Condition="'$(TestCase)' == 'wrong-output'" />
+  </ItemGroup>
+  <Target Name="ResolveMatchingContract" DependsOnTargets="Produce" />
+  <Target Name="Produce">
+    <MakeDir Directories="obj/contract;obj/seeds;obj/sources" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CopyFiles SourceFiles="@(_FixtureInput)" DestinationFiles="@(_FixtureOutput)"
+               DeclaredInputs="@(_FixtureInput)" DeclaredOutputs="@(_FixtureOutput)" />
+  </Target>
+  <Target Name="InvalidDeclaration" DependsOnTargets="Produce;GetGenFacadesRoslynAssembliesPath">
+    <PropertyGroup>
+      <_Output>$(GenFacadesOutputSourcePath)</_Output>
+      <_Output Condition="'$(TestCase)' == 'wrong-output'">obj/wrong.cs</_Output>
+    </PropertyGroup>
+    <GenPartialFacadeSource ReferencePaths="@(ReferencePath)" ReferenceAssembly="@(ResolvedMatchingContract)"
+                            CompileFiles="obj/sources/Existing.cs" DefineConstants="$(DefineConstants)" LangVersion="$(LangVersion)"
+                            RoslynAssembliesPath="$(GenFacadesRoslynAssembliesPath)" OutputSourcePath="$(GenFacadesOutputSourcePath)"
+                            DeclaredInputs="@(ResolvedMatchingContract);@(ReferencePath);$(GenFacadesRoslynAssembliesPath)/Microsoft.CodeAnalysis.dll;$(GenFacadesRoslynAssembliesPath)/Microsoft.CodeAnalysis.CSharp.dll;@(_ExtraInput)"
+                            DeclaredOutputs="$(_Output)" />
+  </Target>
+  <PropertyGroup>
+    <_BuildTarget Condition="'$(_InvalidTarget)' == ''">GeneratePartialFacadeSource</_BuildTarget>
+    <_BuildTarget Condition="'$(_InvalidTarget)' != ''">$(_InvalidTarget)</_BuildTarget>
+  </PropertyGroup>
+  <Target Name="Build" DependsOnTargets="$(_BuildTarget)">
+    <WriteLinesToFile File="items.txt" Lines="@(Compile);@(FileWrites)" Overwrite="true"
+                      DeclaredInputs="$(GenFacadesOutputSourcePath)" DeclaredOutputs="items.txt"
+                      Condition="'$(_InvalidTarget)' == ''" />
+  </Target>
+  <Target Name="Restore" />
+</Project>

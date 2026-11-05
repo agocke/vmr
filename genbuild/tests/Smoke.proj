@@ -38,6 +38,8 @@
     <CallTarget Targets="TestCompilerGeneratedFiles" />
     <CallTarget Targets="TestNativeTaskHost" />
     <CallTarget Targets="TestApiCompat" />
+    <CallTarget Targets="TestGenFacades" />
+    <CallTarget Targets="TestNotSupportedGeneration" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -1990,6 +1992,8 @@
           DestinationFolder="$(_RuntimeResourceRoot)inputs" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)../../src/runtime/src/libraries/System.Collections.Immutable/src/Resources/Strings.resx"
           DestinationFiles="$(_RuntimeResourceRoot)inputs/ImmutableStrings.resx" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../../src/runtime/src/libraries/System.Collections/src/Resources/Strings.resx"
+          DestinationFiles="$(_RuntimeResourceRoot)inputs/CollectionsStrings.resx" />
     <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
              Query="/Project/Target[@Name='CoreResGen']">
       <Output TaskParameter="Result" PropertyName="_RuntimeResourceTarget" />
@@ -2032,7 +2036,7 @@
            Text="Resource construction must not execute RESX producers or create compiled resources." />
     <Exec WorkingDirectory="$(_RuntimeResourceRoot)" Command="ninja -f build.ninja" />
     <ItemGroup>
-      <_RuntimeResourceFile Include="Mono.Linker.Resources.Strings.resources;ILLink.Shared.SharedStrings.resources;System.Collections.Immutable.Strings.resources" />
+      <_RuntimeResourceFile Include="Mono.Linker.Resources.Strings.resources;ILLink.Shared.SharedStrings.resources;System.Collections.Immutable.Strings.resources;System.Collections.Strings.resources" />
     </ItemGroup>
     <GetFileHash Files="@(_RuntimeResourceFile->'$(_RuntimeResourceRoot)obj/baseline/%(Identity)')">
       <Output TaskParameter="Items" ItemName="_RuntimeResourceBaselineHash" />
@@ -2064,6 +2068,147 @@
                       '@(_RuntimeResourceBaselineHash->'%(FileHash)')' != '@(_ImmutableResourceGraphHash->'%(FileHash)')' or
                       Exists('$(_RuntimeResourceRoot)obj/graph-immutable/RuntimeResourceCompilation.proj.GenerateResource.cache')"
            Text="Immutable's string-only resource policy must preserve SDK-default bytes in ordinary and independent execution without an action-side cache." />
+    <PropertyGroup>
+      <_PreserializedResourceArguments>-p:UseRuntimePolicy=false -p:ResourcesExtensionsReference=&quot;$(_AppDirectory)/toolset/System.Resources.Extensions.dll&quot;</_PreserializedResourceArguments>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_AppDirectory)/toolset/System.Resources.Extensions.dll')"
+           Text="Preserialized resource parity must exercise the ordinary System.Resources.Extensions writer." />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -t:Build -p:TestCase=ordinary-preserialized $(_PreserializedResourceArguments)" />
+    <Exec Command="$(_App) restore &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -p:TestCase=graph-preserialized $(_PreserializedResourceArguments)" />
+    <Exec Command="$(_App) build &quot;$(_RuntimeResourceRoot)RuntimeResourceCompilation.proj&quot; -p:TestCase=graph-preserialized $(_PreserializedResourceArguments) -p:MSBuildEmitActionGraph=&quot;$(_RuntimeResourceRoot)preserialized.ninja&quot;" />
+    <Error Condition="Exists('$(_RuntimeResourceRoot)obj/graph-preserialized/CollectionsStrings.resx') or
+                      Exists('$(_RuntimeResourceRoot)obj/graph-preserialized/System.Collections.Strings.resources')"
+           Text="Preserialized string resources must remain future inputs and outputs during construction." />
+    <Exec WorkingDirectory="$(_RuntimeResourceRoot)" Command="ninja -f preserialized.ninja" />
+    <GetFileHash Files="@(_RuntimeResourceFile->'$(_RuntimeResourceRoot)obj/ordinary-preserialized/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_PreserializedResourceOrdinaryHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_RuntimeResourceFile->'$(_RuntimeResourceRoot)obj/graph-preserialized/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_PreserializedResourceGraphHash" />
+    </GetFileHash>
+    <Error Condition="'@(_RuntimeResourceBaselineHash->'%(FileHash)')' != '@(_PreserializedResourceOrdinaryHash->'%(FileHash)')' or
+                      '@(_RuntimeResourceBaselineHash->'%(FileHash)')' != '@(_PreserializedResourceGraphHash->'%(FileHash)')' or
+                      Exists('$(_RuntimeResourceRoot)obj/graph-preserialized/RuntimeResourceCompilation.proj.GenerateResource.cache')"
+           Text="Inline strings must preserve ordinary bytes with preserialization enabled, with or without an Extensions reference, without an action-side cache." />
+  </Target>
+  <Target Name="TestGenFacades">
+    <PropertyGroup>
+      <_FacadeRoot>$(_TestDirectory)genfacades/</_FacadeRoot>
+      <_FacadeCompiler>&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library</_FacadeCompiler>
+    </PropertyGroup>
+    <ItemGroup>
+      <_FacadeCase Include="action;ordinary;undeclared-input;wrong-output" />
+      <_FacadeImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+    </ItemGroup>
+    <MakeDir Directories="$(_FacadeRoot)inputs;$(_FacadeRoot)seed" />
+    <WriteLinesToFile File="$(_FacadeRoot)%(_FacadeImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_FacadeRoot)seed" />
+    <Exec Command="$(_App) restore &quot;$(_FacadeRoot)seed/HelloWorld.csproj&quot;" />
+    <XmlPeek XmlInputPath="$(_FacadeRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_FacadeReference" />
+    </XmlPeek>
+    <Error Condition="'@(_FacadeReference)' == ''" Text="Facade fixtures require prepared framework references." />
+    <WriteLinesToFile File="$(_FacadeRoot)compile.rsp" Lines="@(_FacadeReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
+    <Exec Command="$(_FacadeCompiler) -out:&quot;$(_FacadeRoot)inputs/Contract.dll&quot; @&quot;$(_FacadeRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)GenFacades/Types.cs&quot;" />
+    <Exec Command="$(_FacadeCompiler) -out:&quot;$(_FacadeRoot)inputs/Seed.dll&quot; @&quot;$(_FacadeRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)GenFacades/Types.cs&quot;" />
+    <Exec Command="$(_FacadeCompiler) -define:MISSING_FORWARD -out:&quot;$(_FacadeRoot)MissingSeed.dll&quot; @&quot;$(_FacadeRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)GenFacades/Types.cs&quot;" />
+    <Copy SourceFiles="$(_FacadeRoot)inputs/Seed.dll" DestinationFiles="$(_FacadeRoot)GoodSeed.dll" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)GenFacades/Existing.cs" DestinationFolder="$(_FacadeRoot)inputs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)GenFacades/GenFacades.proj" DestinationFolder="$(_FacadeRoot)%(_FacadeCase.Identity)" />
+    <Exec Command="$(_App) build &quot;$(_FacadeRoot)action/GenFacades.proj&quot; -p:MSBuildEmitActionGraph=&quot;$(_FacadeRoot)action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_FacadeRoot)action/obj') or Exists('$(_FacadeRoot)action/items.txt')"
+           Text="Facade construction must not produce future contract, seed, source, or generated forwards." />
+    <Exec WorkingDirectory="$(_FacadeRoot)action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_FacadeRoot)ordinary/GenFacades.proj&quot; -t:Build" />
+    <GetFileHash Files="$(_FacadeRoot)action/obj/Fixture.Forwards.cs;$(_FacadeRoot)ordinary/obj/Fixture.Forwards.cs">
+      <Output TaskParameter="Items" ItemName="_FacadeSourceHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_FacadeRoot)action/items.txt;$(_FacadeRoot)ordinary/items.txt">
+      <Output TaskParameter="Items" ItemName="_FacadeItemHash" />
+    </GetFileHash>
+    <Error Condition="'@(_FacadeSourceHash->'%(FileHash)'->Distinct()->Count())' != '1' or
+                      '@(_FacadeItemHash->'%(FileHash)'->Distinct()->Count())' != '1' or
+                      !$([System.IO.File]::ReadAllText('$(_FacadeRoot)action/obj/Fixture.Forwards.cs').Contains('typeof(PartialFacade.Forwarded)')) or
+                      $([System.IO.File]::ReadAllText('$(_FacadeRoot)action/obj/Fixture.Forwards.cs').Contains('typeof(PartialFacade.Implemented)'))"
+           Text="Facade actions must preserve ordinary bytes and static compile/clean items, forwarding only types without conditional source implementations." />
+    <Exec WorkingDirectory="$(_FacadeRoot)action" Command="ninja -f build.ninja" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_FacadeNoWork" />
+    </Exec>
+    <Error Condition="!@(_FacadeNoWork->AnyHaveMetadataValue('Identity', 'ninja: no work to do.'))" Text="Unchanged facade actions must be a Ninja no-op." />
+    <WriteLinesToFile File="$(_FacadeRoot)inputs/Existing.cs" Lines="// Implementation removed" Overwrite="true" />
+    <Exec WorkingDirectory="$(_FacadeRoot)action" Command="ninja -f build.ninja" />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_FacadeRoot)action/obj/Fixture.Forwards.cs').Contains('typeof(PartialFacade.Implemented)'))"
+           Text="Changes to declared source inputs must invalidate facade generation." />
+    <GetFileHash Files="$(_FacadeRoot)action/obj/Fixture.Forwards.cs">
+      <Output TaskParameter="Hash" PropertyName="_FacadeBeforeFailure" />
+    </GetFileHash>
+    <Copy SourceFiles="$(_FacadeRoot)MissingSeed.dll" DestinationFiles="$(_FacadeRoot)inputs/Seed.dll" />
+    <Touch Files="$(_FacadeRoot)inputs/Seed.dll" />
+    <Exec WorkingDirectory="$(_FacadeRoot)action" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_FacadeMissingTypeExit" />
+    </Exec>
+    <GetFileHash Files="$(_FacadeRoot)action/obj/Fixture.Forwards.cs">
+      <Output TaskParameter="Hash" PropertyName="_FacadeAfterFailure" />
+    </GetFileHash>
+    <Error Condition="'$(_FacadeMissingTypeExit)' == '0' or '$(_FacadeBeforeFailure)' != '$(_FacadeAfterFailure)'"
+           Text="Semantic facade failures must fail execution without overwriting the previous generated source." />
+    <Copy SourceFiles="$(_FacadeRoot)GoodSeed.dll" DestinationFiles="$(_FacadeRoot)inputs/Seed.dll" />
+    <Touch Files="$(_FacadeRoot)inputs/Seed.dll" />
+    <Exec WorkingDirectory="$(_FacadeRoot)action" Command="ninja -f build.ninja" />
+    <ItemGroup>
+      <_FacadeInvalid Include="undeclared-input;wrong-output" />
+    </ItemGroup>
+    <Exec Command="$(_App) build &quot;$(_FacadeRoot)%(_FacadeInvalid.Identity)/GenFacades.proj&quot; -p:TestCase=%(_FacadeInvalid.Identity) -p:MSBuildEmitActionGraph=&quot;$(_FacadeRoot)%(_FacadeInvalid.Identity)/build.ninja&quot;" />
+    <Exec WorkingDirectory="$(_FacadeRoot)%(_FacadeInvalid.Identity)" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_FacadeInvalidExit" />
+    </Exec>
+    <Error Condition="@(_FacadeInvalidExit->AnyHaveMetadataValue('Identity', '0')) or
+                      Exists('$(_FacadeRoot)%(_FacadeInvalid.Identity)/obj/Fixture.Forwards.cs') or
+                      Exists('$(_FacadeRoot)%(_FacadeInvalid.Identity)/obj/wrong.cs')"
+           Text="Incorrect facade input or output declarations must fail before writing generated source." />
+  </Target>
+  <Target Name="TestNotSupportedGeneration">
+    <PropertyGroup>
+      <_StubRoot>$(_TestDirectory)platform-stubs/</_StubRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <_StubCase Include="action;ordinary;excluded-action;excluded-ordinary;missing-exclusions" />
+      <_StubParity Include="plain" Action="action" Ordinary="ordinary" Case="" />
+      <_StubParity Include="excluded" Action="excluded-action" Ordinary="excluded-ordinary" Case="excluded" />
+    </ItemGroup>
+    <MakeDir Directories="$(_StubRoot)inputs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)GenFacades/PlatformStub.cs" DestinationFolder="$(_StubRoot)inputs" />
+    <WriteLinesToFile File="$(_StubRoot)inputs/Exclusions.txt" Lines="M:PlatformStub.Widget.Run" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)GenFacades/NotSupported.proj" DestinationFolder="$(_StubRoot)%(_StubCase.Identity)" />
+    <Exec Command="$(_App) build &quot;$(_StubRoot)%(_StubParity.Action)/NotSupported.proj&quot; -p:TestCase=%(_StubParity.Case) -p:MSBuildEmitActionGraph=&quot;$(_StubRoot)%(_StubParity.Action)/build.ninja&quot;" />
+    <Error Condition="Exists('$(_StubRoot)%(_StubParity.Action)/obj') or Exists('$(_StubRoot)%(_StubParity.Action)/items.txt')"
+           Text="Platform stub construction must not produce future source, exclusions, or rewritten source." />
+    <Exec WorkingDirectory="$(_StubRoot)%(_StubParity.Action)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_StubRoot)%(_StubParity.Ordinary)/NotSupported.proj&quot; -t:Build -p:TestCase=%(_StubParity.Case)" />
+    <GetFileHash Files="$(_StubRoot)%(_StubParity.Action)/obj/PlatformStub.notsupported.cs;$(_StubRoot)%(_StubParity.Action)/items.txt">
+      <Output TaskParameter="Items" ItemName="_StubActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_StubRoot)%(_StubParity.Ordinary)/obj/PlatformStub.notsupported.cs;$(_StubRoot)%(_StubParity.Ordinary)/items.txt">
+      <Output TaskParameter="Items" ItemName="_StubOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_StubActionHash->'%(FileHash)')' != '@(_StubOrdinaryHash->'%(FileHash)')' or
+                      !$([System.IO.File]::ReadAllText('$(_StubRoot)action/obj/PlatformStub.notsupported.cs').Contains('throw new System.PlatformNotSupportedException(&quot;not available&quot;)')) or
+                      !$([System.IO.File]::ReadAllText('$(_StubRoot)action/obj/PlatformStub.notsupported.cs').Contains('void Run()')) or
+                      $([System.IO.File]::ReadAllText('$(_StubRoot)excluded-action/obj/PlatformStub.notsupported.cs').Contains('void Run()'))"
+           Text="Platform stub actions must preserve ordinary bytes/items, exception messages, and API exclusions." />
+    <WriteLinesToFile File="$(_StubRoot)inputs/Exclusions.txt" Lines="M:PlatformStub.Widget.Dispose" Overwrite="true" />
+    <Exec WorkingDirectory="$(_StubRoot)excluded-action" Command="ninja -f build.ninja" />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_StubRoot)excluded-action/obj/PlatformStub.notsupported.cs').Contains('void Run()')) or
+                      $([System.IO.File]::ReadAllText('$(_StubRoot)excluded-action/obj/PlatformStub.notsupported.cs').Contains('void Dispose()'))"
+           Text="Changing a declared exclusion file must invalidate platform stub generation." />
+    <Exec Command="$(_App) build &quot;$(_StubRoot)missing-exclusions/NotSupported.proj&quot; -p:TestCase=missing-exclusions -p:MSBuildEmitActionGraph=&quot;$(_StubRoot)missing-exclusions/build.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_StubMissingInputExit" />
+    </Exec>
+    <Error Condition="'$(_StubMissingInputExit)' == '0' or Exists('$(_StubRoot)missing-exclusions/build.ninja') or
+                      Exists('$(_StubRoot)missing-exclusions/build.ninja.actions') or Exists('$(_StubRoot)missing-exclusions/obj')"
+           Text="A declared exclusion file must exist or have a producer; missing inputs must not publish a partial graph." />
   </Target>
   <Target Name="TestInternalsVisibleTo">
     <PropertyGroup>
@@ -2872,7 +3017,7 @@
     <WriteLinesToFile File="$(_TestDirectory)csc/Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/HelloWorld.csproj&quot;" />
     <ItemGroup>
-      <_CscCase Include="short;another much longer checkout;embedded;compiler-error;ordinary;determinism;paths;response;generated-directory;signed;resource-graph;resource-ordinary;resource-linked;resource-typed;resource-source;resource-tool;resource-runtime;resource-architecture;resource-preserialized;resource-accessors;resource-accessors-ordinary;resource-accessors-language;skip-analyzers;skip-analyzers-ordinary;skip-analyzers-compiler-error" />
+      <_CscCase Include="short;another much longer checkout;embedded;compiler-error;ordinary;determinism;paths;response;generated-directory;signed;resource-graph;resource-ordinary;resource-linked;resource-typed;resource-source;resource-tool;resource-runtime;resource-architecture;resource-preserialized;resource-preserialized-typed;resource-accessors;resource-accessors-ordinary;resource-accessors-language;skip-analyzers;skip-analyzers-ordinary;skip-analyzers-compiler-error" />
       <_CscRoot Include="@(_CscCase->'$(_TestDirectory)csc/%(Identity)/project/')" />
       <_CscRelocation Include="short;another much longer checkout" />
       <_CscRejected Include="determinism" Arguments="-p:Deterministic=false" />
@@ -3052,8 +3197,8 @@
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/resource-ordinary/project/Csc.proj&quot; -t:Build -p:TestCase=resource-ordinary" />
     <ItemGroup>
       <_CscResourceFile Include="ResourceRoot.Strings.resources;ResourceRoot.Strings.fr.resources" />
-      <_CscResourceRejected Include="source;tool;runtime;architecture;preserialized" />
-      <_CscResourcePayloadRejected Include="linked;typed" />
+      <_CscResourceRejected Include="source;tool;runtime;architecture" />
+      <_CscResourcePayloadRejected Include="linked;typed;preserialized-typed" />
     </ItemGroup>
     <GetFileHash Files="$(_TestDirectory)csc/resource-graph/project/obj/%(_CscResourceFile.Identity)">
       <Output TaskParameter="Items" ItemName="_CscResourceGraphHash" />
@@ -3064,6 +3209,16 @@
     <Error Condition="'@(_CscResourceGraphHash->'%(FileHash)')' != '@(_CscResourceOrdinaryHash->'%(FileHash)')' or
                       Exists('$(_TestDirectory)csc/resource-graph/project/obj/Csc.proj.GenerateResource.cache')"
            Text="Main and culture resources must match ordinary bytes without using an incremental state cache." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/resource-preserialized/project/Csc.proj&quot; -p:TestCase=resource-preserialized" />
+    <Error Condition="Exists('$(_TestDirectory)csc/resource-preserialized/project/obj/Strings.resx') or
+                      Exists('$(_TestDirectory)csc/resource-preserialized/project/obj/Hello.dll')"
+           Text="Preserialized string resource construction must not execute producers or compilation." />
+    <Exec WorkingDirectory="$(_TestDirectory)csc/resource-preserialized/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <GetFileHash Files="$(_TestDirectory)csc/resource-preserialized/project/obj/%(_CscResourceFile.Identity)">
+      <Output TaskParameter="Items" ItemName="_CscResourcePreserializedHash" />
+    </GetFileHash>
+    <Error Condition="'@(_CscResourcePreserializedHash->'%(FileHash)')' != '@(_CscResourceOrdinaryHash->'%(FileHash)')'"
+           Text="Preserialized string resources must retain ordinary main/culture bytes and compile successfully." />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/resource-%(_CscResourceRejected.Identity)/project/Csc.proj&quot; -p:TestCase=resource-%(_CscResourceRejected.Identity) -flp:&quot;LogFile=$(_TestDirectory)csc/resource-%(_CscResourceRejected.Identity).log;Verbosity=quiet&quot;"
           IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" ItemName="_CscResourceRejectedExit" />

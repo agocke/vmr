@@ -3571,7 +3571,6 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     <MSBuildInternalMessage
         Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(_Temporary)' != '' and
                    ('$(ResGenExecuteAsTool)' == 'true' or '$(ResGenEnvironment)' != '' or
-                    '$(GenerateResourceUsePreserializedResources)' == 'true' or
                     ('$(GenerateResourceMSBuildRuntime)' != '' and '$(GenerateResourceMSBuildRuntime)' != 'CurrentRuntime') or
                     ('$(GenerateResourceMSBuildArchitecture)' != '' and '$(GenerateResourceMSBuildArchitecture)' != 'CurrentArchitecture') or
                     '%(_Temporary.Extension)' != '.resx' or
@@ -3583,6 +3582,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
         Severity="Error"
         DeclaredInputs="" DeclaredOutputs="" />
 
+    <!-- Inline strings have the same binary format with either preserialization setting. -->
     <CompileResources
         SourceFile="%(_Temporary.Identity)"
         OutputFile="%(_Temporary.OutputResource)"

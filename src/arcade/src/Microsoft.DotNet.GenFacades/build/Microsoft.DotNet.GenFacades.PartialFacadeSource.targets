@@ -2,7 +2,8 @@
 <Project>
 
   <!-- TODO: Remove Architecture="*" on Runtime="NET" UsingTask declarations below when https://github.com/dotnet/msbuild/issues/13739 is fixed and a new msbuild is consumed with the fix. -->
-  <UsingTask TaskName="GenPartialFacadeSource" AssemblyFile="$(GenFacadesTargetAssemblyPath)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="GenPartialFacadeSource" AssemblyFile="$(GenFacadesTargetAssemblyPath)" Runtime="NET" Architecture="*" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="GenPartialFacadeSource" AssemblyFile="$(GenFacadesTargetAssemblyPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
   <PropertyGroup>
     <GenFacadesReferencePathItemName Condition="'$(GenFacadesReferencePathItemName)' == ''">ReferencePath</GenFacadesReferencePathItemName>
@@ -18,6 +19,11 @@
           Inputs="$(MSBuildAllProjects);@($(GenFacadesReferenceAssemblyItemName));@($(GenFacadesReferencePathItemName));@(Compile->WithMetadataValue('ExcludeFromGenFacades', ''))"
           Outputs="$(GenFacadesOutputSourcePath)"
           DependsOnTargets="$(GeneratePartialFacadeSourceDependsOn)">
+    <ItemGroup>
+      <_GenPartialFacadeInput Remove="@(_GenPartialFacadeInput)" />
+      <_GenPartialFacadeInput Include="@($(GenFacadesReferenceAssemblyItemName));@($(GenFacadesReferencePathItemName));@(Compile->WithMetadataValue('ExcludeFromGenFacades', ''))" />
+      <_GenPartialFacadeInput Include="$(GenFacadesRoslynAssembliesPath)/Microsoft.CodeAnalysis.dll;$(GenFacadesRoslynAssembliesPath)/Microsoft.CodeAnalysis.CSharp.dll" />
+    </ItemGroup>
     <GenPartialFacadeSource
       ReferencePaths="@($(GenFacadesReferencePathItemName))"
       ReferenceAssembly="@($(GenFacadesReferenceAssemblyItemName))"
@@ -28,11 +34,17 @@
       IgnoreMissingTypesList="@(GenFacadesIgnoreMissingType)"
       OmitTypes="@(GenFacadesOmitType)"
       OutputSourcePath="$(GenFacadesOutputSourcePath)"
+      DeclaredInputs="@(_GenPartialFacadeInput)"
+      DeclaredOutputs="$(GenFacadesOutputSourcePath)"
       SeedTypePreferences="@(SeedTypePreference)"
       RoslynAssembliesPath="$(GenFacadesRoslynAssembliesPath)" />
 
-    <ItemGroup Condition="'$(GenFacadesAutoIncludeCompileItem)' != 'false' and
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(GenFacadesAutoIncludeCompileItem)' != 'false' and
                           Exists('$(GenFacadesOutputSourcePath)')">
+      <Compile Include="$(GenFacadesOutputSourcePath)" />
+      <FileWrites Include="$(GenFacadesOutputSourcePath)" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(GenFacadesAutoIncludeCompileItem)' != 'false'">
       <Compile Include="$(GenFacadesOutputSourcePath)" />
       <FileWrites Include="$(GenFacadesOutputSourcePath)" />
     </ItemGroup>

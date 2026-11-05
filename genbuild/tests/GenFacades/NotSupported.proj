@@ -1,0 +1,29 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <LangVersion>preview</LangVersion>
+    <RoslynTargetsPath>$(MSBuildToolsPath)/Roslyn</RoslynTargetsPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildToolsPath)/Arcade/GenFacades/build/Microsoft.DotNet.GenFacades.targets" />
+  <Import Project="$(MSBuildToolsPath)/Arcade/GenFacades/build/Microsoft.DotNet.GenFacades.NotSupported.targets" />
+  <PropertyGroup>
+    <GeneratePlatformNotSupportedAssemblyMessage>&quot;not available&quot;</GeneratePlatformNotSupportedAssemblyMessage>
+    <ApiExclusionListPath Condition="'$(TestCase)' == 'excluded'">obj/sources/Exclusions.txt</ApiExclusionListPath>
+    <ApiExclusionListPath Condition="'$(TestCase)' == 'missing-exclusions'">missing.txt</ApiExclusionListPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <_contractSourceFilesGroup Include="obj/sources/PlatformStub.cs" OriginalItemSpec="PlatformStub.cs" />
+  </ItemGroup>
+  <Target Name="Produce">
+    <MakeDir Directories="obj/sources" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CopyFiles SourceFiles="../inputs/PlatformStub.cs;../inputs/Exclusions.txt"
+               DestinationFiles="obj/sources/PlatformStub.cs;obj/sources/Exclusions.txt"
+               DeclaredInputs="../inputs/PlatformStub.cs;../inputs/Exclusions.txt"
+               DeclaredOutputs="obj/sources/PlatformStub.cs;obj/sources/Exclusions.txt" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="Produce;AddGenFacadeNotSupportedCompileItem">
+    <WriteLinesToFile File="items.txt" Lines="@(Compile);@(FileWrites)" Overwrite="true"
+                      DeclaredInputs="@(GenFacadeNotSupportedCompileInput->'%(OutputPath)')" DeclaredOutputs="items.txt" />
+  </Target>
+  <Target Name="Restore" />
+</Project>

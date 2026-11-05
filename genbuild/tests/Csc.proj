@@ -37,10 +37,10 @@
     <ResGenExecuteAsTool Condition="'$(TestCase)' == 'resource-tool'">true</ResGenExecuteAsTool>
     <GenerateResourceMSBuildRuntime Condition="'$(TestCase)' == 'resource-runtime'">CLR2</GenerateResourceMSBuildRuntime>
     <GenerateResourceMSBuildArchitecture Condition="'$(TestCase)' == 'resource-architecture'">x86</GenerateResourceMSBuildArchitecture>
-    <GenerateResourceUsePreserializedResources Condition="'$(TestCase)' == 'resource-preserialized'">true</GenerateResourceUsePreserializedResources>
+    <GenerateResourceUsePreserializedResources Condition="$(TestCase.StartsWith('resource-preserialized'))">true</GenerateResourceUsePreserializedResources>
     <_ResourceData>&lt;root&gt;&lt;data name="Greeting" xml:space="preserve"&gt;&lt;value&gt; inline &amp;amp%3B generated &lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
     <_ResourceData Condition="'$(TestCase)' == 'resource-linked'">&lt;root&gt;&lt;data name="Greeting" type="System.Resources.ResXFileRef, System.Windows.Forms"&gt;&lt;value&gt;undeclared.txt%3BSystem.String, mscorlib, Version=4.0.0.0&lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
-    <_ResourceData Condition="'$(TestCase)' == 'resource-typed'">&lt;root&gt;&lt;data name="Greeting" type="System.Int32, mscorlib"&gt;&lt;value&gt;42&lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
+    <_ResourceData Condition="'$(TestCase)' == 'resource-typed' or '$(TestCase)' == 'resource-preserialized-typed'">&lt;root&gt;&lt;data name="Greeting" type="System.Int32, mscorlib"&gt;&lt;value&gt;42&lt;/value&gt;&lt;/data&gt;&lt;/root&gt;</_ResourceData>
   </PropertyGroup>
   <PropertyGroup Condition="$(TestCase.StartsWith('resource-accessors'))">
     <DefineConstants>$(DefineConstants);RESOURCE_ACCESSORS</DefineConstants>

@@ -4,7 +4,9 @@
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 
@@ -14,6 +16,10 @@ public abstract partial class RoslynBuildTask : Task
 {
     [Required]
     public string RoslynAssembliesPath { get; set; }
+
+    public ITaskItem[] DeclaredInputs { get; set; }
+
+    public ITaskItem[] DeclaredOutputs { get; set; }
 
     public override bool Execute()
     {
@@ -30,6 +36,41 @@ public abstract partial class RoslynBuildTask : Task
     }
 
     public abstract bool ExecuteCore();
+
+    protected bool ValidateDeclaredFiles(IEnumerable<string> inputs, IEnumerable<string> outputs)
+    {
+        if (DeclaredInputs is null && DeclaredOutputs is null)
+        {
+            return true;
+        }
+
+        StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var expectedInputs = new HashSet<string>(inputs.Select(Path.GetFullPath), comparer)
+        {
+            Path.GetFullPath(Path.Combine(RoslynAssembliesPath, "Microsoft.CodeAnalysis.dll")),
+            Path.GetFullPath(Path.Combine(RoslynAssembliesPath, "Microsoft.CodeAnalysis.CSharp.dll")),
+        };
+        var expectedOutputs = new HashSet<string>(outputs.Select(Path.GetFullPath), comparer);
+        if (DeclaredInputs is null || !expectedInputs.SetEquals(DeclaredInputs.Select(item => Path.GetFullPath(item.ItemSpec))))
+        {
+            Log.LogError("DeclaredInputs must contain exactly the source inputs and both Roslyn assemblies.");
+            return false;
+        }
+
+        if (DeclaredOutputs is null || DeclaredOutputs.Length != expectedOutputs.Count
+            || !expectedOutputs.SetEquals(DeclaredOutputs.Select(item => Path.GetFullPath(item.ItemSpec))))
+        {
+            Log.LogError("DeclaredOutputs must contain exactly the generated source paths.");
+            return false;
+        }
+
+        foreach (string output in expectedOutputs)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(output));
+        }
+
+        return true;
+    }
     
     private Assembly ResolverForRoslyn(AssemblyLoadContext context, AssemblyName assemblyName)
     {

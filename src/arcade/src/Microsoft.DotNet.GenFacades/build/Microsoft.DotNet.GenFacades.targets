@@ -19,7 +19,7 @@
       <GenFacadesRoslynAssembliesPath Condition="'$(_UseRoslynToolsetPackageForGenFacades)' != 'true'">$(RoslynTargetsPath)</GenFacadesRoslynAssembliesPath>
 
       <!-- The SDK stores the roslyn assemblies in the 'bincore' subdirectory. -->
-      <GenFacadesRoslynAssembliesPath Condition="'$(MSBuildRuntimeType)' == 'Core'">$([System.IO.Path]::Combine('$(RoslynAssembliesPath)', 'bincore'))</GenFacadesRoslynAssembliesPath>
+      <GenFacadesRoslynAssembliesPath Condition="'$(MSBuildRuntimeType)' == 'Core'">$([System.IO.Path]::Combine('$(GenFacadesRoslynAssembliesPath)', 'bincore'))</GenFacadesRoslynAssembliesPath>
     </PropertyGroup>
   </Target>
 

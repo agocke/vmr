@@ -9,6 +9,7 @@ using System.Linq;
 
 namespace Microsoft.DotNet.GenFacades;
 
+[MSBuildDeclaredIOTask]
 public class GenPartialFacadeSource : RoslynBuildTask
 {
     [Required]
@@ -33,12 +34,19 @@ public class GenPartialFacadeSource : RoslynBuildTask
 
     [Required]
     public string OutputSourcePath { get; set; }
-    
+
     public override bool ExecuteCore()
     {
         bool result = true;
         try
         {
+            if (!ValidateDeclaredFiles(
+                new[] { ReferenceAssembly }.Concat((ReferencePaths ?? []).Concat(CompileFiles ?? []).Select(item => item.ItemSpec)),
+                new[] { OutputSourcePath }))
+            {
+                return false;
+            }
+
             result = GenPartialFacadeSourceGenerator.Execute(
                 ReferencePaths?.Select(item => item.ItemSpec).ToArray(),
                 ReferenceAssembly,

@@ -2,7 +2,8 @@
 <Project>
 
   <!-- TODO: Remove Architecture="*" on Runtime="NET" UsingTask declarations below when https://github.com/dotnet/msbuild/issues/13739 is fixed and a new msbuild is consumed with the fix. -->
-  <UsingTask TaskName="NotSupportedAssemblyGenerator" AssemblyFile="$(GenFacadesTargetAssemblyPath)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="NotSupportedAssemblyGenerator" AssemblyFile="$(GenFacadesTargetAssemblyPath)" Runtime="NET" Architecture="*" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="NotSupportedAssemblyGenerator" AssemblyFile="$(GenFacadesTargetAssemblyPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
   <PropertyGroup Condition="'$(GeneratePlatformNotSupportedAssemblyMessage)' != ''">
     <CoreCompileDependsOn>AddGenFacadeNotSupportedCompileItem;$(CoreCompileDependsOn)</CoreCompileDependsOn>
@@ -54,11 +55,18 @@
           Inputs="@(GenFacadeNotSupportedCompileInput)"
           Outputs="@(GenFacadeNotSupportedCompileInput->'%(OutputPath)')" >
 
+    <ItemGroup>
+      <_GenFacadeNotSupportedInput Remove="@(_GenFacadeNotSupportedInput)" />
+      <_GenFacadeNotSupportedInput Include="@(GenFacadeNotSupportedCompileInput);$(ApiExclusionListPath)" />
+      <_GenFacadeNotSupportedInput Include="$(GenFacadesRoslynAssembliesPath)/Microsoft.CodeAnalysis.dll;$(GenFacadesRoslynAssembliesPath)/Microsoft.CodeAnalysis.CSharp.dll" />
+    </ItemGroup>
     <NotSupportedAssemblyGenerator
       SourceFiles="@(GenFacadeNotSupportedCompileInput)"
       LangVersion="$(LangVersion)"
       Message="$(GeneratePlatformNotSupportedAssemblyMessage)"
       ApiExclusionListPath="$(ApiExclusionListPath)"
+      DeclaredInputs="@(_GenFacadeNotSupportedInput)"
+      DeclaredOutputs="@(GenFacadeNotSupportedCompileInput->'%(OutputPath)')"
       RoslynAssembliesPath="$(GenFacadesRoslynAssembliesPath)" />
 
     <ItemGroup>
