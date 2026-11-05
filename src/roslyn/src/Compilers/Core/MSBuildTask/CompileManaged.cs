@@ -14,13 +14,13 @@ using Roslyn.Utilities;
 namespace Microsoft.CodeAnalysis.BuildTasks;
 
 /// <summary>
-/// Executes a prepared C# invocation with an explicit compiler and runtime host.
+/// Executes a prepared managed compiler invocation with an explicit compiler and runtime host.
 /// </summary>
 [MSBuildDeclaredIOTask]
 [MSBuildMultiThreadableTask]
-public sealed class CompileCsc : ToolTask
+public sealed class CompileManaged : ToolTask
 {
-    public CompileCsc() : base(ErrorString.ResourceManager)
+    public CompileManaged() : base(ErrorString.ResourceManager)
     {
     }
 

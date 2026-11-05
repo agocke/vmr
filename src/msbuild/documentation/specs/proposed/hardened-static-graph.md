@@ -861,7 +861,7 @@ every declared output must exist on success. Inputs are existing external
 regular files or required outputs of predecessor actions; generated inputs
 need not exist during construction.
 
-The bounded `CompileCsc` profile additionally supports one compiler-owned
+The bounded `CompileManaged` profile additionally supports one compiler-owned
 generated-source tree through `DeclaredOutputTrees`: an absolute root with
 `ArchiveFile`, `DyndepFile` and `ReceiptFile` metadata. Archive and dyndep are
 regular compiler outputs; a separate materializer owns the root, receipt and

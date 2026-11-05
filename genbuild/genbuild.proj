@@ -28,6 +28,7 @@
     <Component Include="$(MSBuildThisFileDirectory)arcade/templating/Templating.csproj" Tfm="net11.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/MSBuild/Microsoft.Build.Tasks.CodeAnalysis.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/Tools/CodeStyleConfigFileGenerator.csproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Tools/GenerateDocumentationAndConfigFiles/GenerateDocumentationAndConfigFiles.csproj" Tfm="net10.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/CSharp/csc/AnyCpu/csc.csproj" Tfm="net10.0" />
+    <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/VisualBasic/vbc/AnyCpu/vbc.csproj" Tfm="net10.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/genfacades/GenFacades.csproj" Tfm="net11.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/CodeStyle/CSharp/CodeFixes/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/VisualBasic/CodeFixes/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes.vbproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Microsoft.CodeAnalysis.Analyzers/Core/Microsoft.CodeAnalysis.Analyzers.csproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers/CSharp/Microsoft.CodeAnalysis.CSharp.BannedApiAnalyzers.csproj" Tfm="netstandard2.0" />
     <Component Include="$(GenBuildRoot)src/sdk/src/Microsoft.CodeAnalysis.NetAnalyzers/src/Microsoft.CodeAnalysis.NetAnalyzers.Package.csproj" />
@@ -90,6 +91,8 @@
       <_RoslynTask Include="$(_RoslynOutput)Microsoft.Build.Tasks.CodeAnalysis/$(Configuration)/net10.0/Microsoft.Build.Tasks.CodeAnalysis.dll;$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/*.targets" />
       <_CSharpCompiler Include="$(_RoslynOutput)csc/$(Configuration)/net10.0/**/*"
                        Exclude="$(_RoslynOutput)csc/$(Configuration)/net10.0/csc;$(_RoslynOutput)csc/$(Configuration)/net10.0/csc.exe;**/*.runtimeconfig.dev.json" />
+      <_VisualBasicCompiler Include="$(_RoslynOutput)vbc/$(Configuration)/net10.0/**/*"
+                            Exclude="$(_RoslynOutput)vbc/$(Configuration)/net10.0/vbc;$(_RoslynOutput)vbc/$(Configuration)/net10.0/vbc.exe;**/*.runtimeconfig.dev.json;@(_CSharpCompiler->'$(_RoslynOutput)vbc/$(Configuration)/net10.0/%(RecursiveDir)%(Filename)%(Extension)')" />
       <_SourceLinkBuild Include="$(GenBuildRoot)src/sourcelink/src/%(SourceLink.Source)/build/**/*">
         <Package>%(SourceLink.Identity)</Package>
       </_SourceLinkBuild>
@@ -124,12 +127,14 @@
     <Copy SourceFiles="@(_PruneData)" DestinationFiles="@(_PruneData->'$(GenBuildToolsetDirectory)PrunePackageData/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_RoslynTask)" DestinationFolder="$(GenBuildToolsetDirectory)Roslyn/" SkipUnchangedFiles="true" />
     <Error Condition="'@(_CSharpCompiler)' == ''" Text="The source-built C# compiler is missing. Run without GenBuildSkipComponentBuild." />
+    <Error Condition="'@(_VisualBasicCompiler)' == ''" Text="The source-built VB compiler is missing. Run without GenBuildSkipComponentBuild." />
     <ItemGroup>
       <_ObsoleteCompiler Include="$(GenBuildToolsetDirectory)Roslyn/bincore/**/*"
-                         Exclude="@(_CSharpCompiler->'$(GenBuildToolsetDirectory)Roslyn/bincore/%(RecursiveDir)%(Filename)%(Extension)')" />
+                         Exclude="@(_CSharpCompiler->'$(GenBuildToolsetDirectory)Roslyn/bincore/%(RecursiveDir)%(Filename)%(Extension)');@(_VisualBasicCompiler->'$(GenBuildToolsetDirectory)Roslyn/bincore/%(RecursiveDir)%(Filename)%(Extension)')" />
     </ItemGroup>
     <Delete Files="@(_ObsoleteCompiler)" />
     <Copy SourceFiles="@(_CSharpCompiler)" DestinationFiles="@(_CSharpCompiler->'$(GenBuildToolsetDirectory)Roslyn/bincore/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_VisualBasicCompiler)" DestinationFiles="@(_VisualBasicCompiler->'$(GenBuildToolsetDirectory)Roslyn/bincore/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_SourceLinkBuild)" DestinationFiles="@(_SourceLinkBuild->'$(GenBuildToolsetDirectory)Sdks/%(Package)/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_SourceLinkMultiTargetingBuild)" DestinationFiles="@(_SourceLinkMultiTargetingBuild->'$(GenBuildToolsetDirectory)Sdks/%(Package)/buildMultiTargeting/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_SourceLinkTask)" DestinationFiles="@(_SourceLinkTask->'$(GenBuildToolsetDirectory)Sdks/%(Package)/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />

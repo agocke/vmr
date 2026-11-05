@@ -391,10 +391,13 @@ provider versions, metadata validation, stale replacement, and independent error
 
 ### Deterministic compiler actions
 
-- [x] Compose pure `FormatCsc` with independent `CompileCsc`, reusing option
+- [x] Compose pure `FormatCsc` with independent `CompileManaged`, reusing option
   formatting without ordinary Csc's server, IDE host, or discovery paths.
+- [x] Compose pure `FormatVbc` with the same executor and shared footprint/path-map
+  helper; retain VB options, explicit runtime inputs and VB resource naming.
 - [x] Capture compiler/analyzer dependency closures during Restore as `cscinputs`;
-  keep later tool/documentation/module inputs explicit.
+  capture VB closures as `vbcinputs` and keep later tool/documentation/module
+  inputs explicit.
 - [x] Require deterministic compilation and automatic stable path maps consistent
   with SourceLink, covering project, generated-source, and output paths.
 - [x] Declare analyzers/generators, dependencies, configs, and additional files;
@@ -426,7 +429,7 @@ response-file searches. Plugin I/O enforcement is deferred like other task I/O.
   document parity, deterministic archive bytes, no-work rebuilds and failed
   compilation preserving published source bytes/timestamps.
 
-This is the single-tree `CompileCsc` profile, not general directory support,
+This is the single-tree `CompileManaged` profile, not general directory support,
 construction-time enumeration or generated-item discovery. Publication updates
 individual files atomically, not the whole tree in one transaction. The receipt
 is required to authorize replacement/deletion of existing files. Ninja-created
@@ -1079,7 +1082,7 @@ The action declares the parent DLL input and generated C# output, composing the
 existing `GetAssemblyAttributes` and `WriteCodeFragment` implementations without
 reading the DLL during construction. Authored attributes precede parent-derived
 attributes and the culture attribute, exactly as in the ordinary target.
-`FormatCsc` and `CompileCsc` consume that known source and the culture's resources;
+`FormatCsc` and `CompileManaged` consume that known source and the culture's resources;
 separate per-culture compiler items avoid contaminating main compilation.
 Declared `CopyFiles` actions publish the satellites. Ordinary extraction,
 compilation and copy paths retain their existing behavior.
@@ -1215,12 +1218,26 @@ The compiler smoke's stale generated-directory rejection is now a positive
 compilation/materialization test; compiler, generated-tree, facade and
 platform-stub checks all pass.
 
-A fresh whole traversal passes resource, partial-facade, platform-stub and template
-generation. Restore succeeds; construction first fails in
-Microsoft.VisualBasic.Core at `CreateVisualBasicManifestResourceName`. VB also
-imports cached non-hardened Roslyn targets rather than the staged toolchain, so
-toolchain routing and VB resource/compiler integration are next. The previously
-reported networking Build cycles do not recur in this traversal. No whole-partition
+The standalone toolset builds and stages both source-built compilers. VB now uses
+`FormatVbc` and the shared `CompileManaged` executor, with the same deterministic
+footprint/path-map policy as C#. Preparation captures VB's compiler/analyzer
+closure per configured framework. Resource formatting uses VB's root namespace
+and flattened basename policy without source discovery. Ordinary Vbc and resource
+naming remain on their existing paths. Focused Ninja execution checks future
+source/resource and explicit-runtime producers, `None`/`Embed` runtime modes,
+relocated assembly/PDB/reference/documentation bytes, ordinary resource metadata
+parity, mapped caller paths, no-work and independent compiler failure. Unsupported
+SDK/runtime lookup, response files, nondeterminism and source-dependent naming
+reject construction. C#, generated-tree, satellite-source and ApiCompat regressions
+also pass.
+
+A fresh whole traversal passes resource, partial-facade, platform-stub, template
+and VB integration. Restore succeeds; construction now first fails with
+NETSDK1255 for missing conflict version facts on the future-produced
+`Microsoft.Interop.SourceGeneration.dll` consumed by
+System.Runtime.InteropServices.JavaScript. Producer version metadata is the next
+frontier, not permission to open a nonexistent assembly during construction.
+The previously reported networking Build cycles do not recur. No whole-partition
 Ninja graph has been produced or executed; preparation and failed construction
 produce no assemblies/resources or partial graph and preserve the recorded shared
 cache hashes.

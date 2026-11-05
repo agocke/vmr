@@ -30,12 +30,14 @@
     <Compile Include="$(MSBuildThisFileDirectory)..\Portable\InternalUtilities\UnicodeCharacterUtilities.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CanonicalError.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CommandLineBuilderExtension.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)CompileCsc.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CompileManaged.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CompilerInvocation.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CopyRefAssembly.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Csc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Csi.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FormatAnalyzerConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FormatCsc.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FormatVbc.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)GenerateMSBuildEditorConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IAnalyzerConfigFilesHostObject.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ICompilerOptionsHostObject.cs" />

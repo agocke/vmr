@@ -12,7 +12,7 @@ using Microsoft.Build.Utilities;
 namespace Microsoft.Build.Tasks;
 
 /// <summary>
-/// Formats C# resource names from paths and metadata without discovering or reading source files.
+/// Formats resource names from paths and metadata without discovering or reading source files.
 /// </summary>
 [MSBuildMultiThreadableTask]
 [MSBuildDeclaredIOTask]
@@ -22,6 +22,8 @@ public sealed class FormatResourceNames : TaskExtension
     public ITaskItem[] ResourceFiles { get; set; } = [];
 
     public string RootNamespace { get; set; } = string.Empty;
+
+    public bool UseVisualBasicNaming { get; set; }
 
     public bool PrependCultureAsDirectory { get; set; } = true;
 
@@ -61,18 +63,31 @@ public sealed class FormatResourceNames : TaskExtension
 
             try
             {
-                string name = CreateCSharpManifestResourceName.CreateManifestNameImpl(
-                    source.ItemSpec,
-                    source.GetMetadata("TargetPath"),
-                    PrependCultureAsDirectory,
-                    RootNamespace,
-                    dependentUponFileName: null,
-                    source.GetMetadata("Culture"),
-                    binaryStream: null,
-                    Log,
-                    ConversionUtilities.ValidBooleanFalse(source.GetMetadata("WithCulture")),
-                    EnableCustomCulture,
-                    deterministic: true);
+                string name = UseVisualBasicNaming
+                    ? CreateVisualBasicManifestResourceName.CreateManifestNameImpl(
+                        source.ItemSpec,
+                        source.GetMetadata("TargetPath"),
+                        PrependCultureAsDirectory,
+                        RootNamespace,
+                        dependentUponFileName: null,
+                        source.GetMetadata("Culture"),
+                        binaryStream: null,
+                        Log,
+                        ConversionUtilities.ValidBooleanFalse(source.GetMetadata("WithCulture")),
+                        EnableCustomCulture,
+                        deterministic: true)
+                    : CreateCSharpManifestResourceName.CreateManifestNameImpl(
+                        source.ItemSpec,
+                        source.GetMetadata("TargetPath"),
+                        PrependCultureAsDirectory,
+                        RootNamespace,
+                        dependentUponFileName: null,
+                        source.GetMetadata("Culture"),
+                        binaryStream: null,
+                        Log,
+                        ConversionUtilities.ValidBooleanFalse(source.GetMetadata("WithCulture")),
+                        EnableCustomCulture,
+                        deterministic: true);
 
                 TaskItem resource = new(source);
                 resource.SetMetadata("ManifestResourceName", EscapingUtilities.Escape(name));

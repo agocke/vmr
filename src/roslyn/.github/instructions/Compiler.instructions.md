@@ -82,21 +82,24 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
 - `Csc.cs` - C# compiler task
 - `Vbc.cs` - VB compiler task  
 - `ManagedCompiler.cs` - Base compiler task functionality
-- Hardened C# compilation uses zero-I/O `FormatCsc` and the independent
-  `CompileCsc` action, not Csc's server/IDE/tool-discovery execution. Both
+- Hardened C# and VB compilation use zero-I/O `FormatCsc`/`FormatVbc` and the
+  independent `CompileManaged` action, not server/IDE/tool-discovery execution. Both
   deterministic compilation and deterministic source paths are mandatory.
   Automatic mappings preserve SourceLink root aliases and cover project,
   generated-source and output paths, including CodeView. Restore's
-  `_CaptureCscToolInputs` prepares the compiler/analyzer closure under
-  `$(MSBuildProjectExtensionsPath)cscinputs/`; hardened evaluation requires that
+  `_CaptureCscToolInputs`/`_CaptureVbcToolInputs` prepare compiler/analyzer closures under
+  `$(MSBuildProjectExtensionsPath)cscinputs/` and `vbcinputs/`; hardened evaluation requires that
   import. SDK preparation covers the configured metadata requests reached during
   framework discovery as well as selected compilation requests. Capturing a
   compiler closure does not request compilation of that framework.
   Declare analyzer/generator dependencies, configs and additional files and
   trust their nominal compiler-input-only contract; enforcement is deferred
-  without per-plugin gates. `CompileCsc` controls the child environment and
+  without per-plugin gates. `CompileManaged` controls the child environment and
   uses ToolTask cancellation/private response-file scratch, never server state
-  or a task-local cache. Keep ordinary Csc behavior unchanged.
+  or a task-local cache. Shared `CompilerInvocation` composes footprint validation
+  and path mappings without another compiler inheritance layer. VB requires an
+  explicit runtime path, `None`/`Embed`, or `NoVBRuntimeReference`; implicit runtime
+  and SDK-directory searches are rejected. Keep ordinary Csc/Vbc behavior unchanged.
 - Hardened `EmitCompilerGeneratedFiles` declares one compiler-owned output tree.
   The source-built C# compiler's archive mode redirects physical writes only;
   preserve `/generatedfilesout` logical paths, analyzer-config matching and PDB

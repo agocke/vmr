@@ -322,8 +322,8 @@ internal sealed class HardenedActionGraph
             "a task without an explicit assembly registration, a custom task factory, or specialized hosting", node.Location);
         string taskAssembly = CanonicalPath(assembly!.AssemblyFile, node.Location);
         Require(trees.Count == 0 || (trees.Count == 1 &&
-            typeName == "Microsoft.CodeAnalysis.BuildTasks.CompileCsc"),
-            "output trees outside the single-tree CompileCsc profile", node.Location);
+            typeName == "Microsoft.CodeAnalysis.BuildTasks.CompileManaged"),
+            "output trees outside the single-tree CompileManaged profile", node.Location);
         foreach (string path in outputs)
         {
             Require(!Directory.Exists(path), $"directory output '{path}'", node.Location);

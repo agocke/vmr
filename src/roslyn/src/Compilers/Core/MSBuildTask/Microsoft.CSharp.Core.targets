@@ -3,7 +3,7 @@
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="Microsoft.Managed.Core.targets"/>
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.FormatCsc" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
-  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.CompileCsc" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.CompileManaged" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.WriteCscInputs" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
 
   <PropertyGroup>
@@ -303,7 +303,7 @@
       <Output TaskParameter="PathMappings" ItemName="_HardenedCscPathMapping" />
     </FormatCsc>
 
-    <CompileCsc Condition="'$(MSBuildHardenedGraph)' == 'true'"
+    <CompileManaged Condition="'$(MSBuildHardenedGraph)' == 'true'"
                 DotNetHost="$(DOTNET_HOST_PATH)"
                 CompilerAssembly="$(_BuildTasksDirectory)bincore/csc.dll"
                 CompilerArguments="$(_HardenedCscArguments)"

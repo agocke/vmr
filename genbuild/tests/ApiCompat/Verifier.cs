@@ -205,7 +205,7 @@ internal static class Verifier
         string comparison = invocations.Single(entry =>
             entry.Invocation.GetProperty("taskType").GetString() == "Microsoft.DotNet.ApiCompat.Task.ValidateAssembliesTask").File;
         string compiler = invocations.Single(entry =>
-            entry.Invocation.GetProperty("taskType").GetString() == "Microsoft.CodeAnalysis.BuildTasks.CompileCsc").File;
+            entry.Invocation.GetProperty("taskType").GetString() == "Microsoft.CodeAnalysis.BuildTasks.CompileManaged").File;
         int comparisonIndex = output.IndexOf(comparison, StringComparison.Ordinal);
         Require(comparisonIndex >= 0, "The existing graph did not execute ApiCompat: " + testCase);
         Require(output.Contains(compiler, StringComparison.Ordinal) == expectCompile,

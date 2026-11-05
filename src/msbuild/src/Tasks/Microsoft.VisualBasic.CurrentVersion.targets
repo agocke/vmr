@@ -101,9 +101,19 @@ Copyright (C) Microsoft Corporation. All rights reserved.
               ResourceFiles="@(EmbeddedResource)"
               RootNamespace="$(RootNamespace)"
               UseDependentUponConvention="$(EmbeddedResourceUseDependentUponConvention)"
-              Condition="'%(EmbeddedResource.ManifestResourceName)' == '' and ('%(EmbeddedResource.WithCulture)' == 'false' or '%(EmbeddedResource.Type)' == 'Resx')">
+              Condition="'$(MSBuildHardenedGraph)' != 'true' and '%(EmbeddedResource.ManifestResourceName)' == '' and ('%(EmbeddedResource.WithCulture)' == 'false' or '%(EmbeddedResource.Type)' == 'Resx')">
             <Output TaskParameter="ResourceFilesWithManifestResourceNames" ItemName="_Temporary" />
         </CreateVisualBasicManifestResourceName>
+
+        <FormatResourceNames
+              ResourceFiles="@(EmbeddedResource)"
+              RootNamespace="$(RootNamespace)"
+              UseVisualBasicNaming="true"
+              UseDependentUponConvention="$(EmbeddedResourceUseDependentUponConvention)"
+              DeclaredInputs="" DeclaredOutputs=""
+              Condition="'$(MSBuildHardenedGraph)' == 'true' and '%(EmbeddedResource.ManifestResourceName)' == '' and ('%(EmbeddedResource.WithCulture)' == 'false' or '%(EmbeddedResource.Type)' == 'Resx')">
+            <Output TaskParameter="ResourceFilesWithManifestResourceNames" ItemName="_Temporary" />
+        </FormatResourceNames>
 
         <!-- Create manifest names for all culture non-resx resources -->
         <CreateVisualBasicManifestResourceName
@@ -112,9 +122,21 @@ Copyright (C) Microsoft Corporation. All rights reserved.
               PrependCultureAsDirectory="false"
               EnableCustomCulture="$(EnableCustomCulture)"
               UseDependentUponConvention="$(EmbeddedResourceUseDependentUponConvention)"
-              Condition="'%(EmbeddedResource.ManifestResourceName)' == '' and '%(EmbeddedResource.WithCulture)' == 'true' and '%(EmbeddedResource.Type)' == 'Non-Resx'">
+              Condition="'$(MSBuildHardenedGraph)' != 'true' and '%(EmbeddedResource.ManifestResourceName)' == '' and '%(EmbeddedResource.WithCulture)' == 'true' and '%(EmbeddedResource.Type)' == 'Non-Resx'">
             <Output TaskParameter="ResourceFilesWithManifestResourceNames" ItemName="_Temporary" />
         </CreateVisualBasicManifestResourceName>
+
+        <FormatResourceNames
+              ResourceFiles="@(EmbeddedResource)"
+              RootNamespace="$(RootNamespace)"
+              UseVisualBasicNaming="true"
+              PrependCultureAsDirectory="false"
+              EnableCustomCulture="$(EnableCustomCulture)"
+              UseDependentUponConvention="$(EmbeddedResourceUseDependentUponConvention)"
+              DeclaredInputs="" DeclaredOutputs=""
+              Condition="'$(MSBuildHardenedGraph)' == 'true' and '%(EmbeddedResource.ManifestResourceName)' == '' and '%(EmbeddedResource.WithCulture)' == 'true' and '%(EmbeddedResource.Type)' == 'Non-Resx'">
+            <Output TaskParameter="ResourceFilesWithManifestResourceNames" ItemName="_Temporary" />
+        </FormatResourceNames>
 
         <ItemGroup>
             <EmbeddedResource Remove="@(EmbeddedResource)" Condition="'%(EmbeddedResource.ManifestResourceName)' == ''"/>

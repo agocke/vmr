@@ -19,7 +19,7 @@ dotnet msbuild genbuild/genbuild.proj -m:1 -nr:false -bl:{}
 ```
 
 This builds the selected MSBuild, SDK-task, Roslyn, SourceLink, NuGet, and Arcade
-target-framework task sources, including the source-built C# compiler, and
+target-framework task sources, including the source-built C# and VB compilers, and
 assembles the app in `artifacts/bin/genbuild/Debug/`. It does not build the full
 SDK, templates, workloads, or a runtime.
 
@@ -125,7 +125,9 @@ For runtime, pass the matching
 and `-p:RestoreAdditionalProjectSources=/absolute/path/to/isolated-feed`
 to Restore and Build. Its compiler package also supplies integration targets;
 select the prototype integration explicitly in both commands with
-`-p:CSharpCoreTargetsPath=/absolute/path/to/app/toolset/Roslyn/Microsoft.CSharp.Core.targets`.
+`-p:CSharpCoreTargetsPath=/absolute/path/to/app/toolset/Roslyn/Microsoft.CSharp.Core.targets`
+and
+`-p:VisualBasicCoreTargetsPath=/absolute/path/to/app/toolset/Roslyn/Microsoft.VisualBasic.Core.targets`.
 This changes the integration authoring, not a permission to prebuild compiler
 or runtime products. Do not patch shared cached package contents.
 

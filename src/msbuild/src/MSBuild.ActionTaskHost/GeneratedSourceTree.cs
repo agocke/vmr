@@ -72,7 +72,7 @@ internal sealed class GeneratedSourceTree
         Require(value is ITaskItem[], taskType);
         ITaskItem[] items = (ITaskItem[])value;
         Require(items.Length == 0 || (items.Length == 1 &&
-            taskType == "Microsoft.CodeAnalysis.BuildTasks.CompileCsc"), taskType);
+            taskType == "Microsoft.CodeAnalysis.BuildTasks.CompileManaged"), taskType);
         GeneratedSourceTree[] trees = new GeneratedSourceTree[items.Length];
         for (int i = 0; i < items.Length; i++)
         {

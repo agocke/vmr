@@ -1,0 +1,81 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
+    <_TargetFrameworkVersionWithoutV>11.0</_TargetFrameworkVersionWithoutV>
+    <TargetFramework>net11.0</TargetFramework>
+    <Language>VB</Language>
+    <OutputType>exe</OutputType>
+    <RootNamespace>Fixture.Root</RootNamespace>
+    <Deterministic Condition="'$(Deterministic)' == ''">true</Deterministic>
+    <DeterministicSourcePaths Condition="'$(DeterministicSourcePaths)' == ''">true</DeterministicSourcePaths>
+    <NoCompilerStandardLib>true</NoCompilerStandardLib>
+    <VBRuntime Condition="'$(VBRuntime)' == ''">None</VBRuntime>
+    <VBRuntime Condition="'$(TestCase)' == 'explicit-runtime'">obj/runtime/Microsoft.VisualBasic.dll</VBRuntime>
+    <VBRuntime Condition="'$(TestCase)' == 'embed-runtime'">Embed</VBRuntime>
+    <VBRuntimePath Condition="'$(TestCase)' == 'runtime-path'">None</VBRuntimePath>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <GenerateDocumentation>true</GenerateDocumentation>
+    <OptionStrict>true</OptionStrict>
+    <OptionExplicit>true</OptionExplicit>
+    <OptionInfer>true</OptionInfer>
+    <FinalDefineConstants>EXPECTED=42,_MYTYPE=&quot;Empty&quot;</FinalDefineConstants>
+    <FinalDefineConstants Condition="'$(TestCase)' == 'compiler-error'">$(FinalDefineConstants),BROKEN=True</FinalDefineConstants>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/</MSBuildProjectExtensionsPath>
+    <EmbeddedResourceUseDependentUponConvention>false</EmbeddedResourceUseDependentUponConvention>
+    <EmbeddedResourceUseDependentUponConvention Condition="'$(TestCase)' == 'convention'">true</EmbeddedResourceUseDependentUponConvention>
+    <CompilerResponseFile Condition="'$(TestCase)' == 'response'">override.rsp</CompilerResponseFile>
+    <FrameworkPathOverride Condition="'$(TestCase)' == 'sdkpath'">ambient-sdk</FrameworkPathOverride>
+    <_CompilerDirectory>$(MSBuildSDKsPath)/../Roslyn/</_CompilerDirectory>
+    <UseSourcePath>true</UseSourcePath>
+    <GenerateResourceMSBuildRuntime>CurrentRuntime</GenerateResourceMSBuildRuntime>
+    <GenerateResourceMSBuildArchitecture>CurrentArchitecture</GenerateResourceMSBuildArchitecture>
+    <ResGenExecuteAsTool>false</ResGenExecuteAsTool>
+  </PropertyGroup>
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.Vbc" AssemblyFile="$(_CompilerDirectory)Microsoft.Build.Tasks.CodeAnalysis.dll" />
+  <Import Project="$(_CompilerDirectory)Microsoft.VisualBasic.Core.targets" />
+  <Import Project="FrameworkInputs.props" />
+  <Import Project="Resources.targets" />
+  <ItemGroup>
+    <SourceRoot Include="$(MSBuildProjectDirectory)/../" SourceControl="git" />
+    <Compile Include="Program.vb;obj/Generated.vb" />
+    <IntermediateAssembly Include="obj/Hello.dll" />
+    <IntermediateRefAssembly Include="obj/ref/Hello.dll" />
+    <DocFileItem Include="obj/Hello.xml" />
+    <ReferencePathWithRefAssemblies Include="@(_FrameworkReferenceManifestCompileReference)" />
+    <EmbeddedResource Include="obj/sub/Strings.resx" Type="Resx" WithCulture="false">
+      <TargetPath>linked/path/Strings.resx</TargetPath>
+      <DependentUpon Condition="'$(TestCase)' == 'dependent'">Program.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="obj/sub/Strings.fr.resx" Type="Resx" WithCulture="true" Culture="fr" />
+    <EmbeddedResource Include="obj/sub/data.fr.txt" Type="Non-Resx" WithCulture="true" Culture="fr" />
+  </ItemGroup>
+  <Target Name="PrepareForBuild" />
+  <Target Name="PrepareResourceNames" DependsOnTargets="CreateManifestResourceNames" />
+  <Target Name="ResolvePackageAssets" />
+  <Target Name="ResolveTargetingPackAssets" />
+  <Target Name="_BeforeVBCSCoreCompile" DependsOnTargets="CoreResGen;_GenerateCompileInputs" />
+  <Target Name="Produce">
+    <ItemGroup Condition="'$(TestCase)' == 'explicit-runtime'">
+      <_RuntimeReference Include="@(_FrameworkReferenceManifestCompileReference)" Condition="'%(_FrameworkReferenceManifestCompileReference.Filename)' == 'Microsoft.VisualBasic'" />
+    </ItemGroup>
+    <CopyFiles SourceFiles="@(_RuntimeReference)" DestinationFiles="obj/runtime/Microsoft.VisualBasic.dll"
+               DeclaredInputs="@(_RuntimeReference)" DeclaredOutputs="obj/runtime/Microsoft.VisualBasic.dll"
+               Condition="'$(TestCase)' == 'explicit-runtime'" />
+    <WriteLinesToFile File="obj/Generated.vb" Lines="Public Module Producer;Public Const Text As String = &quot;generated VB&quot;;End Module"
+                      Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="obj/Generated.vb" />
+    <WriteLinesToFile File="%(EmbeddedResource.Identity)"
+                      Lines="&lt;root&gt;&lt;data name=&quot;Greeting&quot; xml:space=&quot;preserve&quot;&gt;&lt;value&gt;resource VB&lt;/value&gt;&lt;/data&gt;&lt;/root&gt;"
+                      Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="%(EmbeddedResource.Identity)" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="_SetPathMapFromSourceRoots;Produce;CreateManifestResourceNames;CoreCompile">
+    <WriteLinesToFile File="resource-items.txt"
+                      Lines="@(EmbeddedResource->'%(Identity)|%(ManifestResourceName)|%(LogicalName)|%(Culture)|%(WithCulture)')"
+                      Overwrite="true" DeclaredInputs="" DeclaredOutputs="resource-items.txt" />
+  </Target>
+  <Target Name="Restore">
+    <MakeDir Directories="obj/ref;obj/sub" />
+  </Target>
+</Project>

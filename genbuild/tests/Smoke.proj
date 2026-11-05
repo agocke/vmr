@@ -41,6 +41,7 @@
     <CallTarget Targets="TestGenFacades" />
     <CallTarget Targets="TestNotSupportedGeneration" />
     <CallTarget Targets="TestGenerateFileFromTemplate" />
+    <CallTarget Targets="TestVbc" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -3105,6 +3106,84 @@
     </Exec>
     <Error Condition="'$(_DepsMissingExitCode)' == '0' or Exists('$(_TestDirectory)deps/missing/project/out/DepsApp.deps.json')"
            Text="Deps execution must fail on missing declared binaries rather than emit empty versions." />
+  </Target>
+  <Target Name="TestVbc">
+    <PropertyGroup>
+      <_VbcRoot>$(_TestDirectory)vbc/</_VbcRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_VbcRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_VbcRoot)" />
+    <WriteLinesToFile File="$(_VbcRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_VbcRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_VbcRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_VbcRoot)HelloWorld.csproj&quot;" />
+    <ItemGroup>
+      <_VbcCase Include="short;another much longer checkout;ordinary;explicit-runtime;embed-runtime;compiler-error;determinism;paths;response;sdkpath;runtime;runtime-path;dependent;convention" />
+      <_VbcDirectory Include="@(_VbcCase->'$(_VbcRoot)%(Identity)/project/')" />
+      <_VbcExecution Include="short;another much longer checkout;explicit-runtime;embed-runtime" />
+      <_VbcInvalid Include="determinism" Arguments="-p:Deterministic=false" />
+      <_VbcInvalid Include="paths" Arguments="-p:DeterministicSourcePaths=false" />
+      <_VbcInvalid Include="runtime" Arguments="-p:VBRuntime=Default" />
+      <_VbcInvalid Include="response;sdkpath;runtime-path;dependent;convention" />
+    </ItemGroup>
+    <MakeDir Directories="@(_VbcDirectory)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Vbc.proj" DestinationFiles="%(_VbcDirectory.Identity)Vbc.proj" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Vbc.vb" DestinationFiles="%(_VbcDirectory.Identity)Program.vb" />
+    <Copy SourceFiles="$(_VbcRoot)obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_VbcDirectory.Identity)FrameworkInputs.props" />
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.VisualBasic.CurrentVersion.targets" Query="/Project/Target[@Name='CreateManifestResourceNames']">
+      <Output TaskParameter="Result" ItemName="_VbcResourceTargets" />
+    </XmlPeek>
+    <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets" Query="/Project/Target[@Name='CoreResGen' or @Name='_GenerateCompileInputs']">
+      <Output TaskParameter="Result" ItemName="_VbcResourceTargets" />
+    </XmlPeek>
+    <WriteLinesToFile File="%(_VbcDirectory.Identity)Resources.targets" Lines="&lt;Project&gt;;@(_VbcResourceTargets);&lt;/Project&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_VbcRoot)%(_VbcCase.Identity)/project/Vbc.proj&quot;" />
+    <Exec Command="$(_App) build &quot;$(_VbcRoot)%(_VbcExecution.Identity)/project/Vbc.proj&quot; -p:TestCase=&quot;%(_VbcExecution.Identity)&quot;" />
+    <Error Condition="Exists('$(_VbcRoot)%(_VbcExecution.Identity)/project/obj/Generated.vb') or Exists('$(_VbcRoot)%(_VbcExecution.Identity)/project/obj/Hello.dll') or Exists('$(_VbcRoot)%(_VbcExecution.Identity)/project/obj/sub/Strings.resx')"
+           Text="VB construction must not execute source/resource producers or the compiler." />
+    <Exec WorkingDirectory="$(_VbcRoot)%(_VbcExecution.Identity)/project" Command="ninja -f obj/genbuild/build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_VbcRoot)ordinary/project/Vbc.proj&quot; -t:Build" />
+    <ItemGroup>
+      <_VbcResult Include="@(_VbcExecution)" />
+      <_VbcArtifact Include="obj/Hello.dll;obj/Hello.pdb;obj/ref/Hello.dll;obj/Hello.xml" />
+    </ItemGroup>
+    <GetFileHash Files="@(_VbcArtifact->'$(_VbcRoot)short/project/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_VbcShortHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_VbcArtifact->'$(_VbcRoot)another much longer checkout/project/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_VbcLongHash" />
+    </GetFileHash>
+    <Error Condition="'@(_VbcShortHash->'%(FileHash)')' != '@(_VbcLongHash->'%(FileHash)')'" Text="Relocated VB compilations must have identical assembly, PDB, reference assembly and documentation bytes." />
+    <GetFileHash Files="$(_VbcRoot)short/project/resource-items.txt;$(_VbcRoot)ordinary/project/resource-items.txt">
+      <Output TaskParameter="Items" ItemName="_VbcResourceHash" />
+    </GetFileHash>
+    <Error Condition="'@(_VbcResourceHash->'%(FileHash)'->Distinct()->Count())' != '1' or
+                      !$([System.IO.File]::ReadAllText('$(_VbcRoot)short/project/resource-items.txt').Contains('|Fixture.Root.Strings|')) or
+                      !$([System.IO.File]::ReadAllText('$(_VbcRoot)short/project/resource-items.txt').Contains('|Fixture.Root.Strings.fr|')) or
+                      !$([System.IO.File]::ReadAllText('$(_VbcRoot)short/project/resource-items.txt').Contains('|Fixture.Root.data.txt|Fixture.Root.data.txt|fr|true'))"
+           Text="VB resource naming must match ordinary root-namespace, flattened linked path and culture metadata." />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_VbcRoot)%(_VbcResult.Identity)/project/obj/Hello.runtimeconfig.json" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_VbcRoot)%(_VbcResult.Identity)/project/obj/Hello.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_VbcProgramOutput" />
+    </Exec>
+    <Error Condition="'@(_VbcProgramOutput->Distinct())' != '/_/project/Program.vb%3Bgenerated VB%3Bresource VB'"
+           Text="VB execution must preserve caller path mapping, future sources, constants and manifest resources." />
+    <Exec WorkingDirectory="$(_VbcRoot)short/project" Command="ninja -f obj/genbuild/build.ninja" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_VbcNoWork" />
+    </Exec>
+    <Error Condition="!@(_VbcNoWork->AnyHaveMetadataValue('Identity', 'ninja: no work to do.'))" Text="Unchanged VB actions must have no Ninja work." />
+    <Exec Command="$(_App) build &quot;$(_VbcRoot)compiler-error/project/Vbc.proj&quot; -p:TestCase=compiler-error" />
+    <Exec WorkingDirectory="$(_VbcRoot)compiler-error/project" Command="ninja -f obj/genbuild/build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_VbcCompilerErrorExit" />
+    </Exec>
+    <Error Condition="'$(_VbcCompilerErrorExit)' == '0' or Exists('$(_VbcRoot)compiler-error/project/obj/Hello.dll')"
+           Text="VB compiler failures must propagate from the independent executor without producing an assembly." />
+    <Exec Command="$(_App) build &quot;$(_VbcRoot)%(_VbcInvalid.Identity)/project/Vbc.proj&quot; -p:TestCase=%(_VbcInvalid.Identity) %(_VbcInvalid.Arguments)"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_VbcInvalidExit" />
+    </Exec>
+    <Error Condition="@(_VbcInvalidExit->AnyHaveMetadataValue('Identity', '0')) or Exists('$(_VbcRoot)%(_VbcInvalid.Identity)/project/obj/genbuild/build.ninja') or Exists('$(_VbcRoot)%(_VbcInvalid.Identity)/project/obj/Generated.vb')"
+           Text="Unsupported VB discovery and nondeterministic options must reject construction without partial graphs or products." />
   </Target>
   <Target Name="TestCsc">
     <MakeDir Directories="$(_TestDirectory)csc" />

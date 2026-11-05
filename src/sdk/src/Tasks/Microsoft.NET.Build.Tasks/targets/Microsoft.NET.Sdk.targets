@@ -1339,7 +1339,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="CompilerOutputs" ItemName="_HardenedSatelliteCscOutput" />
       <Output TaskParameter="PathMappings" ItemName="_HardenedSatelliteCscPathMapping" />
     </FormatCsc>
-    <CompileCsc Condition="'$(MSBuildHardenedGraph)' == 'true'"
+    <CompileManaged Condition="'$(MSBuildHardenedGraph)' == 'true'"
                 DotNetHost="$(DOTNET_HOST_PATH)"
                 CompilerAssembly="$(_BuildTasksDirectory)bincore/csc.dll"
                 CompilerArguments="$(_HardenedSatelliteCscArguments)"

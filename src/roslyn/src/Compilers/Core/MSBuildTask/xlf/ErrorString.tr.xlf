@@ -3,8 +3,8 @@
   <file datatype="xml" source-language="en" target-language="tr" original="../ErrorString.resx">
     <body>
       <trans-unit id="CompileCsc.ExplicitToolInputs">
-        <source>Declared-I/O C# compilation requires absolute, declared compiler and runtime host inputs without tool, shell, host-object or environment overrides.</source>
-        <target state="new">Declared-I/O C# compilation requires absolute, declared compiler and runtime host inputs without tool, shell, host-object or environment overrides.</target>
+        <source>Declared-I/O managed compilation requires absolute, declared compiler and runtime host inputs without tool, shell, host-object or environment overrides.</source>
+        <target state="new">Declared-I/O managed compilation requires absolute, declared compiler and runtime host inputs without tool, shell, host-object or environment overrides.</target>
         <note />
       </trans-unit>
       <trans-unit id="Compiler_UnexpectedException">
@@ -43,13 +43,13 @@
         <note />
       </trans-unit>
       <trans-unit id="FormatCsc.RequiredParameter">
-        <source>Declared-I/O C# compilation requires '{0}=true'.</source>
-        <target state="new">Declared-I/O C# compilation requires '{0}=true'.</target>
+        <source>Declared-I/O managed compilation requires '{0}=true'.</source>
+        <target state="new">Declared-I/O managed compilation requires '{0}=true'.</target>
         <note />
       </trans-unit>
       <trans-unit id="FormatCsc.UnsupportedParameter">
-        <source>Parameter '{0}' is not supported by declared-I/O C# compilation.</source>
-        <target state="new">Parameter '{0}' is not supported by declared-I/O C# compilation.</target>
+        <source>Parameter '{0}' is not supported by declared-I/O managed compilation.</source>
+        <target state="new">Parameter '{0}' is not supported by declared-I/O managed compilation.</target>
         <note />
       </trans-unit>
       <trans-unit id="General_CannotConvertStringToBool">

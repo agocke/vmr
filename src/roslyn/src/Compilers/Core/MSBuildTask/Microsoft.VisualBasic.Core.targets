@@ -2,6 +2,33 @@
 <!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="Microsoft.Managed.Core.targets"/>
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.FormatVbc" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.CompileManaged" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.WriteCscInputs" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
+
+  <PropertyGroup>
+    <_VbcInputManifestPath>$(MSBuildProjectExtensionsPath)vbcinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</_VbcInputManifestPath>
+  </PropertyGroup>
+  <Import Project="$(_VbcInputManifestPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+
+  <Target Name="_CaptureStandaloneVbcToolInputsAfterRestore"
+          AfterTargets="Restore"
+          DependsOnTargets="_CaptureVbcToolInputs"
+          Condition="'$(UsingMicrosoftNETSdk)' != 'true' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
+
+  <Target Name="_CaptureVbcToolInputs"
+          DependsOnTargets="ResolvePackageAssets;ResolveTargetingPackAssets"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
+    <ItemGroup>
+      <_VbcAnalyzerDirectory Include="@(Analyzer->'%(RootDir)%(Directory)')" KeepDuplicates="false" />
+    </ItemGroup>
+    <ItemGroup>
+      <_VbcToolInput Include="$(_BuildTasksDirectory)bincore/**/*;@(AnalyzerDependency)" />
+      <_VbcToolInput Include="%(_VbcAnalyzerDirectory.Identity)**/*" />
+    </ItemGroup>
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_VbcInputManifestPath)'))" />
+    <WriteCscInputs Inputs="@(_VbcToolInput)" OutputFile="$(_VbcInputManifestPath)" ItemName="_VbcPreparedToolInput" />
+  </Target>
 
   <Target Name="CoreCompile"
           Inputs="$(MSBuildAllProjects);
@@ -54,7 +81,7 @@
     </PropertyGroup>
 
     <!-- Condition is to filter out the _CoreCompileResourceInputs so that it doesn't pass in culture resources to the compiler -->
-    <Vbc Condition="'%(_CoreCompileResourceInputs.WithCulture)' != 'true'"
+    <Vbc Condition="'$(MSBuildHardenedGraph)' != 'true' and '%(_CoreCompileResourceInputs.WithCulture)' != 'true'"
          AdditionalLibPaths="$(AdditionalLibPaths)"
          AddModules="@(AddModules)"
          AdditionalFiles="@(AdditionalFiles)"
@@ -147,6 +174,114 @@
          SourceLink="$(SourceLink)">
       <Output TaskParameter="CommandLineArgs" ItemName="VbcCommandLineArgs" />
     </Vbc>
+    <FormatVbc Condition="'$(MSBuildHardenedGraph)' == 'true' and '%(_CoreCompileResourceInputs.WithCulture)' != 'true'"
+         DeclaredInputs="" DeclaredOutputs=""
+         CompilerToolExe="$(VbcToolExe)"
+         CompilerToolPath="$(VbcToolPath)"
+         SourceRoots="@(SourceRoot)"
+         DeterministicSourcePaths="$(DeterministicSourcePaths)"
+         AdditionalCompilerInputs="@(AnalyzerDependency);@(EmbeddedDocumentation);@(CustomAdditionalCompileInputs)"
+         AdditionalLibPaths="$(AdditionalLibPaths)"
+         AddModules="@(AddModules)"
+         AdditionalFiles="@(AdditionalFiles)"
+         AnalyzerConfigFiles="@(EditorConfigFiles)"
+         Analyzers="@(Analyzer)"
+         BaseAddress="$(BaseAddress)"
+         ChecksumAlgorithm="$(ChecksumAlgorithm)"
+         CodeAnalysisRuleSet="$(ResolvedCodeAnalysisRuleSet)"
+         CodePage="$(CodePage)"
+         DebugType="$(DebugType)"
+         DefineConstants="$(FinalDefineConstants)"
+         DelaySign="$(DelaySign)"
+         DisableSdkPath="true"
+         DisabledWarnings="$(NoWarn)"
+         DocumentationFile="@(DocFileItem)"
+         EmbedAllSources="$(EmbedAllSources)"
+         EmbeddedFiles="@(EmbeddedFiles)"
+         EmitDebugInformation="$(DebugSymbols)"
+         EnvironmentVariables="$(VbcEnvironment)"
+         ErrorLog="$(ErrorLog)"
+         ErrorReport="$(ErrorReport)"
+         Features="$(Features)"
+         FileAlignment="$(FileAlignment)"
+         GenerateDocumentation="$(GenerateDocumentation)"
+         GeneratedFilesOutputPath="$(CompilerGeneratedFilesOutputPath)"
+         HighEntropyVA="$(HighEntropyVA)"
+         Imports="@(Import)"
+         Instrument="$(Instrument)"
+         KeyContainer="$(KeyContainerName)"
+         KeyFile="$(KeyOriginatorFile)"
+         LangVersion="$(LangVersion)"
+         LinkResources="@(LinkResource)"
+         MainEntryPoint="$(StartupObject)"
+         ModuleAssemblyName="$(ModuleAssemblyName)"
+         NoConfig="true"
+         NoStandardLib="$(NoCompilerStandardLib)"
+         NoVBRuntimeReference="$(NoVBRuntimeReference)"
+         NoWarnings="$(_NoWarnings)"
+         NoWin32Manifest="$(NoWin32Manifest)"
+         Optimize="$(Optimize)"
+         Deterministic="$(Deterministic)"
+         PublicSign="$(PublicSign)"
+         OptionCompare="$(OptionCompare)"
+         OptionExplicit="$(OptionExplicit)"
+         OptionInfer="$(OptionInfer)"
+         OptionStrict="$(OptionStrict)"
+         OptionStrictType="$(OptionStrictType)"
+         OutputAssembly="@(IntermediateAssembly)"
+         OutputRefAssembly="@(IntermediateRefAssembly)"
+         PdbFile="$(PdbFile)"
+         Platform="$(PlatformTarget)"
+         Prefer32Bit="$(Prefer32Bit)"
+         PreferredUILang="$(PreferredUILang)"
+         ProjectName="$(MSBuildProjectName)"
+         ProvideCommandLineArgs="$(ProvideCommandLineArgs)"
+         References="@(ReferencePathWithRefAssemblies)"
+         RefOnly="$(ProduceOnlyReferenceAssembly)"
+         RemoveIntegerChecks="$(RemoveIntegerChecks)"
+         ReportAnalyzer="$(ReportAnalyzer)"
+         ReportIVTs="$(ReportIVTs)"
+         Resources="@(_CoreCompileResourceInputs);@(CompiledLicenseFile)"
+         ResponseFiles="$(CompilerResponseFile)"
+         RootNamespace="$(RootNamespace)"
+         RuntimeMetadataVersion="$(RuntimeMetadataVersion)"
+         SdkPath="$(FrameworkPathOverride)"
+         SkipAnalyzers="$(_SkipAnalyzers)"
+         SkipCompilerExecution="$(SkipCompilerExecution)"
+         Sources="@(Compile)"
+         SubsystemVersion="$(SubsystemVersion)"
+         TargetCompactFramework="$(TargetCompactFramework)"
+         TargetType="$(OutputType)"
+         TargetFramework="$(TargetFramework)"
+         TreatWarningsAsErrors="$(TreatWarningsAsErrors)"
+         Utf8Output="$(Utf8Output)"
+         VBRuntimePath="$(VBRuntimePath)"
+         Verbosity="$(VbcVerbosity)"
+         WarningsAsErrors="$(WarningsAsErrors)"
+         WarningsNotAsErrors="$(WarningsNotAsErrors)"
+         Win32Icon="$(ApplicationIcon)"
+         Win32Manifest="$(Win32Manifest)"
+         Win32Resource="$(Win32Resource)"
+         VBRuntime="$(VBRuntime)"
+         SourceLink="$(SourceLink)">
+      <Output TaskParameter="CompilerArguments" PropertyName="_HardenedVbcArguments" />
+      <Output TaskParameter="CompilerInputs" ItemName="_HardenedVbcInput" />
+      <Output TaskParameter="CompilerOutputs" ItemName="_HardenedVbcOutput" />
+      <Output TaskParameter="CompilerOutputTrees" ItemName="_HardenedVbcTree" />
+      <Output TaskParameter="PathMappings" ItemName="_HardenedVbcPathMapping" />
+    </FormatVbc>
+
+    <CompileManaged Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                    DotNetHost="$(DOTNET_HOST_PATH)"
+                    CompilerAssembly="$(_BuildTasksDirectory)bincore/vbc.dll"
+                    CompilerArguments="$(_HardenedVbcArguments)"
+                    PathMappings="@(_HardenedVbcPathMapping)"
+                    DeclaredInputs="$(DOTNET_HOST_PATH);@(_VbcPreparedToolInput);@(_HardenedVbcInput)"
+                    DeclaredOutputs="@(_HardenedVbcOutput)"
+                    DeclaredOutputTrees="@(_HardenedVbcTree)" />
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <FileWrites Include="@(_HardenedVbcOutput);@(_HardenedVbcTree->'%(ReceiptFile)')" />
+    </ItemGroup>
     <ItemGroup>
       <_CoreCompileResourceInputs Remove="@(_CoreCompileResourceInputs)" />
     </ItemGroup>

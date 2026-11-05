@@ -94,7 +94,8 @@ namespace Microsoft.Build.Tasks
             Stream binaryStream, // File contents binary stream, may be null
             TaskLoggingHelper log,
             bool treatAsCultureNeutral = false,
-            bool enableCustomCulture = false)
+            bool enableCustomCulture = false,
+            bool deterministic = false)
         {
             // Use the link file name if there is one, otherwise, fall back to file name.
             string embeddedFileName = linkFileName;
@@ -116,7 +117,9 @@ namespace Microsoft.Build.Tasks
             }
             else
             {
-                info = Culture.GetItemCultureInfo(embeddedFileName, dependentUponFileName, treatAsCultureNeutral);
+                info = deterministic
+                    ? Culture.GetItemCultureInfoDeterministic(embeddedFileName, dependentUponFileName, treatAsCultureNeutral)
+                    : Culture.GetItemCultureInfo(embeddedFileName, dependentUponFileName, treatAsCultureNeutral);
 
                 // If the item has a culture override, respect that.
                 if (!string.IsNullOrEmpty(culture))

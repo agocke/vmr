@@ -26,6 +26,8 @@ public sealed class WriteCscInputs : Task, IMultiThreadableTask
     [Required]
     public string OutputFile { get; set; } = "";
 
+    public string ItemName { get; set; } = "_CscPreparedToolInput";
+
     public override bool Execute()
     {
         var items = new XElement("ItemGroup");
@@ -35,7 +37,7 @@ public sealed class WriteCscInputs : Task, IMultiThreadableTask
             var escapedPath = path.Replace("%", "%25").Replace("$", "%24").Replace("@", "%40")
                 .Replace("(", "%28").Replace(")", "%29").Replace(";", "%3B")
                 .Replace("'", "%27").Replace("*", "%2A").Replace("?", "%3F");
-            items.Add(new XElement("_CscPreparedToolInput", new XAttribute("Include", escapedPath)));
+            items.Add(new XElement(ItemName, new XAttribute("Include", escapedPath)));
         }
 
         try

@@ -110,7 +110,7 @@ internal static class Program
         {
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(file));
             JsonElement invocation = document.RootElement;
-            if (invocation.GetProperty("taskType").GetString() != "Microsoft.CodeAnalysis.BuildTasks.CompileCsc")
+            if (invocation.GetProperty("taskType").GetString() != "Microsoft.CodeAnalysis.BuildTasks.CompileManaged")
             {
                 continue;
             }
@@ -118,7 +118,7 @@ internal static class Program
             compilerCount++;
             JsonElement parameters = invocation.GetProperty("parameters");
             JsonElement trees = parameters.GetProperty("DeclaredOutputTrees").GetProperty("items");
-            Require(trees.GetArrayLength() == 1, "CompileCsc must declare exactly one generated-source tree.");
+            Require(trees.GetArrayLength() == 1, "CompileManaged must declare exactly one generated-source tree.");
             JsonElement tree = trees[0];
             Require(tree.GetProperty("itemSpec").GetString() == root, "Formatter changed the exact tree root.");
             JsonElement metadata = tree.GetProperty("metadata");
@@ -134,7 +134,7 @@ internal static class Program
             Require(mappedRoot == logicalRoot, $"Captured path mapping changed: {mappedRoot} != {logicalRoot}");
         }
 
-        Require(compilerCount == 1, "Consumer must have exactly one CompileCsc action.");
+        Require(compilerCount == 1, "Consumer must have exactly one CompileManaged action.");
         Require(File.ReadAllText(graph).Contains("dyndep =", StringComparison.Ordinal),
             "Generated tree materialization must consume Ninja dyndep.");
     }
@@ -151,7 +151,7 @@ internal static class Program
         string invocation = Directory.GetFiles(graph + ".actions", "*.json").Single(file =>
         {
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(file));
-            return document.RootElement.GetProperty("taskType").GetString() == "Microsoft.CodeAnalysis.BuildTasks.CompileCsc";
+            return document.RootElement.GetProperty("taskType").GetString() == "Microsoft.CodeAnalysis.BuildTasks.CompileManaged";
         });
         byte[] archive = File.ReadAllBytes(root + ".tree.zip");
         byte[] receipt = File.ReadAllBytes(root + ".tree.json");
@@ -285,7 +285,7 @@ internal static class Program
             root.Contains("\\genbuild-smoke\\", StringComparison.Ordinal), "Cleaning tests require an isolated smoke fixture.");
         string[] manifests = Directory.GetFiles(graph + ".actions", "*.json");
         string invocation = manifests.Single(file =>
-            JsonNode.Parse(File.ReadAllText(file))!["taskType"]!.GetValue<string>() == "Microsoft.CodeAnalysis.BuildTasks.CompileCsc");
+            JsonNode.Parse(File.ReadAllText(file))!["taskType"]!.GetValue<string>() == "Microsoft.CodeAnalysis.BuildTasks.CompileManaged");
         string[] outputs = manifests.SelectMany(file => DeclaredFiles(file, "DeclaredOutputs")).Distinct().ToArray();
         string[] inputs = manifests.SelectMany(file => DeclaredFiles(file, "DeclaredInputs"))
             .Where(file => !outputs.Contains(file)).Distinct().ToArray();

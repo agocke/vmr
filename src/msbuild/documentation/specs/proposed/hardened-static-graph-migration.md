@@ -268,17 +268,19 @@ pattern to generated sources consumed by an independent compiler action.
 
 File lists alone do not establish a declared-I/O compiler contract. Compilation
 must also be deterministic and independent of the physical checkout/CWD.
-Hardened C# compilation uses the zero-I/O
+Hardened C# and VB compilation use the zero-I/O
 [FormatCsc](../../../../roslyn/src/Compilers/Core/MSBuildTask/FormatCsc.cs)
-and the independent
-[CompileCsc](../../../../roslyn/src/Compilers/Core/MSBuildTask/CompileCsc.cs)
-action rather than annotating ordinary Csc's server, IDE-host and tool-discovery
+and [FormatVbc](../../../../roslyn/src/Compilers/Core/MSBuildTask/FormatVbc.cs)
+formatters and the independent
+[CompileManaged](../../../../roslyn/src/Compilers/Core/MSBuildTask/CompileManaged.cs)
+action rather than annotating ordinary compiler server, IDE-host and tool-discovery
 execution path.
 
 Restore captures the pinned compiler and analyzer dependency closure in
-`$(MSBuildProjectExtensionsPath)cscinputs/$(MSBuildProjectFile).g.props`.
+`$(MSBuildProjectExtensionsPath)cscinputs/$(MSBuildProjectFile).g.props` for C#,
+or `vbcinputs/` for VB.
 SDK graph preparation/replay inserts
-`$(Configuration)/$(Platform)/$(TargetFramework)/` beneath `cscinputs/`, matching
+`$(Configuration)/$(Platform)/$(TargetFramework)/` beneath the compiler directory, matching
 the framework, NuGet and SourceLink snapshot identity.
 Build imports those explicit files; it does not enumerate external tool
 directories. Keep this manifest outside Common's automatic project-extension
@@ -289,6 +291,12 @@ files, embedded sources, resources, signing inputs and SourceLink are semantic
 inputs. XML documentation includes must be explicit `@(EmbeddedDocumentation)`
 or `@(CustomAdditionalCompileInputs)` inputs, including transitive dependencies.
 Do not substitute a target's timestamp lists for the compiler's actual footprint.
+
+VB must select `VBRuntime=None`, `VBRuntime=Embed`, an explicit runtime file path
+or `NoVBRuntimeReference`; implicit runtime-name and SDK-directory searches are
+not declared inputs. A future runtime file is supported when a producer declares
+that same path. Custom PDB moves performed by ordinary Vbc are not hidden inside
+the compiler action.
 
 Both `Deterministic` and `DeterministicSourcePaths` must be true. Unspecified
 source encoding defaults to UTF-8 rather than the machine's default code page.
