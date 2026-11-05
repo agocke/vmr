@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <!-- TODO: Remove Architecture="*" on Runtime="NET" UsingTask declarations below when https://github.com/dotnet/msbuild/issues/13739 is fixed and a new msbuild is consumed with the fix. -->
-  <UsingTask TaskName="Microsoft.DotNet.Build.Tasks.Templating.GenerateFileFromTemplate" AssemblyFile="$(MicrosoftDotNetBuildTasksTemplatingAssembly)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="Microsoft.DotNet.Build.Tasks.Templating.GenerateFileFromTemplate" AssemblyFile="$(MicrosoftDotNetBuildTasksTemplatingAssembly)" Runtime="NET" Architecture="*" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="Microsoft.DotNet.Build.Tasks.Templating.GenerateFileFromTemplate" AssemblyFile="$(MicrosoftDotNetBuildTasksTemplatingAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
 </Project>

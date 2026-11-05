@@ -40,6 +40,7 @@
     <CallTarget Targets="TestApiCompat" />
     <CallTarget Targets="TestGenFacades" />
     <CallTarget Targets="TestNotSupportedGeneration" />
+    <CallTarget Targets="TestGenerateFileFromTemplate" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)missing.csproj&quot; -bl:&quot;$(_TestDirectory)missing-{}.binlog&quot;" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
     </Exec>
@@ -2210,6 +2211,102 @@
                       Exists('$(_StubRoot)missing-exclusions/build.ninja.actions') or Exists('$(_StubRoot)missing-exclusions/obj')"
            Text="A declared exclusion file must exist or have a producer; missing inputs must not publish a partial graph." />
   </Target>
+  <Target Name="TestGenerateFileFromTemplate">
+    <PropertyGroup>
+      <_TemplateRoot>$(_TestDirectory)templating/</_TemplateRoot>
+      <_TemplateAction>$(_TemplateRoot)action/</_TemplateAction>
+      <_TemplateExpanded>$(_TemplateAction)obj/expanded.txt</_TemplateExpanded>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TemplateCase Include="action;ordinary;wrong-input;wrong-output;deferred-output" />
+      <_TemplateInvalid Include="wrong-input;wrong-output" />
+    </ItemGroup>
+    <MakeDir Directories="$(_TemplateRoot)inputs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../../src/runtime/src/libraries/System.Diagnostics.DiagnosticSource/src/ThisAssembly.cs.in;$(MSBuildThisFileDirectory)Templating/extra.in"
+          DestinationFolder="$(_TemplateRoot)inputs" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Templating/Templating.proj" DestinationFolder="$(_TemplateRoot)%(_TemplateCase.Identity)" />
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)../../src/runtime/src/libraries/System.Diagnostics.DiagnosticSource/src/System.Diagnostics.DiagnosticSource.csproj"
+             Query="/Project/Target[@Name='_GenerateThisAssemblyInfo']">
+      <Output TaskParameter="Result" PropertyName="_DiagnosticTemplateTarget" />
+    </XmlPeek>
+    <Error Condition="'$(_DiagnosticTemplateTarget)' == ''" Text="Templating smoke must use the actual DiagnosticSource target." />
+    <WriteLinesToFile File="$(_TemplateRoot)%(_TemplateCase.Identity)/DiagnosticSource.targets"
+                      Lines="&lt;Project&gt;;$(_DiagnosticTemplateTarget);&lt;/Project&gt;" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_TemplateAction)Templating.proj&quot; -p:MSBuildEmitActionGraph=&quot;$(_TemplateAction)build.ninja&quot;" />
+    <Error Condition="Exists('$(_TemplateAction)ThisAssembly.cs.in') or Exists('$(_TemplateAction)obj') or Exists('$(_TemplateAction)items.txt')"
+           Text="Template construction must not execute template producers, substitute content or create outputs." />
+    <Exec WorkingDirectory="$(_TemplateAction)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_TemplateRoot)ordinary/Templating.proj&quot; -t:Build" />
+    <ItemGroup>
+      <_TemplateResult Include="obj/ThisAssembly.cs;obj/expanded.txt;items.txt" />
+    </ItemGroup>
+    <GetFileHash Files="@(_TemplateResult->'$(_TemplateAction)%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_TemplateActionHash" />
+    </GetFileHash>
+    <GetFileHash Files="@(_TemplateResult->'$(_TemplateRoot)ordinary/%(Identity)')">
+      <Output TaskParameter="Items" ItemName="_TemplateOrdinaryHash" />
+    </GetFileHash>
+    <Error Condition="'@(_TemplateActionHash->'%(FileHash)')' != '@(_TemplateOrdinaryHash->'%(FileHash)')' or
+                      !$([System.IO.File]::ReadAllText('$(_TemplateAction)obj/ThisAssembly.cs').Contains('&quot;11.0.123.456&quot;')) or
+                      !$([System.IO.File]::ReadAllText('$(_TemplateExpanded)').Contains('name=final')) or
+                      !$([System.IO.File]::ReadAllText('$(_TemplateExpanded)').Contains('equals=a=b')) or
+                      !$([System.IO.File]::ReadAllText('$(_TemplateExpanded)').Contains('escaped=${Name}')) or
+                      !$([System.IO.File]::ReadAllText('$(_TemplateExpanded)').Contains('malformed=${Name'))"
+           Text="Template actions must preserve ordinary UTF-8 bytes, version substitution, case-insensitive properties, escaping, malformed placeholders and compile/clean items." />
+    <Exec WorkingDirectory="$(_TemplateAction)" Command="ninja -f build.ninja" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_TemplateNoWork" />
+    </Exec>
+    <Error Condition="!@(_TemplateNoWork->AnyHaveMetadataValue('Identity', 'ninja: no work to do.'))" Text="Unchanged template actions must have no Ninja work." />
+    <PropertyGroup>
+      <_TemplateBeforeSkip>$([System.IO.File]::GetLastWriteTimeUtc('$(_TemplateExpanded)').Ticks)</_TemplateBeforeSkip>
+    </PropertyGroup>
+    <Touch Files="$(_TemplateRoot)inputs/extra.in" />
+    <Exec WorkingDirectory="$(_TemplateAction)" Command="ninja -f build.ninja" />
+    <PropertyGroup>
+      <_TemplateAfterSkip>$([System.IO.File]::GetLastWriteTimeUtc('$(_TemplateExpanded)').Ticks)</_TemplateAfterSkip>
+    </PropertyGroup>
+    <Error Condition="'$(_TemplateBeforeSkip)' != '$(_TemplateAfterSkip)'"
+           Text="SkipUnchanged must preserve the output timestamp when a declared template input is touched without changing its contents." />
+    <WriteLinesToFile File="$(_TemplateRoot)inputs/extra.in" Lines="suffix=changed" Overwrite="false" />
+    <Exec WorkingDirectory="$(_TemplateAction)" Command="ninja -f build.ninja" />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_TemplateExpanded)').Contains('suffix=changed'))"
+           Text="Changing a declared template input must regenerate output." />
+    <GetFileHash Files="$(_TemplateExpanded)">
+      <Output TaskParameter="Hash" PropertyName="_TemplateBeforeReconstruction" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_TemplateAction)Templating.proj&quot; -p:Value=beta -p:MSBuildEmitActionGraph=&quot;$(_TemplateAction)build.ninja&quot;" />
+    <GetFileHash Files="$(_TemplateExpanded)">
+      <Output TaskParameter="Hash" PropertyName="_TemplateAfterReconstruction" />
+    </GetFileHash>
+    <Error Condition="'$(_TemplateBeforeReconstruction)' != '$(_TemplateAfterReconstruction)'"
+           Text="Changed template properties must not execute substitution during reconstruction." />
+    <Exec WorkingDirectory="$(_TemplateAction)" Command="ninja -f build.ninja" />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_TemplateExpanded)').Contains('value=beta'))"
+           Text="Changed template properties must invalidate the generated-file action." />
+    <MakeDir Directories="$(_TemplateRoot)%(_TemplateInvalid.Identity)/obj" />
+    <WriteLinesToFile File="$(_TemplateRoot)%(_TemplateInvalid.Identity)/obj/expanded.txt" Lines="preserved stale output" Overwrite="true" />
+    <GetFileHash Files="$(_TemplateRoot)%(_TemplateInvalid.Identity)/obj/expanded.txt">
+      <Output TaskParameter="Items" ItemName="_TemplateInvalidBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_TemplateRoot)%(_TemplateInvalid.Identity)/Templating.proj&quot; -p:TestCase=%(_TemplateInvalid.Identity) -p:MSBuildEmitActionGraph=&quot;$(_TemplateRoot)%(_TemplateInvalid.Identity)/build.ninja&quot;" />
+    <Exec WorkingDirectory="$(_TemplateRoot)%(_TemplateInvalid.Identity)" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_TemplateInvalidExit" />
+    </Exec>
+    <GetFileHash Files="$(_TemplateRoot)%(_TemplateInvalid.Identity)/obj/expanded.txt">
+      <Output TaskParameter="Items" ItemName="_TemplateInvalidAfter" />
+    </GetFileHash>
+    <Error Condition="@(_TemplateInvalidExit->AnyHaveMetadataValue('Identity', '0')) or
+                      '@(_TemplateInvalidBefore->'%(FileHash)')' != '@(_TemplateInvalidAfter->'%(FileHash)')' or
+                      Exists('$(_TemplateRoot)wrong-output/obj/wrong.txt')"
+           Text="Incorrect template file declarations must fail execution without overwriting prior output or writing undeclared files." />
+    <Exec Command="$(_App) build &quot;$(_TemplateRoot)deferred-output/Templating.proj&quot; -p:TestCase=deferred-output -p:MSBuildEmitActionGraph=&quot;$(_TemplateRoot)deferred-output/build.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_TemplateDeferredExit" />
+    </Exec>
+    <Error Condition="'$(_TemplateDeferredExit)' == '0' or Exists('$(_TemplateRoot)deferred-output/build.ninja') or
+                      Exists('$(_TemplateRoot)deferred-output/build.ninja.actions') or Exists('$(_TemplateRoot)deferred-output/obj')"
+           Text="Deferred template output properties must fail construction without publishing a partial graph or executing producers." />
+  </Target>
   <Target Name="TestInternalsVisibleTo">
     <PropertyGroup>
       <_IvtRoot>$(_TestDirectory)internals-visible-to/</_IvtRoot>
@@ -3022,7 +3119,7 @@
       <_CscRelocation Include="short;another much longer checkout" />
       <_CscRejected Include="determinism" Arguments="-p:Deterministic=false" />
       <_CscRejected Include="paths" Arguments="-p:DeterministicSourcePaths=false" />
-      <_CscRejected Include="response;generated-directory" />
+      <_CscRejected Include="response" />
     </ItemGroup>
     <MakeDir Directories="@(_CscRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.proj" DestinationFiles="%(_CscRoot.Identity)Csc.proj" />
@@ -3145,6 +3242,26 @@
     </Exec>
     <Error Condition="'@(_CscProgramOutput)' != '/_/project/Program.cs;True;generated before compilation'"
            Text="Compiler actions must map CallerFilePath, execute generators and consume generated producer inputs." />
+    <PropertyGroup>
+      <_CscGeneratedRoot>$(_TestDirectory)csc/generated-directory/project/</_CscGeneratedRoot>
+    </PropertyGroup>
+    <Exec Command="$(_App) build &quot;$(_CscGeneratedRoot)Csc.proj&quot; -p:TestCase=generated-directory" />
+    <Error Condition="Exists('$(_CscGeneratedRoot)generated') or Exists('$(_CscGeneratedRoot)generated.tree.zip') or
+                      Exists('$(_CscGeneratedRoot)obj/Hello.dll')"
+           Text="Generated-directory construction must schedule the compiler and owned tree without producing either." />
+    <Exec WorkingDirectory="$(_CscGeneratedRoot)" Command="ninja -f obj/genbuild/build.ninja" />
+    <ItemGroup>
+      <_CscGeneratedSource Include="$(_CscGeneratedRoot)generated/**/*.cs" />
+    </ItemGroup>
+    <Error Condition="'@(_CscGeneratedSource)' == '' or !Exists('$(_CscGeneratedRoot)generated.tree.zip') or
+                      !Exists('$(_CscGeneratedRoot)generated.tree.json')"
+           Text="The compiler must materialize generated sources with their owned-tree archive and receipt." />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_CscGeneratedRoot)obj/Hello.runtimeconfig.json" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_CscGeneratedRoot)obj/Hello.dll&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_CscGeneratedProgramOutput" />
+    </Exec>
+    <Error Condition="'@(_CscGeneratedProgramOutput)' != '/_/project/Program.cs;True;generated before compilation'"
+           Text="Generated-directory compilation must preserve mapped source paths, generated Regex behavior and producer inputs." />
     <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/signed/project/Csc.proj&quot; -p:TestCase=signed" />
     <Error Condition="Exists('$(_TestDirectory)csc/signed/project/obj/public.snk') or Exists('$(_TestDirectory)csc/signed/project/obj/Hello.dll')"
            Text="Signing-key selection must accept a future key producer without opening it or executing the compiler." />

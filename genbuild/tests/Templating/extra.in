@@ -1,0 +1,9 @@
+value=${Value}
+name=${Name}
+case=${name}
+equals=${Equals}
+empty=${Empty}
+escaped=`${Name}
+ticks=``${Name}
+missing=${Missing}
+malformed=${Name

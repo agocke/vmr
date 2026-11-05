@@ -71,7 +71,7 @@ public abstract partial class RoslynBuildTask : Task
 
         return true;
     }
-    
+
     private Assembly ResolverForRoslyn(AssemblyLoadContext context, AssemblyName assemblyName)
     {
         return LoadRoslyn(assemblyName, path => context.LoadFromAssemblyPath(path));

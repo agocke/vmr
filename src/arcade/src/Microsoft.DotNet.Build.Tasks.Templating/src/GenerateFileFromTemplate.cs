@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -28,6 +29,7 @@ namespace Microsoft.DotNet.Build.Tasks.Templating;
 /// </example>
 /// </summary>
 [MSBuildMultiThreadableTask]
+[MSBuildDeclaredIOTask]
 public class GenerateFileFromTemplate : Task, IMultiThreadableTask
 {
     /// <summary>Injected by MSBuild so paths resolve against the project directory in multithreaded builds.</summary>
@@ -62,6 +64,10 @@ public class GenerateFileFromTemplate : Task, IMultiThreadableTask
     /// </summary>
     public bool SkipUnchanged { get; set; }
 
+    public ITaskItem[] DeclaredInputs { get; set; }
+
+    public ITaskItem[] DeclaredOutputs { get; set; }
+
     /// <summary>
     /// The destination for the generated file resolved by this task.
     /// </summary>
@@ -77,6 +83,16 @@ public class GenerateFileFromTemplate : Task, IMultiThreadableTask
         ResolvedOutputPath = resolvedOutputPath;
 
         AbsolutePath templateFile = TaskEnvironment.GetAbsolutePath(TemplateFile);
+        if (DeclaredInputs is not null || DeclaredOutputs is not null)
+        {
+            templateFile = templateFile.GetCanonicalForm();
+        }
+
+        if (!ValidateDeclaredFiles(templateFile, resolvedOutputPath))
+        {
+            return false;
+        }
+
         if (!File.Exists(templateFile))
         {
             Log.LogError($"File {TemplateFile} does not exist");
@@ -107,6 +123,31 @@ public class GenerateFileFromTemplate : Task, IMultiThreadableTask
         File.WriteAllBytes(resolvedOutputPath, resultBytes);
 
         return !Log.HasLoggedErrors;
+    }
+
+    private bool ValidateDeclaredFiles(AbsolutePath templateFile, AbsolutePath outputPath)
+    {
+        if (DeclaredInputs is null && DeclaredOutputs is null)
+        {
+            return true;
+        }
+
+        StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        if (DeclaredInputs is null || DeclaredInputs.Length != 1
+            || !comparer.Equals(templateFile.Value, TaskEnvironment.GetAbsolutePath(DeclaredInputs[0].ItemSpec).GetCanonicalForm().Value))
+        {
+            Log.LogError("DeclaredInputs must contain exactly TemplateFile.");
+            return false;
+        }
+
+        if (DeclaredOutputs is null || DeclaredOutputs.Length != 1
+            || !comparer.Equals(outputPath.Value, TaskEnvironment.GetAbsolutePath(DeclaredOutputs[0].ItemSpec.Replace('\\', '/')).GetCanonicalForm().Value))
+        {
+            Log.LogError("DeclaredOutputs must contain exactly OutputPath.");
+            return false;
+        }
+
+        return true;
     }
 
     private static bool FileContentsMatch(AbsolutePath path, byte[] expectedBytes)
@@ -218,4 +259,3 @@ public class GenerateFileFromTemplate : Task, IMultiThreadableTask
         return sb.ToString();
     }
 }
-

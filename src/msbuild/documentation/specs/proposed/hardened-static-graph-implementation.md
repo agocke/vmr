@@ -1203,16 +1203,27 @@ future producers, invalidates on source/exclusion changes, rejects invalid
 declarations or missing required inputs, and preserves prior partial-facade
 source on semantic failure. Unchanged facade actions have no Ninja work.
 
-A fresh whole traversal passes those resource, partial-facade and platform-stub
-blockers. Its next first failure is `GenerateFileFromTemplate` in
-System.Diagnostics.DiagnosticSource, followed by deferred-value diagnostics.
-Build cycles are reported in System.Net.NameResolution, System.Net.Sockets and
-System.Net.Security; their independence from the template failure is not yet
-established. This traversal has not executed Ninja; preparation and failed
-construction produce no assemblies/resources or partial graph and preserve
-the recorded shared cache hashes. The broad compiler smoke also retains an
-unrelated stale rejection expectation for generated-source directories;
-its resource regressions pass before that failure.
+The standalone toolset now also builds the templating task from source.
+`GenerateFileFromTemplate` declares exactly one template input and one generated
+output, validating the canonical paths before reading or writing. The hardened
+DiagnosticSource call supplies those declarations; ordinary builds retain their
+existing call and pinned-package compatibility. Focused execution uses the actual
+DiagnosticSource target and template and verifies ordinary byte/item parity,
+future producers, substitution and escaping, no-work, unchanged-output timestamp
+preservation, input/property invalidation and rejection of incorrect footprints.
+The compiler smoke's stale generated-directory rejection is now a positive
+compilation/materialization test; compiler, generated-tree, facade and
+platform-stub checks all pass.
+
+A fresh whole traversal passes resource, partial-facade, platform-stub and template
+generation. Restore succeeds; construction first fails in
+Microsoft.VisualBasic.Core at `CreateVisualBasicManifestResourceName`. VB also
+imports cached non-hardened Roslyn targets rather than the staged toolchain, so
+toolchain routing and VB resource/compiler integration are next. The previously
+reported networking Build cycles do not recur in this traversal. No whole-partition
+Ninja graph has been produced or executed; preparation and failed construction
+produce no assemblies/resources or partial graph and preserve the recorded shared
+cache hashes.
 
 ### NuGet fact capture
 

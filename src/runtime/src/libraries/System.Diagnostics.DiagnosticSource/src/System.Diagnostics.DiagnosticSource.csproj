@@ -188,7 +188,15 @@ System.Diagnostics.DiagnosticSource</PackageDescription>
     <GenerateFileFromTemplate
       TemplateFile="ThisAssembly.cs.in"
       Properties="AssemblyVersion=$(AssemblyVersion);AssemblyFileVersion=$(FileVersion)"
-      OutputPath="$(IntermediateOutputPath)ThisAssembly.cs" />
+      OutputPath="$(IntermediateOutputPath)ThisAssembly.cs"
+      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <GenerateFileFromTemplate
+      TemplateFile="ThisAssembly.cs.in"
+      Properties="AssemblyVersion=$(AssemblyVersion);AssemblyFileVersion=$(FileVersion)"
+      OutputPath="$(IntermediateOutputPath)ThisAssembly.cs"
+      DeclaredInputs="ThisAssembly.cs.in"
+      DeclaredOutputs="$(IntermediateOutputPath)ThisAssembly.cs"
+      Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
     <ItemGroup>
       <Compile Include="$(IntermediateOutputPath)ThisAssembly.cs" />

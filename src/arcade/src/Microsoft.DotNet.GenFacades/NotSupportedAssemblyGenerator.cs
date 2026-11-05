@@ -90,7 +90,7 @@ public class NotSupportedAssemblyGenerator : RoslynBuildTask
             }
             syntaxTree = CSharpSyntaxTree.ParseText(File.ReadAllText(sourceFile), new CSharpParseOptions(languageVersion));
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Log.LogErrorFromException(ex, false);
             return;
@@ -183,7 +183,7 @@ internal class NotSupportedAssemblyRewriter : CSharpSyntaxRewriter
         if (node.Body == null)
             return node;
 
-        string message = "{ throw new System.PlatformNotSupportedException(" + $"{ _message }); "+ " } ";       
+        string message = "{ throw new System.PlatformNotSupportedException(" + $"{_message}); " + " } ";
         BlockSyntax block = (BlockSyntax)SyntaxFactory.ParseStatement(message);
 
         return node.WithBody(block);
@@ -230,5 +230,5 @@ internal class NotSupportedAssemblyRewriter : CSharpSyntaxRewriter
 
     private string GetEventDefinition(EventDeclarationSyntax node) => GetFullyQualifiedName((TypeDeclarationSyntax)node.Parent) + "." + node.Identifier.ValueText;
 
-    private string GetDefaultMessage() => "{ throw new System.PlatformNotSupportedException(" + $"{ _message }); " + " }\n";
+    private string GetDefaultMessage() => "{ throw new System.PlatformNotSupportedException(" + $"{_message}); " + " }\n";
 }

@@ -25,6 +25,7 @@
     <Component Include="$(MSBuildThisFileDirectory)arcade/TargetFramework.csproj" Tfm="net11.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/sdk/ArcadeSdk.csproj" Tfm="net11.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/xliff/XliffTasks.csproj" Tfm="net11.0" />
+    <Component Include="$(MSBuildThisFileDirectory)arcade/templating/Templating.csproj" Tfm="net11.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/MSBuild/Microsoft.Build.Tasks.CodeAnalysis.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/Tools/CodeStyleConfigFileGenerator.csproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Tools/GenerateDocumentationAndConfigFiles/GenerateDocumentationAndConfigFiles.csproj" Tfm="net10.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/CSharp/csc/AnyCpu/csc.csproj" Tfm="net10.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/genfacades/GenFacades.csproj" Tfm="net11.0" />
@@ -106,6 +107,8 @@
       <_XliffTask Include="$(MSBuildThisFileDirectory)arcade/xliff/bin/$(Configuration)/net11.0/**/*" />
       <_GenFacadesTask Include="$(MSBuildThisFileDirectory)arcade/genfacades/bin/$(Configuration)/net11.0/**/*" />
       <_GenFacadesBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.GenFacades/build/**/*" />
+      <_TemplatingTask Include="$(MSBuildThisFileDirectory)arcade/templating/bin/$(Configuration)/net11.0/**/*" />
+      <_TemplatingBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Build.Tasks.Templating/src/build/**/*" />
       <_XliffBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.XliffTasks/build/**/*" />
       <_XliffCrossTargetingBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.XliffTasks/buildCrossTargeting/**/*" />
     </ItemGroup>
@@ -142,6 +145,9 @@
     <Error Condition="'@(_GenFacadesTask)' == ''" Text="The locally-built GenFacades tasks are missing. Run without GenBuildSkipComponentBuild." />
     <Copy SourceFiles="@(_GenFacadesTask)" DestinationFiles="@(_GenFacadesTask->'$(GenBuildToolsetDirectory)Arcade/GenFacades/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_GenFacadesBuild)" DestinationFiles="@(_GenFacadesBuild->'$(GenBuildToolsetDirectory)Arcade/GenFacades/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Error Condition="'@(_TemplatingTask)' == ''" Text="The locally-built templating tasks are missing. Run without GenBuildSkipComponentBuild." />
+    <Copy SourceFiles="@(_TemplatingTask)" DestinationFiles="@(_TemplatingTask->'$(GenBuildToolsetDirectory)Arcade/Templating/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_TemplatingBuild)" DestinationFiles="@(_TemplatingBuild->'$(GenBuildToolsetDirectory)Arcade/Templating/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_XliffBuild)" DestinationFiles="@(_XliffBuild->'$(GenBuildToolsetDirectory)Arcade/XliffTasks/build/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_XliffCrossTargetingBuild)" DestinationFiles="@(_XliffCrossTargetingBuild->'$(GenBuildToolsetDirectory)Arcade/XliffTasks/buildCrossTargeting/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <ItemGroup>

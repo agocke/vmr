@@ -1,0 +1,52 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <AssemblyVersion>11.0.0.0</AssemblyVersion>
+    <FileVersion>11.0.123.456</FileVersion>
+    <Value Condition="'$(Value)' == ''">alpha</Value>
+    <_ExtraOutput>obj/../obj/expanded.txt</_ExtraOutput>
+    <_ExtraInput>obj/extra.in</_ExtraInput>
+    <_ExtraDeclaredInput>obj/./extra.in</_ExtraDeclaredInput>
+    <_ExtraDeclaredInput Condition="'$(TestCase)' == 'wrong-input'">obj/placeholder.in</_ExtraDeclaredInput>
+    <_ExtraDeclaredOutput>obj/expanded.txt</_ExtraDeclaredOutput>
+    <_ExtraDeclaredOutput Condition="'$(TestCase)' == 'wrong-output'">obj/wrong.txt</_ExtraDeclaredOutput>
+    <_ExtraProperties>Value=$(Value);Name=first;NAME=final;Equals=a=b;Empty=;invalid</_ExtraProperties>
+    <_ExtraExpectedOutput>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'obj/expanded.txt'))</_ExtraExpectedOutput>
+  </PropertyGroup>
+  <Import Project="$(MSBuildToolsPath)/Arcade/Templating/build/Microsoft.DotNet.Build.Tasks.Templating.props" />
+  <Import Project="DiagnosticSource.targets" />
+  <Target Name="Produce">
+    <MakeDir Directories="obj" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <CopyFiles SourceFiles="../inputs/ThisAssembly.cs.in;../inputs/extra.in;../inputs/extra.in"
+               DestinationFiles="ThisAssembly.cs.in;obj/extra.in;obj/placeholder.in"
+               DeclaredInputs="../inputs/ThisAssembly.cs.in;../inputs/extra.in"
+               DeclaredOutputs="ThisAssembly.cs.in;obj/extra.in;obj/placeholder.in" />
+  </Target>
+  <Target Name="GenerateExtra">
+    <GenerateFileFromTemplate TemplateFile="$(_ExtraInput)" OutputPath="$(_ExtraOutput)"
+                              Properties="$(_ExtraProperties)" SkipUnchanged="true"
+                              Condition="'$(MSBuildHardenedGraph)' != 'true'">
+      <Output TaskParameter="ResolvedOutputPath" PropertyName="_ExtraResolvedOutput" />
+    </GenerateFileFromTemplate>
+    <GenerateFileFromTemplate TemplateFile="$(_ExtraInput)" OutputPath="$(_ExtraOutput)"
+                              Properties="$(_ExtraProperties)" SkipUnchanged="true"
+                              DeclaredInputs="$(_ExtraDeclaredInput)" DeclaredOutputs="$(_ExtraDeclaredOutput)"
+                              Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(TestCase)' != 'deferred-output'" />
+    <GenerateFileFromTemplate TemplateFile="$(_ExtraInput)" OutputPath="$(_ExtraOutput)"
+                              Properties="$(_ExtraProperties)" SkipUnchanged="true"
+                              DeclaredInputs="$(_ExtraDeclaredInput)" DeclaredOutputs="$(_ExtraDeclaredOutput)"
+                              Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(TestCase)' == 'deferred-output'">
+      <Output TaskParameter="ResolvedOutputPath" PropertyName="_ExtraResolvedOutput" />
+    </GenerateFileFromTemplate>
+    <Error Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(_ExtraResolvedOutput)' != '$(_ExtraExpectedOutput)'"
+           Text="Ordinary template execution must retain its canonical ResolvedOutputPath." />
+    <ItemGroup>
+      <FileWrites Include="obj/expanded.txt" />
+    </ItemGroup>
+  </Target>
+  <Target Name="Build" DependsOnTargets="Produce;_GenerateThisAssemblyInfo;GenerateExtra">
+    <WriteLinesToFile File="items.txt" Lines="@(Compile);@(FileWrites)" Overwrite="true"
+                      DeclaredInputs="obj/ThisAssembly.cs;obj/expanded.txt" DeclaredOutputs="items.txt" />
+  </Target>
+  <Target Name="Restore" />
+</Project>
