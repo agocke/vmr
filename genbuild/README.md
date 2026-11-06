@@ -586,10 +586,18 @@ producer ownership, zeroed reference versions, untouched inputs, ordinary
 DLL/PDB/XML byte parity, no-work and rejection of incorrect footprints or
 malformed assemblies.
 
-The whole libraries traversal now passes this rewrite and first fails at
-`WriteLinesToFile` without declarations in `shims/stubs/Directory.Build.targets`
-for System.Security.Permissions. Failed construction publishes no partial graph
-or product assemblies. A fresh real VB-shim profile now completes all 1,448 Ninja
+Forwarded-type source generation in `shims/stubs/Directory.Build.targets` now
+declares no file inputs and exactly one generated-source output. Its static item
+metadata supplies the content. `TestRuntimeForwardedTypes` verifies ordinary
+source-byte parity, actual plain/nested-type compilation, producer ownership,
+future compiler inputs, clean bookkeeping, metadata-change invalidation, no-work,
+and the original empty-item error without construction-time products.
+
+The whole libraries traversal passes this generation and first fails at ASN.1
+generation/comparison in `Common/src/System/Security/Cryptography/Asn1/AsnXml.targets`.
+Its directory/transform/comparison tasks lack declarations, and its comparison
+returns a file-dependent value to construction. Failed construction publishes no
+partial graph or product assemblies. A fresh real VB-shim profile completes all 1,448 Ninja
 actions, including source-built VB compilation, reference rewriting/publication
 and 29 ApiCompat validations; repeated Ninja has no work. Runtime authoring supplies
 the implementation-side pack fallback and transitive private references without

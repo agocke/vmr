@@ -1,0 +1,25 @@
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TypeSuffix Condition="'$(TypeSuffix)' == ''">Initial</TypeSuffix>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(EmptyForwardedTypes)' != 'true'">
+    <ForwardedType Include="ForwardedFixture.Plain$(TypeSuffix)" />
+    <ForwardedType Include="ForwardedFixture.Container" InnerClass="First;Second" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="RuntimeForwardedTypes.targets" />
+  <Target Name="CheckForwardedTypeItems" BeforeTargets="CoreCompile" DependsOnTargets="CreateCompileSourceForForwardedTypes">
+    <PropertyGroup>
+      <_ForwardedItemsValid Condition="'@(Compile->WithMetadataValue('Identity', '$(ForwardedTypesCompilePath)')->Count())' == '1' and
+                                      @(FileWrites->AnyHaveMetadataValue('Identity', '$(ForwardedTypesCompilePath)'))">true</_ForwardedItemsValid>
+    </PropertyGroup>
+    <Error Condition="'$(_ForwardedItemsValid)' != 'true' and '$(MSBuildHardenedGraph)' != 'true'"
+           Text="Forwarded-type generation must add the future compile source once and record it for cleaning." />
+    <Error Condition="'$(_ForwardedItemsValid)' != 'true' and '$(MSBuildHardenedGraph)' == 'true'"
+           DeclaredInputs="" DeclaredOutputs=""
+           Text="Forwarded-type generation must add the future compile source once and record it for cleaning." />
+  </Target>
+</Project>

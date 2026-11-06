@@ -31,6 +31,7 @@
     <CallTarget Targets="TestRuntimeResourceCompilation" />
     <CallTarget Targets="TestInternalsVisibleTo" />
     <CallTarget Targets="TestRuntimeGenAPI" />
+    <CallTarget Targets="TestRuntimeForwardedTypes" />
     <CallTarget Targets="TestRuntimeILLinkCompileOutputs" />
     <CallTarget Targets="TestRuntimeILLinkInputs" />
     <CallTarget Targets="TestXlfLocalization" />
@@ -906,6 +907,87 @@
     <Exec Command="$(_LedgerSdk) &quot;$(_LedgerRoot)Alpha.proj&quot; -t:%(_LedgerStep.Identity) $(_LedgerArguments)" />
     <Error Condition="!Exists('$(_LedgerRoot)layout/testhost/Alpha.dll') or !Exists('$(_LedgerRoot)layout/testhost/native/libmsquic.so')"
            Text="A stale producer ledger must not delete now aggregate-owned testhost outputs." />
+  </Target>
+  <Target Name="TestRuntimeForwardedTypes">
+    <PropertyGroup>
+      <_ForwardedRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'forwarded-types'))</_ForwardedRoot>
+      <_ForwardedHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_ForwardedHostOS>
+      <_ForwardedHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_ForwardedHostOS>
+      <_ForwardedHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_ForwardedHostOS>
+      <_ForwardedHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_ForwardedHostOS>
+      <_ForwardedArguments>-p:Configuration=Debug -p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:MSBuildGraphRepositoryRoot=&quot;$(_ForwardedRoot)&quot; -p:MSBuildGraphHostOS=$(_ForwardedHostOS)</_ForwardedArguments>
+      <_ForwardedSource>obj/Debug/net11.0/RuntimeForwardedTypes.ForwardedTypes.cs</_ForwardedSource>
+      <_ForwardedAssembly>obj/Debug/net11.0/RuntimeForwardedTypes.dll</_ForwardedAssembly>
+      <_ForwardedVerifier>&quot;$(GenBuildTestHost)&quot; &quot;$(_ForwardedRoot)Verifier.dll&quot;</_ForwardedVerifier>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ForwardedCase Include="action;ordinary" Empty="false" />
+      <_ForwardedCase Include="empty-action;empty-ordinary" Empty="true" />
+      <_ForwardedImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+    </ItemGroup>
+    <MakeDir Directories="$(_ForwardedRoot)" />
+    <WriteLinesToFile File="$(_ForwardedRoot)%(_ForwardedImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeForwardedTypes.csproj" DestinationFolder="$(_ForwardedRoot)%(_ForwardedCase.Identity)" />
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)../../src/runtime/src/libraries/shims/stubs/Directory.Build.targets"
+             Query="/Project/PropertyGroup | /Project/Target[@Name='CreateCompileSourceForForwardedTypes']">
+      <Output TaskParameter="Result" ItemName="_ForwardedAuthoring" />
+    </XmlPeek>
+    <Error Condition="'@(_ForwardedAuthoring->Count())' != '2'" Text="Forwarded-type smoke must use the actual runtime property and target." />
+    <WriteLinesToFile File="$(_ForwardedRoot)%(_ForwardedCase.Identity)/RuntimeForwardedTypes.targets"
+                      Lines="&lt;Project&gt;;@(_ForwardedAuthoring);&lt;/Project&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_ForwardedRoot)%(_ForwardedCase.Identity)/RuntimeForwardedTypes.csproj&quot; $(_ForwardedArguments) -p:EmptyForwardedTypes=%(_ForwardedCase.Empty)" />
+    <XmlPeek XmlInputPath="$(_ForwardedRoot)action/obj/frameworkreferences/Debug/AnyCPU/net11.0/RuntimeForwardedTypes.csproj.g.props"
+             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
+      <Output TaskParameter="Result" ItemName="_ForwardedFrameworkReference" />
+    </XmlPeek>
+    <Error Condition="'@(_ForwardedFrameworkReference)' == ''" Text="The verifier requires prepared framework references." />
+    <WriteLinesToFile File="$(_ForwardedRoot)compile.rsp" Lines="@(_ForwardedFrameworkReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_ForwardedRoot)Verifier.dll&quot; @&quot;$(_ForwardedRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)RuntimeForwardedTypesVerifier.cs&quot;" />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_ForwardedRoot)Verifier.runtimeconfig.json" />
+    <Exec Command="$(_App) build &quot;$(_ForwardedRoot)action/RuntimeForwardedTypes.csproj&quot; $(_ForwardedArguments) -p:MSBuildEmitActionGraph=&quot;$(_ForwardedRoot)action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_ForwardedRoot)action/$(_ForwardedSource)') or Exists('$(_ForwardedRoot)action/$(_ForwardedAssembly)') or Exists('$(_ForwardedRoot)action/bin')"
+           Text="Construction must not generate or compile forwarded-type source." />
+    <Exec Command="$(_ForwardedVerifier) graph &quot;$(_ForwardedRoot)action/build.ninja&quot; &quot;$(_ForwardedRoot)action/$(_ForwardedSource)&quot; &quot;$(_ForwardedRoot)action/$(_ForwardedAssembly)&quot;" />
+    <Exec WorkingDirectory="$(_ForwardedRoot)action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_ForwardedRoot)ordinary/RuntimeForwardedTypes.csproj&quot; $(_ForwardedArguments) -t:Build -p:MSBuildRestoreGraphInputs=false -p:UseSharedCompilation=false" />
+    <GetFileHash Files="$(_ForwardedRoot)action/$(_ForwardedSource);$(_ForwardedRoot)ordinary/$(_ForwardedSource)">
+      <Output TaskParameter="Items" ItemName="_ForwardedSourceHash" />
+    </GetFileHash>
+    <Error Condition="'@(_ForwardedSourceHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Plain and nested forwarded-type source must match ordinary bytes." />
+    <Exec Command="$(_ForwardedVerifier) assembly &quot;$(_ForwardedRoot)action/$(_ForwardedAssembly)&quot; Initial" />
+    <Exec Command="$(_ForwardedVerifier) assembly &quot;$(_ForwardedRoot)ordinary/$(_ForwardedAssembly)&quot; Initial" />
+    <Exec WorkingDirectory="$(_ForwardedRoot)action" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ForwardedNoWork" />
+    </Exec>
+    <Error Condition="!$(_ForwardedNoWork.Contains('no work to do'))" Text="Forwarded-type generation must settle to no work." />
+    <GetFileHash Files="$(_ForwardedRoot)action/$(_ForwardedSource)">
+      <Output TaskParameter="Hash" PropertyName="_ForwardedBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_ForwardedRoot)action/RuntimeForwardedTypes.csproj&quot; $(_ForwardedArguments) -p:TypeSuffix=Changed -p:MSBuildEmitActionGraph=&quot;$(_ForwardedRoot)action/build.ninja&quot;" />
+    <GetFileHash Files="$(_ForwardedRoot)action/$(_ForwardedSource)">
+      <Output TaskParameter="Hash" PropertyName="_ForwardedAfter" />
+    </GetFileHash>
+    <Error Condition="'$(_ForwardedBefore)' != '$(_ForwardedAfter)'" Text="Reconstruction must leave existing generated source untouched." />
+    <Exec WorkingDirectory="$(_ForwardedRoot)action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_ForwardedVerifier) assembly &quot;$(_ForwardedRoot)action/$(_ForwardedAssembly)&quot; Changed" />
+    <Exec Command="$(_App) build &quot;$(_ForwardedRoot)empty-action/RuntimeForwardedTypes.csproj&quot; $(_ForwardedArguments) -p:EmptyForwardedTypes=true -p:MSBuildEmitActionGraph=&quot;$(_ForwardedRoot)empty-action/rejected.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ForwardedEmptyActionExit" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ForwardedEmptyActionLog" />
+    </Exec>
+    <Exec Command="$(_App) restore &quot;$(_ForwardedRoot)empty-ordinary/RuntimeForwardedTypes.csproj&quot; $(_ForwardedArguments) -p:EmptyForwardedTypes=true -t:Build -p:MSBuildRestoreGraphInputs=false"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ForwardedEmptyOrdinaryExit" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ForwardedEmptyOrdinaryLog" />
+    </Exec>
+    <Error Condition="'$(_ForwardedEmptyActionExit)' == '0' or '$(_ForwardedEmptyOrdinaryExit)' == '0' or
+                      !$(_ForwardedEmptyActionLog.Contains('ForwardedType')) or !$(_ForwardedEmptyOrdinaryLog.Contains('ForwardedType')) or
+                      !$(_ForwardedEmptyActionLog.Contains('must not be empty')) or !$(_ForwardedEmptyOrdinaryLog.Contains('must not be empty')) or
+                      Exists('$(_ForwardedRoot)empty-action/rejected.ninja') or Exists('$(_ForwardedRoot)empty-action/rejected.ninja.actions') or
+                      Exists('$(_ForwardedRoot)empty-action/$(_ForwardedSource)') or Exists('$(_ForwardedRoot)empty-action/$(_ForwardedAssembly)') or
+                      Exists('$(_ForwardedRoot)empty-ordinary/$(_ForwardedSource)') or Exists('$(_ForwardedRoot)empty-ordinary/$(_ForwardedAssembly)')"
+           Text="Empty forwarded types must preserve the ordinary error without products or a partial graph." />
   </Target>
   <Target Name="TestRuntimeGenAPI">
     <MakeDir Directories="$(_TestDirectory)" />

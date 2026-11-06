@@ -1266,11 +1266,22 @@ fail-closed disabled attributes.
 A fresh isolated System.Runtime.InteropServices.JavaScript Restore and graph
 construction produce no product DLLs. Its 502-action Ninja graph then builds the
 source-generation tools, CoreLib/library dependencies and the JavaScript library;
-the second execution reports no work. The whole libraries traversal passes the
-interop conflict and reference-rewriting frontiers and now first fails at
-`WriteLinesToFile` without declarations in `shims/stubs/Directory.Build.targets`
-for System.Security.Permissions. Further deferred-item diagnostics on that failed
-path are not yet classified.
+the second execution reports no work. Forwarded-type source generation in
+`shims/stubs/Directory.Build.targets` now declares no file inputs and exactly the
+generated C# output: static `ForwardedType` metadata supplies the content.
+`TestRuntimeForwardedTypes` checks ordinary source-byte parity, actual plain and
+multiple-inner-type compilation, single producer ownership and the future compiler
+dependency, `Compile`/`FileWrites` bookkeeping, no-work, metadata-change invalidation
+without construction-time rewriting, and the original empty-item error without
+products or a partial graph.
+
+The whole libraries traversal passes the interop conflict, reference-rewriting
+and forwarded-source frontiers and now first fails in
+`Common/src/System/Security/Cryptography/Asn1/AsnXml.targets` for
+System.Security.Cryptography. Its directory, XSL transform, comparison and touch
+tasks lack declarations; the file comparison also returns `ContentsDiffer` to
+construction. Further deferred-item diagnostics on that failed path are not yet
+classified.
 The previously reported networking Build cycles do not recur. No whole-partition
 Ninja graph has been produced or executed; its preparation and failed construction
 produce no assemblies/resources or partial graph. Both profiles preserve the

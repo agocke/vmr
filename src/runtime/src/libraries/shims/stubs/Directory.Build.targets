@@ -10,7 +10,9 @@
           BeforeTargets="CoreCompile"
           Inputs="$(MSBuildProjectFullPath);$(MSBuildThisFileFullPath)"
           Outputs="$(ForwardedTypesCompilePath)">
-    <Error Text="The 'ForwardedType' item must not be empty." Condition="'@(ForwardedType)' == ''" />
+    <Error Text="The 'ForwardedType' item must not be empty." Condition="'@(ForwardedType)' == '' and '$(MSBuildHardenedGraph)' != 'true'" />
+    <Error Text="The 'ForwardedType' item must not be empty." Condition="'@(ForwardedType)' == '' and '$(MSBuildHardenedGraph)' == 'true'"
+           DeclaredInputs="" DeclaredOutputs="" />
 
     <ItemGroup>
       <ForwardedType Namespace="$([System.String]::new('%(Identity)').Substring(0, $([System.String]::new('%(Identity)').LastIndexOf('.'))))" />
@@ -28,11 +30,17 @@
 
     <WriteLinesToFile File="$(ForwardedTypesCompilePath)"
                       Lines="@(ForwardedTypesLine)"
-                      Overwrite="true" />
+                      Overwrite="true"
+                      Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <WriteLinesToFile File="$(ForwardedTypesCompilePath)"
+                      Lines="@(ForwardedTypesLine)"
+                      Overwrite="true"
+                      DeclaredInputs="" DeclaredOutputs="$(ForwardedTypesCompilePath)"
+                      Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
     <ItemGroup>
       <Compile Include="$(ForwardedTypesCompilePath)" />
       <FileWrites Include="$(ForwardedTypesCompilePath)" />
     </ItemGroup>
   </Target>
-</Project> 
+</Project>
