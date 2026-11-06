@@ -16,13 +16,15 @@ namespace System.Security.Cryptography
     {
         private readonly ref struct OptionalReadOnlySpan<T>
         {
+            private readonly ReadOnlySpan<T> _value;
+
             public OptionalReadOnlySpan(ReadOnlySpan<T> value, bool hasValue)
             {
-                Value = value;
+                _value = value;
                 HasValue = hasValue;
             }
 
-            public ReadOnlySpan<T> Value { get; }
+            public ReadOnlySpan<T> Value => _value;
             public bool HasValue { get; }
         }
 

@@ -1,6 +1,6 @@
 <Project DefaultTargets="Test">
   <PropertyGroup>
-    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
     <GenBuildApp Condition="'$(GenBuildApp)' == ''">$(MSBuildThisFileDirectory)../../artifacts/bin/genbuild/$(Configuration)/genbuild.dll</GenBuildApp>
     <GenBuildTestHost Condition="'$(GenBuildTestHost)' == ''">$(DOTNET_HOST_PATH)</GenBuildTestHost>
     <_TestDirectory>$(MSBuildThisFileDirectory)../../artifacts/obj/genbuild-smoke/$([System.Guid]::NewGuid())/with spaces/</_TestDirectory>
@@ -32,6 +32,7 @@
     <CallTarget Targets="TestInternalsVisibleTo" />
     <CallTarget Targets="TestRuntimeGenAPI" />
     <CallTarget Targets="TestRuntimeForwardedTypes" />
+    <CallTarget Targets="TestRuntimeAsn" />
     <CallTarget Targets="TestRuntimeILLinkCompileOutputs" />
     <CallTarget Targets="TestRuntimeILLinkInputs" />
     <CallTarget Targets="TestXlfLocalization" />
@@ -907,6 +908,74 @@
     <Exec Command="$(_LedgerSdk) &quot;$(_LedgerRoot)Alpha.proj&quot; -t:%(_LedgerStep.Identity) $(_LedgerArguments)" />
     <Error Condition="!Exists('$(_LedgerRoot)layout/testhost/Alpha.dll') or !Exists('$(_LedgerRoot)layout/testhost/native/libmsquic.so')"
            Text="A stale producer ledger must not delete now aggregate-owned testhost outputs." />
+  </Target>
+  <Target Name="TestRuntimeAsn">
+    <PropertyGroup>
+      <_AsnRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'asn'))</_AsnRoot>
+      <_AsnSource>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '../../src/runtime/src/libraries/Common/src/System/Security/Cryptography/Asn1'))</_AsnSource>
+      <_AsnArguments>-p:RuntimeAsnTargetsPath=&quot;$(_AsnSource)AsnXml.targets&quot;</_AsnArguments>
+    </PropertyGroup>
+    <ItemGroup>
+      <_AsnCase Include="action;ordinary" />
+      <_AsnSchema Include="AlgorithmIdentifierAsn;DssParms" />
+      <_AsnImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+    </ItemGroup>
+    <MakeDir Directories="$(_AsnRoot)" />
+    <WriteLinesToFile File="$(_AsnRoot)%(_AsnImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeAsn.proj" DestinationFolder="$(_AsnRoot)%(_AsnCase.Identity)" />
+    <WriteLinesToFile File="$(_AsnRoot)%(_AsnCase.Identity)/manual.cs" Lines="class Manual { }" Overwrite="true" />
+    <Copy SourceFiles="$(_AsnSource)AlgorithmIdentifierAsn.xml;$(_AsnSource)AlgorithmIdentifierAsn.xml.cs;$(_AsnSource)DssParms.xml;$(_AsnSource)DssParms.xml.cs"
+          DestinationFolder="$(_AsnRoot)%(_AsnCase.Identity)/inputs" />
+    <GetFileHash Files="$(_AsnRoot)action/inputs/AlgorithmIdentifierAsn.xml.cs;$(_AsnRoot)action/inputs/DssParms.xml.cs">
+      <Output TaskParameter="Items" ItemName="_AsnCheckedInBefore" />
+    </GetFileHash>
+    <Exec Command="$(_App) build &quot;$(_AsnRoot)action/RuntimeAsn.proj&quot; $(_AsnArguments) -p:MSBuildEmitActionGraph=&quot;$(_AsnRoot)action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_AsnRoot)action/obj')" Text="ASN construction must not transform or create output directories." />
+    <Exec WorkingDirectory="$(_AsnRoot)action" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_AsnRoot)ordinary/RuntimeAsn.proj&quot; $(_AsnArguments) -t:Build -p:MSBuildRestoreGraphInputs=false" />
+    <GetFileHash Files="$(_AsnRoot)action/obj/asnxml/AlgorithmIdentifierAsn.xml.cs;$(_AsnRoot)ordinary/obj/asnxml/AlgorithmIdentifierAsn.cs">
+      <Output TaskParameter="Items" ItemName="_AsnAlgorithmHashes" />
+    </GetFileHash>
+    <GetFileHash Files="$(_AsnRoot)action/obj/asnxml/DssParms.xml.cs;$(_AsnRoot)ordinary/obj/asnxml/DssParms.cs">
+      <Output TaskParameter="Items" ItemName="_AsnDssHashes" />
+    </GetFileHash>
+    <Error Condition="'@(_AsnAlgorithmHashes->'%(FileHash)'->Distinct()->Count())' != '1' or
+                      '@(_AsnDssHashes->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Hardened ASN source bytes must match the ordinary runtime transform." />
+    <Exec WorkingDirectory="$(_AsnRoot)action" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_AsnNoWork" />
+    </Exec>
+    <Error Condition="!$(_AsnNoWork.Contains('no work to do'))" Text="ASN generation must settle to no work." />
+    <GetFileHash Files="$(_AsnRoot)action/obj/asnxml/DssParms.xml.cs">
+      <Output TaskParameter="Hash" PropertyName="_AsnGeneratedBefore" />
+    </GetFileHash>
+    <ReadLinesFromFile File="$(_AsnRoot)action/inputs/DssParms.xml">
+      <Output TaskParameter="Lines" ItemName="_AsnChangedXml" />
+    </ReadLinesFromFile>
+    <WriteLinesToFile File="$(_AsnRoot)action/inputs/DssParms.xml" Lines="@(_AsnChangedXml->Replace('DssParms', 'DssParmsChanged'))" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_AsnRoot)action/RuntimeAsn.proj&quot; $(_AsnArguments) -p:MSBuildEmitActionGraph=&quot;$(_AsnRoot)action/build.ninja&quot;" />
+    <GetFileHash Files="$(_AsnRoot)action/obj/asnxml/DssParms.xml.cs">
+      <Output TaskParameter="Hash" PropertyName="_AsnGeneratedAfter" />
+    </GetFileHash>
+    <Error Condition="'$(_AsnGeneratedBefore)' != '$(_AsnGeneratedAfter)'" Text="ASN reconstruction must not rewrite existing products." />
+    <Exec WorkingDirectory="$(_AsnRoot)action" Command="ninja -f build.ninja" />
+    <ReadLinesFromFile File="$(_AsnRoot)action/obj/asnxml/DssParms.xml.cs">
+      <Output TaskParameter="Lines" PropertyName="_AsnChangedSource" />
+    </ReadLinesFromFile>
+    <Error Condition="!$(_AsnChangedSource.Contains('DssParmsChanged'))" Text="ASN XML edits must invalidate the transform." />
+    <WriteLinesToFile File="$(_AsnRoot)action/inputs/DssParms.xml" Lines="&lt;invalid /&gt;" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_AsnRoot)action/RuntimeAsn.proj&quot; $(_AsnArguments) -p:MSBuildEmitActionGraph=&quot;$(_AsnRoot)action/build.ninja&quot;" />
+    <Exec WorkingDirectory="$(_AsnRoot)action" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_AsnInvalidExit" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_AsnInvalidLog" />
+    </Exec>
+    <Error Condition="'$(_AsnInvalidExit)' == '0' or !$(_AsnInvalidLog.Contains('unknown node'))"
+           Text="Invalid ASN schema must fail during execution, not silently generate source." />
+    <GetFileHash Files="$(_AsnRoot)action/inputs/AlgorithmIdentifierAsn.xml.cs;$(_AsnRoot)action/inputs/DssParms.xml.cs">
+      <Output TaskParameter="Items" ItemName="_AsnCheckedInAfter" />
+    </GetFileHash>
+    <Error Condition="'@(_AsnCheckedInBefore->'%(FileHash)')' != '@(_AsnCheckedInAfter->'%(FileHash)')'"
+           Text="Hardened ASN execution must never modify checked-in source, including failure." />
   </Target>
   <Target Name="TestRuntimeForwardedTypes">
     <PropertyGroup>

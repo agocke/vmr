@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 #if NET
@@ -15,7 +16,6 @@ using Microsoft.Build.Shared;
 using Microsoft.Build.Utilities;
 
 #if FEATURE_COMPILED_XSL
-using System.Collections.Generic;
 using System.Reflection;
 #endif
 
@@ -28,6 +28,7 @@ namespace Microsoft.Build.Tasks
     /// and outputs to screen or specified file.
     /// </summary>
     [MSBuildMultiThreadableTask]
+    [MSBuildDeclaredIOTask]
     public class XslTransformation : TaskExtension, IMultiThreadableTask
     {
         #region Members
@@ -104,6 +105,16 @@ namespace Microsoft.Build.Tasks
         /// </summary>
         public bool ProhibitDtd { get; set; } = ChangeWaves.AreFeaturesEnabled(ChangeWaves.Wave18_11);
 
+        /// <summary>
+        /// Exact XML and stylesheet file inputs. Supplying declarations enables the restricted file-only mode.
+        /// </summary>
+        public ITaskItem[] DeclaredInputs { get; set; }
+
+        /// <summary>
+        /// Exact generated file outputs.
+        /// </summary>
+        public ITaskItem[] DeclaredOutputs { get; set; }
+
         #endregion
 
         /// <summary>
@@ -116,6 +127,7 @@ namespace Microsoft.Build.Tasks
             XsltInput xsltinput;
             int currentXmlInputIndex = -1;
             ArgumentNullException.ThrowIfNull(_outputPaths, "OutputPath");
+            bool declaredIO = DeclaredInputs != null || DeclaredOutputs != null;
 
 #if NET
             if (!RuntimeFeature.IsDynamicCodeSupported)
@@ -128,13 +140,18 @@ namespace Microsoft.Build.Tasks
             // Load XmlInput, XsltInput parameters
             try
             {
+                if (declaredIO && !ValidateDeclaredIO())
+                {
+                    return false;
+                }
+
                 AbsolutePath?[] absoluteXmlInputPaths = XmlInputPaths != null
                     ? Array.ConvertAll(XmlInputPaths, item => item.ItemSpec != null ? TaskEnvironment.GetAbsolutePath(item.ItemSpec) : (AbsolutePath?)null)
                     : null;
                 xmlinput = new XmlInput(absoluteXmlInputPaths, XmlContent);
 
                 AbsolutePath? absoluteXslInputPath = XslInputPath?.ItemSpec != null ? TaskEnvironment.GetAbsolutePath(XslInputPath.ItemSpec) : null;
-                xsltinput = new XsltInput(absoluteXslInputPath, XslContent, XslCompiledDllPath?.ItemSpec, TaskEnvironment, Log, PreserveWhitespace);
+                xsltinput = new XsltInput(absoluteXslInputPath, XslContent, XslCompiledDllPath?.ItemSpec, TaskEnvironment, Log, PreserveWhitespace, declaredIO);
             }
             catch (Exception e) when (!ExceptionHandling.IsCriticalException(e))
             {
@@ -206,11 +223,15 @@ namespace Microsoft.Build.Tasks
                 for (int i = 0; i < xmlinput.Count; i++)
                 {
                     currentXmlInputIndex = i;
+                    if (declaredIO)
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(TaskEnvironment.GetAbsolutePath(_outputPaths[i].ItemSpec)));
+                    }
                     using (XmlWriter xmlWriter = XmlWriter.Create(TaskEnvironment.GetAbsolutePath(_outputPaths[i].ItemSpec), xslct.OutputSettings))
                     {
                         using (XmlReader xr = xmlinput.CreateReader(i, ProhibitDtd))
                         {
-                            xslct.Transform(xr, arguments, xmlWriter, new XmlUrlResolver());
+                            xslct.Transform(xr, arguments, xmlWriter, declaredIO ? null : new XmlUrlResolver());
                         }
 
                         xmlWriter.Close();
@@ -268,6 +289,41 @@ namespace Microsoft.Build.Tasks
                 }
             }
 
+            return true;
+        }
+
+        private bool ValidateDeclaredIO()
+        {
+            if (DeclaredInputs == null || DeclaredOutputs == null
+                || XmlInputPaths == null || XmlInputPaths.Length == 0 || XslInputPath == null
+                || XmlContent != null || XslContent != null || XslCompiledDllPath != null
+                || UseTrustedSettings || !ProhibitDtd)
+            {
+                Log.LogErrorWithCodeFromResources("XslTransform.ArgumentError",
+                    "Declared XSL transformations require XML and stylesheet files, prohibited DTDs and untrusted settings.");
+                return false;
+            }
+
+            HashSet<string> Paths(ITaskItem[] items)
+            {
+                HashSet<string> paths = new(FileUtilities.PathComparer);
+                foreach (ITaskItem item in items)
+                {
+                    paths.Add(TaskEnvironment.GetAbsolutePath(item.ItemSpec).GetCanonicalForm());
+                }
+                return paths;
+            }
+
+            HashSet<string> inputs = Paths(XmlInputPaths);
+            inputs.Add(TaskEnvironment.GetAbsolutePath(XslInputPath.ItemSpec).GetCanonicalForm());
+            HashSet<string> outputs = Paths(_outputPaths);
+            if (!inputs.SetEquals(Paths(DeclaredInputs)) || !outputs.SetEquals(Paths(DeclaredOutputs))
+                || outputs.Count != _outputPaths.Length || inputs.Overlaps(outputs))
+            {
+                Log.LogErrorWithCodeFromResources("XslTransform.ArgumentError",
+                    "DeclaredInputs must match the XML and stylesheet files, and DeclaredOutputs must match distinct output files that do not overwrite inputs.");
+                return false;
+            }
             return true;
         }
 
@@ -449,6 +505,8 @@ namespace Microsoft.Build.Tasks
             /// </summary>
             private bool _preserveWhitespace;
 
+            private readonly bool _declaredIO;
+
             /// <summary>
             /// Tool for logging build messages, warnings, and errors
             /// </summary>
@@ -464,9 +522,11 @@ namespace Microsoft.Build.Tasks
             /// <param name="taskEnvironment">Task environment for resolving paths.</param>
             /// <param name="logTool">Log helper.</param>
             /// <param name="preserveWhitespace">Flag for xslt whitespace option.</param>
-            public XsltInput(AbsolutePath? xsltFilePath, string xslt, string xsltCompiledDllSpec, TaskEnvironment taskEnvironment, TaskLoggingHelper logTool, bool preserveWhitespace)
+            /// <param name="declaredIO">Reject external stylesheet resolution when the input footprint is declared.</param>
+            public XsltInput(AbsolutePath? xsltFilePath, string xslt, string xsltCompiledDllSpec, TaskEnvironment taskEnvironment, TaskLoggingHelper logTool, bool preserveWhitespace, bool declaredIO = false)
             {
                 _log = logTool;
+                _declaredIO = declaredIO;
 #if FEATURE_COMPILED_XSL
                 _taskEnvironment = taskEnvironment;
 #endif
@@ -572,7 +632,7 @@ namespace Microsoft.Build.Tasks
                             }
                             else
                             {
-                                xslct.Load(stylesheet, XsltSettings.Default, new XmlUrlResolver());
+                                xslct.Load(stylesheet, XsltSettings.Default, _declaredIO ? null : new XmlUrlResolver());
                             }
                         }
                         break;

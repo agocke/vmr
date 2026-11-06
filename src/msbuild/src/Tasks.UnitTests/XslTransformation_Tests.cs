@@ -51,6 +51,111 @@ namespace Microsoft.Build.UnitTests
 
         public XslTransformation_Tests(ITestOutputHelper output) => _output = output;
 
+        [Fact]
+        public void DeclaredTransformMatchesOrdinaryAndCreatesOutputDirectory()
+        {
+            using TestEnvironment env = TestEnvironment.Create(_output);
+            string root = env.CreateFolder().Path;
+            string xml = Path.Combine(root, "input.xml");
+            string xsl = Path.Combine(root, "input.xsl");
+            string ordinary = Path.Combine(root, "ordinary.xml");
+            string declared = Path.Combine(root, "nested", "declared.xml");
+            File.WriteAllText(xml, _xmlDocument);
+            File.WriteAllText(xsl, _xslDocument);
+            XslTransformation task = new()
+            {
+                BuildEngine = new MockEngine(_output),
+                TaskEnvironment = TaskEnvironmentHelper.CreateForTest(),
+                XmlInputPaths = [new TaskItem(xml)],
+                XslInputPath = new TaskItem(xsl),
+                OutputPaths = [new TaskItem(ordinary)],
+                ProhibitDtd = true,
+            };
+            task.Execute().ShouldBeTrue();
+            task.OutputPaths = [new TaskItem(declared)];
+            task.DeclaredInputs = [new TaskItem(xml), new TaskItem(xsl)];
+            task.DeclaredOutputs = [new TaskItem(declared)];
+            task.Execute().ShouldBeTrue();
+            File.ReadAllBytes(declared).ShouldBe(File.ReadAllBytes(ordinary));
+        }
+
+        [Theory]
+        [InlineData("inputs")]
+        [InlineData("outputs")]
+        [InlineData("partial")]
+        [InlineData("trusted")]
+        [InlineData("dtd")]
+        [InlineData("overlap")]
+        [InlineData("duplicates")]
+        public void InvalidDeclarationsRejectBeforeFileIO(string mode)
+        {
+            using TestEnvironment env = TestEnvironment.Create(_output);
+            string root = env.CreateFolder().Path;
+            string xml = Path.Combine(root, "missing.xml");
+            string xsl = Path.Combine(root, "missing.xsl");
+            string output = Path.Combine(root, "products", "result.xml");
+            MockEngine engine = new(_output);
+            XslTransformation task = new()
+            {
+                BuildEngine = engine,
+                TaskEnvironment = TaskEnvironmentHelper.CreateForTest(),
+                XmlInputPaths = [new TaskItem(xml)],
+                XslInputPath = new TaskItem(xsl),
+                OutputPaths = [new TaskItem(output)],
+                DeclaredInputs = [new TaskItem(xml), new TaskItem(xsl)],
+                DeclaredOutputs = [new TaskItem(output)],
+                ProhibitDtd = true,
+            };
+            switch (mode)
+            {
+                case "inputs": task.DeclaredInputs = [new TaskItem(xml)]; break;
+                case "outputs": task.DeclaredOutputs = []; break;
+                case "partial": task.DeclaredInputs = null; break;
+                case "trusted": task.UseTrustedSettings = true; break;
+                case "dtd": task.ProhibitDtd = false; break;
+                case "overlap": task.OutputPaths = task.DeclaredOutputs = [new TaskItem(xml)]; break;
+                case "duplicates": task.OutputPaths = task.DeclaredOutputs = [new TaskItem(output), new TaskItem(output)]; break;
+            }
+            task.Execute().ShouldBeFalse();
+            engine.Log.ShouldContain("MSB3701");
+            Directory.Exists(Path.GetDirectoryName(output)).ShouldBeFalse();
+        }
+
+        [Theory]
+        [InlineData("include")]
+        [InlineData("document")]
+        [InlineData("xml-dtd")]
+        public void DeclaredTransformRejectsExternalResolution(string mode)
+        {
+            using TestEnvironment env = TestEnvironment.Create(_output);
+            string root = env.CreateFolder().Path;
+            string xml = Path.Combine(root, "input.xml");
+            string xsl = Path.Combine(root, "input.xsl");
+            string output = Path.Combine(root, "result.xml");
+            File.WriteAllText(Path.Combine(root, "external.xml"), "<external>undeclared</external>");
+            File.WriteAllText(Path.Combine(root, "external.xsl"), _xslDocument);
+            File.WriteAllText(xml, mode == "xml-dtd" ? _xmlDocumentWithDtd : _xmlDocument);
+            File.WriteAllText(xsl, mode switch
+            {
+                "include" => "<xsl:stylesheet version='1.0' xmlns:xsl='http://www.w3.org/1999/XSL/Transform'><xsl:include href='external.xsl'/></xsl:stylesheet>",
+                "document" => "<xsl:stylesheet version='1.0' xmlns:xsl='http://www.w3.org/1999/XSL/Transform'><xsl:template match='/'><xsl:copy-of select=\"document('external.xml')\"/></xsl:template></xsl:stylesheet>",
+                _ => _xslDocument,
+            });
+            XslTransformation task = new()
+            {
+                BuildEngine = new MockEngine(_output),
+                TaskEnvironment = TaskEnvironmentHelper.CreateForTest(),
+                XmlInputPaths = [new TaskItem(xml)],
+                XslInputPath = new TaskItem(xsl),
+                OutputPaths = [new TaskItem(output)],
+                DeclaredInputs = [new TaskItem(xml), new TaskItem(xsl)],
+                DeclaredOutputs = [new TaskItem(output)],
+                ProhibitDtd = true,
+            };
+            task.Execute().ShouldBeFalse();
+            task.Log.HasLoggedErrors.ShouldBeTrue();
+        }
+
         /// <summary>
         /// The "surround" regex.
         /// </summary>

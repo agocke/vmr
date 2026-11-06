@@ -1,6 +1,6 @@
 <Project DefaultTargets="Build">
   <PropertyGroup>
-    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
     <GenBuildRoot>$(MSBuildThisFileDirectory)../</GenBuildRoot>
     <GenBuildOutputDirectory Condition="'$(GenBuildOutputDirectory)' == ''">$(GenBuildRoot)artifacts/bin/genbuild/$(Configuration)/</GenBuildOutputDirectory>
     <GenBuildOutputDirectory>$([MSBuild]::NormalizeDirectory('$(GenBuildOutputDirectory)'))</GenBuildOutputDirectory>

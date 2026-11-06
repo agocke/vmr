@@ -145,7 +145,9 @@ represented as having flowed from the component repositories.
   NuGet's existing .NET 10 target inside the .NET 11 app.
 - [x] Exercise the packaged app with a runtime-only host, without an installed SDK.
 
-`genbuild/genbuild.proj` builds into `artifacts/bin/genbuild/Debug`. It does not
+`genbuild/genbuild.proj` defaults to Release and builds into
+`artifacts/bin/genbuild/Release`. This includes the source-built compiler, tasks,
+and action host; use `-p:Configuration=Debug` explicitly for debugging. It does not
 build SDK redist, templates, workloads, the SDK CLI driver, or a runtime. With
 MSBuild's pinned .NET 11 SDK on `PATH`, build from `src/msbuild`:
 
@@ -183,8 +185,8 @@ Tree materialization and ownership-aware cleaning remain on the managed path.
 From the VMR root, run with an external .NET 11 runtime:
 
 ```sh
-dotnet artifacts/bin/genbuild/Debug/genbuild.dll restore path/Project.csproj -bl:{}
-dotnet artifacts/bin/genbuild/Debug/genbuild.dll build path/Project.csproj -bl:{}
+dotnet artifacts/bin/genbuild/Release/genbuild.dll restore path/Project.csproj -p:Configuration=Release -bl:{}
+dotnet artifacts/bin/genbuild/Release/genbuild.dll build path/Project.csproj -p:Configuration=Release -bl:{}
 ninja -C path -f obj/genbuild/build.ninja
 ```
 
@@ -193,6 +195,9 @@ MSBuild process and emits the graph, not product files. Extra arguments are
 forwarded to MSBuild; `MSBuildEmitActionGraph` changes the graph destination.
 Explicit directory-import paths and `MSBuildGraphHostOS` must be consistent
 between preparation and construction where the profile requires them.
+Performance profiles also pass `Configuration=Release` to both invocations, use
+fresh intermediate/output directories, and repack local task packages from
+Release outputs under new versions.
 
 Compiler/external tool versions remain pinned by `src/sdk/eng/Version.Details.props`.
 Framework definitions and RID/pruning metadata come from the selected bootstrap
@@ -1275,17 +1280,46 @@ dependency, `Compile`/`FileWrites` bookkeeping, no-work, metadata-change invalid
 without construction-time rewriting, and the original empty-item error without
 products or a partial graph.
 
-The whole libraries traversal passes the interop conflict, reference-rewriting
-and forwarded-source frontiers and now first fails in
-`Common/src/System/Security/Cryptography/Asn1/AsnXml.targets` for
-System.Security.Cryptography. Its directory, XSL transform, comparison and touch
-tasks lack declarations; the file comparison also returns `ContentsDiffer` to
-construction. Further deferred-item diagnostics on that failed path are not yet
-classified.
-The previously reported networking Build cycles do not recur. No whole-partition
-Ninja graph has been produced or executed; its preparation and failed construction
-produce no assemblies/resources or partial graph. Both profiles preserve the
-recorded shared cache hashes.
+Hardened ASN.1 generation in
+`Common/src/System/Security/Cryptography/Asn1/AsnXml.targets` now transforms into
+private `obj/asnxml` files and remaps only matching compiler inputs, preserving
+metadata and clean ownership. It does not write checked-in sources or consume the
+ordinary file-comparison result during construction. Ordinary regeneration,
+comparison, touching and warnings remain unchanged. Declared `XslTransformation`
+calls require exact XML/stylesheet inputs and distinct, non-overlapping outputs;
+trusted settings, DTDs, compiled/string stylesheet modes and external stylesheet
+resolution are rejected. Calls without declarations retain ordinary behavior.
+Unit tests exercise parity, invalid footprints and external-resolution rejection;
+`TestRuntimeAsn` uses the real runtime target and stylesheet to check source-byte
+parity, compile metadata, unrelated sources, no-work, XML-edit invalidation,
+construction purity and execution-time schema failure without source-tree writes.
+
+The whole libraries traversal now constructs a 5,321-action Ninja graph (5,320
+task descriptors plus the generated-source tree materializer), without generating
+assemblies/resources. Its 58 ASN outputs each have one producer and are explicit
+inputs to the cryptography compiler action. The previously reported networking
+Build cycles do not recur. Preparation and construction preserve the recorded
+shared cache hashes. Ninja generates all 58 ASN sources; each matches its
+checked-in counterpart modulo BOM/line endings. Constructor assignments to
+getter-only ref-like auto-properties expose the source-built Roslyn assertion
+`propertyAccess.AutoPropertyAccessorKind != AccessorKind.Set`. Equivalent explicit
+readonly backing fields in `PasswordBasedEncryption` and the DNS record types
+temporarily avoid this compiler defect without disabling assertions or escape
+checks in the Debug validation. Normal Release compiler builds omit Debug.Assert
+calls; the source workaround remains in place.
+
+The complete 5,321-action libraries graph now succeeds through resumed execution
+with an experimental copied Ninja graph containing 417 conservative adjacent-action
+fork/join diamonds. The final resume completes 1,514 actions in 440 seconds, and
+repeated Ninja has no work. The original emitted graph and protected shared cache
+hashes remain unchanged. This verifies whole-partition libraries execution, not
+a clean performance comparison, runtime tests or the entire runtime build.
+
+The isolated Release libraries profile sets `EnableNgenOptimization=false`
+because no legacy IBC data is supplied, matching that aspect of the earlier
+Debug profile. C#/VB Release optimization remains enabled. Stock Release's
+external IBC-profile glob still needs a declared discovery model; the
+IBC/ReadyToRun/native-PGO pipeline is not validated by this profile.
 
 A fresh real VB shim profile constructs without products and completes all 1,448
 Ninja actions, including source-built VB compilation, the shim's separate-output

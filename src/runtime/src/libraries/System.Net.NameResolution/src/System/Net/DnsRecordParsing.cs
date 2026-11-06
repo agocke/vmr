@@ -9,11 +9,13 @@ namespace System.Net
 
     internal readonly ref struct DnsARecordData
     {
-        public ReadOnlySpan<byte> AddressBytes { get; }
+        private readonly ReadOnlySpan<byte> _addressBytes;
+
+        public ReadOnlySpan<byte> AddressBytes => _addressBytes;
 
         internal DnsARecordData(ReadOnlySpan<byte> addressBytes)
         {
-            AddressBytes = addressBytes;
+            _addressBytes = addressBytes;
         }
 
         public IPAddress ToIPAddress() => new IPAddress(AddressBytes);
@@ -21,11 +23,13 @@ namespace System.Net
 
     internal readonly ref struct DnsAAAARecordData
     {
-        public ReadOnlySpan<byte> AddressBytes { get; }
+        private readonly ReadOnlySpan<byte> _addressBytes;
+
+        public ReadOnlySpan<byte> AddressBytes => _addressBytes;
 
         internal DnsAAAARecordData(ReadOnlySpan<byte> addressBytes)
         {
-            AddressBytes = addressBytes;
+            _addressBytes = addressBytes;
         }
 
         public IPAddress ToIPAddress() => new IPAddress(AddressBytes);
@@ -33,46 +37,55 @@ namespace System.Net
 
     internal readonly ref struct DnsCNameRecordData
     {
-        public DnsEncodedName CName { get; }
+        private readonly DnsEncodedName _cname;
+
+        public DnsEncodedName CName => _cname;
 
         internal DnsCNameRecordData(DnsEncodedName cname)
         {
-            CName = cname;
+            _cname = cname;
         }
     }
 
     internal readonly ref struct DnsMxRecordData
     {
+        private readonly DnsEncodedName _exchange;
+
         public ushort Preference { get; }
-        public DnsEncodedName Exchange { get; }
+        public DnsEncodedName Exchange => _exchange;
 
         internal DnsMxRecordData(ushort preference, DnsEncodedName exchange)
         {
             Preference = preference;
-            Exchange = exchange;
+            _exchange = exchange;
         }
     }
 
     internal readonly ref struct DnsSrvRecordData
     {
+        private readonly DnsEncodedName _target;
+
         public ushort Priority { get; }
         public ushort Weight { get; }
         public ushort Port { get; }
-        public DnsEncodedName Target { get; }
+        public DnsEncodedName Target => _target;
 
         internal DnsSrvRecordData(ushort priority, ushort weight, ushort port, DnsEncodedName target)
         {
             Priority = priority;
             Weight = weight;
             Port = port;
-            Target = target;
+            _target = target;
         }
     }
 
     internal readonly ref struct DnsSoaRecordData
     {
-        public DnsEncodedName PrimaryNameServer { get; }
-        public DnsEncodedName ResponsibleMailbox { get; }
+        private readonly DnsEncodedName _primaryNameServer;
+        private readonly DnsEncodedName _responsibleMailbox;
+
+        public DnsEncodedName PrimaryNameServer => _primaryNameServer;
+        public DnsEncodedName ResponsibleMailbox => _responsibleMailbox;
         public uint SerialNumber { get; }
         public uint RefreshInterval { get; }
         public uint RetryInterval { get; }
@@ -83,8 +96,8 @@ namespace System.Net
             uint serialNumber, uint refreshInterval, uint retryInterval,
             uint expireLimit, uint minimumTtl)
         {
-            PrimaryNameServer = primaryNameServer;
-            ResponsibleMailbox = responsibleMailbox;
+            _primaryNameServer = primaryNameServer;
+            _responsibleMailbox = responsibleMailbox;
             SerialNumber = serialNumber;
             RefreshInterval = refreshInterval;
             RetryInterval = retryInterval;
@@ -141,21 +154,25 @@ namespace System.Net
 
     internal readonly ref struct DnsPtrRecordData
     {
-        public DnsEncodedName Name { get; }
+        private readonly DnsEncodedName _name;
+
+        public DnsEncodedName Name => _name;
 
         internal DnsPtrRecordData(DnsEncodedName name)
         {
-            Name = name;
+            _name = name;
         }
     }
 
     internal readonly ref struct DnsNsRecordData
     {
-        public DnsEncodedName Name { get; }
+        private readonly DnsEncodedName _name;
+
+        public DnsEncodedName Name => _name;
 
         internal DnsNsRecordData(DnsEncodedName name)
         {
-            Name = name;
+            _name = name;
         }
     }
 

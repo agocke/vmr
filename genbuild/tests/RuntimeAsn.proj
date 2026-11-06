@@ -1,0 +1,32 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <AsnXml Include="inputs/AlgorithmIdentifierAsn.xml;inputs/DssParms.xml" />
+    <Compile Include="@(AsnXml -> '%(Identity).cs')"
+             Link="linked/%(Filename)%(Extension)" DependentUpon="schema.xml" FixtureMetadata="kept" />
+    <Compile Include="manual.cs" />
+  </ItemGroup>
+  <Import Project="$(RuntimeAsnTargetsPath)" />
+  <Target Name="Restore" />
+  <Target Name="Build" DependsOnTargets="CoreCompile" />
+  <Target Name="CoreCompile">
+    <PropertyGroup>
+      <_AsnItemsValid Condition="'@(Compile->Count())' == '3' and
+                                '@(Compile->WithMetadataValue('Identity', 'manual.cs')->Count())' == '1' and
+                                '@(Compile->WithMetadataValue('FixtureMetadata', 'kept')->Count())' == '2' and
+                                '@(Compile->WithMetadataValue('DependentUpon', 'schema.xml')->Count())' == '2' and
+                                '@(Compile->WithMetadataValue('Link', 'linked/AlgorithmIdentifierAsn.xml.cs')->Count())' == '1' and
+                                '@(Compile->WithMetadataValue('Link', 'linked/DssParms.xml.cs')->Count())' == '1'">true</_AsnItemsValid>
+      <_AsnItemsValid Condition="'$(MSBuildHardenedGraph)' == 'true' and
+                                ('@(Compile)' != 'manual.cs;@(AsnXml -> '$(_AsnIntermediatePath)%(Filename)%(Extension).cs')' or
+                                 '@(FileWrites)' != '@(AsnXml -> '$(_AsnIntermediatePath)%(Filename)%(Extension).cs')')">false</_AsnItemsValid>
+    </PropertyGroup>
+    <Error Condition="'$(_AsnItemsValid)' != 'true' and '$(MSBuildHardenedGraph)' != 'true'"
+           Text="ASN generation must preserve compile metadata and hardened output ownership." />
+    <Error Condition="'$(_AsnItemsValid)' != 'true' and '$(MSBuildHardenedGraph)' == 'true'"
+           Text="ASN generation must preserve compile metadata and hardened output ownership."
+           DeclaredInputs="" DeclaredOutputs="" />
+  </Target>
+</Project>

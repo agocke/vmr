@@ -30,7 +30,7 @@
   </UsingTask>
 
   <Target Name="CompileAsn" BeforeTargets="CoreCompile"
-    Condition=" '@(AsnXml)' != '' "
+    Condition=" '@(AsnXml)' != '' and '$(MSBuildHardenedGraph)' != 'true' "
     Inputs="@(AsnXml);$(MSBuildThisFileDirectory)asn.xslt"
     Outputs="%(Identity).cs">
 
@@ -63,5 +63,27 @@
     <Touch Condition="'@(_FilesDiffer)' != 'true'" Files="@(AsnXml -> '%(Identity).cs')" />
 
     <Warning Condition="'@(_FilesDiffer)' == 'true'" Text="AsnXml regenerated files, be sure to check them in: @(AsnXml -> '%(Identity).cs')" />
+  </Target>
+
+  <Target Name="CompileAsnHardened" BeforeTargets="CoreCompile"
+          Condition="'@(AsnXml)' != '' and '$(MSBuildHardenedGraph)' == 'true'">
+    <PropertyGroup>
+      <_AsnIntermediatePath>$([MSBuild]::NormalizeDirectory('$(IntermediateOutputPath)', 'asnxml'))</_AsnIntermediatePath>
+    </PropertyGroup>
+    <ItemGroup>
+      <_NonAsnCompile Include="@(Compile)" Exclude="@(AsnXml -> '%(Identity).cs')" />
+      <_AsnCompile Include="@(Compile)" Exclude="@(_NonAsnCompile)">
+        <_AsnGeneratedPath>$(_AsnIntermediatePath)%(Filename)%(Extension)</_AsnGeneratedPath>
+      </_AsnCompile>
+      <Compile Remove="@(_AsnCompile)" />
+      <Compile Include="@(_AsnCompile -> '%(_AsnGeneratedPath)')" />
+      <FileWrites Include="@(AsnXml -> '$(_AsnIntermediatePath)%(Filename)%(Extension).cs')" />
+    </ItemGroup>
+    <XslTransformation XslInputPath="$(MSBuildThisFileDirectory)asn.xslt"
+                       XmlInputPaths="@(AsnXml)"
+                       OutputPaths="@(AsnXml -> '$(_AsnIntermediatePath)%(Filename)%(Extension).cs')"
+                       ProhibitDtd="true"
+                       DeclaredInputs="@(AsnXml);$(MSBuildThisFileDirectory)asn.xslt"
+                       DeclaredOutputs="@(AsnXml -> '$(_AsnIntermediatePath)%(Filename)%(Extension).cs')" />
   </Target>
 </Project>

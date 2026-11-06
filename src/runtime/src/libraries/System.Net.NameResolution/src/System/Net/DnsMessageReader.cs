@@ -8,13 +8,15 @@ namespace System.Net
     // A parsed question entry from the question section.
     internal readonly ref struct DnsQuestion
     {
-        public DnsEncodedName Name { get; }
+        private readonly DnsEncodedName _name;
+
+        public DnsEncodedName Name => _name;
         public DnsRecordType Type { get; }
         public DnsRecordClass Class { get; }
 
         internal DnsQuestion(DnsEncodedName name, DnsRecordType type, DnsRecordClass @class)
         {
-            Name = name;
+            _name = name;
             Type = type;
             Class = @class;
         }
@@ -23,16 +25,20 @@ namespace System.Net
     // A parsed resource record from any section (answer, authority, additional).
     internal readonly ref struct DnsRecord
     {
-        public DnsEncodedName Name { get; }
+        private readonly DnsEncodedName _name;
+        private readonly ReadOnlySpan<byte> _data;
+        private readonly ReadOnlySpan<byte> _message;
+
+        public DnsEncodedName Name => _name;
         public DnsRecordType Type { get; }
         public DnsRecordClass Class { get; }
         public uint TimeToLive { get; }
 
         // Raw RDATA bytes.
-        public ReadOnlySpan<byte> Data { get; }
+        public ReadOnlySpan<byte> Data => _data;
 
         // The full DNS message buffer, for resolving compression pointers in RDATA.
-        public ReadOnlySpan<byte> Message { get; }
+        public ReadOnlySpan<byte> Message => _message;
 
         // Offset of Data within Message.
         public int DataOffset { get; }
@@ -40,12 +46,12 @@ namespace System.Net
         internal DnsRecord(DnsEncodedName name, DnsRecordType type, DnsRecordClass @class,
             uint ttl, ReadOnlySpan<byte> data, ReadOnlySpan<byte> message, int dataOffset)
         {
-            Name = name;
+            _name = name;
             Type = type;
             Class = @class;
             TimeToLive = ttl;
-            Data = data;
-            Message = message;
+            _data = data;
+            _message = message;
             DataOffset = dataOffset;
         }
     }

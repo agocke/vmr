@@ -20,7 +20,7 @@ dotnet msbuild genbuild/genbuild.proj -m:1 -nr:false -bl:{}
 
 This builds the selected MSBuild, SDK-task, Roslyn, SourceLink, NuGet, and Arcade
 target-framework task sources, including the source-built C# and VB compilers, and
-assembles the app in `artifacts/bin/genbuild/Debug/`. It does not build the full
+assembles the app in `artifacts/bin/genbuild/Release/`. It does not build the full
 SDK, templates, workloads, or a runtime.
 
 `genbuild.proj` is the complete build entry point. `genbuild.csproj` only compiles
@@ -32,9 +32,16 @@ After the initial component build, reassemble without rebuilding components:
 dotnet msbuild genbuild/genbuild.proj -p:GenBuildSkipComponentBuild=true -bl:{}
 ```
 
-Use `-p:Configuration=Release` to change configuration. If necessary,
+Release is the default for the app, source-built components, and smoke-test
+toolset selection. Use `-p:Configuration=Debug` for debugging. Smoke fixtures
+still exercise their intentional Debug/Release configuration cases. If necessary,
 `GenBuildDotNetHost` and `GenBuildBootstrapSdk` select explicit build-time
 paths to `dotnet` and its SDK directory, respectively.
+
+For performance measurements, use Release for both the toolchain and the target
+projects, with matching `-p:Configuration=Release` in Restore and Build. Prepare
+fresh intermediate/output directories and repack locally built task packages
+from Release outputs with new versions; do not reuse Debug task packages.
 
 ## Run
 
@@ -43,8 +50,8 @@ Keep the entire app directory together when copying it elsewhere.
 From the VMR root:
 
 ```sh
-dotnet artifacts/bin/genbuild/Debug/genbuild.dll restore path/Project.csproj -bl:{}
-dotnet artifacts/bin/genbuild/Debug/genbuild.dll build path/Project.csproj -bl:{}
+dotnet artifacts/bin/genbuild/Release/genbuild.dll restore path/Project.csproj -p:Configuration=Release -bl:{}
+dotnet artifacts/bin/genbuild/Release/genbuild.dll build path/Project.csproj -p:Configuration=Release -bl:{}
 ninja -C path -f obj/genbuild/build.ninja
 ```
 
@@ -115,7 +122,7 @@ revision to avoid reusing a cached package:
 
 ```sh
 dotnet msbuild genbuild/arcade/TargetFramework.csproj -t:Pack \
-  -p:Configuration=Debug -p:NoBuild=true \
+  -p:Configuration=Release -p:NoBuild=true \
   -p:PackageVersion=12.0.0-genbuild.1 \
   -p:PackageOutputPath=/absolute/path/to/isolated-feed
 ```
@@ -593,19 +600,46 @@ source-byte parity, actual plain/nested-type compilation, producer ownership,
 future compiler inputs, clean bookkeeping, metadata-change invalidation, no-work,
 and the original empty-item error without construction-time products.
 
-The whole libraries traversal passes this generation and first fails at ASN.1
-generation/comparison in `Common/src/System/Security/Cryptography/Asn1/AsnXml.targets`.
-Its directory/transform/comparison tasks lack declarations, and its comparison
-returns a file-dependent value to construction. Failed construction publishes no
-partial graph or product assemblies. A fresh real VB-shim profile completes all 1,448 Ninja
+Hardened ASN.1 generation now transforms XML into private `obj/asnxml` sources and
+remaps only the corresponding `Compile` items, preserving metadata and recording
+clean ownership. It never rewrites checked-in generated files or feeds a
+file-dependent comparison result back into construction. Ordinary builds retain
+their regeneration, comparison, timestamp and warning behavior. Declared
+`XslTransformation` invocations validate exact file footprints, reject overlapping
+or duplicate outputs, and prohibit trusted settings, DTDs and external stylesheet
+resolution. Ordinary transformations retain their existing modes and resolver.
+The focused runtime smoke checks real stylesheet byte parity, compile metadata,
+unrelated sources, no-work, XML-edit invalidation and execution-time schema errors.
+
+The whole libraries traversal now constructs a 5,321-action Ninja graph without
+product assemblies or resources. Its 58 ASN sources have one transform producer
+and explicit compiler dependencies. A fresh real VB-shim profile completes all 1,448 Ninja
 actions, including source-built VB compilation, reference rewriting/publication
 and 29 ApiCompat validations; repeated Ninja has no work. Runtime authoring supplies
 the implementation-side pack fallback and transitive private references without
 promoting public implementation binaries over pack references. Linking explicitly
 precedes ApiCompat input collection, so validation checks the final assembly and
 existing suppression identities remain valid. No validation was disabled or new
-suppression added; shared-cache hashes are unchanged. Complete libraries execution
-is not yet proven.
+suppression added; shared-cache hashes are unchanged. The whole-partition Ninja
+run generates all 58 ASN sources, matching checked-in sources modulo BOM/line
+endings. A source-built Roslyn ref-safety assertion on constructor-assigned
+getter-only ref-like auto-properties is temporarily avoided with equivalent
+explicit readonly backing fields in `PasswordBasedEncryption` and the DNS record
+types. This also avoids the problematic path with Debug compiler assertions
+enabled; no escape checks were relaxed.
+
+The 5,321-action libraries graph now completes through resumed execution using
+an experimental copied Ninja graph with 417 conservative adjacent-action
+fork/join diamonds. The final resume completes 1,514 actions in 440 seconds;
+repeated Ninja has no work. The original emitted graph and protected shared
+caches remain unchanged. This verifies libraries graph execution, not a clean
+performance comparison, runtime tests or the entire runtime build.
+
+The isolated Release libraries profile uses `EnableNgenOptimization=false`,
+matching the earlier Debug profile's lack of legacy IBC data. This does not
+disable C#/VB Release optimization. Stock Release enables an external IBC-profile
+glob that still needs a declared discovery model; this profile does not validate
+the IBC/ReadyToRun/native-PGO pipeline.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,
