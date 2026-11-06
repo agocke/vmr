@@ -1,0 +1,20 @@
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <AssemblyName>Fixture</AssemblyName>
+    <AssemblyVersion>1.2.3.4</AssemblyVersion>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <CodePage>65001</CodePage>
+    <EmbedUntrackedSources>false</EmbedUntrackedSources>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+    <GenFacadesForceZeroVersionSeeds>true</GenFacadesForceZeroVersionSeeds>
+    <GenFacadesForceZeroVersionSeedsDebugMode>true</GenFacadesForceZeroVersionSeedsDebugMode>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Types.cs" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="$(MSBuildToolsPath)/Arcade/GenFacades/build/Microsoft.DotNet.GenFacades.targets" />
+</Project>

@@ -1,0 +1,53 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <GenFacadesForceZeroVersionSeeds>true</GenFacadesForceZeroVersionSeeds>
+    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+    <TargetName>Fixture</TargetName>
+    <TargetExt>.dll</TargetExt>
+    <_Original>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'obj/Fixture.dll'))</_Original>
+    <_Rewritten>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'obj/ZeroVersionSeeds/Fixture.dll'))</_Rewritten>
+  </PropertyGroup>
+  <Import Project="$(MSBuildToolsPath)/Arcade/GenFacades/build/Microsoft.DotNet.GenFacades.targets" />
+  <ItemGroup>
+    <IntermediateAssembly Include="$(_Original)" Marker="preserved" />
+  </ItemGroup>
+  <Target Name="Restore" />
+  <Target Name="PrepareDirectories" BeforeTargets="CoreCompile;Produce" Condition="'$(MSBuildHardenedGraph)' != 'true'">
+    <MakeDir Directories="obj;bin" />
+  </Target>
+  <Target Name="CoreCompile">
+    <CopyFiles SourceFiles="../inputs/Seed.dll" DestinationFiles="@(IntermediateAssembly)"
+               DeclaredInputs="../inputs/Seed.dll" DeclaredOutputs="@(IntermediateAssembly)" />
+    <CallTarget Targets="$(TargetsTriggeredByCompilation)" Condition="'$(TargetsTriggeredByCompilation)' != ''" />
+  </Target>
+  <Target Name="Build" DependsOnTargets="CoreCompile">
+    <Error Condition="'%(IntermediateAssembly.Marker)' != 'preserved' or
+                      ('$(MSBuildHardenedGraph)' == 'true' and '@(IntermediateAssembly)' != '$(_Rewritten)') or
+                      ('$(MSBuildHardenedGraph)' != 'true' and '@(IntermediateAssembly)' != '$(_Original)')"
+           Text="Reference clearing must retain intermediate metadata and route publication through the correct assembly." />
+    <Error Condition="'$(MSBuildHardenedGraph)' == 'true' and !@(FileWrites->AnyHaveMetadataValue('Identity', '$(_Rewritten)'))"
+           Text="The rewritten intermediate must participate in clean bookkeeping." />
+    <CopyFiles SourceFiles="@(IntermediateAssembly)" DestinationFiles="bin/Fixture.dll"
+               DeclaredInputs="@(IntermediateAssembly)" DeclaredOutputs="bin/Fixture.dll" />
+  </Target>
+  <Target Name="Produce">
+    <CopyFiles SourceFiles="../inputs/Seed.dll" DestinationFiles="obj/input.dll"
+               DeclaredInputs="../inputs/Seed.dll" DeclaredOutputs="obj/input.dll" />
+  </Target>
+  <Target Name="Invalid" DependsOnTargets="Produce">
+    <PropertyGroup>
+      <_Input>obj/input.dll</_Input>
+      <_Output>obj/output.dll</_Output>
+      <_DeclaredInput>$(_Input)</_DeclaredInput>
+      <_DeclaredOutput>$(_Output)</_DeclaredOutput>
+      <_DeclaredInput Condition="'$(TestCase)' == 'wrong-input'">../inputs/Seed.dll</_DeclaredInput>
+      <_DeclaredOutput Condition="'$(TestCase)' == 'wrong-output'">obj/wrong.dll</_DeclaredOutput>
+      <_Input Condition="'$(TestCase)' == 'bad-pe'">../inputs/bad.dll</_Input>
+      <_DeclaredInput Condition="'$(TestCase)' == 'bad-pe'">$(_Input)</_DeclaredInput>
+      <_Output Condition="'$(TestCase)' == 'in-place'">$(_Input)</_Output>
+      <_DeclaredOutput Condition="'$(TestCase)' == 'in-place'">$(_Output)</_DeclaredOutput>
+    </PropertyGroup>
+    <ClearAssemblyReferenceVersions Assembly="$(_Input)" OutputAssembly="$(_Output)"
+                                    DeclaredInputs="$(_DeclaredInput)" DeclaredOutputs="$(_DeclaredOutput)" />
+  </Target>
+</Project>

@@ -2,28 +2,52 @@
 <Project>
 
   <!-- TODO: Remove Architecture="*" on Runtime="NET" UsingTask declarations below when https://github.com/dotnet/msbuild/issues/13739 is fixed and a new msbuild is consumed with the fix. -->
-  <UsingTask TaskName="ClearAssemblyReferenceVersions" AssemblyFile="$(GenFacadesTargetAssemblyPath)" Runtime="NET" Architecture="*" />
+  <UsingTask TaskName="ClearAssemblyReferenceVersions" AssemblyFile="$(GenFacadesTargetAssemblyPath)" Runtime="NET" Architecture="*" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="ClearAssemblyReferenceVersions" AssemblyFile="$(GenFacadesTargetAssemblyPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
   <PropertyGroup>
     <!-- Support zero version seeds by rewriting the output of the compiler. -->
-    <TargetsTriggeredByCompilation Condition="'$(DesignTimeBuild)' != 'true'">
+    <TargetsTriggeredByCompilation Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildHardenedGraph)' != 'true'">
       $(TargetsTriggeredByCompilation);ClearAssemblyReferenceVersions
     </TargetsTriggeredByCompilation>
+    <_ClearAssemblyReferenceVersionsAfterTargets Condition="'$(DesignTimeBuild)' != 'true' and '$(MSBuildHardenedGraph)' == 'true'">CoreCompile</_ClearAssemblyReferenceVersionsAfterTargets>
   </PropertyGroup>
 
-  <Target Name="ClearAssemblyReferenceVersions">
+  <Target Name="ClearAssemblyReferenceVersions" AfterTargets="$(_ClearAssemblyReferenceVersionsAfterTargets)">
     <PropertyGroup>
       <_ClearAssemblyReferenceVersionsAssembly>$(IntermediateOutputPath)$(TargetName)$(TargetExt)</_ClearAssemblyReferenceVersionsAssembly>
+      <_ClearAssemblyReferenceVersionsAssembly Condition="'$(MSBuildHardenedGraph)' == 'true'">@(IntermediateAssembly->'%(FullPath)')</_ClearAssemblyReferenceVersionsAssembly>
+      <_ClearAssemblyReferenceVersionsOutput Condition="'$(MSBuildHardenedGraph)' == 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'ZeroVersionSeeds', '$(TargetName)$(TargetExt)'))</_ClearAssemblyReferenceVersionsOutput>
+      <_ClearAssemblyReferenceVersionsDebugCopy>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'ClearRef', '$(TargetName)$(TargetExt)'))</_ClearAssemblyReferenceVersionsDebugCopy>
     </PropertyGroup>
 
     <!-- Copy the original assembly for debugging purposes -->
     <Copy SourceFiles="$(_ClearAssemblyReferenceVersionsAssembly)"
           DestinationFolder="$(IntermediateOutputPath)ClearRef"
-          Condition="'$(GenFacadesForceZeroVersionSeedsDebugMode)' == 'true'">
+          Condition="'$(GenFacadesForceZeroVersionSeedsDebugMode)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
       <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
     </Copy>
 
-    <ClearAssemblyReferenceVersions Assembly="$(_ClearAssemblyReferenceVersionsAssembly)" />
+    <CopyFiles SourceFiles="$(_ClearAssemblyReferenceVersionsAssembly)"
+               DestinationFiles="$(_ClearAssemblyReferenceVersionsDebugCopy)"
+               DeclaredInputs="$(_ClearAssemblyReferenceVersionsAssembly)"
+               DeclaredOutputs="$(_ClearAssemblyReferenceVersionsDebugCopy)"
+               Condition="'$(GenFacadesForceZeroVersionSeedsDebugMode)' == 'true' and '$(MSBuildHardenedGraph)' == 'true'" />
+
+    <ClearAssemblyReferenceVersions Assembly="$(_ClearAssemblyReferenceVersionsAssembly)"
+                                    Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+    <ClearAssemblyReferenceVersions Assembly="$(_ClearAssemblyReferenceVersionsAssembly)"
+                                    OutputAssembly="$(_ClearAssemblyReferenceVersionsOutput)"
+                                    DeclaredInputs="$(_ClearAssemblyReferenceVersionsAssembly)"
+                                    DeclaredOutputs="$(_ClearAssemblyReferenceVersionsOutput)"
+                                    Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <_ClearVersionIntermediateAssembly Include="@(IntermediateAssembly)" />
+      <IntermediateAssembly Remove="@(IntermediateAssembly)" />
+      <IntermediateAssembly Include="@(_ClearVersionIntermediateAssembly->'$(_ClearAssemblyReferenceVersionsOutput)')" />
+      <FileWrites Include="$(_ClearAssemblyReferenceVersionsOutput)" />
+      <FileWrites Include="$(_ClearAssemblyReferenceVersionsDebugCopy)" Condition="'$(GenFacadesForceZeroVersionSeedsDebugMode)' == 'true'" />
+    </ItemGroup>
   </Target>
 
 </Project>

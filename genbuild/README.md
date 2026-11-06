@@ -577,11 +577,27 @@ Unowned files, symlinks and invalid archive/receipt paths are rejected. Ordinary
 Csc still writes generated sources normally, without sidecars. Tree contents are
 not construction-time item discovery or supported directory inputs.
 
-The fresh full `net11.0` closure now reaches CoreLib's ApiCompat integration,
-which reports a `CoreCompile` dependency cycle and missing declared-I/O lists.
-Localization and validation remain enabled. Failed current-framework construction
-publishes neither a graph nor prebuilt products; complete CoreLib/native
-integration remains unproven.
+`ClearAssemblyReferenceVersions` now supports a distinct declared output.
+Hardened builds retain the raw compiler assembly and publish a rewritten
+`ZeroVersionSeeds` intermediate, preserving item metadata, debug backups and
+clean bookkeeping without relocating symbols or documentation. Ordinary builds
+retain their in-place rewrite. `TestClearAssemblyReferenceVersions` verifies
+producer ownership, zeroed reference versions, untouched inputs, ordinary
+DLL/PDB/XML byte parity, no-work and rejection of incorrect footprints or
+malformed assemblies.
+
+The whole libraries traversal now passes this rewrite and first fails at
+`WriteLinesToFile` without declarations in `shims/stubs/Directory.Build.targets`
+for System.Security.Permissions. Failed construction publishes no partial graph
+or product assemblies. A fresh real VB-shim profile now completes all 1,448 Ninja
+actions, including source-built VB compilation, reference rewriting/publication
+and 29 ApiCompat validations; repeated Ninja has no work. Runtime authoring supplies
+the implementation-side pack fallback and transitive private references without
+promoting public implementation binaries over pack references. Linking explicitly
+precedes ApiCompat input collection, so validation checks the final assembly and
+existing suppression identities remain valid. No validation was disabled or new
+suppression added; shared-cache hashes are unchanged. Complete libraries execution
+is not yet proven.
 
 Ordinary graph-input preparation now captures the complete assets JSON as
 item/property facts under `obj/nugetinputs/`, including framework/RID data,

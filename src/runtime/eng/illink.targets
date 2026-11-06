@@ -283,6 +283,7 @@
              Condition="'$(ILLinkTasksAssembly)' != ''" />
   <Target Name="ILLinkTrimAssembly"
           AfterTargets="CoreCompile"
+          BeforeTargets="PrepareInputsForApiCompatValidateAssemblies"
           Condition="'$(ILLinkTrimAssembly)' == 'true' and '$(DesignTimeBuild)' != 'true'"
           DependsOnTargets="_RestoreILLinkFinalOutputs;PrepareForAssembliesTrim"
           Inputs="$(ILLinkTrimInputAssembly);$(_ILLinkTrimSymbolsInput);$(MSBuildAllProjects);@(ReferencePathWithRefAssemblies);@(ILLinkDescriptorsLibraryBuildXml);$(ILLinkSubstitutionsLibraryBuildXml);@(ILLinkSuppressionsLibraryBuildXml);$(ILLinkTasksAssembly)"

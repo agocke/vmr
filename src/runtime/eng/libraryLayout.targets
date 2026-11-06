@@ -105,7 +105,10 @@
       <Output TaskParameter="ReferenceFiles" ItemName="_ApiCompatReferenceLayoutFile" />
     </Microsoft.DotNet.ApiCompat.Task.FormatApiCompatReferenceFiles>
     <ItemGroup>
+      <_ApiCompatPrivateReference Include="@(TargetPathWithTargetPlatformMoniker->'%(FullPath)')" Condition="'$(IsPrivateAssembly)' == 'true'" />
+      <_ApiCompatPrivateReference Include="@(_ResolvedProjectReferencePaths->Metadata('ApiCompatPrivateReferenceFiles'));@(ResolvedMatchingContract->Metadata('ApiCompatPrivateReferenceFiles'))" />
       <TargetPathWithTargetPlatformMoniker ApiCompatReferenceFiles="@(_ApiCompatReferenceLayoutFile)" />
+      <TargetPathWithTargetPlatformMoniker ApiCompatPrivateReferenceFiles="@(_ApiCompatPrivateReference->DistinctWithCase())" />
     </ItemGroup>
   </Target>
 

@@ -13,6 +13,15 @@
     <Compile Include="Greeting.cs" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <!-- Register validation first, as the package does before runtime imports its linker targets. -->
+  <Target Name="ApiCompatValidateAssemblies" AfterTargets="CoreCompile"
+          DependsOnTargets="PrepareInputsForApiCompatValidateAssemblies" />
+  <Target Name="PrepareInputsForApiCompatValidateAssemblies" DependsOnTargets="CoreCompile">
+    <Error Condition="'$(ILLinkTrimAssembly)' == 'true' and
+                      ('@(IntermediateAssembly)' != '$(ILLinkTrimAssemblyPath)' or
+                       !Exists('$(ILLinkTrimAssemblyPath)') or !Exists('$(IntermediateOutputPath)linker-ran'))"
+           Text="ApiCompat must select the final linked assembly after linking, not the pre-trim compiler output." />
+  </Target>
   <Import Project="$(RuntimeILLinkTargets)" />
   <!-- Exercise runtime's target ordering with a recording linker, not linker semantics. -->
   <UsingTask TaskName="ILLink" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">

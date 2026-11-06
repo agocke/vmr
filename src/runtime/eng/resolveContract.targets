@@ -113,10 +113,17 @@
 
   <Target Name="CollectProducedApiCompatReferences"
           BeforeTargets="CollectApiCompatInputs"
+          AfterTargets="GetReferencesForApiCompatValidateAssemblies"
           DependsOnTargets="ResolveProjectReferences"
           Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true'">
     <ItemGroup>
-      <ApiCompatProducedReferenceFile Include="@(ResolvedMatchingContract->Metadata('ApiCompatReferenceFiles'))" />
+      <!-- Compiler references alone do not include every transitive metadata dependency. -->
+      <ApiCompatAssemblyReferences Include="$(MicrosoftNetCoreAppRefPackRefDir)"
+                                   Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', '$(NetCoreAppCurrent)'))" />
+      <ApiCompatAssemblyReferences Include="@(_ResolvedProjectReferencePaths->Metadata('ApiCompatPrivateReferenceFiles'))" />
+      <ApiCompatContractAssemblyReferences Include="@(_ResolvedProjectReferencePaths->Metadata('ApiCompatPrivateReferenceFiles'))"
+                                           Condition="'$(ApiCompatUseImplementationReferencesForContract)' != 'false'" />
+      <ApiCompatProducedReferenceFile Include="@(ResolvedMatchingContract->Metadata('ApiCompatReferenceFiles'));@(_ResolvedProjectReferencePaths->Metadata('ApiCompatReferenceFiles'))" />
     </ItemGroup>
   </Target>
 

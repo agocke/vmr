@@ -39,6 +39,7 @@
     <CallTarget Targets="TestNativeTaskHost" />
     <CallTarget Targets="TestApiCompat" />
     <CallTarget Targets="TestGenFacades" />
+    <CallTarget Targets="TestClearAssemblyReferenceVersions" />
     <CallTarget Targets="TestNotSupportedGeneration" />
     <CallTarget Targets="TestGenerateFileFromTemplate" />
     <CallTarget Targets="TestVbc" />
@@ -551,6 +552,11 @@
     </PropertyGroup>
     <MSBuild Projects="$(MSBuildThisFileDirectory)RuntimeApiCompatReferenceFiles.proj" Targets="Test"
              Properties="MSBuildHardenedGraph=true;FixtureRoot=$(_RuntimeApiCompatRoot);RuntimeLibraryLayoutTargetsPath=$(_RuntimeApiCompatLayoutTargets);ApiCompatTaskAssembly=$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/tools/net11.0/Microsoft.DotNet.ApiCompat.Task.dll" />
+    <ItemGroup>
+      <_RuntimeApiCompatImplementationPolicy Include="true;false" />
+    </ItemGroup>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)RuntimeApiCompatReferenceFiles.proj" Targets="TestReferences"
+             Properties="MSBuildHardenedGraph=true;TestApiCompatInputs=true;ApiCompatUseImplementationReferencesForContract=%(_RuntimeApiCompatImplementationPolicy.Identity);FixtureRoot=$(_RuntimeApiCompatRoot);RuntimeLibraryLayoutTargetsPath=$(_RuntimeApiCompatLayoutTargets);RuntimeResolveContractTargetsPath=$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../src/runtime/eng/resolveContract.targets'));ApiCompatTaskAssembly=$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/tools/net11.0/Microsoft.DotNet.ApiCompat.Task.dll" />
   </Target>
 
   <Target Name="TestRuntimeLibraryLayout">
@@ -2225,6 +2231,106 @@
                       Exists('$(_FacadeRoot)%(_FacadeInvalid.Identity)/obj/Fixture.Forwards.cs') or
                       Exists('$(_FacadeRoot)%(_FacadeInvalid.Identity)/obj/wrong.cs')"
            Text="Incorrect facade input or output declarations must fail before writing generated source." />
+  </Target>
+  <Target Name="TestClearAssemblyReferenceVersions" DependsOnTargets="TestGenFacades">
+    <PropertyGroup>
+      <_ClearVersionRoot>$(_TestDirectory)clear-reference-versions/</_ClearVersionRoot>
+      <_ClearVersionVerifier>&quot;$(GenBuildTestHost)&quot; &quot;$(_ClearVersionRoot)Verifier.dll&quot;</_ClearVersionVerifier>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ClearVersionCase Include="action;ordinary;debug-action;debug-ordinary;wrong-input;wrong-output;bad-pe;in-place" />
+      <_ClearVersionPair Include="normal" Action="action" Ordinary="ordinary" Debug="false" />
+      <_ClearVersionPair Include="debug" Action="debug-action" Ordinary="debug-ordinary" Debug="true"
+                         Backups="&quot;$(_ClearVersionRoot)debug-action/obj/ClearRef/Fixture.dll&quot; &quot;$(_ClearVersionRoot)debug-ordinary/obj/ClearRef/Fixture.dll&quot;" />
+      <_ClearVersionInvalid Include="wrong-input;wrong-output" />
+      <_ClearVersionImport Include="Directory.Build.props;Directory.Build.targets;Directory.Packages.props" />
+    </ItemGroup>
+    <MakeDir Directories="$(_ClearVersionRoot)inputs" />
+    <WriteLinesToFile File="$(_ClearVersionRoot)%(_ClearVersionImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(_TestDirectory)genfacades/GoodSeed.dll" DestinationFiles="$(_ClearVersionRoot)inputs/Seed.dll" />
+    <WriteLinesToFile File="$(_ClearVersionRoot)inputs/bad.dll" Lines="not a PE file" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)GenFacades/ClearVersion.proj" DestinationFolder="$(_ClearVersionRoot)%(_ClearVersionCase.Identity)" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_ClearVersionRoot)Verifier.dll&quot; @&quot;$(_TestDirectory)genfacades/compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)GenFacades/ClearVersionVerifier.cs&quot;" />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json" DestinationFiles="$(_ClearVersionRoot)Verifier.runtimeconfig.json" />
+    <Exec Command="$(_App) build &quot;$(_ClearVersionRoot)%(_ClearVersionPair.Action)/ClearVersion.proj&quot; -p:GenFacadesForceZeroVersionSeedsDebugMode=%(_ClearVersionPair.Debug) -p:MSBuildEmitActionGraph=&quot;$(_ClearVersionRoot)%(_ClearVersionPair.Action)/build.ninja&quot;" />
+    <Error Condition="Exists('$(_ClearVersionRoot)%(_ClearVersionPair.Action)/obj') or Exists('$(_ClearVersionRoot)%(_ClearVersionPair.Action)/bin')"
+           Text="Reference clearing construction must not prebuild or rewrite the future compiler output." />
+    <Exec Command="$(_ClearVersionVerifier) graph &quot;$(_ClearVersionRoot)%(_ClearVersionPair.Action)/build.ninja&quot; &quot;$(_ClearVersionRoot)%(_ClearVersionPair.Action)/obj/Fixture.dll&quot; &quot;$(_ClearVersionRoot)%(_ClearVersionPair.Action)/obj/ZeroVersionSeeds/Fixture.dll&quot; &quot;$(_ClearVersionRoot)%(_ClearVersionPair.Action)/bin/Fixture.dll&quot;" />
+    <Exec WorkingDirectory="$(_ClearVersionRoot)%(_ClearVersionPair.Action)" Command="ninja -f build.ninja" />
+    <Exec Command="$(_App) restore &quot;$(_ClearVersionRoot)%(_ClearVersionPair.Ordinary)/ClearVersion.proj&quot; -t:Build -p:GenFacadesForceZeroVersionSeedsDebugMode=%(_ClearVersionPair.Debug)" />
+    <Exec Command="$(_ClearVersionVerifier) compare &quot;$(_ClearVersionRoot)inputs/Seed.dll&quot; &quot;$(_ClearVersionRoot)%(_ClearVersionPair.Action)/bin/Fixture.dll&quot; &quot;$(_ClearVersionRoot)%(_ClearVersionPair.Ordinary)/bin/Fixture.dll&quot; &quot;$(_ClearVersionRoot)%(_ClearVersionPair.Action)/obj/Fixture.dll&quot; %(_ClearVersionPair.Backups)" />
+    <Exec WorkingDirectory="$(_ClearVersionRoot)%(_ClearVersionPair.Action)" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_ClearVersionNoWork" />
+    </Exec>
+    <Error Condition="'@(_ClearVersionNoWork->WithMetadataValue('Identity', 'ninja: no work to do.')->Count())' != '2'"
+           Text="Reference clearing graphs must settle to no work." />
+    <Exec Command="$(_App) build &quot;$(_ClearVersionRoot)%(_ClearVersionInvalid.Identity)/ClearVersion.proj&quot; -t:Invalid -p:TestCase=%(_ClearVersionInvalid.Identity) -p:MSBuildEmitActionGraph=&quot;$(_ClearVersionRoot)%(_ClearVersionInvalid.Identity)/build.ninja&quot;" />
+    <Exec WorkingDirectory="$(_ClearVersionRoot)%(_ClearVersionInvalid.Identity)" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" ItemName="_ClearVersionInvalidExit" />
+    </Exec>
+    <Error Condition="@(_ClearVersionInvalidExit->AnyHaveMetadataValue('Identity', '0')) or
+                      Exists('$(_ClearVersionRoot)%(_ClearVersionInvalid.Identity)/obj/output.dll') or
+                      Exists('$(_ClearVersionRoot)%(_ClearVersionInvalid.Identity)/obj/wrong.dll')"
+           Text="Incorrect declarations must fail before rewriting any output." />
+    <MakeDir Directories="$(_ClearVersionRoot)bad-pe/obj" />
+    <Copy SourceFiles="$(_ClearVersionRoot)inputs/Seed.dll" DestinationFiles="$(_ClearVersionRoot)bad-pe/obj/output.dll" />
+    <Exec Command="$(_App) build &quot;$(_ClearVersionRoot)bad-pe/ClearVersion.proj&quot; -t:Invalid -p:TestCase=bad-pe -p:MSBuildEmitActionGraph=&quot;$(_ClearVersionRoot)bad-pe/build.ninja&quot;" />
+    <Exec WorkingDirectory="$(_ClearVersionRoot)bad-pe" Command="ninja -f build.ninja" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ClearVersionBadPeExit" />
+    </Exec>
+    <GetFileHash Files="$(_ClearVersionRoot)inputs/Seed.dll;$(_ClearVersionRoot)bad-pe/obj/output.dll">
+      <Output TaskParameter="Items" ItemName="_ClearVersionBadPeHash" />
+    </GetFileHash>
+    <Error Condition="'$(_ClearVersionBadPeExit)' == '0' or '@(_ClearVersionBadPeHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Invalid PE input must fail without replacing an earlier valid output." />
+    <Exec Command="$(_App) restore &quot;$(_ClearVersionRoot)in-place/ClearVersion.proj&quot; -t:Invalid -p:TestCase=in-place" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ClearVersionInPlaceExit" />
+    </Exec>
+    <GetFileHash Files="$(_ClearVersionRoot)inputs/Seed.dll;$(_ClearVersionRoot)in-place/obj/input.dll">
+      <Output TaskParameter="Items" ItemName="_ClearVersionInPlaceHash" />
+    </GetFileHash>
+    <Error Condition="'$(_ClearVersionInPlaceExit)' == '0' or '@(_ClearVersionInPlaceHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Declared in-place rewriting must be rejected before modifying the input." />
+    <PropertyGroup>
+      <_ClearSdkRoot>$([MSBuild]::NormalizeDirectory('$(_ClearVersionRoot)', 'sdk'))</_ClearSdkRoot>
+      <_ClearSdkHostOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_ClearSdkHostOS>
+      <_ClearSdkHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_ClearSdkHostOS>
+      <_ClearSdkHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_ClearSdkHostOS>
+      <_ClearSdkHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_ClearSdkHostOS>
+      <_ClearSdkArguments>-p:Configuration=Debug -p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:MSBuildGraphRepositoryRoot=&quot;$(_ClearSdkRoot)&quot; -p:MSBuildGraphHostOS=$(_ClearSdkHostOS)</_ClearSdkArguments>
+    </PropertyGroup>
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)GenFacades/ClearVersion.csproj;$(MSBuildThisFileDirectory)GenFacades/Types.cs" DestinationFolder="$(_ClearSdkRoot)action" />
+    <Exec Command="$(_App) restore &quot;$(_ClearSdkRoot)action/ClearVersion.csproj&quot; $(_ClearSdkArguments)" />
+    <Exec Command="$(_App) build &quot;$(_ClearSdkRoot)action/ClearVersion.csproj&quot; $(_ClearSdkArguments) -p:MSBuildEmitActionGraph=&quot;$(_ClearSdkRoot)action/build.ninja&quot;" />
+    <Error Condition="Exists('$(_ClearSdkRoot)action/bin') or Exists('$(_ClearSdkRoot)action/obj/Debug/net11.0/Fixture.dll') or Exists('$(_ClearSdkRoot)action/obj/Debug/net11.0/ZeroVersionSeeds')"
+           Text="SDK reference clearing must construct without compiling or rewriting products." />
+    <Exec Command="$(_ClearVersionVerifier) graph &quot;$(_ClearSdkRoot)action/build.ninja&quot; &quot;$(_ClearSdkRoot)action/obj/Debug/net11.0/Fixture.dll&quot; &quot;$(_ClearSdkRoot)action/obj/Debug/net11.0/ZeroVersionSeeds/Fixture.dll&quot; &quot;$(_ClearSdkRoot)action/bin/Debug/net11.0/Fixture.dll&quot;" />
+    <Exec WorkingDirectory="$(_ClearSdkRoot)action" Command="ninja -f build.ninja &quot;$(_ClearSdkRoot)action/obj/Debug/net11.0/Fixture.dll&quot;" />
+    <GetFileHash Files="$(_ClearSdkRoot)action/obj/Debug/net11.0/Fixture.dll">
+      <Output TaskParameter="Hash" PropertyName="_ClearSdkOriginalHash" />
+    </GetFileHash>
+    <Exec WorkingDirectory="$(_ClearSdkRoot)action" Command="ninja -f build.ninja" />
+    <GetFileHash Files="$(_ClearSdkRoot)action/obj/Debug/net11.0/Fixture.dll">
+      <Output TaskParameter="Hash" PropertyName="_ClearSdkAfterHash" />
+    </GetFileHash>
+    <Error Condition="'$(_ClearSdkOriginalHash)' != '$(_ClearSdkAfterHash)'" Text="The rewrite must not mutate the real compiler output." />
+    <Exec WorkingDirectory="$(_ClearSdkRoot)action" Command="ninja -f build.ninja" ConsoleToMSBuild="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ClearSdkNoWork" />
+    </Exec>
+    <Error Condition="!$(_ClearSdkNoWork.Contains('no work to do'))" Text="The compiled SDK rewrite graph must settle to no work." />
+    <Copy SourceFiles="$(_ClearSdkRoot)action/obj/Debug/net11.0/Fixture.dll;$(_ClearSdkRoot)action/bin/Debug/net11.0/Fixture.dll;$(_ClearSdkRoot)action/bin/Debug/net11.0/Fixture.pdb;$(_ClearSdkRoot)action/bin/Debug/net11.0/Fixture.xml;$(_ClearSdkRoot)action/obj/Debug/net11.0/ClearRef/Fixture.dll"
+          DestinationFiles="$(_ClearSdkRoot)Original.dll;$(_ClearSdkRoot)Independent.dll;$(_ClearSdkRoot)Independent.pdb;$(_ClearSdkRoot)Independent.xml;$(_ClearSdkRoot)Backup.dll" />
+    <!-- Reuse the physical source root so ordinary and hardened SourceLink mappings agree. -->
+    <Exec Command="$(_App) restore &quot;$(_ClearSdkRoot)action/ClearVersion.csproj&quot; $(_ClearSdkArguments) -t:Rebuild -p:MSBuildRestoreGraphInputs=false -p:UseSharedCompilation=false -p:DeterministicSourcePaths=true" />
+    <Exec Command="$(_ClearVersionVerifier) compare &quot;$(_ClearSdkRoot)Original.dll&quot; &quot;$(_ClearSdkRoot)Independent.dll&quot; &quot;$(_ClearSdkRoot)action/bin/Debug/net11.0/Fixture.dll&quot; &quot;$(_ClearSdkRoot)Backup.dll&quot; &quot;$(_ClearSdkRoot)action/obj/Debug/net11.0/ClearRef/Fixture.dll&quot;" />
+    <GetFileHash Files="$(_ClearSdkRoot)Independent.pdb;$(_ClearSdkRoot)action/bin/Debug/net11.0/Fixture.pdb">
+      <Output TaskParameter="Items" ItemName="_ClearSdkPdbHash" />
+    </GetFileHash>
+    <GetFileHash Files="$(_ClearSdkRoot)Independent.xml;$(_ClearSdkRoot)action/bin/Debug/net11.0/Fixture.xml">
+      <Output TaskParameter="Items" ItemName="_ClearSdkDocHash" />
+    </GetFileHash>
+    <Error Condition="'@(_ClearSdkPdbHash->'%(FileHash)'->Distinct()->Count())' != '1' or '@(_ClearSdkDocHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Separating the rewritten assembly must preserve ordinary symbols and documentation publication." />
   </Target>
   <Target Name="TestNotSupportedGeneration">
     <PropertyGroup>

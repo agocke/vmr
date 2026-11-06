@@ -1135,14 +1135,28 @@ and explicit `ApiCompatProducedReferenceFile` members. Runtime exports the
 transitive `ApiCompatReferenceFiles` metadata from its reference-layout
 producers through ordinary project target outputs, flattening list-valued
 metadata before a pure, OS-case-aware formatter selects immediate pack DLLs
-and deduplicates diamond dependencies. ApiCompat consumes the
-matching contract's closure without introducing implementation-build cycles
-or changing directory fallback into explicit-file precedence.
+and deduplicates diamond dependencies. ApiCompat consumes both the matching
+contract's and implementation references' pack closures. The implementation-side
+search also receives the pack fallback, after its direct references. Separate
+`ApiCompatPrivateReferenceFiles` metadata propagates private assemblies such as
+System.Private.Uri that have no pack layout. These private dependencies are
+appended after direct files, respecting the contract-side implementation-reference
+opt-out; public transitive implementation binaries are not promoted over pack
+references. These queries do not introduce implementation-build cycles or change
+pack directory fallback into explicit-file precedence.
 Preparation skips these roots even if stale files exist. The formatter adds
 their selected members as exact inputs with `RequireProducer=true` metadata;
 the graph writer requires prior declared output owners before publication.
 An unused directory may have no members, but unresolved required references
 fail closed rather than discovering ambient siblings.
+
+Runtime linking now precedes ApiCompat input collection explicitly, rather than
+relying on the registration order of two `CoreCompile` after-targets. Validation
+consumes the final linked intermediate and retains its normal framework-based
+suppression identity, not `PreTrim`. The ordinary recording-linker regression
+exercises this ordering across symbol modes, untrimmed builds and incremental
+recovery; runtime reference fixtures cover private diamond closures, public
+reference precedence and both contract-reference policies.
 
 The actual current-framework Immutable reference closure independently
 executes 84 actions, including strict ApiCompat validation with the three
@@ -1206,6 +1220,16 @@ future producers, invalidates on source/exclusion changes, rejects invalid
 declarations or missing required inputs, and preserves prior partial-facade
 source on semantic failure. Unchanged facade actions have no Ninja work.
 
+`ClearAssemblyReferenceVersions` accepts an optional separate output and validates
+exact, distinct input/output declarations before touching files. Hardened targets
+run after `CoreCompile`, preserve its raw assembly, and remap `IntermediateAssembly`
+to a rewritten `ZeroVersionSeeds` output for downstream publication. Item metadata,
+debug backups and clean bookkeeping survive; PDB and documentation paths stay
+unchanged. Ordinary compilation retains its in-place rewrite. Focused seeded and
+real SDK compiler fixtures verify exclusive producer ownership, zeroed references,
+unchanged assembly version/MVID, ordinary DLL/PDB/XML byte parity and Ninja no-work.
+Invalid footprints and malformed PE input fail without modifying prior outputs.
+
 The standalone toolset now also builds the templating task from source.
 `GenerateFileFromTemplate` declares exactly one template input and one generated
 output, validating the canonical paths before reading or writing. The hardened
@@ -1243,13 +1267,24 @@ A fresh isolated System.Runtime.InteropServices.JavaScript Restore and graph
 construction produce no product DLLs. Its 502-action Ninja graph then builds the
 source-generation tools, CoreLib/library dependencies and the JavaScript library;
 the second execution reports no work. The whole libraries traversal passes the
-interop conflict frontier and now first fails at the shim's in-place
-`ClearAssemblyReferenceVersions` task, whose call lacks explicit declarations.
-Further deferred-item diagnostics on that failed path are not yet classified.
+interop conflict and reference-rewriting frontiers and now first fails at
+`WriteLinesToFile` without declarations in `shims/stubs/Directory.Build.targets`
+for System.Security.Permissions. Further deferred-item diagnostics on that failed
+path are not yet classified.
 The previously reported networking Build cycles do not recur. No whole-partition
 Ninja graph has been produced or executed; its preparation and failed construction
 produce no assemblies/resources or partial graph. Both profiles preserve the
 recorded shared cache hashes.
+
+A fresh real VB shim profile constructs without products and completes all 1,448
+Ninja actions, including source-built VB compilation, the shim's separate-output
+rewrite/publication and 29 ApiCompat validations. The previously failing
+ComponentModel.Primitives, Numerics and Reflection.Emit validations consume their
+final linked producers; private System.Private.Uri is an explicit input with its
+own producer. All success semaphores exist and repeated Ninja has no work. No
+suppression was added or validation relaxed, and the protected cache hashes remain
+unchanged. This verifies the shim dependency closure, not the whole libraries
+partition.
 
 ### NuGet fact capture
 
