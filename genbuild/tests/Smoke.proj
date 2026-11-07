@@ -117,6 +117,7 @@
     <Error Condition="'@(_SdkProgramOutput)' != 'Hello from genbuild.'" Text="The program built by the SDK action graph did not run correctly on the external runtime." />
     <CallTarget Targets="TestProjectReferences" />
     <CallTarget Targets="TestAnalyzerProjectReferences" />
+    <CallTarget Targets="TestCompilerPackageDependencies" />
     <CallTarget Targets="TestConfiguredPreparation" />
     <CallTarget Targets="TestDiscoveryPreparation" />
     <CallTarget Targets="TestFrameworkBasics" />
@@ -432,8 +433,8 @@
       <_ConfiguredReleaseInputs>@(_ConfiguredReleaseInput)</_ConfiguredReleaseInputs>
       <_ConfiguredChildInputs>@(_ConfiguredChildInput)</_ConfiguredChildInputs>
     </PropertyGroup>
-    <Error Condition="!$(_ConfiguredDebugInputs.Contains('Debug.inputs')) or $(_ConfiguredDebugInputs.Contains('Release.inputs')) or !$(_ConfiguredReleaseInputs.Contains('Release.inputs')) or !$(_ConfiguredChildInputs.Contains('Release.inputs'))"
-           Text="Compiler inputs must remain distinct across configured preparations." />
+    <Error Condition="$(_ConfiguredDebugInputs.Contains('Debug.inputs')) or $(_ConfiguredReleaseInputs.Contains('Release.inputs')) or $(_ConfiguredChildInputs.Contains('Release.inputs'))"
+           Text="Explicit project dependencies must not be duplicated into compiler preparation snapshots." />
     <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:Configuration=Debug -bl:&quot;$(_ConfiguredRoot)outer-build-rejected.binlog&quot;"
           IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
       <Output TaskParameter="ExitCode" PropertyName="_ConfiguredOuterExit" />
@@ -455,6 +456,10 @@
     <Error Condition="'$(_ConfiguredProductBuildExit)' == '0' or !$(_ConfiguredProductBuildLog.Contains('Graph-input preparation cannot build project outputs')) or Exists('$(_ConfiguredRoot)Parent/bin') or Exists('$(_ConfiguredRoot)Child/bin')"
            Text="Preparation must explicitly reject attempts to prebuild product or tool outputs." />
     <Exec Command="$(_App) build &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:TargetFramework=net11.0 -p:Configuration=Debug -p:MSBuildEmitActionGraph=&quot;$(_ConfiguredRoot)build.ninja&quot; -bl:&quot;$(_ConfiguredRoot)build.binlog&quot;" />
+    <Error Condition="!$([System.IO.File]::ReadAllText('$(_ConfiguredRoot)build.ninja').Contains('Parent/Debug.inputs')) or
+                      !$([System.IO.File]::ReadAllText('$(_ConfiguredRoot)build.ninja').Contains('Child/Release.inputs')) or
+                      $([System.IO.File]::ReadAllText('$(_ConfiguredRoot)build.ninja').Contains('Parent/Release.inputs'))"
+           Text="Compiler actions must select explicit dependencies from their configured project authoring." />
     <Error Condition="Exists('$(_ConfiguredRoot)Parent/bin/Debug/net11.0/Parent.dll') or Exists('$(_ConfiguredRoot)Child/bin/Release/net10.0/Child.dll')"
            Text="Configured graph construction must not compile products." />
     <Exec WorkingDirectory="$(_ConfiguredRoot)Parent" Command="ninja -f &quot;$(_ConfiguredRoot)build.ninja&quot;" />
@@ -1836,6 +1841,49 @@
                      Exists('$(_NuGetInputsRoot)missing-target.ninja') or Exists('$(_NuGetInputsRoot)missing-target.ninja.actions') or
                      Exists('$(_NuGetInputsRoot)invalid-format.ninja') or Exists('$(_NuGetInputsRoot)invalid-format.ninja.actions')"
            Text="Missing targets and unsupported fact formats must fail without partial graph publication." />
+  </Target>
+  <Target Name="TestCompilerPackageDependencies">
+    <PropertyGroup>
+      <_CompilerPackageRoot>$(_TestDirectory)compiler-package-dependencies/</_CompilerPackageRoot>
+      <_CompilerPackageDirectory>$(_CompilerPackageRoot)packages/genbuild.compiler.inputs/1.0.0/</_CompilerPackageDirectory>
+      <_CompilerPackageArguments>-p:DirectoryBuildPropsPath=&quot;$(_CompilerPackageRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_CompilerPackageRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_CompilerPackageRoot)Directory.Packages.props&quot; -p:RestorePackagesPath=&quot;$(_CompilerPackageRoot)packages&quot; -p:NuGetPackageRoot=&quot;$(_CompilerPackageRoot)packages/&quot;</_CompilerPackageArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_CompilerPackageRoot)package/analyzers/dotnet/cs/dependencies;$(_CompilerPackageRoot)package/tools/dependencies;$(_CompilerPackageRoot)package/build;$(_CompilerPackageRoot)feed" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)package/GenBuild.Compiler.Inputs.nuspec"
+                      Lines="&lt;package&gt;&lt;metadata&gt;&lt;id&gt;GenBuild.Compiler.Inputs&lt;/id&gt;&lt;version&gt;1.0.0&lt;/version&gt;&lt;authors&gt;genbuild&lt;/authors&gt;&lt;description&gt;Explicit compiler input fixture&lt;/description&gt;&lt;/metadata&gt;&lt;/package&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)package/analyzers/dotnet/cs/PackageAnalyzer.dll" Lines="Graph-only analyzer fixture" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)package/analyzers/dotnet/cs/dependencies/package.json" Lines="package companion" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)package/tools/LateAnalyzer.dll" Lines="Graph-only late analyzer fixture" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)package/tools/dependencies/late.json" Lines="late companion" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)package/build/GenBuild.Compiler.Inputs.targets"
+                      Lines="&lt;Project&gt;&lt;Target Name=&quot;AddLatePackageAnalyzer&quot; BeforeTargets=&quot;CoreCompile&quot;&gt;&lt;ItemGroup&gt;&lt;Analyzer Include=&quot;%24(MSBuildThisFileDirectory)../tools/LateAnalyzer.dll&quot; /&gt;&lt;/ItemGroup&gt;&lt;/Target&gt;&lt;/Project&gt;" Overwrite="true" />
+    <ZipDirectory SourceDirectory="$(_CompilerPackageRoot)package" DestinationFile="$(_CompilerPackageRoot)feed/GenBuild.Compiler.Inputs.1.0.0.nupkg" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)NuGet.Config"
+                      Lines="&lt;configuration&gt;&lt;packageSources&gt;&lt;clear /&gt;&lt;add key=&quot;local&quot; value=&quot;feed&quot; /&gt;&lt;/packageSources&gt;&lt;/configuration&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)App.csproj"
+                      Lines="&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;&lt;PropertyGroup&gt;&lt;TargetFramework&gt;net11.0&lt;/TargetFramework&gt;&lt;UseAppHost&gt;false&lt;/UseAppHost&gt;&lt;EnableNETAnalyzers&gt;false&lt;/EnableNETAnalyzers&gt;&lt;DisableImplicitFrameworkReferences&gt;true&lt;/DisableImplicitFrameworkReferences&gt;&lt;/PropertyGroup&gt;&lt;ItemGroup&gt;&lt;PackageReference Include=&quot;GenBuild.Compiler.Inputs&quot; Version=&quot;1.0.0&quot; /&gt;&lt;/ItemGroup&gt;&lt;/Project&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_CompilerPackageRoot)Program.cs" Lines="public class Program { }" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_CompilerPackageRoot)App.csproj&quot; $(_CompilerPackageArguments) -bl:&quot;$(_CompilerPackageRoot)restore.binlog&quot;" />
+    <PropertyGroup>
+      <_CompilerPackagePreparedInputs>$([System.IO.File]::ReadAllText('$(_CompilerPackageRoot)obj/cscinputs/Debug/AnyCPU/net11.0/App.csproj.g.props'))</_CompilerPackagePreparedInputs>
+    </PropertyGroup>
+    <Error Condition="$(_CompilerPackagePreparedInputs.Contains('genbuild.compiler.inputs')) or $(_CompilerPackagePreparedInputs.Contains('bincore/'))"
+           Text="Compiler preparation must not inventory package analyzer directories or snapshot the static compiler catalog." />
+    <WriteLinesToFile File="$(_CompilerPackageDirectory)analyzers/dotnet/cs/not-in-package.json" Lines="not acquired" Overwrite="true" />
+    <Exec Command="$(_App) build &quot;$(_CompilerPackageRoot)App.csproj&quot; $(_CompilerPackageArguments) -p:MSBuildEmitActionGraph=&quot;$(_CompilerPackageRoot)build.ninja&quot; -bl:&quot;$(_CompilerPackageRoot)build.binlog&quot;" />
+    <PropertyGroup>
+      <_CompilerPackageGraph>$([System.IO.File]::ReadAllText('$(_CompilerPackageRoot)build.ninja'))</_CompilerPackageGraph>
+    </PropertyGroup>
+    <Error Condition="!$(_CompilerPackageGraph.Contains('/Roslyn/bincore/Microsoft.CodeAnalysis.dll')) or
+                      !$(_CompilerPackageGraph.Contains('/analyzers/dotnet/cs/PackageAnalyzer.dll')) or
+                      !$(_CompilerPackageGraph.Contains('/analyzers/dotnet/cs/dependencies/package.json')) or
+                      !$(_CompilerPackageGraph.Contains('/tools/LateAnalyzer.dll')) or
+                      !$(_CompilerPackageGraph.Contains('/tools/dependencies/late.json')) or
+                      $(_CompilerPackageGraph.Contains('not-in-package.json')) or Exists('$(_CompilerPackageRoot)bin/Debug/net11.0/App.dll')"
+           Text="Graph construction must select package companions for final analyzers without filesystem inventory or compilation." />
   </Target>
   <Target Name="TestNuGetSdkResolution">
     <PropertyGroup>

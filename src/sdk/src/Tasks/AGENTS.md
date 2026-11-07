@@ -27,6 +27,18 @@ current-.NET-only:
   via the `<Sdk>` attribute.
 - `FrameworkPackages/` — per-TFM runtime framework version data.
 
+## Declared compiler package inputs
+
+Hardened `ResolveNuGetAssets` publishes `AnalyzerDependencyCandidates` from the
+package file inventories in its already-reconstructed assets model. These are
+candidates, not selected analyzer dependencies: Roslyn selects companions after
+the final `Analyzer` items are available, including package-target additions.
+Do not restore configured analyzer resolution or directory scans in compiler
+preparation. Explicit `AnalyzerDependency` authoring covers loose/generated files
+and package-adjacent files absent from the acquired inventory.
+Both primary and satellite `CompileManaged` calls consume `_CompilerToolInput`
+directly from the packaged Build catalog, not Restore snapshots.
+
 ## Build diagnostics (NETSDK errors / warnings / info)
 
 These are conventions that aren't visible from the code alone — getting them wrong

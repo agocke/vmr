@@ -347,6 +347,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       DefaultImplicitPackages="$(DefaultImplicitPackages)"
       DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="Analyzers" ItemName="ResolvedAnalyzers" />
+      <Output TaskParameter="AnalyzerDependencyCandidates" ItemName="_CompilerPackageFile" />
       <Output TaskParameter="ContentFilesToPreprocess" ItemName="_ContentFilesToPreprocess" />
       <Output TaskParameter="DebugSymbolsFiles" ItemName="_DebugSymbolsFiles" />
       <Output TaskParameter="ReferenceDocumentationFiles" ItemName="_ReferenceDocumentationFiles" />

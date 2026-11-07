@@ -28,6 +28,17 @@ Roslyn follows a **layered compiler architecture**:
 - `src/Compilers/CSharp/Portable/BoundTree/BoundNodes.xml` - Bound tree node definitions (generated code source)
 - `docs/wiki/Roslyn-Overview.md` - Architecture deep-dive
 
+## Declared compiler dependency inputs
+
+The opt-in declared-I/O compiler targets import `CompilerInputs.props`
+(`CompilerInputsPath` can override its location). genbuild publishes this
+relocatable catalog from its compiler and SDK-analyzer copy items.
+`ResolveCompilerDependencies` is a filesystem-free selector over candidate files
+and the final `Analyzer` items; run it inside `CoreCompile` after `BeforeTargets`
+hooks, not as an earlier dependency target. Loose/generated analyzer companions
+require explicit `AnalyzerDependency` items. Compiler preparation retains only
+framework-pack analyzer discovery pending the framework migration.
+
 ## Code Generation
 
 Several core data structures are generated from XML definitions — **never edit the generated `.cs` or `.vb` files directly**:
@@ -87,11 +98,11 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
   deterministic compilation and deterministic source paths are mandatory.
   Automatic mappings preserve SourceLink root aliases and cover project,
   generated-source and output paths, including CodeView. Restore's
-  `_CaptureCscToolInputs`/`_CaptureVbcToolInputs` prepare compiler/analyzer closures under
+  `_CaptureCscToolInputs`/`_CaptureVbcToolInputs` capture framework-analyzer directory facts under
   `$(MSBuildProjectExtensionsPath)cscinputs/` and `vbcinputs/`; hardened evaluation requires that
   import. SDK preparation covers the configured metadata requests reached during
   framework discovery as well as selected compilation requests. Capturing a
-  compiler closure does not request compilation of that framework.
+  framework-analyzer snapshot does not request compilation of that framework.
   Declare analyzer/generator dependencies, configs and additional files and
   trust their nominal compiler-input-only contract; enforcement is deferred
   without per-plugin gates. `CompileManaged` controls the child environment and

@@ -13,7 +13,7 @@ using Microsoft.CodeAnalysis.CommandLine;
 namespace Microsoft.CodeAnalysis.BuildTasks;
 
 /// <summary>
-/// Publishes Restore's discovered compiler and analyzer tool closure for a fresh Build evaluation.
+/// Publishes supplied framework-analyzer inputs for a fresh Build evaluation.
 /// </summary>
 [MSBuildMultiThreadableTask]
 public sealed class WriteCscInputs : Task, IMultiThreadableTask

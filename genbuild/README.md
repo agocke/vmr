@@ -72,6 +72,17 @@ preparation profile. Changed package-SDK requests or discovery configuration
 require a fresh Restore. See the
 [SDK-binding contract](../src/msbuild/documentation/specs/proposed/hardened-static-graph.md#prepared-sdk-imports).
 
+Assembly also publishes a relocatable `toolset/Roslyn/CompilerInputs.props`
+catalog from the files it copies. Compiler preparation does not resolve NuGet or
+targeting-pack assets: graph construction selects analyzer companions from the
+acquired package file lists and packaged SDK analyzer files, after the final
+`Analyzer` items are available. Only hardened Build imports the tool catalog;
+Restore does not copy its static file lists into per-project snapshots.
+Declare companions for loose or generated analyzers with `AnalyzerDependency`;
+files added beside an extracted package analyzer are not implicitly acquired
+inputs. Framework-pack analyzer companions still use the existing framework
+preparation snapshot.
+
 For normal `Directory.Build.props`, `Directory.Build.targets`, and
 `Directory.Packages.props` discovery, pass
 `-p:MSBuildGraphRepositoryRoot=/absolute/path/to/repository` to both Restore and

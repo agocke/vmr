@@ -54,8 +54,12 @@
   </ItemGroup>
   <Target Name="PrepareForBuild" />
   <Target Name="PrepareResourceNames" DependsOnTargets="CreateManifestResourceNames" />
-  <Target Name="ResolvePackageAssets" />
-  <Target Name="ResolveTargetingPackAssets" />
+  <Target Name="ResolvePackageAssets">
+    <Error Condition="'$(MSBuildRestoreGraphInputs)' == 'true'" Text="Compiler preparation must not resolve package assets." />
+  </Target>
+  <Target Name="ResolveTargetingPackAssets">
+    <Error Condition="'$(MSBuildRestoreGraphInputs)' == 'true'" Text="Compiler preparation must not resolve targeting-pack assets." />
+  </Target>
   <Target Name="_BeforeVBCSCoreCompile" DependsOnTargets="CoreResGen;_GenerateCompileInputs" />
   <Target Name="Produce">
     <ItemGroup Condition="'$(TestCase)' == 'explicit-runtime'">

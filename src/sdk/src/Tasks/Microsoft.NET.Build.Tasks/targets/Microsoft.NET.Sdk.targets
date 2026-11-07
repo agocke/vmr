@@ -1341,10 +1341,10 @@ Copyright (c) .NET Foundation. All rights reserved.
     </FormatCsc>
     <CompileManaged Condition="'$(MSBuildHardenedGraph)' == 'true'"
                 DotNetHost="$(DOTNET_HOST_PATH)"
-                CompilerAssembly="$(_BuildTasksDirectory)bincore/csc.dll"
+                CompilerAssembly="$([MSBuild]::NormalizePath('$(_BuildTasksDirectory)', 'bincore/csc.dll'))"
                 CompilerArguments="$(_HardenedSatelliteCscArguments)"
                 PathMappings="@(_HardenedSatelliteCscPathMapping)"
-                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CscPreparedToolInput);@(_HardenedSatelliteCscInput)"
+                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CompilerToolInput);@(_CscPreparedToolInput);@(_HardenedSatelliteCscInput)"
                 DeclaredOutputs="@(_HardenedSatelliteCscOutput)" />
     <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
       <FileWrites Include="$(_AssemblyInfoFile);@(_HardenedSatelliteCscOutput)" />

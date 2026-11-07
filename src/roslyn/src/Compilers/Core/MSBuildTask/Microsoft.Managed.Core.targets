@@ -16,6 +16,11 @@
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.MapSourceRoots" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
 
   <Import Project="Microsoft.Managed.Core.CurrentVersions.targets" />
+  <PropertyGroup>
+    <CompilerInputsPath Condition="'$(CompilerInputsPath)' == ''">$(_BuildTasksDirectory)CompilerInputs.props</CompilerInputsPath>
+  </PropertyGroup>
+  <Import Project="$(CompilerInputsPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.ResolveCompilerDependencies" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
 
   <Target Name="ShimReferencePathsWhenCommonTargetsDoesNotUnderstandReferenceAssemblies"
           BeforeTargets="CoreCompile"

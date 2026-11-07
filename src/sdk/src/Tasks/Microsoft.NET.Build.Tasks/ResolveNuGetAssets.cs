@@ -44,6 +44,8 @@ public sealed class ResolveNuGetAssets : TaskBase
     [Output]
     public ITaskItem[] Analyzers { get; set; } = [];
     [Output]
+    public ITaskItem[] AnalyzerDependencyCandidates { get; set; } = [];
+    [Output]
     public ITaskItem[] CompileTimeAssemblies { get; set; } = [];
     [Output]
     public ITaskItem[] ContentFilesToPreprocess { get; set; } = [];
@@ -130,7 +132,19 @@ public sealed class ResolveNuGetAssets : TaskBase
                 .Concat(selection.ResourceAssemblies).Concat(selection.RuntimeTargets), item =>
                 item.GetMetadata("DestinationSubDirectory") + Path.GetFileName(item.ItemSpec));
 
+            List<ITaskItem> analyzerDependencyCandidates = [];
+            foreach (LockFileLibrary library in model.Libraries.Where(library => library.Type == "package"))
+            {
+                LockFileTargetLibrary package = new() { Name = library.Name, Version = library.Version };
+                foreach (string file in library.Files)
+                {
+                    analyzerDependencyCandidates.Add(new Microsoft.Build.Utilities.TaskItem(
+                        Microsoft.Build.Evaluation.ProjectCollection.Escape(resolver.ResolvePackageAssetPath(package, file))));
+                }
+            }
+
             Analyzers = selection.Analyzers;
+            AnalyzerDependencyCandidates = analyzerDependencyCandidates.ToArray();
             CompileTimeAssemblies = selection.CompileTimeAssemblies;
             ContentFilesToPreprocess = selection.ContentFilesToPreprocess;
             DebugSymbolsFiles = selection.DebugSymbolsFiles;

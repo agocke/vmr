@@ -109,11 +109,6 @@ Copyright (c) .NET Foundation. All rights reserved.
                       ProjectLanguage="$(Language)" />
   </Target>
 
-  <Target Name="_PrepareNuGetAnalyzersForGraph"
-          BeforeTargets="_CaptureCscToolInputs;_CaptureVbcToolInputs"
-          DependsOnTargets="ResolveLockFileAnalyzers"
-          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
-
   <Target Name="_ComputeFrameworkReferenceFetchManifestProfile"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true'">
     <PropertyGroup>

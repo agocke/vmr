@@ -17,14 +17,13 @@
           Condition="'$(UsingMicrosoftNETSdk)' != 'true' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
 
   <Target Name="_CaptureVbcToolInputs"
-          DependsOnTargets="ResolvePackageAssets;ResolveTargetingPackAssets"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
     <ItemGroup>
-      <_VbcAnalyzerDirectory Include="@(Analyzer->'%(RootDir)%(Directory)')" KeepDuplicates="false" />
+      <_VbcAnalyzerDirectory Include="@(Analyzer->'%(RootDir)%(Directory)')"
+                            Condition="'%(Analyzer.FrameworkReferenceName)' != ''" KeepDuplicates="false" />
     </ItemGroup>
     <ItemGroup>
-      <_VbcToolInput Include="$(_BuildTasksDirectory)bincore/**/*;@(AnalyzerDependency)" />
-      <_VbcToolInput Include="%(_VbcAnalyzerDirectory.Identity)**/*" />
+      <_VbcToolInput Include="%(_VbcAnalyzerDirectory.Identity)**/*" Condition="'%(_VbcAnalyzerDirectory.Identity)' != ''" />
     </ItemGroup>
     <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_VbcInputManifestPath)'))" />
     <WriteCscInputs Inputs="@(_VbcToolInput)" OutputFile="$(_VbcInputManifestPath)" ItemName="_VbcPreparedToolInput" />
@@ -271,12 +270,18 @@
       <Output TaskParameter="PathMappings" ItemName="_HardenedVbcPathMapping" />
     </FormatVbc>
 
+    <ResolveCompilerDependencies Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                                 Analyzers="@(Analyzer)" CandidateFiles="@(_CompilerPackageFile);@(_CompilerAnalyzerFile)"
+                                 DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="Dependencies" ItemName="_CompilerAnalyzerDependency" />
+    </ResolveCompilerDependencies>
+
     <CompileManaged Condition="'$(MSBuildHardenedGraph)' == 'true'"
                     DotNetHost="$(DOTNET_HOST_PATH)"
-                    CompilerAssembly="$(_BuildTasksDirectory)bincore/vbc.dll"
+                    CompilerAssembly="$([MSBuild]::NormalizePath('$(_BuildTasksDirectory)', 'bincore/vbc.dll'))"
                     CompilerArguments="$(_HardenedVbcArguments)"
                     PathMappings="@(_HardenedVbcPathMapping)"
-                    DeclaredInputs="$(DOTNET_HOST_PATH);@(_VbcPreparedToolInput);@(_HardenedVbcInput)"
+                    DeclaredInputs="$(DOTNET_HOST_PATH);@(_CompilerToolInput);@(_VbcPreparedToolInput);@(_CompilerAnalyzerDependency);@(_HardenedVbcInput)"
                     DeclaredOutputs="@(_HardenedVbcOutput)"
                     DeclaredOutputTrees="@(_HardenedVbcTree)" />
     <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">

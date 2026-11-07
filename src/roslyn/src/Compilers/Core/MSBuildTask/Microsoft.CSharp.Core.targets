@@ -17,14 +17,13 @@
           Condition="'$(UsingMicrosoftNETSdk)' != 'true' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
 
   <Target Name="_CaptureCscToolInputs"
-          DependsOnTargets="ResolvePackageAssets;ResolveTargetingPackAssets"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
     <ItemGroup>
-      <_CscAnalyzerDirectory Include="@(Analyzer->'%(RootDir)%(Directory)')" KeepDuplicates="false" />
+      <_CscAnalyzerDirectory Include="@(Analyzer->'%(RootDir)%(Directory)')"
+                            Condition="'%(Analyzer.FrameworkReferenceName)' != ''" KeepDuplicates="false" />
     </ItemGroup>
     <ItemGroup>
-      <_CscToolInput Include="$(_BuildTasksDirectory)bincore/**/*;@(AnalyzerDependency)" />
-      <_CscToolInput Include="%(_CscAnalyzerDirectory.Identity)**/*" />
+      <_CscToolInput Include="%(_CscAnalyzerDirectory.Identity)**/*" Condition="'%(_CscAnalyzerDirectory.Identity)' != ''" />
     </ItemGroup>
     <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_CscInputManifestPath)'))" />
     <WriteCscInputs Inputs="@(_CscToolInput)" OutputFile="$(_CscInputManifestPath)" />
@@ -303,12 +302,18 @@
       <Output TaskParameter="PathMappings" ItemName="_HardenedCscPathMapping" />
     </FormatCsc>
 
+    <ResolveCompilerDependencies Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                                 Analyzers="@(Analyzer)" CandidateFiles="@(_CompilerPackageFile);@(_CompilerAnalyzerFile)"
+                                 DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="Dependencies" ItemName="_CompilerAnalyzerDependency" />
+    </ResolveCompilerDependencies>
+
     <CompileManaged Condition="'$(MSBuildHardenedGraph)' == 'true'"
                 DotNetHost="$(DOTNET_HOST_PATH)"
-                CompilerAssembly="$(_BuildTasksDirectory)bincore/csc.dll"
+                CompilerAssembly="$([MSBuild]::NormalizePath('$(_BuildTasksDirectory)', 'bincore/csc.dll'))"
                 CompilerArguments="$(_HardenedCscArguments)"
                 PathMappings="@(_HardenedCscPathMapping)"
-                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CscPreparedToolInput);@(_HardenedCscInput)"
+                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CompilerToolInput);@(_CscPreparedToolInput);@(_CompilerAnalyzerDependency);@(_HardenedCscInput)"
                 DeclaredOutputs="@(_HardenedCscOutput)"
                 DeclaredOutputTrees="@(_HardenedCscTree)" />
 

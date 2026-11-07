@@ -61,7 +61,8 @@
     <IntermediateAssembly Include="obj/Hello.dll" />
     <IntermediateRefAssembly Include="obj/ref/Hello.dll" />
     <ReferencePathWithRefAssemblies Include="@(_FrameworkReferenceManifestCompileReference)" />
-    <Analyzer Include="@(_FrameworkReferenceManifestFrameworkReference->'%(TargetingPackPath)/analyzers/dotnet/cs/System.Text.RegularExpressions.Generator.dll')" />
+    <Analyzer Include="@(_FrameworkReferenceManifestFrameworkReference->'%(TargetingPackPath)/analyzers/dotnet/cs/System.Text.RegularExpressions.Generator.dll')"
+              FrameworkReferenceName="Microsoft.NETCore.App" />
     <Analyzer Include="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll;$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll" />
   </ItemGroup>
   <ItemGroup Condition="$(TestCase.StartsWith('resource-'))">
@@ -77,8 +78,12 @@
   <Target Name="_BeforeVBCSCoreCompile" DependsOnTargets="$(_SigningTarget);$(_ResourceTargets)" />
   <Target Name="PrepareForBuild" />
   <Target Name="PrepareResourceNames" />
-  <Target Name="ResolvePackageAssets" />
-  <Target Name="ResolveTargetingPackAssets" />
+  <Target Name="ResolvePackageAssets">
+    <Error Condition="'$(MSBuildRestoreGraphInputs)' == 'true'" Text="Compiler preparation must not resolve package assets." />
+  </Target>
+  <Target Name="ResolveTargetingPackAssets">
+    <Error Condition="'$(MSBuildRestoreGraphInputs)' == 'true'" Text="Compiler preparation must not resolve targeting-pack assets." />
+  </Target>
   <Target Name="Produce">
     <WriteLinesToFile File="%(EmbeddedResource.Identity)" Lines="$(_ResourceData)"
                       Overwrite="true" Encoding="UTF-8" DeclaredInputs="" DeclaredOutputs="%(EmbeddedResource.Identity)"

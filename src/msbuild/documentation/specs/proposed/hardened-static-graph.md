@@ -469,6 +469,22 @@ This changes neither SourceLink enablement policy nor the snapshot format.
 The analyzer marker is prepared during Restore, not written as an in-place
 action during graph construction.
 
+Hardened compiler evaluation consumes the packaged `CompilerInputs.props` tool
+catalog directly rather than enumerating or snapshotting the compiler directory.
+Compiler preparation no longer invokes
+`ResolvePackageAssets`, `ResolveTargetingPackAssets`, or `ResolveLockFileAnalyzers`.
+The existing pure NuGet selection publishes dependency candidates from the
+package file lists in its already-reconstructed assets model. Immediately before
+declared compilation, `ResolveCompilerDependencies` selects candidates below the
+directories of the final analyzers, including analyzers added by package targets.
+The same selection handles the packaged SDK analyzer catalog without filesystem
+discovery. Loose and generated analyzer companions require explicit
+`AnalyzerDependency` authoring; project-dependent inputs stay in authoring rather
+than being duplicated into compiler snapshots. Framework-pack analyzer-directory
+capture remains in those snapshots pending the separate framework migration.
+This removes compiler-owned configured resolution but does not remove the
+additional configured preparation traversal.
+
 Roslyn and SDK analyzer-package generators publish deterministic inventories of
 their emitted global configs in package authoring. Hardened targets select from
 these items using the existing version, mode, category and warnings-as-errors
