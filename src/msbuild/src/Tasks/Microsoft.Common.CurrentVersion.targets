@@ -6118,11 +6118,11 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     <PropertyGroup>
       <_MSBuildGraphInputsCaptureTarget Condition="'$(_MSBuildGraphInputsCaptureTarget)' == ''">_CaptureHardenedGraphInputs</_MSBuildGraphInputsCaptureTarget>
     </PropertyGroup>
-    <!-- Restore each selected configuration without forcing its framework onto dependencies. -->
+    <!-- Restore without forcing the selected framework or capture selector onto dependencies. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"
              Targets="Restore"
              Properties="MSBuildRestoreGraphInputs=false;EnableFrameworkReferenceFetchManifest=false"
-             RemoveProperties="TargetFramework"
+             RemoveProperties="TargetFramework;_MSBuildGraphInputsCaptureTarget"
              BuildInParallel="false" />
     <!-- Capture must import restored package authoring rather than Restore's suppressed extensions. -->
     <MSBuild Projects="$(MSBuildProjectFullPath)"

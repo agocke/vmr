@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 
@@ -319,6 +320,22 @@ namespace ILLink.Tasks
         protected override string GenerateResponseFileCommands()
         {
             var args = new StringBuilder();
+            if (DeclaredInputs is not null || DeclaredOutputs is not null)
+            {
+                if (DeclaredInputs is null || DeclaredOutputs is null ||
+                    string.IsNullOrEmpty(_illinkPath) || string.IsNullOrEmpty(DotNetHostPath))
+                    throw new ArgumentException("Declared-I/O ILLink requires explicit inputs, outputs, linker and host paths.");
+
+                if (CustomSteps is { Length: > 0 } || DumpDependencies)
+                    throw new ArgumentException("Custom steps and dependency dumps are not supported by declared-I/O ILLink.");
+
+                ValidateDeclaredIOArguments();
+                args.AppendLine("--explicit-io");
+                foreach (var input in DeclaredInputs)
+                    args.Append("--explicit-input ").AppendLine(Quote(Path.GetFullPath(input.ItemSpec)));
+                foreach (var output in DeclaredOutputs)
+                    args.Append("--explicit-output ").AppendLine(Quote(Path.GetFullPath(output.ItemSpec)));
+            }
 
             if (RootDescriptorFiles != null)
             {
@@ -439,6 +456,8 @@ namespace ILLink.Tasks
                     // implementation assemblies.
                     if (assemblyNames.Contains(assemblyName))
                         continue;
+                    if (DeclaredInputs is not null)
+                        assemblyNames.Add(assemblyName);
 
                     args.Append("-reference ").AppendLine(Quote(assemblyPath));
 
@@ -561,6 +580,50 @@ namespace ILLink.Tasks
             }
 
             return args.ToString();
+        }
+
+        void ValidateDeclaredIOArguments()
+        {
+            var arguments = new Queue<string>();
+            foreach (Match match in Regex.Matches(ExtraArgs ?? "", "\"([^\"]*)\"|(\\S+)"))
+                arguments.Enqueue(match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value);
+
+            while (arguments.Count > 0)
+            {
+                var option = arguments.Dequeue();
+                switch (option)
+                {
+                    case "-x":
+                    case "--substitutions":
+                    case "--link-attributes":
+                    case "--ignore-link-attributes":
+                    case "--skip-unresolved":
+                    case "--trim-mode":
+                    case "--nowarn":
+                    case "--disable-opt":
+                    case "-b":
+                        ReadArgument();
+                        break;
+                    case "--action":
+                        ReadArgument();
+                        if (arguments.Count > 0 && !arguments.Peek().StartsWith("-", StringComparison.Ordinal))
+                            ReadArgument();
+                        break;
+                    case "--preserve-symbol-paths":
+                        break;
+                    default:
+                        throw new ArgumentException($"Unsupported declared-I/O ILLink argument '{option}'; use explicit references, not directory searches or response files.");
+                }
+            }
+
+            string ReadArgument()
+            {
+                var argument = arguments.Count > 0 ? arguments.Dequeue() :
+                    throw new ArgumentException("Missing ILLink argument value.");
+                if (argument.StartsWith("@", StringComparison.Ordinal))
+                    throw new ArgumentException("Declared-I/O ILLink requires explicit files, not file lists.");
+                return argument;
+            }
         }
     }
 }

@@ -8,7 +8,9 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using Mono.Cecil;
 using Mono.Linker;
+using Mono.Linker.Steps;
 using Xunit;
 
 namespace ILLink.Tasks.Tests
@@ -17,6 +19,189 @@ namespace ILLink.Tasks.Tests
     // the task -> response file -> parsed arguments -> options on LinkContext
     public class TaskArgumentTests
     {
+        [Theory]
+        [InlineData("-d references")]
+        [InlineData("\"-d\" \"references with spaces\"")]
+        [InlineData("@inputs.rsp")]
+        [InlineData("--link-attributes @inputs.txt")]
+        [InlineData("-reference undeclared.dll")]
+        [InlineData("--explicit-io")]
+        public void DeclaredIORejectsImplicitInputArguments(string arguments)
+        {
+            var task = new MockTask
+            {
+                DotNetHostPath = "dotnet",
+                DeclaredInputs = Array.Empty<ITaskItem>(),
+                DeclaredOutputs = Array.Empty<ITaskItem>(),
+                ExtraArgs = arguments
+            };
+            Assert.Throws<ArgumentException>(() => task.CreateDriver());
+        }
+
+        [Fact]
+        public void ExplicitReferencesDoNotResolveAdjacentAssemblies()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "illink-explicit-" + Guid.NewGuid());
+            Directory.CreateDirectory(root);
+            try
+            {
+                string reference = Path.Combine(root, "Reference.dll");
+                string neighbor = Path.Combine(root, "Neighbor.dll");
+                WriteTestAssembly(reference);
+                WriteTestAssembly(neighbor);
+                var task = new MockTask
+                {
+                    ReferenceAssemblyPaths = new ITaskItem[] { new TaskItem(reference) },
+                    DotNetHostPath = "dotnet",
+                    DeclaredInputs = new ITaskItem[] { new TaskItem(reference) },
+                    DeclaredOutputs = Array.Empty<ITaskItem>(),
+                    ExtraArgs = "--skip-unresolved true"
+                };
+                using (var driver = task.CreateDriver())
+                {
+                    Assert.NotNull(driver.Context.TryResolve("Reference"));
+                    Assert.Null(driver.Context.TryResolve("Neighbor"));
+                    Assert.Throws<InvalidOperationException>(() => driver.Context.Resolver.GetAssembly(neighbor));
+                }
+
+                using var ordinary = new MockTask { ExtraArgs = $"-d \"{root}\"" }.CreateDriver();
+                Assert.NotNull(ordinary.Context.TryResolve("Neighbor"));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        public void ExplicitCompanionsControlReadsAndOutputs(bool includeCompanions, bool includeOutputs)
+        {
+            string root = Path.Combine(Path.GetTempPath(), "illink-explicit-" + Guid.NewGuid());
+            Directory.CreateDirectory(root);
+            try
+            {
+                string assembly = Path.Combine(root, "Reference.dll");
+                string symbols = Path.ChangeExtension(assembly, ".pdb");
+                string config = assembly + ".config";
+                string output = Path.Combine(root, "out");
+                WriteTestAssembly(assembly);
+                File.WriteAllText(symbols, "symbols");
+                File.WriteAllText(config, "config");
+                string[] inputs = includeCompanions ? new[] { assembly, symbols, config } : new[] { assembly };
+                var task = new MockTask
+                {
+                    AssemblyPaths = new ITaskItem[] { new TaskItem(assembly) },
+                    OutputDirectory = new TaskItem(output),
+                    DotNetHostPath = "dotnet",
+                    DeclaredInputs = inputs.Select(path => (ITaskItem)new TaskItem(path)).ToArray(),
+                    DeclaredOutputs = (includeOutputs ? inputs : new[] { assembly })
+                        .Select(path => (ITaskItem)new TaskItem(Path.Combine(output, Path.GetFileName(path)))).ToArray(),
+                    ExtraArgs = "--action copy -b true"
+                };
+                using var driver = task.CreateDriver();
+                Assert.NotNull(driver.Context.TryResolve("Reference"));
+                if (includeCompanions && !includeOutputs)
+                {
+                    Assert.Throws<InvalidOperationException>(() => new OutputStep().Process(driver.Context));
+                    return;
+                }
+                new OutputStep().Process(driver.Context);
+                Assert.True(File.Exists(Path.Combine(output, "Reference.dll")));
+                Assert.Equal(includeCompanions, File.Exists(Path.Combine(output, "Reference.pdb")));
+                Assert.Equal(includeCompanions, File.Exists(Path.Combine(output, "Reference.dll.config")));
+                if (includeCompanions)
+                {
+                    Assert.Equal("symbols", File.ReadAllText(Path.Combine(output, "Reference.pdb")));
+                    Assert.Equal("config", File.ReadAllText(Path.Combine(output, "Reference.dll.config")));
+                }
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ExplicitIORejectsLinkedResources(bool includeResourceInput)
+        {
+            string root = Path.Combine(Path.GetTempPath(), "illink-explicit-" + Guid.NewGuid());
+            Directory.CreateDirectory(root);
+            try
+            {
+                string path = Path.Combine(root, "Reference.dll");
+                string resource = Path.Combine(root, "resource.txt");
+                File.WriteAllText(resource, "linked resource");
+                using (var assembly = AssemblyDefinition.CreateAssembly(
+                    new AssemblyNameDefinition("Reference", new Version(1, 0)),
+                    "Reference.dll", ModuleKind.Dll))
+                {
+                    assembly.MainModule.Resources.Add(new LinkedResource(
+                        "LinkedResource", Mono.Cecil.ManifestResourceAttributes.Public, resource));
+                    assembly.Write(path);
+                }
+
+                using (var ordinary = new MockTask
+                {
+                    AssemblyPaths = new ITaskItem[] { new TaskItem(path) },
+                    DotNetHostPath = "dotnet"
+                }.CreateDriver())
+                {
+                    var assembly = ordinary.Context.Resolver.GetAssembly(path);
+                    Assert.Equal(ResourceType.Linked, Assert.Single(assembly.MainModule.Resources).ResourceType);
+                }
+
+                var task = new MockTask
+                {
+                    AssemblyPaths = new ITaskItem[] { new TaskItem(path) },
+                    DotNetHostPath = "dotnet",
+                    DeclaredInputs = (includeResourceInput ? new[] { path, resource } : new[] { path })
+                        .Select(input => (ITaskItem)new TaskItem(input)).ToArray(),
+                    DeclaredOutputs = Array.Empty<ITaskItem>()
+                };
+                using var driver = task.CreateDriver();
+                Assert.Throws<NotSupportedException>(() => driver.Context.Resolver.GetAssembly(path));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        static void WriteTestAssembly(string path)
+        {
+            using var assembly = AssemblyDefinition.CreateAssembly(
+                new AssemblyNameDefinition(Path.GetFileNameWithoutExtension(path), new Version(1, 0)),
+                Path.GetFileName(path), ModuleKind.Dll);
+            assembly.Write(path);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ExplicitPortableSymbolsRequireTheirFileInput(bool includeSymbols)
+        {
+            string path = typeof(TaskArgumentTests).Assembly.Location;
+            string pdb = Path.ChangeExtension(path, ".pdb");
+            Assert.True(File.Exists(pdb));
+            var task = new MockTask
+            {
+                AssemblyPaths = new ITaskItem[] { new TaskItem(path) },
+                DotNetHostPath = "dotnet",
+                DeclaredInputs = (includeSymbols ? new[] { path, pdb } : new[] { path })
+                    .Select(input => (ITaskItem)new TaskItem(input)).ToArray(),
+                DeclaredOutputs = Array.Empty<ITaskItem>()
+            };
+            using var driver = task.CreateDriver();
+            var assembly = driver.Context.TryResolve(Path.GetFileNameWithoutExtension(path));
+            Assert.NotNull(assembly);
+            Assert.Equal(includeSymbols, assembly.MainModule.HasSymbols);
+        }
+
         public static IEnumerable<object[]> AssemblyPathsCases => new List<object[]> {
             new object [] {
                 new ITaskItem [] {

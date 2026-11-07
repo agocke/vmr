@@ -36,6 +36,7 @@ using System.Linq;
 using System.Runtime.Serialization.Json;
 using ILLink.Shared;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 
 namespace Mono.Linker.Steps
 {
@@ -65,6 +66,7 @@ namespace Mono.Linker.Steps
         {
             if (Context.AssemblyListFile != null)
             {
+                Context.RequireOutputFile(Context.AssemblyListFile);
                 using (var w = File.CreateText(Context.AssemblyListFile))
                 {
                     w.WriteLine("[" + string.Join(", ", assembliesWritten.Select(a => "\"" + a + "\"").ToArray()) + "]");
@@ -105,6 +107,10 @@ namespace Mono.Linker.Steps
             }
 
             string outputName = GetAssemblyFileName(assembly, directory);
+            Context.RequireOutputFile(outputName);
+            if (writerParameters.WriteSymbols &&
+                assembly.MainModule.SymbolReader is not EmbeddedPortablePdbReader)
+                Context.RequireOutputFile(Path.ChangeExtension(outputName, ".pdb"));
             try
             {
                 assembly.Write(outputName, writerParameters);
@@ -155,6 +161,7 @@ namespace Mono.Linker.Steps
             if (Context.PInvokesListFile == null)
                 return;
 
+            Context.RequireOutputFile(Path.Combine(Context.OutputDirectory, Context.PInvokesListFile));
             using (var fs = File.Open(Path.Combine(Context.OutputDirectory, Context.PInvokesListFile), FileMode.Create))
             {
                 var values = Context.PInvokes.Distinct().OrderBy(l => l);
@@ -169,12 +176,19 @@ namespace Mono.Linker.Steps
         protected virtual void DeleteAssembly(AssemblyDefinition assembly, string directory)
         {
             var target = GetAssemblyFileName(assembly, directory);
+            Context.RequireOutputFile(target);
             if (File.Exists(target))
             {
                 File.Delete(target);
-                File.Delete(target + ".mdb");
-                File.Delete(Path.ChangeExtension(target, "pdb"));
-                File.Delete(GetConfigFile(target));
+                DeleteCompanion(target + ".mdb");
+                DeleteCompanion(Path.ChangeExtension(target, "pdb"));
+                DeleteCompanion(GetConfigFile(target));
+            }
+
+            void DeleteCompanion(string path)
+            {
+                if (Context.IsOutputFile(path))
+                    File.Delete(path);
             }
         }
 
@@ -214,6 +228,24 @@ namespace Mono.Linker.Steps
             FileInfo original = GetOriginalAssemblyFileInfo(assembly);
             string resourceFile = GetAssemblyResourceFileName(original.FullName);
 
+            if (Context.ExplicitInputs is not null)
+            {
+                foreach (string satellite in Context.ExplicitInputs.OrderBy(path => path, StringComparer.Ordinal))
+                {
+                    string? cultureDirectory = Path.GetDirectoryName(satellite);
+                    if (Path.GetFileName(satellite) != resourceFile ||
+                        cultureDirectory is null || Path.GetDirectoryName(cultureDirectory) != original.DirectoryName)
+                        continue;
+
+                    string culturePath = Path.Combine(directory, Path.GetFileName(cultureDirectory));
+                    string target = Path.Combine(culturePath, resourceFile);
+                    Context.RequireOutputFile(target);
+                    Directory.CreateDirectory(culturePath);
+                    File.Copy(satellite, target, true);
+                }
+                return;
+            }
+
             foreach (var subDirectory in Directory.EnumerateDirectories(original.DirectoryName!))
             {
                 var satelliteAssembly = Path.Combine(subDirectory, resourceFile);
@@ -231,6 +263,8 @@ namespace Mono.Linker.Steps
         void CopyConfigFileIfNeeded(AssemblyDefinition assembly, string directory)
         {
             string config = GetConfigFile(GetOriginalAssemblyFileInfo(assembly).FullName);
+            if (!Context.IsInputFile(config))
+                return;
             if (!File.Exists(config))
                 return;
 
@@ -239,6 +273,7 @@ namespace Mono.Linker.Steps
             if (config == target)
                 return;
 
+            Context.RequireOutputFile(target);
             File.Copy(config, GetConfigFile(GetAssemblyFileName(assembly, directory)), true);
         }
 
@@ -266,17 +301,24 @@ namespace Mono.Linker.Steps
             if (source == target)
                 return;
 
+            Context.RequireOutputFile(target);
             File.Copy(source, target, true);
             if (!Context.LinkSymbols)
                 return;
 
             var mdb = source + ".mdb";
-            if (File.Exists(mdb))
+            if (Context.IsInputFile(mdb) && File.Exists(mdb))
+            {
+                Context.RequireOutputFile(target + ".mdb");
                 File.Copy(mdb, target + ".mdb", true);
+            }
 
             var pdb = Path.ChangeExtension(source, "pdb");
-            if (File.Exists(pdb))
+            if (Context.IsInputFile(pdb) && File.Exists(pdb))
+            {
+                Context.RequireOutputFile(Path.ChangeExtension(target, "pdb"));
                 File.Copy(pdb, Path.ChangeExtension(target, "pdb"), true);
+            }
         }
 
         protected virtual string GetAssemblyFileName(AssemblyDefinition assembly, string directory)

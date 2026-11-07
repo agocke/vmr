@@ -18,6 +18,8 @@
   <Target Name="WriteDiscoveryRestoreInputs"
           AfterTargets="Restore"
           Condition="'$(MSBuildProjectName)' == 'Library'">
+    <Error Condition="'$(_MSBuildGraphInputsCaptureTarget)' != ''"
+           Text="Restore must not inherit the graph-input capture selector." />
     <MakeDir Directories="$(MSBuildProjectExtensionsPath)" />
     <WriteLinesToFile File="$(_DiscoveryRestoreInputs)"
                       Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;DiscoveryRestoreInputsReady&gt;true&lt;/DiscoveryRestoreInputsReady&gt;&lt;/PropertyGroup&gt;&lt;/Project&gt;"

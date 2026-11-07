@@ -12,6 +12,7 @@
     <ProjectReference Include="task/RuntimeLinkerXmlTask.csproj;tool/RuntimeILLinkTool.csproj" />
     <Reference Include="$(MSBuildProjectDirectory)/references/Reference.dll" />
     <ReferencePathWithRefAssemblies Include="@(Reference)" />
+    <ILLinkAdditionalInput Include="$(MSBuildProjectDirectory)/references/Reference.pdb" />
     <IntermediateAssembly Include="obj/Fixture.dll" />
     <_DebugSymbolsIntermediatePath Include="obj/Fixture.pdb" />
     <_ToolAsset Include="illink.dll;illink.pdb;illink.runtimeconfig.json;illink.deps.json" />
@@ -22,7 +23,7 @@
   </ItemGroup>
   <Target Name="ResolvePackageAssets" />
   <Target Name="ResolveTargetingPackAssets" />
-  <Target Name="Restore" DependsOnTargets="_CaptureILLinkInputs">
+  <Target Name="Restore">
     <MSBuild Projects="@(ProjectReference)" Targets="Restore" />
   </Target>
   <Target Name="Produce">
@@ -48,7 +49,7 @@
   <Target Name="ValidateInputs" Condition="'$(MSBuildHardenedGraph)' == 'true'">
     <ItemGroup>
       <_RequiredILLinkInput Include="obj/PreTrim/Fixture.dll;obj/PreTrim/Fixture.pdb;obj/descriptor.xml;
-                                    references/Reference.dll;references/Reference.pdb;references/Shadow.dll;
+                                    references/Reference.dll;references/Reference.pdb;
                                     task/bin/Debug/net/Fixture.ILLink.Tasks.dll;
                                     task/bin/Debug/net/Fixture.ILLink.Tasks.deps.json;
                                     @(_ToolAsset->'task/bin/Debug/net/%(Identity)');
@@ -57,6 +58,9 @@
     </ItemGroup>
     <Error Condition="'@(_MissingILLinkInput)' != ''"
            Text="ILLink omitted declared inputs '@(_MissingILLinkInput)'. Actual inputs: '@(_ILLinkDeclaredInput)'."
+           DeclaredInputs="" DeclaredOutputs="" />
+    <Error Condition="@(_ILLinkDeclaredInput->AnyHaveMetadataValue('Filename', 'Shadow'))"
+           Text="ILLink must not discover undeclared neighboring assemblies."
            DeclaredInputs="" DeclaredOutputs="" />
   </Target>
   <Target Name="Build" DependsOnTargets="_PrepareILLinkCompileOutputs;Produce;ILLinkTrimAssembly;ValidateInputs" />

@@ -33,6 +33,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using ILLink.Shared;
 using ILLink.Shared.TypeSystemProxy;
@@ -176,9 +178,31 @@ namespace Mono.Linker
             => _typeNameResolver ??= new TypeNameResolver(this, this);
 
         public ISymbolReaderProvider SymbolReaderProvider { get; set; }
+        readonly List<Stream> _explicitSymbolStreams = new();
 #endif
 
         public bool LogMessages { get; set; }
+
+        internal HashSet<string>? ExplicitInputs { get; set; }
+        internal HashSet<string>? ExplicitOutputs { get; set; }
+
+        internal bool IsInputFile(string path) =>
+            ExplicitInputs is null || ExplicitInputs.Contains(Path.GetFullPath(path));
+
+        internal void RequireInputFile(string path)
+        {
+            if (!IsInputFile(path))
+                throw new InvalidOperationException($"Undeclared ILLink input '{path}'.");
+        }
+
+        internal bool IsOutputFile(string path) =>
+            ExplicitOutputs is null || ExplicitOutputs.Contains(Path.GetFullPath(path));
+
+        internal void RequireOutputFile(string path)
+        {
+            if (!IsOutputFile(path))
+                throw new InvalidOperationException($"Undeclared ILLink output '{path}'.");
+        }
 
 #if !ILTRIM
 
@@ -371,9 +395,40 @@ namespace Mono.Linker
 
             try
             {
-                var symbolReader = SymbolReaderProvider.GetSymbolReader(
-                    assembly.MainModule,
-                    GetAssemblyLocation(assembly));
+                ISymbolReader? symbolReader;
+                if (ExplicitInputs is not null)
+                {
+                    if (assembly.MainModule.HasDebugHeader && assembly.MainModule.GetDebugHeader().Entries.Any(entry =>
+                        entry.Directory.Type == ImageDebugType.EmbeddedPortablePdb))
+                    {
+                        symbolReader = new EmbeddedPortablePdbReaderProvider().GetSymbolReader(
+                            assembly.MainModule, GetAssemblyLocation(assembly));
+                    }
+                    else
+                    {
+                        string pdb = Path.ChangeExtension(GetAssemblyLocation(assembly), ".pdb");
+                        if (!IsInputFile(pdb))
+                            return;
+
+                        // Stream-based reading cannot probe an adjacent, undeclared symbol file.
+                        Stream stream = File.OpenRead(pdb);
+                        try
+                        {
+                            symbolReader = SymbolReaderProvider.GetSymbolReader(assembly.MainModule, stream);
+                            _explicitSymbolStreams.Add(stream);
+                        }
+                        catch
+                        {
+                            stream.Dispose();
+                            throw;
+                        }
+                    }
+                }
+                else
+                {
+                    symbolReader = SymbolReaderProvider.GetSymbolReader(
+                        assembly.MainModule, GetAssemblyLocation(assembly));
+                }
 
                 if (symbolReader == null)
                     return;
@@ -570,6 +625,8 @@ namespace Mono.Linker
         public void Dispose()
         {
             _resolver.Dispose();
+            foreach (Stream stream in _explicitSymbolStreams)
+                stream.Dispose();
         }
 
         public bool IsOptimizationEnabled(CodeOptimizations optimization, MemberReference context)

@@ -368,6 +368,8 @@ Restore-time capture includes the configured framework-metadata requests reached
 by ordinary project-reference negotiation, not just the configurations selected
 for compilation. Each reached configuration receives ordinary Restore followed
 by fresh local capture, without recursively requesting its compilation references.
+Nested Restore requests remove the capture selector, allowing discovery and
+selected-framework preparation to share the same ordinary Restore configuration.
 Framework, NuGet, compiler, and enabled source-control imports
 remain required during hardened evaluation; incomplete capture fails rather than
 being hidden by optional imports. There is no metadata-only mode or discovery
@@ -492,16 +494,19 @@ leaves any previous graph untouched.
 ILLink's pre-compile target now records its trim-input directory as a structural
 requirement in hardened construction; future compiler execution creates the
 parent. Ordinary directory creation and assembly/PDB remapping are unchanged.
-ILLink's declared inputs now mirror runtime main's invocation-cache discovery:
-all `-d` assembly candidates, optional config/MDB/PDB sidecars, culture satellites,
-recursive metadata modules, nonmetadata assembly files, explicit XML and tools.
-Restore captures external discovery as configured facts; construction selects
-them without reading PE files or enumerating directories. Future assemblies and
-tool runfiles come from prior action outputs, conservatively including producer
-files beneath their directories. The linker keeps its existing search policy,
-uses the explicit external host and owns the final DLL/conditional PDB.
-Unknown custom input-discovery arguments fail closed. Changes to external
-directory membership require a fresh Restore, not live construction-time discovery.
+Declared-I/O ILLink receives explicit assembly/reference paths, XML and tool
+files; external symbols and companions are authored as `ILLinkAdditionalInput`.
+Known producer outputs conservatively cover future companions and tool runfiles.
+There is no per-project linker directory/PE inventory during Restore.
+The task rejects `-d`, indirect file lists and unsupported discovery arguments.
+During execution, the linker resolves only its explicit references, reads symbols
+and copies sidecars/satellites only from declared files, and checks output paths.
+An undeclared neighboring file cannot affect the action; unresolved identities
+follow the existing explicit linker policy without directory probing.
+The linker uses the explicit external host and owns the final DLL/conditional PDB.
+Custom steps, dependency dumps, multi-module assemblies and linked resources
+currently fail closed in this profile. Ordinary ILLink retains its existing
+discovery and behavior.
 Common's XML-documentation publication now uses declared `CopyFiles` and static
 `FileWrites`; runtime's documentation override staging uses the same worker,
 without hardened timestamp touching. Ordinary copy/touch behavior is retained.

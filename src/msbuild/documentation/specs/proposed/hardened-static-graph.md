@@ -14,6 +14,8 @@ builds remain unchanged outside the opt-in graph/Restore workflow. The
 [roadmap](hardened-static-graph-implementation.md) describes the implementation.
 For practical migration patterns, see the
 [conversion cookbook](hardened-static-graph-migration.md).
+The [capture-once fetch proposal](#proposed-capture-once-fetch) describes a
+replacement for per-configuration preparation, not implemented behavior.
 
 ## Pipeline
 
@@ -92,6 +94,8 @@ Each reached configuration receives ordinary Restore and a fresh capture
 evaluation with restored imports. Metadata requests do not inherit the capture
 evaluation marker, so a subsequent selected-framework capture cannot reuse an
 evaluation created before that project's Restore.
+Nested Restore requests do not inherit the capture selector, so discovery and
+selected-framework preparation can reuse the same ordinary Restore configuration.
 
 Hardened evaluation requires the explicitly named framework, NuGet, compiler,
 and enabled source-control imports for every reached inner build. Missing
@@ -833,6 +837,388 @@ independence. Deterministic compiler settings, automatic path mapping and
 relocation/output comparisons remain necessary alongside future sandboxing.
 Enforcement belongs in the general construction/execution infrastructure, not
 task-specific sandbox implementations.
+
+## Proposed capture-once fetch
+
+**Status: design proposal, not implemented.** The preparation and mandatory
+per-project imports described above remain the current contract until their
+producers and consumers are migrated together.
+
+### Boundary and success criteria
+
+Capture the state of external resources, not the result of preparing a
+configured build. Acquisition may walk declared dependencies to determine what
+to fetch; it must not negotiate the configured build-reference graph.
+
+First ask whether the task contract should eliminate discovery. An existing
+helper's directory search or assembly inspection is not by itself a reason to
+capture that behavior during Restore. If Build can supply a finite explicit
+file set from authored items, acquisition manifests and producer outputs, the
+action should consume that set. File-content analysis belongs in execution when
+it does not need to return new graph structure or change the declared footprint.
+Inputs may conservatively include candidates; they need not predict the minimal
+set of files the tool ultimately reads.
+
+```text
+existing Restore evaluations -> acquisition requests + fetch intents
+acquire dependencies          -> final package/pack/tool locations
+capture external resources   -> one immutable fetch catalog
+fresh hardened evaluation    -> pure selection + complete action graph
+Ninja                        -> declared product actions
+```
+
+Capture introduces no additional project-evaluation pass. It does not invoke
+`PrepareProjectReferences`, `ResolvePackageDependenciesForBuild`, or a fresh
+SDK project evaluation to obtain already-selected references or analyzers.
+Ordinary Restore keeps the framework/package processing it requires for
+acquisition. Additional evaluations required by genuinely distinct acquisition
+requests are not replaced by a path-only deduplication.
+
+"Once" means once per resource observation within one Restore invocation,
+including requests arriving from different projects, frameworks, or workers.
+It is not a persistent cache keyed by path or an assertion that package/tool
+directories never change. Cross-invocation reuse is deferred.
+
+Success requires an evaluation/request count near conventional acquisition,
+plus separately measured resource-capture work. Fewer snapshot writes alone
+do not establish this. Capture's project-evaluation count must be zero, and
+metadata discovery during construction must not initiate capture.
+
+### Collect intents in the acquisition walk
+
+Extend the existing Restore metadata collection to return typed `FetchIntent`
+records alongside its acquisition requests. An intent contains a resource
+kind, explicit path/root or acquisition locator, discovery options, required
+fact facets, and origin for diagnostics. It does not contain a selected
+compile-reference closure, winning project-reference framework, or evaluated
+project-property dump.
+An explicit action input is not automatically a fetch intent. Authored reference,
+descriptor and source paths, and known producer outputs, do not require Restore
+to inspect their contents when the action can consume them at execution.
+
+SDK integration registers toolset roots, runtime-graph paths, platform SDK
+requests, and explicit external roots already visible in Restore. NuGet supplies
+the successful assets models, acquired package roots, pack requests, and package
+SDK bindings. Repository integrations register Git scopes and exact mutable
+cache/marker paths. These records are aggregated at the root; collecting them
+must not schedule another project walk.
+
+Preserve authored reference properties and removals when issuing acquisition
+requests. The current
+[path collector](../../../../nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.targets)
+converts references into a string property and recreates path items, losing
+their metadata. The replacement retains the request identity and applies
+explicit `AdditionalProperties`, property removals, and supplied
+configuration/platform/framework assignments. It does not run
+`AssignProjectConfiguration` or nearest-framework selection to manufacture
+those assignments.
+
+Request identity and resource identity are separate. Different configurations
+may acquire the same physical package and share its inventory. Configurations
+that change package requirements cannot be collapsed merely because their
+project paths match. If NuGet cannot express both specifications in one
+dependency specification, partition acquisition into compatible batches.
+Conflicting specifications that write the same assets/output path are rejected
+until authoring supplies disjoint restore paths; do not silently keep the last
+writer or pretend path metadata solves NuGet's identity constraints. The target
+is one Restore operation per compatible acquisition batch, not one per project.
+
+Package props/targets and restored SDK imports remain live source authoring in
+the fresh hardened evaluation. Capture does not evaluate them again. Acquired
+package and tool roots provide inventories and supported metadata facets for
+later pure selection, including analyzers named only by package imports.
+Authoring that needs otherwise unavailable external state to shape the graph
+must declare an acquisition-time intent. An additional explicit action-input
+path alone does not require one. Missing fact coverage is an error, not a reason
+to discover that state during construction. Likewise, Restore-generated authoring
+that needs external state must register the intent before the root capture barrier.
+
+Restore finalization needs an explicit migration contract. A child project's
+ordinary NuGet graph visit does not execute that child's `Restore` target or
+its `AfterTargets="Restore"` hooks. Do not preserve those effects by restoring
+every child again. Integrations that produce known post-acquisition imports
+register a finalizer while their existing Restore instance is evaluated.
+Run it on that retained instance after acquisition, with explicit acquisition
+results, without changing global properties, reloading imports, or walking
+references. It cannot depend on newly imported package authoring or use SDK
+build resolution as a discovery helper. Keep the required instances alive
+through finalization; a lost instance is a failed Restore, not permission for
+a hidden capture evaluation.
+
+Existing child Restore/capture hooks must be adapted to this finalizer/intent
+contract, including the fresh-import regression. Package-only hooks invisible
+to the Restore evaluation cannot be invoked magically after acquisition:
+acquired package inventories cover package-local inputs, and other external
+requirements need an explicit acquisition-side declaration. The legacy profile
+retains its current hooks until this authoring migration is validated.
+
+### Resource contracts
+
+An inventory records names, existence, and required contents/metadata without
+applying project-specific build selection. Typed collectors bound their reads
+to the requested resources; a directory root is not permission for arbitrary
+filesystem exploration.
+
+| Resource | Capture | Pure construction-time work |
+| --- | --- | --- |
+| Assets and packages | Successful assets data, package locations/folder precedence, package file inventory, conflict versions, related-file presence, locale facts | Framework/RID assets, dependency, analyzer, copy-local and conflict selection |
+| Framework/host packs | Available/missing pack locations, raw framework/platform/override data, legacy inventories, path-convention existence facts, host files | Framework/profile/language filtering, references/analyzers, runtime frameworks, preferred packages and apphost choice |
+| Compiler/analyzer tools | Unavoidable tool-location/identity facts; reuse packaged tool and dependency manifests rather than assume directory enumeration is required | Supply the finite compiler/analyzer dependency set from explicit items, manifests and producer outputs |
+| Runtime graph | Explicit graph path and JSON contents | Framework and RID compatibility |
+| Git | Repository/worktree, remote/configuration scope, roots/revision/branch and tracked/untracked state | Project `Compile` intersection, source-root projection and URL translation |
+| Platform SDK | Location/discovery options and results, relevant existence and metadata-directory facts | Derive platform properties and reference paths |
+| Unavoidable external presence facts | Presence values that actually affect graph structure, such as an optional suppression file | Derive explicit references and companion inputs; keep file-content analysis within declared actions |
+| Mutable caches/markers | Exact existence observations and required marker initialization | Consume the recorded pre-build state under existing semantics |
+
+The existing
+[NuGet writer](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteNuGetInputs.cs)
+and [runtime-graph writer](../../../../arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/WriteTargetFrameworkInputs.cs)
+already preserve underlying data rather than a winning selection.
+The [framework manifest](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkReferenceFetchManifest.cs)
+instead receives selected references and analyzers. Its replacement must
+preserve all inputs to the selection in
+[targeting-pack resolution](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ResolveTargetingPackAssets.cs),
+including profile and language metadata, legacy enumeration, duplicate rules,
+`net5.0` path fallback, first-reference existence fallback, and conflict data.
+
+For compiler inputs,
+[directory expansion](../../../../roslyn/src/Compilers/Core/MSBuildTask/Microsoft.CSharp.Core.targets)
+currently occurs before the writer receives its file list. Audit whether tool
+and acquired-package manifests can replace that expansion before introducing
+new catalog inventories. Where an unavoidable inventory remains, construction
+uses it to supply explicit files, not an open-ended tool search. Incidental
+acquisition must not add files to actions or create product dependencies.
+
+The prototype applies this rule to ILLink: its declared-I/O profile rejects `-d` search-directory
+arguments and implicit filesystem search fallbacks. It takes explicit assembly
+and reference paths, descriptors, symbols/companions and tool files. The existing
+task already exposes `AssemblyPaths` and `ReferenceAssemblyPaths` as explicit
+`-reference` inputs; runtime authoring supplies references in project-reference
+precedence order and known output files instead of deriving `-d` directories.
+External companions are explicit `ILLinkAdditionalInput` items; future companions
+and tool runfiles come from known producer outputs.
+Assembly resolution and metadata inspection then happen during execution,
+within that declared set. Undeclared file access is an error, not permission to
+search the containing directory. Unresolved assembly identities follow explicit
+linker options, such as `--skip-unresolved`, without a filesystem-search fallback.
+
+The per-project `WriteILLinkInputs` directory/PE scan has been removed, not
+centralized in Restore. Symbols and other companions retain their declared producers.
+Custom steps, dependency dumps, multi-module assemblies and linked resources
+currently fail closed in the explicit profile; supporting them requires equally
+explicit file contracts.
+Adapt ApiCompat and other directory-searching consumers under the same rule
+where explicit file inputs suffice. Preserve ordinary tool behavior outside
+the opt-in declared-I/O profile; these task/authoring changes need their own
+correctness and independent-execution validation.
+
+Empty and negative observations are explicit facts. Cataloging a pack known
+only from an unselected framework may record that it is unavailable without
+trying to prepare that framework's references. Selecting an unavailable required
+pack during construction still fails. A required external file that acquisition
+promised to supply must exist before catalog publication.
+Inventory coverage records its root, depth and filters. Absence can be inferred
+only inside a completely recorded scope; an uncaptured path or facet is unknown,
+not false. Physical sidecars and directory members matter where current behavior
+enumerates them; a package's advertised file list is not a substitute for those
+observations.
+
+Product-generated tools/references are never external inventory roots. Their
+known paths retain producer edges. If their future contents would be needed to
+discover more graph structure, authoring must declare that structure or split
+the build; capture must not build the product, enable `DesignTimeBuild`, or
+suppress a missing-pack check.
+
+### Coordinator, keys, and overlapping reads
+
+The root Restore owns a `FetchCoordinator`. Workers return intents; the root
+merges and executes resource collectors after acquisition and Restore extension
+writes finish. No process-local worker cache is relied upon for cross-node
+"once" semantics. A collector may parallelize independent resources without
+evaluating projects or scheduling product targets.
+
+Conceptually, a resource key is:
+
+```text
+ResourceKey = (collector/schema version, kind, absolute logical locator,
+               discovery-option signature)
+ObservationKey = (absolute observed path, observation kind, read options)
+```
+
+Configuration, project path, and target framework do not enter a resource key
+unless they actually change its locator or discovery options. Ordered fallback
+roots, Git remote/configuration/worktree scope, platform overrides and host
+context are semantic inputs. Case comparison follows the explicit host/path
+rules; locale-dependent string comparison is not a key algorithm.
+
+Keep exact action-path spellings and logical-root identities. Lexical path
+normalization does not prove that symlink aliases are interchangeable. Capture
+records or rejects aliases under the collector's root policy; construction
+does not resolve them through new ambient probes. Links or metadata paths that
+escape a requested root require a separate explicit resource or are rejected.
+
+Before capture, union required facets for a resource: for example file names,
+text contents or presence facts that cannot be eliminated by an explicit action
+contract. Do not add PE/module or companion discovery merely to preserve an
+existing task's directory-search interface. The invocation
+observation table reuses identical reads across collectors and overlapping roots.
+One unavoidable directory enumeration may serve multiple genuine discovery
+requests; one file read may serve multiple necessary facts. Typed parsing can differ,
+but observation sharing does not merge different discovery semantics.
+
+Resource metadata can reveal more necessary external observations, such as
+pack manifest paths. Collectors may expand that resource-only
+worklist with provenance and cycle handling. This is not a project-reference
+walk and cannot create configured build requests.
+
+Do not eagerly inspect every binary in every acquired package. Successful
+assets/package manifests identify candidate files and roles across their
+targets; those bound the metadata facets that later selection can need.
+Collecting that resource inventory is distinct from choosing a project's
+winning assets. New facts needed for graph construction require a declared
+collector contract, not a speculative scan of the package cache or the whole
+machine. Explicit action-input files do not need metadata capture merely because
+they are outside those inventories.
+
+Each resource/facet computation has one shared result, including failure, in
+the invocation. Concurrent duplicates join it rather than starting another
+read. A missing facet requested after the capture barrier is a coverage error;
+there is no construction-time "capture on miss." Capture failures require a
+new Restore, not an unchecked stale-cache result.
+
+### Catalog representation and publication
+
+Use one profile directory supplied by the driver, with immutable generation
+directories and an atomic current-generation record. Proposed logical records:
+
+```text
+FetchCatalog:
+  format/schema, generation, producer/toolset identity, host context
+  acquisition requests and assets/package/SDK-binding associations
+  resource keys, coverage/facets, fact payload digests and provenance
+
+ResourceFacts:
+  explicit discovery inputs
+  availability, inventories, contents and metadata
+  subordinate observation identities
+```
+
+These are data records, not evaluated SDK/property snapshots. Physical payloads
+may be split by resource, but a project does not receive its own serialized copy
+of the same resource facts.
+
+At Restore start, atomically mark the profile as preparing a new generation.
+Capture writes staging payloads after acquisition, validates all required
+resources, and finalizes the immutable generation before atomically marking it
+complete. Publication must remain on a filesystem supporting the required
+atomic replacement operations. A failed Restore leaves the new profile
+incomplete: ordinary Build cannot silently use its previous successful catalog.
+Concurrent writers to one profile are rejected. Existing committed generations
+and diagnostics need not be deleted to recover.
+
+Capture freshness is invocation-scoped. Repeating Restore reads external state
+again, including mutable tool directories and caches. Do not use mtimes, path
+identity, or a package's apparent immutability as an unproven freshness check.
+Changing state that affects facts requires a new Restore and graph generation;
+automatic external-change detection and persistent resource caching are separate
+future designs.
+
+Atomic catalog publication is not an atomic snapshot of the whole filesystem.
+Acquisition and registered finalization must finish before observations begin,
+and external resources must be stable while their capture-dependent data is
+used. Report detectable changes during a read as failures; do not claim that
+mtime checks can prove global consistency. Mutable caches/markers keep their
+explicit pre-build observation semantics and execution ownership. Stronger
+filesystem snapshotting is outside this first design.
+
+### Consume without another input-evaluation pass
+
+The engine loads and validates the named completed catalog once, before fresh
+hardened project evaluation, as a narrowly defined graph-input capability.
+It checks generation/schema/context and payload associations/digests. This
+does not grant tasks filesystem access or broaden ordinary property-function
+permissions. SDK binding replay uses that same generation.
+
+The engine supplies an immutable catalog context to evaluation and audited
+zero-I/O selectors. Selectors receive the catalog identity, resource key and
+ordinary explicit selection parameters; their results depend on those facts,
+not an ambient service or mutable process cache. Evaluation-time platform/SDK
+fact lookups use the same restricted, deterministic context. Parsing and sharing
+the catalog once avoids importing/recreating a large common item collection
+for every configured project.
+Selectors cannot mutate shared models; they return project-local items from
+the immutable data.
+
+Graph construction performs framework/profile/analyzer/asset/reference
+selection during its normal fresh evaluations and target walk. It does not
+run a preliminary graph to determine fetch scope. Source authoring and permitted
+source-glob discovery retain their existing engine capabilities.
+
+Separate validation of acquisition coverage from resource freshness.
+Construction validates its Restore-relevant requests against the recorded
+acquisition records using metadata already available in its normal evaluation.
+Initially retain the existing requirement for matching entry configuration and
+explicit input context. Do not hash all live authoring into a frozen project
+snapshot: evaluation-only source/SDK authoring changes remain supported when
+acquisition requests and needed resource coverage still match. A changed package
+request or external locator requires Restore, even if a same-named old assets
+file exists.
+
+Missing keys/facets, incompatible context, malformed data, and incomplete
+publication fail before graph publication. Absence facts may drive only the
+explicitly supported selection rules. There is no legacy-manifest or live-machine
+fallback. Selected external files still enter action `DeclaredInputs`; catalog
+identity also participates in graph-input identity. A broad inventory is not
+itself a broad action-input list.
+
+### Migration and validation
+
+Audit and tighten directory-searching task contracts first, starting with
+ILLink's explicit references and outputs. Remove unnecessary preparation
+consumers before defining the catalog's remaining required resources.
+Implement the coordinator/catalog spine and existing-Restore intent aggregation
+with a bounded fixture. Add raw framework-pack facts and a zero-I/O
+replacement for manifest replay, then compiler/analyzer selection from acquired
+tool/package inventories. Adapt NuGet/runtime-graph payload storage and the
+remaining genuinely necessary Git/platform/presence/cache consumers to the same generation.
+Package-specific or repository-specific external state that must shape the
+graph requires authored intents, not additional capture evaluations. Explicit
+action inputs are not extra catalog requirements.
+
+Develop behind an explicit proposed capture-once profile. Keep ordinary builds
+and the current legacy profile unchanged until migration is complete. Compare
+separate profiles; do not fill missing new facts from old per-project snapshots.
+Framework migration alone is a contract milestone, not a claim that the
+Restore evaluation regression has been fixed.
+
+Before enabling the replacement for the runtime-library profile, verify:
+
+- One observation per unique invocation key/facet under diamond references,
+  multiple TFMs, overlapping roots and multi-node acquisition. Count actual
+  opens/enumerations, not just writer calls or distinct item identities.
+- No added capture evaluations, build-edge negotiation, or per-project nested
+  Restore. Report required acquisition batches separately from capture work.
+- Fresh imports and explicit child configuration/property removals still work;
+  conflicting assets specifications fail instead of overwriting one another.
+- Late package analyzers are covered by acquired inventories; unregistered loose
+  roots fail; generated tools retain producers and no DLL/resources are built
+  during capture.
+- Declared-I/O ILLink uses explicit references rather than `-d` or implicit
+  directory fallbacks; undeclared file access fails, metadata reads occur only
+  during execution, and the input/output set covers supported symbols and tool
+  companions without a Restore-time linker inventory. Unsupported modules and
+  linked resources fail closed.
+- Profile/language filtering, framework/path fallbacks, conflict facts and
+  metadata probes match existing behavior, including unselected unavailable packs.
+- Mutation between Restore invocations refreshes facts; capture failure,
+  partial publication, incompatible contexts and concurrent writers cannot
+  consume a stale or partial default catalog.
+- Prepared selections, action descriptors and normalized Ninja graphs match;
+  focused fixtures execute independently. Repeat full execution if graph or
+  output semantics intentionally change.
+- Matched Release timings account separately for acquisition evaluations,
+  unique external observations, capture serialization and graph construction.
+  Do not infer the required fetch time from the current writer-task timings.
 
 ## Prototype boundary and later work
 

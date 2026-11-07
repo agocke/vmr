@@ -37,7 +37,6 @@ namespace Microsoft.Build.Tasks
             Utilities.Task.RegisterTask<WritePlatformSDKRestoreImport>();
             Utilities.Task.RegisterTask<ValidateHardenedAssemblySearchPaths>();
             Utilities.Task.RegisterTask<ResolveReferencePaths>();
-            Utilities.Task.RegisterTask<WriteILLinkInputs>();
             Utilities.Task.RegisterTask<ResolveILLinkInputs>();
             Utilities.Task.RegisterTask<WriteUnmanagedRegistrationCacheImport>();
             Utilities.Task.RegisterTask<ReconcileCleanFileWrites>();

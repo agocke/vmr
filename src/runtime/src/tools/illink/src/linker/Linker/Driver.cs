@@ -350,6 +350,22 @@ namespace Mono.Linker
 
                             continue;
 
+                        case "--explicit-io":
+                            var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+                            context.ExplicitInputs = new HashSet<string>(pathComparer);
+                            context.ExplicitOutputs = new HashSet<string>(pathComparer);
+                            continue;
+
+                        case "--explicit-input":
+                        case "--explicit-output":
+                            if (!GetStringParam(token, out string? explicitPath))
+                                return -1;
+                            if (context.ExplicitInputs is null)
+                                throw new InvalidOperationException("--explicit-io must precede explicit file declarations.");
+                            (token == "--explicit-input" ? context.ExplicitInputs : context.ExplicitOutputs!)
+                                .Add(Path.GetFullPath(explicitPath));
+                            continue;
+
                         case "--substitutions":
                             if (arguments.Count < 1)
                             {
@@ -767,6 +783,7 @@ namespace Mono.Linker
                             if (!GetStringParam(token, out string? xmlFile))
                                 return -1;
 
+                            context.RequireInputFile(xmlFile);
                             if (!File.Exists(xmlFile))
                             {
                                 context.LogError(null, DiagnosticId.XmlDescriptorCouldNotBeFound, xmlFile);
@@ -1057,16 +1074,19 @@ namespace Mono.Linker
 
         protected virtual void AddResolveFromXmlStep(Pipeline pipeline, string file)
         {
+            Context.RequireInputFile(file);
             pipeline.PrependStep(new ResolveFromXmlStep(File.OpenRead(file), file));
         }
 
         protected virtual void AddLinkAttributesStep(Pipeline pipeline, string file)
         {
+            Context.RequireInputFile(file);
             pipeline.AddStepBefore(typeof(MarkStep), new LinkAttributesStep(File.OpenRead(file), file));
         }
 
         protected virtual void AddBodySubstituterStep(Pipeline pipeline, string file)
         {
+            Context.RequireInputFile(file);
             pipeline.AddStepBefore(typeof(MarkStep), new BodySubstituterStep(File.OpenRead(file), file));
         }
 
@@ -1261,12 +1281,13 @@ namespace Mono.Linker
         }
 #endif
 
-        static string[] GetFiles(string param)
+        string[] GetFiles(string param)
         {
             if (param.Length < 1 || param[0] != '@')
                 return new string[] { param };
 
             string file = param.Substring(1);
+            Context.RequireInputFile(file);
             return ReadLines(file);
         }
 

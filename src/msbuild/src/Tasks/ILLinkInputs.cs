@@ -4,9 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection.Metadata;
-using System.Reflection.PortableExecutable;
-using System.Xml.Linq;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
 using Microsoft.Build.Utilities;
@@ -15,148 +12,12 @@ using Microsoft.Build.Utilities;
 
 namespace Microsoft.Build.Tasks;
 
-public sealed class WriteILLinkInputs : TaskExtension
-{
-    public ITaskItem[] AssemblyPaths { get; set; } = [];
-    public ITaskItem[] ExcludedDirectories { get; set; } = [];
-
-    [Required]
-    public string OutputFile { get; set; } = null!;
-
-    public override bool Execute()
-    {
-        try
-        {
-            HashSet<string> directories = new(FileUtilities.PathComparer);
-            Dictionary<string, XElement> assemblies = new(FileUtilities.PathComparer);
-            XElement inventory = new("ILLinkInputs", new XAttribute("Version", "1"));
-            foreach (ITaskItem assembly in AssemblyPaths)
-            {
-                string path = Path.GetFullPath(assembly.ItemSpec);
-                bool excluded = false;
-                foreach (ITaskItem exclusion in ExcludedDirectories)
-                {
-                    if (ILLinkInputPaths.IsUnder(path, Path.GetFullPath(exclusion.ItemSpec)))
-                    {
-                        excluded = true;
-                        break;
-                    }
-                }
-
-                if (!excluded && File.Exists(path))
-                {
-                    AddDirectory(Path.GetDirectoryName(path)!);
-                    AddAssembly(path);
-                }
-            }
-
-            XElement project = new("Project", new XElement("PropertyGroup",
-                new XElement("_ILLinkInputsData", EscapingUtilities.Escape(inventory.ToString(SaveOptions.DisableFormatting)))));
-            string content = project + "\n";
-            if (!File.Exists(OutputFile) || File.ReadAllText(OutputFile) != content)
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(OutputFile))!);
-                File.WriteAllText(OutputFile, content);
-            }
-
-            return true;
-
-            void AddDirectory(string directory)
-            {
-                if (!directories.Add(directory))
-                {
-                    return;
-                }
-
-                XElement element = new("Directory", new XAttribute("Path", directory));
-                inventory.Add(element);
-                List<string> candidates = [];
-                foreach (string candidate in Directory.EnumerateFiles(directory))
-                {
-                    if (ILLinkInputPaths.IsAssembly(candidate))
-                    {
-                        candidates.Add(Path.GetFullPath(candidate));
-                    }
-                }
-
-                candidates.Sort(StringComparer.Ordinal);
-                foreach (string candidate in candidates)
-                {
-                    element.Add(new XElement("Candidate", new XAttribute("Path", candidate)));
-                    AddAssembly(candidate);
-                }
-            }
-
-            void AddAssembly(string path)
-            {
-                path = Path.GetFullPath(path);
-                if (assemblies.ContainsKey(path))
-                {
-                    return;
-                }
-
-                XElement element = new("Assembly", new XAttribute("Path", path));
-                assemblies.Add(path, element);
-                inventory.Add(element);
-                AddFile(path);
-                AddOptionalFile(path + ".config");
-                AddOptionalFile(path + ".mdb");
-                AddOptionalFile(Path.ChangeExtension(path, ".pdb"));
-                string directory = Path.GetDirectoryName(path)!;
-                string satelliteName = Path.GetFileNameWithoutExtension(path) + ".resources.dll";
-                List<string> satelliteDirectories = [.. Directory.EnumerateDirectories(directory)];
-                satelliteDirectories.Sort(StringComparer.Ordinal);
-                foreach (string satelliteDirectory in satelliteDirectories)
-                {
-                    AddOptionalFile(Path.Combine(satelliteDirectory, satelliteName));
-                }
-
-                using FileStream input = File.OpenRead(path);
-                using PEReader pe = new(input);
-                if (!pe.HasMetadata)
-                {
-                    throw new BadImageFormatException("ILLink input has no managed metadata.", path);
-                }
-                MetadataReader metadata = pe.GetMetadataReader();
-                foreach (AssemblyFileHandle handle in metadata.AssemblyFiles)
-                {
-                    AssemblyFile file = metadata.GetAssemblyFile(handle);
-                    string filePath = Path.GetFullPath(Path.Combine(directory, metadata.GetString(file.Name)));
-                    AddFile(filePath);
-                    if (file.ContainsMetadata)
-                    {
-                        AddAssembly(filePath);
-                        element.Add(new XElement("Module", new XAttribute("Path", filePath)));
-                    }
-                }
-
-                void AddFile(string file) => element.Add(new XElement("File", new XAttribute("Path", file)));
-
-                void AddOptionalFile(string file)
-                {
-                    if (File.Exists(file))
-                    {
-                        AddFile(file);
-                    }
-                }
-            }
-        }
-        catch (Exception ex) when (ExceptionHandling.IsIoRelatedException(ex) || ex is BadImageFormatException or System.Xml.XmlException)
-        {
-            Log.LogErrorFromException(ex);
-            return false;
-        }
-    }
-}
-
 [MSBuildDeclaredIOTask]
 [MSBuildMultiThreadableTask]
 public sealed class ResolveILLinkInputs : TaskExtension, IMultiThreadableTask
 {
-    [Required]
-    public string Data { get; set; } = null!;
-
     public ITaskItem[] AssemblyPaths { get; set; } = [];
+    public ITaskItem[] CompanionFiles { get; set; } = [];
     public ITaskItem[] ProducedFiles { get; set; } = [];
     public ITaskItem[] ToolFiles { get; set; } = [];
     public string ExtraArgs { get; set; } = "";
@@ -172,37 +33,33 @@ public sealed class ResolveILLinkInputs : TaskExtension, IMultiThreadableTask
         Inputs = [];
         try
         {
-            XElement inventory = XElement.Parse(Data);
-            if (inventory.Name != "ILLinkInputs" || (string?)inventory.Attribute("Version") != "1")
-            {
-                throw new ArgumentException("Missing or unsupported prepared ILLink input inventory; run Restore.");
-            }
-
-            Dictionary<string, XElement> assemblies = new(FileUtilities.PathComparer);
-            Dictionary<string, XElement> directories = new(FileUtilities.PathComparer);
-            foreach (XElement element in inventory.Elements())
-            {
-                (element.Name == "Assembly" ? assemblies : directories).Add(PathOf(element), element);
-            }
-
-            HashSet<string> produced = new(FileUtilities.PathComparer);
-            foreach (ITaskItem item in ProducedFiles)
-            {
-                produced.Add(GetPath(item.ItemSpec));
-            }
-
             SortedSet<string> inputs = new(StringComparer.Ordinal);
-            HashSet<string> visited = new(FileUtilities.PathComparer);
-            foreach (ITaskItem assembly in AssemblyPaths)
+            HashSet<string> directories = new(FileUtilities.PathComparer);
+            foreach (ITaskItem file in AssemblyPaths)
             {
-                AddAssembly(GetPath(assembly.ItemSpec));
+                AddFileAndDirectory(file);
             }
-
             foreach (ITaskItem file in ToolFiles)
             {
+                AddFileAndDirectory(file);
+            }
+            foreach (ITaskItem file in CompanionFiles)
+            {
+                inputs.Add(GetPath(file.ItemSpec));
+            }
+
+            // Producer outputs are already explicit graph inputs, not a filesystem inventory.
+            foreach (ITaskItem file in ProducedFiles)
+            {
                 string path = GetPath(file.ItemSpec);
-                inputs.Add(path);
-                AddProducedFiles(Path.GetDirectoryName(path)!);
+                foreach (string directory in directories)
+                {
+                    if (ILLinkInputPaths.IsUnder(path, directory))
+                    {
+                        inputs.Add(path);
+                        break;
+                    }
+                }
             }
 
             Queue<string> arguments = new(ILLinkInputPaths.SplitArguments(ExtraArgs));
@@ -215,32 +72,6 @@ public sealed class ResolveILLinkInputs : TaskExtension, IMultiThreadableTask
                     case "--substitutions":
                     case "--link-attributes":
                         inputs.Add(GetPath(ReadArgument()));
-                        break;
-                    case "-d":
-                        string directory = GetPath(ReadArgument());
-                        bool known = directories.TryGetValue(directory, out XElement? facts);
-                        if (facts is not null)
-                        {
-                            foreach (XElement candidate in facts.Elements("Candidate"))
-                            {
-                                AddAssembly(PathOf(candidate));
-                            }
-                        }
-
-                        foreach (string file in produced)
-                        {
-                            if (FileUtilities.PathComparer.Equals(Path.GetDirectoryName(file), directory) &&
-                                ILLinkInputPaths.IsAssembly(file))
-                            {
-                                known = true;
-                                AddAssembly(file);
-                            }
-                        }
-
-                        if (!known)
-                        {
-                            throw new ArgumentException($"Unprepared ILLink search directory '{directory}'; run Restore with its assembly inputs.");
-                        }
                         break;
                     case "--action":
                         ReadArgument();
@@ -260,7 +91,7 @@ public sealed class ResolveILLinkInputs : TaskExtension, IMultiThreadableTask
                     case "--preserve-symbol-paths":
                         break;
                     default:
-                        throw new ArgumentException($"Unsupported ILLink input-discovery argument '{option}'.");
+                        throw new ArgumentException($"Unsupported declared-I/O ILLink argument '{option}'; use explicit assembly and companion files, not search directories or response files.");
                 }
             }
 
@@ -269,88 +100,48 @@ public sealed class ResolveILLinkInputs : TaskExtension, IMultiThreadableTask
             {
                 result.Add(new TaskItem(EscapingUtilities.Escape(input)));
             }
-
             Inputs = [.. result];
             return true;
 
-            string ReadArgument() => arguments.Count > 0 ? arguments.Dequeue() :
-                throw new ArgumentException("Missing ILLink argument value.");
-
-            void AddProducedFiles(string directory)
+            string ReadArgument()
             {
-                // Future PE/tool discovery is unavailable. Include producer files below
-                // each assembly/tool directory, covering modules, satellites and runfiles.
-                foreach (string file in produced)
+                string argument = arguments.Count > 0 ? arguments.Dequeue() :
+                    throw new ArgumentException("Missing ILLink argument value.");
+                if (argument.StartsWith("@", StringComparison.Ordinal))
                 {
-                    if (ILLinkInputPaths.IsUnder(file, directory))
-                    {
-                        inputs.Add(file);
-                    }
+                    throw new ArgumentException("Declared-I/O ILLink requires explicit files, not file lists.");
                 }
+                return argument;
             }
 
-            void AddAssembly(string path)
+            void AddFileAndDirectory(ITaskItem file)
             {
-                if (!visited.Add(path))
-                {
-                    return;
-                }
-
-                if (produced.Contains(path))
-                {
-                    inputs.Add(path);
-                    AddProducedFiles(Path.GetDirectoryName(path)!);
-                }
-                else if (assemblies.TryGetValue(path, out XElement? facts))
-                {
-                    foreach (XElement file in facts.Elements("File"))
-                    {
-                        inputs.Add(PathOf(file));
-                    }
-                    foreach (XElement module in facts.Elements("Module"))
-                    {
-                        AddAssembly(PathOf(module));
-                    }
-                }
-                else
-                {
-                    throw new ArgumentException($"Unprepared ILLink assembly '{path}'; run Restore or retain its producer in the graph.");
-                }
+                string path = GetPath(file.ItemSpec);
+                inputs.Add(path);
+                directories.Add(Path.GetDirectoryName(path)!);
             }
         }
-        catch (Exception ex) when (ExceptionHandling.IsIoRelatedException(ex) || ex is System.Xml.XmlException)
+        catch (Exception ex) when (ExceptionHandling.IsIoRelatedException(ex))
         {
             Log.LogErrorFromException(ex);
             return false;
         }
     }
 
-    private string GetPath(string value) => FileUtilities.NormalizePath(TaskEnvironment.GetAbsolutePath(value)).Value;
-
-    private static string PathOf(XElement element)
+    private string GetPath(string value)
     {
-        string path = (string?)element.Attribute("Path") ?? "";
-        if (!Path.IsPathRooted(path) || path.IndexOfAny(['*', '?', '\0']) >= 0)
+        if (value.IndexOfAny(['*', '?', '\0']) >= 0)
         {
-            throw new ArgumentException("Invalid path in prepared ILLink inventory.");
+            throw new ArgumentException("ILLink requires explicit file paths.");
         }
-        return Path.GetFullPath(path);
+        return FileUtilities.NormalizePath(TaskEnvironment.GetAbsolutePath(value)).Value;
     }
 }
 
 internal static class ILLinkInputPaths
 {
-    internal static bool IsAssembly(string path)
-    {
-        string extension = Path.GetExtension(path);
-        return extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".winmd", StringComparison.OrdinalIgnoreCase);
-    }
-
     internal static bool IsUnder(string file, string directory)
-        => file.StartsWith(FileUtilities.EnsureTrailingSlash(directory),
-            FileUtilities.PathComparison);
+        => file.StartsWith(FileUtilities.EnsureTrailingSlash(directory), FileUtilities.PathComparison);
 
     internal static IEnumerable<string> SplitArguments(string arguments)
     {

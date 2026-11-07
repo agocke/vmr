@@ -118,7 +118,8 @@ namespace Mono.Linker
             // Any full path explicit reference takes precedence over other look up logic
             asm = ResolveFromReferences(name);
 
-            asm ??= SearchDirectory(name);
+            if (_context.ExplicitInputs is null)
+                asm ??= SearchDirectory(name);
 
             if (asm == null)
             {
@@ -148,6 +149,8 @@ namespace Mono.Linker
 
         public virtual void AddSearchDirectory(string directory)
         {
+            if (_context.ExplicitInputs is not null)
+                throw new InvalidOperationException("Declared-I/O ILLink does not support search directories.");
             _directories.Add(directory);
         }
 
@@ -155,6 +158,7 @@ namespace Mono.Linker
         {
             // Sanitize the path for caching purposes
             file = Path.GetFullPath(file);
+            _context.RequireInputFile(file);
 
             if (_pathToAssembly.TryGetValue(file, out var loadedAssembly))
                 return loadedAssembly;
@@ -167,6 +171,19 @@ namespace Mono.Linker
                 using var mappedFile = MemoryMappedFile.CreateFromFile(
                     fileStream, null, fileStream.Length, MemoryMappedFileAccess.Read, HandleInheritability.None, true);
                 viewStream = mappedFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read);
+
+                if (_context.ExplicitInputs is not null)
+                {
+                    using var pe = new System.Reflection.PortableExecutable.PEReader(viewStream,
+                        System.Reflection.PortableExecutable.PEStreamOptions.LeaveOpen);
+                    var metadata = System.Reflection.Metadata.PEReaderExtensions.GetMetadataReader(pe);
+                    if (metadata.AssemblyFiles.Count > 0)
+                    {
+                        // Cecil can reopen modules and hash linked resources outside this resolver.
+                        throw new NotSupportedException("Declared-I/O ILLink does not yet support multi-module assemblies or linked resources.");
+                    }
+                    viewStream.Position = 0;
+                }
 
                 AssemblyDefinition result = ModuleDefinition.ReadModule(viewStream, _defaultReaderParameters).Assembly;
 

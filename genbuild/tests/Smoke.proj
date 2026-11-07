@@ -1477,7 +1477,6 @@
     <WriteLinesToFile File="%(_ILLinkInputDirectory.Identity)references/Reference.pdb" Lines="reference symbols" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_ILLinkInputRoot)action/RuntimeILLinkInputs.proj&quot; $(_ILLinkInputArguments)" />
     <Copy SourceFiles="$(_AppDirectory)/toolset/Microsoft.Build.Tasks.Core.dll" DestinationFiles="$(_ILLinkInputRoot)action/references/Shadow.dll" />
-    <Exec Command="$(_App) restore &quot;$(_ILLinkInputRoot)action/RuntimeILLinkInputs.proj&quot; $(_ILLinkInputArguments)" />
     <Exec Command="$(_App) build &quot;$(_ILLinkInputRoot)action/RuntimeILLinkInputs.proj&quot; $(_ILLinkInputArguments) -p:MSBuildEmitActionGraph=&quot;$(_ILLinkInputRoot)action/build.ninja&quot;" />
     <Error Condition="Exists('$(_ILLinkInputRoot)action/task/bin') or Exists('$(_ILLinkInputRoot)action/tool/bin') or
                       Exists('$(_ILLinkInputRoot)action/obj/PreTrim') or Exists('$(_ILLinkInputRoot)action/obj/Fixture.dll')"
@@ -1501,6 +1500,12 @@
     </ReadLinesFromFile>
     <Error Condition="!@(_ILLinkInputChangedContents->AnyHaveMetadataValue('Identity', 'changed reference symbols'))"
            Text="Changing a declared reference sidecar must rerun the independent linker action." />
+    <Exec Command="$(_App) build &quot;$(_ILLinkInputRoot)action/RuntimeILLinkInputs.proj&quot; $(_ILLinkInputArguments) -p:ILLinkArgs=&quot;-d references&quot; -p:MSBuildEmitActionGraph=&quot;$(_ILLinkInputRoot)action/invalid.ninja&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_ILLinkDirectoryExit" />
+    </Exec>
+    <Error Condition="'$(_ILLinkDirectoryExit)' == '0'"
+           Text="Declared-I/O linker authoring must reject directory search arguments." />
   </Target>
   <Target Name="TestRuntimeILLinkCompileOutputs">
     <PropertyGroup>
