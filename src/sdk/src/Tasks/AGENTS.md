@@ -39,6 +39,17 @@ and package-adjacent files absent from the acquired inventory.
 Both primary and satellite `CompileManaged` calls consume `_CompilerToolInput`
 directly from the packaged Build catalog, not Restore snapshots.
 
+Hardened framework preparation captures raw acquired pack resources through
+[`WriteFrameworkPackInputs`](Microsoft.NET.Build.Tasks/WriteFrameworkPackInputs.cs),
+not configured references, analyzers, runtime frameworks or apphost paths.
+[`PreparedFrameworkTasks`](Microsoft.NET.Build.Tasks/PreparedFrameworkTasks.cs)
+reuses SDK selection with those resources during graph construction, without
+filesystem/workload discovery fallback. Archive member inventories preserve
+analyzer companions absent from FrameworkList; loose packs need explicit catalogs
+when FrameworkList is incomplete. `_CompilerFrameworkFile` supplies these candidates
+to final analyzer dependency selection. The configured preparation walk remains;
+do not add reference traversal or new selection passes just to collect resource facts.
+
 ## Build diagnostics (NETSDK errors / warnings / info)
 
 These are conventions that aren't visible from the code alone — getting them wrong

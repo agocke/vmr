@@ -18,15 +18,8 @@
 
   <Target Name="_CaptureCscToolInputs"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
-    <ItemGroup>
-      <_CscAnalyzerDirectory Include="@(Analyzer->'%(RootDir)%(Directory)')"
-                            Condition="'%(Analyzer.FrameworkReferenceName)' != ''" KeepDuplicates="false" />
-    </ItemGroup>
-    <ItemGroup>
-      <_CscToolInput Include="%(_CscAnalyzerDirectory.Identity)**/*" Condition="'%(_CscAnalyzerDirectory.Identity)' != ''" />
-    </ItemGroup>
     <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_CscInputManifestPath)'))" />
-    <WriteCscInputs Inputs="@(_CscToolInput)" OutputFile="$(_CscInputManifestPath)" />
+    <WriteCscInputs Inputs="" OutputFile="$(_CscInputManifestPath)" />
   </Target>
 
   <PropertyGroup>
@@ -303,7 +296,7 @@
     </FormatCsc>
 
     <ResolveCompilerDependencies Condition="'$(MSBuildHardenedGraph)' == 'true'"
-                                 Analyzers="@(Analyzer)" CandidateFiles="@(_CompilerPackageFile);@(_CompilerAnalyzerFile)"
+                                 Analyzers="@(Analyzer)" CandidateFiles="@(_CompilerPackageFile);@(_CompilerAnalyzerFile);@(_CompilerFrameworkFile)"
                                  DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="Dependencies" ItemName="_CompilerAnalyzerDependency" />
     </ResolveCompilerDependencies>

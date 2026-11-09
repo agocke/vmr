@@ -583,8 +583,8 @@ capture cannot reuse their pre-Restore evaluations. Capture coverage includes
 discovery, not just compilation requests.
 SDK snapshots distinguish `Configuration/Platform/TargetFramework`; other
 input-affecting global properties require separate intermediate paths.
-Framework runtime facts are captured after targeting-pack resolution filters out
-unused frameworks. Standard preparation rejects `PrepareForBuild`/`CoreCompile`
+Framework preparation now captures raw acquired resources; graph construction selects
+the used runtime frameworks. Standard preparation rejects `PrepareForBuild`/`CoreCompile`
 instead of prebuilding products or tools.
 
 The real `System.Collections.Immutable` probe passes the retained-multi-targeting
@@ -592,8 +592,8 @@ guard and the live-tool prebuild dependency; its minimum-framework closure now
 constructs and executes independently from an empty product tree. Runtime's
 [`FilterImplicitAssemblyReferences`](../../../../runtime/Directory.Build.targets)
 runs before `ResolveAssemblyReferences`, after pack candidates and project-output
-metadata are available. Framework capture retains unfiltered reference/analyzer
-candidates; replayed `ReferencePath` items participate in the same runtime filter.
+metadata are available. Framework capture retains raw pack resources; graph-selected
+reference/analyzer candidates participate in the same runtime filter.
 Project-output and analyzer replacements are selected from metadata, without
 inspecting binaries. The
 [reference fixture](../../../../../genbuild/tests/RuntimeReferences.csproj)
@@ -612,7 +612,7 @@ or generated-task binding in the action graph.
 The real preparation probe produces no DLLs and passes `ILLink.Tasks`' explicit
 MSBuild framework/utility references from
 [`PackageDownloadAndReference`](../../../../runtime/eng/PackageDownloadAndReference.targets).
-Framework capture selects pack-owned references/analyzers by `FrameworkReferenceName`;
+Graph-time SDK selection supplies pack-owned references/analyzers by `FrameworkReferenceName`;
 project-declared references remain in authoring for the existing path-only resolver.
 The [explicit-reference fixture](../../../../../genbuild/tests/ExplicitReferences.csproj)
 prepares a missing future tool path without prebuilding, preserves aliases and
@@ -626,10 +626,58 @@ compiles a package-backed `netstandard2.0` library for a net11 executable and a
 net10 library using Core and ASP.NET targeting packs. Ordinary package targets
 provide explicit `Private=false` references; no framework reference is synthesized
 and no package-authored references enter the pack snapshot. All selected packs
-contribute items scoped to the configured target framework. Changed framework-reference
-identity sets fail with NETSDK1255 and require a fresh Restore.
+contribute items scoped to the configured target framework. A configured subset of
+already-acquired packs requires no additional Restore; changed acquisition context
+or missing resource observations fail before graph publication.
 Windows SDK normalization is imported only for Windows platform authoring, preserving
 ordinary normalization without validating unused Windows-only expressions elsewhere.
+
+Hardened framework fetch manifests use version 2 with raw resource format 1.
+[`WriteFrameworkPackInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkPackInputs.cs)
+captures acquisition bindings, workload-resolved versions, pack data, presence
+observations and archive/explicit member catalogs. Pack XML and runtime-graph JSON
+are shared within one acquisition generation, independent of project language/profile.
+[`PreparedFrameworkTasks`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/PreparedFrameworkTasks.cs)
+injects those resources into existing SDK policy; configured reference, analyzer,
+runtime-framework and apphost selection has no filesystem/workload fallback.
+The ordinary opt-in version-1 selected manifest remains supported.
+
+Framework analyzer members now feed final compiler dependency selection directly.
+C#/VB preparation no longer inventories framework analyzer directories. The runtime
+probe retains all 99 framework analyzer DLLs, including 91 localized companions
+missing from FrameworkList, and all 56 packaged compiler files in every compiler action.
+SDK task builds for current .NET and .NET Framework pass, as do focused raw-resource,
+framework/package conflict, explicit-reference, compiler and acquired-apphost path
+parity checks. Apphost path selection is tested separately from native apphost creation,
+which is not yet a supported declared action.
+
+A fresh Release/linux/x64 runtime-library Restore and graph reproduce all 5,320
+task/output signatures and the operands of all 500 compiler commands. This is not
+literal argument-string parity: 17 commands change only reference ordering after
+selection moves out of evaluation-time snapshots. Thirteen resource-only satellite
+compilers no longer admit unused framework analyzer DLLs; their analyzer-free command
+operands are unchanged. No matched Restore-performance claim is made. Configured
+preparation recursion and framework-discovery capture remain until acquisition
+finalization and the remaining ApiCompat capture are migrated.
+
+Cold baseline/new Ninja executions subsequently completed using identical physical
+execution paths and isolated publication through `LibrariesOverridePath` and
+`LibrariesAllConfigurationsOverridePath`. Both repeated executions reported no work;
+protected original products, caches and the default app remained unchanged.
+Both runs produced the same 7,217-file inventory, but strict byte-equivalence failed:
+7,203 files match and 14 DLL/PDB copies differ, belonging to `Mono.Linker`,
+`ILLink.Tasks` and `System.Text.Json.SourceGeneration.Roslyn4.4`. All satellite
+assemblies match. The differing assemblies have equal method-body/resource hashes
+and assembly-reference sequences, but different MVID/PDB identities. Replaying the
+three baseline compiler invocations with the new toolset reproduces baseline
+DLL/PDB bytes exactly; replaying the new invocations restores new bytes.
+Preserving compiler operands alone is therefore insufficient to match baseline
+bytes: reference ordering must also be retained. That baseline ordering is not a
+compatibility requirement. The new path preserves targeting-pack XML order and
+normal MSBuild item insertion order, replacing case-insensitive snapshot sorting
+and early framework-reference injection. A separate fresh-process graph construction
+reproduces all 500 complete compiler argument strings exactly. The deterministic
+new ordering is retained rather than adding baseline-specific sorting.
 
 Bounded framework/package arbitration now runs during graph construction after
 runtime filtering and path normalization. It reuses SDK conflict policy over
@@ -1416,8 +1464,9 @@ is unchanged. See the [package fixture](../../../../../genbuild/tests/PackageRef
   then compile and start independently through Ninja.
 - [x] Reject missing, malformed and unresolved facts without publishing a graph.
 
-`_FrameworkReferenceConflictFactsVersion=1` adds parsed platform items, pack-owned
-override rules and ordered preferred packages to framework snapshots.
+`_FrameworkReferenceConflictFactsVersion=1` identifies pack conflict resources.
+The raw framework resource path parses platform items during graph-time targeting
+selection and retains pack-owned override rules and ordered preferred packages.
 `_NuGetConflictFactsVersion=1` adds `_NuGetConflictFile` assembly/file versions for
 non-placeholder package assets. Capture uses the existing portable binary-version
 reader; unusual native/version-resource profiles are not established by these

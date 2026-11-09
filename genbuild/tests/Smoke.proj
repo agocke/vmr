@@ -100,14 +100,15 @@
     </ReadLinesFromFile>
     <Error Condition="'$(_LegacyCleanSnapshot)' != 'not an MSBuild project' or $([System.IO.File]::ReadAllText('$(_SdkGraph)').Contains('FileListAbsolute.txt'))"
            Text="Restore and graph construction must ignore obsolete clean snapshots and ledger state." />
-    <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_CompileReference" />
-    </XmlPeek>
-    <Error Condition="'@(_CompileReference)' == ''" Text="Restore did not capture compiler reference inputs." />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_TestDirectory)obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_CompileReference" />
+    </MSBuild>
+    <Error Condition="'@(_CompileReference)' == ''" Text="Restore did not capture acquired framework-pack resources." />
     <XmlPeek XmlInputPath="$(_TestDirectory)obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestRuntimeFramework/@Include">
       <Output TaskParameter="Result" ItemName="_PreparedRuntimeFramework" />
     </XmlPeek>
-    <Error Condition="'@(_PreparedRuntimeFramework)' != 'Microsoft.NETCore.App'" Text="Preparation must capture only the runtime frameworks selected by the project's targeting packs." />
+    <Error Condition="'@(_PreparedRuntimeFramework)' != ''" Text="Restore must not snapshot configured runtime-framework selection." />
     <Exec WorkingDirectory="$(_TestDirectory)" Command="ninja -f &quot;$(_SdkGraph)&quot;" />
     <Error Condition="!Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.dll') or !Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.pdb') or !Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.deps.json') or !Exists('$(_TestDirectory)bin/Debug/net11.0/HelloWorld.runtimeconfig.json')"
            Text="Independent SDK graph execution must publish its assembly, symbols and runtime manifests." />
@@ -352,16 +353,27 @@
       <_FrameworkBasicsHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_FrameworkBasicsHostOS>
       <_FrameworkBasicsArguments>-p:DirectoryBuildPropsPath=&quot;$(_FrameworkBasicsRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_FrameworkBasicsRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_FrameworkBasicsRoot)Directory.Packages.props&quot; -p:MSBuildGraphHostOS=$(_FrameworkBasicsHostOS)</_FrameworkBasicsArguments>
     </PropertyGroup>
-    <MakeDir Directories="$(_FrameworkBasicsRoot)App;$(_FrameworkBasicsRoot)Library;$(_FrameworkBasicsRoot)Multiple" />
+    <MakeDir Directories="$(_FrameworkBasicsRoot)App;$(_FrameworkBasicsRoot)AppHost;$(_FrameworkBasicsRoot)Library;$(_FrameworkBasicsRoot)Multiple" />
     <WriteLinesToFile File="$(_FrameworkBasicsRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_FrameworkBasicsRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_FrameworkBasicsRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)FrameworkBasics.csproj;$(MSBuildThisFileDirectory)FrameworkBasics.csproj;$(MSBuildThisFileDirectory)FrameworkBasics.csproj"
           DestinationFiles="$(_FrameworkBasicsRoot)App/App.csproj;$(_FrameworkBasicsRoot)Library/Library.csproj;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)FrameworkBasics.csproj" DestinationFiles="$(_FrameworkBasicsRoot)AppHost/App.csproj" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/App/Program.cs;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs;$(MSBuildThisFileDirectory)FrameworkBasicsComponent.cs"
           DestinationFiles="$(_FrameworkBasicsRoot)App/Program.cs;$(_FrameworkBasicsRoot)Library/Greeting.cs;$(_FrameworkBasicsRoot)Multiple/Component.cs" />
     <Exec Command="$(_App) restore &quot;$(_FrameworkBasicsRoot)App/App.csproj&quot; $(_FrameworkBasicsArguments) -bl:&quot;$(_FrameworkBasicsRoot)restore.binlog&quot;" />
     <Exec Command="$(_App) restore &quot;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj&quot; $(_FrameworkBasicsArguments) -bl:&quot;$(_FrameworkBasicsRoot)multiple-restore.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;$(_FrameworkBasicsRoot)AppHost/App.csproj&quot; $(_FrameworkBasicsArguments) -p:UseAppHost=true" />
+    <Exec Command="$(_App) restore &quot;$(_FrameworkBasicsRoot)AppHost/App.csproj&quot; $(_FrameworkBasicsArguments) -t:CheckAppHost -p:UseAppHost=true -p:AppHostResult=&quot;$(_FrameworkBasicsRoot)AppHost/ordinary.txt&quot;" />
+    <Exec Command="$(_App) build &quot;$(_FrameworkBasicsRoot)AppHost/App.csproj&quot; $(_FrameworkBasicsArguments) -p:BuildDependsOn=CheckAppHost -p:UseAppHost=true -p:AppHostResult=&quot;$(_FrameworkBasicsRoot)AppHost/prepared.txt&quot; -p:MSBuildEmitActionGraph=&quot;$(_FrameworkBasicsRoot)AppHost/probe.ninja&quot;" />
+    <Error Condition="Exists('$(_FrameworkBasicsRoot)AppHost/prepared.txt')" Text="Apphost construction must select from acquired facts without publishing probe output." />
+    <Exec WorkingDirectory="$(_FrameworkBasicsRoot)AppHost" Command="ninja -f probe.ninja" />
+    <GetFileHash Files="$(_FrameworkBasicsRoot)AppHost/ordinary.txt;$(_FrameworkBasicsRoot)AppHost/prepared.txt">
+      <Output TaskParameter="Items" ItemName="_FrameworkBasicsAppHostHash" />
+    </GetFileHash>
+    <Error Condition="'@(_FrameworkBasicsAppHostHash->'%(FileHash)'->Distinct()->Count())' != '1'"
+           Text="Prepared apphost selection must preserve ordinary host-pack paths." />
     <XmlPeek XmlInputPath="$(_FrameworkBasicsRoot)Library/obj/frameworkreferences/Debug/AnyCPU/netstandard2.0/Library.csproj.g.props"
              Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
       <Output TaskParameter="Result" ItemName="_FrameworkBasicsLibraryPack" />
@@ -370,13 +382,15 @@
            Text="Preparation must not snapshot package-authored references as pack inventory or prebuild products." />
     <Exec Command="$(_App) build &quot;$(_FrameworkBasicsRoot)App/App.csproj&quot; $(_FrameworkBasicsArguments) -p:MSBuildEmitActionGraph=&quot;$(_FrameworkBasicsRoot)build.ninja&quot; -bl:&quot;$(_FrameworkBasicsRoot)build.binlog&quot;" />
     <Exec Command="$(_App) build &quot;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj&quot; $(_FrameworkBasicsArguments) -p:MSBuildEmitActionGraph=&quot;$(_FrameworkBasicsRoot)multiple.ninja&quot; -bl:&quot;$(_FrameworkBasicsRoot)multiple-build.binlog&quot;" />
-    <Exec Command="$(_App) build &quot;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj&quot; $(_FrameworkBasicsArguments) -p:DisableImplicitFrameworkReferences=true -p:MSBuildEmitActionGraph=&quot;$(_FrameworkBasicsRoot)stale.ninja&quot; -flp:&quot;LogFile=$(_FrameworkBasicsRoot)stale.log;Verbosity=quiet&quot;"
+    <Exec Command="$(_App) build &quot;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj&quot; $(_FrameworkBasicsArguments) -p:DisableImplicitFrameworkReferences=true -p:MSBuildEmitActionGraph=&quot;$(_FrameworkBasicsRoot)subset.ninja&quot;" />
+    <Error Condition="!Exists('$(_FrameworkBasicsRoot)subset.ninja')" Text="Graph-time selection must permit a subset of already-acquired framework packs." />
+    <Exec Command="$(_App) build &quot;$(_FrameworkBasicsRoot)Multiple/Multiple.csproj&quot; $(_FrameworkBasicsArguments) -p:NetCoreTargetingPackRoot=&quot;$(_FrameworkBasicsRoot)unacquired-packs&quot; -p:MSBuildEmitActionGraph=&quot;$(_FrameworkBasicsRoot)stale.ninja&quot; -flp:&quot;LogFile=$(_FrameworkBasicsRoot)stale.log;Verbosity=quiet&quot;"
           IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
       <Output TaskParameter="ExitCode" PropertyName="_FrameworkBasicsStaleExit" />
     </Exec>
     <Error Condition="'$(_FrameworkBasicsStaleExit)' == '0' or Exists('$(_FrameworkBasicsRoot)stale.ninja') or
-                      !$([System.IO.File]::ReadAllText('$(_FrameworkBasicsRoot)stale.log').Contains('NETSDK1255'))"
-           Text="Changed framework inputs must require a fresh Restore instead of replaying stale inventory or discovering packs." />
+                      !$([System.IO.File]::ReadAllText('$(_FrameworkBasicsRoot)stale.log').Contains('Run Restore'))"
+           Text="Changed acquisition context must require a fresh Restore instead of discovering packs during graph construction." />
     <Error Condition="Exists('$(_FrameworkBasicsRoot)App/bin/Debug/net11.0/App.dll') or Exists('$(_FrameworkBasicsRoot)Library/bin/Debug/netstandard2.0/Library.dll') or Exists('$(_FrameworkBasicsRoot)Multiple/bin/Debug/net10.0/Multiple.dll')"
            Text="Framework decomposition must preserve graph-only construction and future project producers." />
     <Exec WorkingDirectory="$(_FrameworkBasicsRoot)App" Command="ninja -f &quot;$(_FrameworkBasicsRoot)build.ninja&quot;" />
@@ -1010,10 +1024,10 @@
     <WriteLinesToFile File="$(_ForwardedRoot)%(_ForwardedCase.Identity)/RuntimeForwardedTypes.targets"
                       Lines="&lt;Project&gt;;@(_ForwardedAuthoring);&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_ForwardedRoot)%(_ForwardedCase.Identity)/RuntimeForwardedTypes.csproj&quot; $(_ForwardedArguments) -p:EmptyForwardedTypes=%(_ForwardedCase.Empty)" />
-    <XmlPeek XmlInputPath="$(_ForwardedRoot)action/obj/frameworkreferences/Debug/AnyCPU/net11.0/RuntimeForwardedTypes.csproj.g.props"
-             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_ForwardedFrameworkReference" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_ForwardedRoot)action/obj/frameworkreferences/Debug/AnyCPU/net11.0/RuntimeForwardedTypes.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_ForwardedFrameworkReference" />
+    </MSBuild>
     <Error Condition="'@(_ForwardedFrameworkReference)' == ''" Text="The verifier requires prepared framework references." />
     <WriteLinesToFile File="$(_ForwardedRoot)compile.rsp" Lines="@(_ForwardedFrameworkReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_ForwardedRoot)Verifier.dll&quot; @&quot;$(_ForwardedRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)RuntimeForwardedTypesVerifier.cs&quot;" />
@@ -1128,19 +1142,19 @@
     <Exec Command="$(_App) restore &quot;$(_RuntimeReferencesRoot)Parent/Parent.csproj&quot; $(_RuntimeReferencesArguments) -bl:&quot;$(_RuntimeReferencesRoot)restore.binlog&quot;" />
     <Error Condition="Exists('$(_RuntimeReferencesRoot)Tool/bin') or Exists('$(_RuntimeReferencesRoot)Replacement/bin')"
            Text="Targeting-pack discovery must not build project or tool dependencies." />
-    <XmlPeek XmlInputPath="$(_RuntimeReferencesRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props"
-             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_RuntimePackCandidate" />
-    </XmlPeek>
-    <XmlPeek XmlInputPath="$(_RuntimeReferencesRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props"
-             Query="/Project/ItemGroup/_FrameworkReferenceManifestAnalyzer/@Include">
-      <Output TaskParameter="Result" ItemName="_RuntimePackAnalyzer" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_RuntimeReferencesRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_RuntimePackCandidate" />
+    </MSBuild>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj" Targets="ReadAnalyzers"
+             Properties="FrameworkPackInputs=$(_RuntimeReferencesRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_RuntimePackAnalyzer" />
+    </MSBuild>
     <PropertyGroup>
       <_RuntimePackCandidateNames>@(_RuntimePackCandidate->'%(Filename)')</_RuntimePackCandidateNames>
     </PropertyGroup>
-    <Error Condition="!$(_RuntimePackCandidateNames.Contains('System.Linq')) or !$(_RuntimePackCandidateNames.Contains('Fixture.Replacement')) or '@(_RuntimePackAnalyzer)' == ''"
-           Text="Preparation must retain raw targeting-pack references and analyzers before project-dependent filtering." />
+    <Error Condition="!$(_RuntimePackCandidateNames.Contains('System.Linq')) or $(_RuntimePackCandidateNames.Contains('Fixture.Replacement')) or '@(_RuntimePackAnalyzer)' == ''"
+           Text="Preparation must retain acquired pack members, not graph-time project replacement candidates." />
     <Exec Command="$(_App) build &quot;$(_RuntimeReferencesRoot)Parent/Parent.csproj&quot; $(_RuntimeReferencesArguments) -t:CheckAnalyzerReplacement -p:TestAnalyzerReplacement=true -p:MSBuildEmitActionGraph=&quot;$(_RuntimeReferencesRoot)analyzer-replacement.ninja&quot; -bl:&quot;$(_RuntimeReferencesRoot)analyzer-replacement.binlog&quot;" />
     <Exec Command="$(_App) build &quot;$(_RuntimeReferencesRoot)Parent/Parent.csproj&quot; $(_RuntimeReferencesArguments) -p:MSBuildEmitActionGraph=&quot;$(_RuntimeReferencesRoot)build.ninja&quot; -bl:&quot;$(_RuntimeReferencesRoot)build.binlog&quot;" />
     <Error Condition="Exists('$(_RuntimeReferencesRoot)Tool/bin/Debug/net11.0/Tool.dll') or Exists('$(_RuntimeReferencesRoot)Replacement/bin/Debug/net11.0/Fixture.Replacement.dll')"
@@ -1180,10 +1194,10 @@
     <Exec Command="$(_App) restore &quot;$(_ExplicitRoot)Parent/Parent.csproj&quot; $(_ExplicitArguments) -bl:&quot;$(_ExplicitRoot)restore.binlog&quot;" />
     <Error Condition="Exists('$(_ExplicitRoot)Parent/bin') or Exists('$(_ExplicitRoot)Tool/bin')"
            Text="Preparing explicit references must not require referenced binaries or prebuild their producers." />
-    <XmlPeek XmlInputPath="$(_ExplicitRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props"
-             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_ExplicitPackReference" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_ExplicitRoot)Parent/obj/frameworkreferences/Debug/AnyCPU/net11.0/Parent.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_ExplicitPackReference" />
+    </MSBuild>
     <PropertyGroup>
       <_ExplicitPackNames>@(_ExplicitPackReference->'%(Filename)%(Extension)')</_ExplicitPackNames>
     </PropertyGroup>
@@ -1624,15 +1638,16 @@
     <WriteLinesToFile File="$(_PackageRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_PackageRoot)seed" />
     <Exec Command="$(_App) restore &quot;$(_PackageRoot)seed/HelloWorld.csproj&quot; $(_PackageSeedArguments) -bl:&quot;$(_PackageRoot)seed.binlog&quot;" />
-    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_PackageCompilerReference" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_PackageRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_PackageCompilerReference" />
+    </MSBuild>
     <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/nugetinputs/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_NuGetInput[@Include='%2524/project/restore/packagesPath']/Value/text()">
       <Output TaskParameter="Result" PropertyName="_PackageSeedCache" />
     </XmlPeek>
-    <XmlPeek XmlInputPath="$(_PackageRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="(/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/NuGetPackageVersion/text())[1]">
-      <Output TaskParameter="Result" PropertyName="_PackageFrameworkVersion" />
-    </XmlPeek>
+    <PropertyGroup>
+      <_PackageFrameworkVersion>@(_PackageCompilerReference->'%(NuGetPackageVersion)'->Distinct())</_PackageFrameworkVersion>
+    </PropertyGroup>
     <ItemGroup>
       <_PackageFrameworkArchive Include="$(_PackageSeedCache)/microsoft.netcore.app.ref/$(_PackageFrameworkVersion)/*.nupkg;$(_PackageSeedCache)/microsoft.aspnetcore.app.ref/$(_PackageFrameworkVersion)/*.nupkg" />
     </ItemGroup>
@@ -1732,15 +1747,16 @@
     <WriteLinesToFile File="$(_ArbitrationRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_ArbitrationRoot)seed" />
     <Exec Command="$(_App) restore &quot;$(_ArbitrationRoot)seed/HelloWorld.csproj&quot; $(_ArbitrationSeedArguments) -bl:&quot;$(_ArbitrationRoot)seed.binlog&quot;" />
-    <XmlPeek XmlInputPath="$(_ArbitrationRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_ArbitrationCompilerReference" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_ArbitrationRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_ArbitrationCompilerReference" />
+    </MSBuild>
     <XmlPeek XmlInputPath="$(_ArbitrationRoot)seed/obj/nugetinputs/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_NuGetInput[@Include='%2524/project/restore/packagesPath']/Value/text()">
       <Output TaskParameter="Result" PropertyName="_ArbitrationSeedCache" />
     </XmlPeek>
-    <XmlPeek XmlInputPath="$(_ArbitrationRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="(/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/NuGetPackageVersion/text())[1]">
-      <Output TaskParameter="Result" PropertyName="_ArbitrationFrameworkVersion" />
-    </XmlPeek>
+    <PropertyGroup>
+      <_ArbitrationFrameworkVersion>@(_ArbitrationCompilerReference->'%(NuGetPackageVersion)'->Distinct())</_ArbitrationFrameworkVersion>
+    </PropertyGroup>
     <ItemGroup>
       <_ArbitrationFrameworkArchive Include="$(_ArbitrationSeedCache)/microsoft.netcore.app.ref/$(_ArbitrationFrameworkVersion)/*.nupkg;$(_ArbitrationSeedCache)/microsoft.aspnetcore.app.ref/$(_ArbitrationFrameworkVersion)/*.nupkg" />
       <_ArbitrationLibraryReference Include="@(_ArbitrationCompilerReference)" Condition="'%(_ArbitrationCompilerReference.Filename)' != 'System.Collections.Immutable'" />
@@ -2372,10 +2388,10 @@
     <WriteLinesToFile File="$(_FacadeRoot)%(_FacadeImport.Identity)" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_FacadeRoot)seed" />
     <Exec Command="$(_App) restore &quot;$(_FacadeRoot)seed/HelloWorld.csproj&quot;" />
-    <XmlPeek XmlInputPath="$(_FacadeRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
-             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_FacadeReference" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_FacadeRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_FacadeReference" />
+    </MSBuild>
     <Error Condition="'@(_FacadeReference)' == ''" Text="Facade fixtures require prepared framework references." />
     <WriteLinesToFile File="$(_FacadeRoot)compile.rsp" Lines="@(_FacadeReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
     <Exec Command="$(_FacadeCompiler) -out:&quot;$(_FacadeRoot)inputs/Contract.dll&quot; @&quot;$(_FacadeRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)GenFacades/Types.cs&quot;" />
@@ -2873,7 +2889,9 @@
     <MakeDir Directories="@(_CopyRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)CopyOutputs.proj;$(MSBuildThisFileDirectory)Csc.proj" DestinationFolder="%(_CopyRoot.Identity)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_CopyRoot.Identity)Program.cs" />
-    <Copy SourceFiles="$(_TestDirectory)copies/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_CopyRoot.Identity)FrameworkInputs.props" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj" Targets="WriteFixtureInputs"
+             Properties="FrameworkPackInputs=$(_TestDirectory)copies/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props;FrameworkFixtureInputs=$(_TestDirectory)copies/FrameworkInputs.props" />
+    <Copy SourceFiles="$(_TestDirectory)copies/FrameworkInputs.props" DestinationFiles="%(_CopyRoot.Identity)FrameworkInputs.props" />
     <WriteLinesToFile File="%(_CopyRoot.Identity)CopyOutputs.targets" Lines="&lt;Project&gt;;@(_CopyOutputTarget);&lt;Import Project=&quot;$(MSBuildThisFileDirectory)../../src/runtime/eng/intellisense.targets&quot; Condition=&quot;'%24(TestCase)' == 'doc-override'&quot; /&gt;;&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)copies/%(_CopyCase.Identity)/project/CopyOutputs.proj&quot; -p:TestCase=%(_CopyCase.Mode)" />
     <MakeDir Directories="$(_TestDirectory)copies/stale/project/out/ref;$(_TestDirectory)copies/stale/project/obj/copy.marker" />
@@ -3429,7 +3447,9 @@
     <MakeDir Directories="@(_DepsRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Deps.proj;$(MSBuildThisFileDirectory)Csc.proj" DestinationFolder="%(_DepsRoot.Identity)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_DepsRoot.Identity)Program.cs" />
-    <Copy SourceFiles="$(_TestDirectory)deps/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_DepsRoot.Identity)FrameworkInputs.props" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj" Targets="WriteFixtureInputs"
+             Properties="FrameworkPackInputs=$(_TestDirectory)deps/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props;FrameworkFixtureInputs=$(_TestDirectory)deps/FrameworkInputs.props" />
+    <Copy SourceFiles="$(_TestDirectory)deps/FrameworkInputs.props" DestinationFiles="%(_DepsRoot.Identity)FrameworkInputs.props" />
     <WriteLinesToFile File="%(_DepsRoot.Identity)Deps.targets" Lines="&lt;Project&gt;;$(_DepsTargetXml);&lt;/Project&gt;" Overwrite="true" />
     <WriteLinesToFile File="%(_DepsRoot.Identity)Version.cs"
                       Lines="[assembly: System.Reflection.AssemblyVersion(&quot;3.4.5.6&quot;)];[assembly: System.Reflection.AssemblyFileVersion(&quot;7.8.9.10&quot;)]" Overwrite="true" />
@@ -3495,7 +3515,9 @@
     <MakeDir Directories="@(_VbcDirectory)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Vbc.proj" DestinationFiles="%(_VbcDirectory.Identity)Vbc.proj" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Vbc.vb" DestinationFiles="%(_VbcDirectory.Identity)Program.vb" />
-    <Copy SourceFiles="$(_VbcRoot)obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_VbcDirectory.Identity)FrameworkInputs.props" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj" Targets="WriteFixtureInputs"
+             Properties="FrameworkPackInputs=$(_VbcRoot)obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props;FrameworkFixtureInputs=$(_VbcRoot)FrameworkInputs.props" />
+    <Copy SourceFiles="$(_VbcRoot)FrameworkInputs.props" DestinationFiles="%(_VbcDirectory.Identity)FrameworkInputs.props" />
     <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.VisualBasic.CurrentVersion.targets" Query="/Project/Target[@Name='CreateManifestResourceNames']">
       <Output TaskParameter="Result" ItemName="_VbcResourceTargets" />
     </XmlPeek>
@@ -3569,7 +3591,9 @@
     <MakeDir Directories="@(_CscRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.proj" DestinationFiles="%(_CscRoot.Identity)Csc.proj" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)Csc.cs" DestinationFiles="%(_CscRoot.Identity)Program.cs" />
-    <Copy SourceFiles="$(_TestDirectory)csc/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" DestinationFiles="%(_CscRoot.Identity)FrameworkInputs.props" />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj" Targets="WriteFixtureInputs"
+             Properties="FrameworkPackInputs=$(_TestDirectory)csc/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props;FrameworkFixtureInputs=$(_TestDirectory)csc/FrameworkInputs.props" />
+    <Copy SourceFiles="$(_TestDirectory)csc/FrameworkInputs.props" DestinationFiles="%(_CscRoot.Identity)FrameworkInputs.props" />
     <XmlPeek XmlInputPath="$(_AppDirectory)/toolset/Microsoft.Common.CurrentVersion.targets"
              Query="/Project/Target[@Name='ResolveKeySource']">
       <Output TaskParameter="Result" PropertyName="_CscSigningTarget" />
@@ -4360,10 +4384,10 @@
     <!-- Only the externally supplied contract and assertion helper are precompiled, never the consumer. -->
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_ApiCompatRoot)seed" />
     <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)seed/HelloWorld.csproj&quot; $(_ApiCompatArguments)" />
-    <XmlPeek XmlInputPath="$(_ApiCompatRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
-             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_ApiCompatSeedReference" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_ApiCompatRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_ApiCompatSeedReference" />
+    </MSBuild>
     <Error Condition="'@(_ApiCompatSeedReference)' == ''" Text="ApiCompat fixture setup requires prepared framework references." />
     <PropertyGroup>
       <_ApiCompatReferenceDirectory>@(_ApiCompatSeedReference->'%(RootDir)%(Directory)'->Distinct())</_ApiCompatReferenceDirectory>
@@ -4609,10 +4633,10 @@
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ApiCompat/Compatible.cs" DestinationFiles="%(_ApiCompatProducedCase.Root)ordinary/Surface.cs" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_ApiCompatProducedRoot)seed" />
     <Exec Command="$(_App) restore &quot;$(_ApiCompatProducedRoot)seed/HelloWorld.csproj&quot; $(_ApiCompatProducedArguments)" />
-    <XmlPeek XmlInputPath="$(_ApiCompatProducedRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
-             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_ApiCompatProducedFrameworkReference" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_ApiCompatProducedRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_ApiCompatProducedFrameworkReference" />
+    </MSBuild>
     <Error Condition="'@(_ApiCompatProducedFrameworkReference)' == ''" Text="Produced-reference fixture setup requires prepared framework references." />
     <PropertyGroup>
       <_ApiCompatProducedFrameworkDirectory>@(_ApiCompatProducedFrameworkReference->'%(RootDir)%(Directory)'->Distinct())</_ApiCompatProducedFrameworkDirectory>
@@ -4748,10 +4772,10 @@
     <WriteLinesToFile File="$(_NativeRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_NativeRoot)seed" />
     <Exec Command="$(_App) restore &quot;$(_NativeRoot)seed/HelloWorld.csproj&quot;" />
-    <XmlPeek XmlInputPath="$(_NativeRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
-             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_NativeReference" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_NativeRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_NativeReference" />
+    </MSBuild>
     <Error Condition="'@(_NativeReference)' == ''" Text="Native-host fixture preparation did not capture compiler references." />
     <WriteLinesToFile File="$(_NativeRoot)compile.rsp" Lines="@(_NativeReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:exe -out:&quot;$(_NativeRoot)Verifier.dll&quot; @&quot;$(_NativeRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)NativeTaskHost/Program.cs&quot;" />
@@ -4789,10 +4813,10 @@
     <!-- Compile fixture tools explicitly; consumer Restore and construction must never compile. -->
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_GeneratedRoot)seed" />
     <Exec Command="$(_App) restore &quot;$(_GeneratedRoot)seed/HelloWorld.csproj&quot; $(_GeneratedArguments)" />
-    <XmlPeek XmlInputPath="$(_GeneratedRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props"
-             Query="/Project/ItemGroup/_FrameworkReferenceManifestCompileReference/@Include">
-      <Output TaskParameter="Result" ItemName="_GeneratedCompilerReference" />
-    </XmlPeek>
+    <MSBuild Projects="$(MSBuildThisFileDirectory)FrameworkPackInputs.proj"
+             Properties="FrameworkPackInputs=$(_GeneratedRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props">
+      <Output TaskParameter="TargetOutputs" ItemName="_GeneratedCompilerReference" />
+    </MSBuild>
     <Error Condition="'@(_GeneratedCompilerReference)' == ''" Text="Generator fixture preparation did not capture compiler references." />
     <WriteLinesToFile File="$(_GeneratedRoot)compile.rsp" Lines="@(_GeneratedCompilerReference->'-r:&quot;%(Identity)&quot;')" Overwrite="true" />
     <Exec Command="&quot;$(GenBuildTestHost)&quot; --roll-forward Major &quot;$(_AppDirectory)/toolset/Roslyn/bincore/csc.dll&quot; -noconfig -nostdlib+ -target:library -deterministic+ -out:&quot;$(_GeneratedRoot)CompilerGeneratedGenerator.dll&quot; -r:&quot;$(_AppDirectory)/toolset/Roslyn/bincore/Microsoft.CodeAnalysis.dll&quot; @&quot;$(_GeneratedRoot)compile.rsp&quot; &quot;$(MSBuildThisFileDirectory)CompilerGeneratedFiles/Generator.cs&quot;" />

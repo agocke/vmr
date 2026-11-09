@@ -1,0 +1,527 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Xml.Linq;
+using Microsoft.Build.Evaluation;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace Microsoft.NET.Build.Tasks.UnitTests;
+
+[TestClass]
+public class GivenRawFrameworkPackInputs
+{
+    [TestMethod]
+    [DataRow("", "C#", false)]
+    [DataRow("client", "C#", false)]
+    [DataRow("Full", "VB", false)]
+    [DataRow("", "C#", true)]
+    [DataRow("client", "C#", true)]
+    [DataRow("Full", "VB", true)]
+    public void PreparedSelectionUsesCurrentProfileAndLanguageAfterCapture(string profile, string language, bool usePathFallback)
+    {
+        using var fixture = new PackFixture(usePathFallback);
+        (ITaskItem[] facts, ITaskItem[] resources) = fixture.Capture();
+        ResolveTargetingPackAssets ordinary = fixture.Selection(new ResolveTargetingPackAssets(), profile, language);
+        Assert.IsTrue(ordinary.Execute());
+
+        // Capture is deliberately shared across profiles/languages; it must not freeze a selection.
+        Directory.Delete(fixture.PackRoot, recursive: true);
+        var prepared = fixture.Selection(new Prepared.ResolveTargetingPackAssets(), profile, language);
+        prepared.ResourceFactsVersion = "1";
+        prepared.ResourceFacts = facts;
+        prepared.PackResources = resources;
+        Assert.IsTrue(prepared.Execute(), string.Join("\n", ((RecordingEngine)prepared.BuildEngine).Errors));
+
+        string[] expectedNames = profile switch
+        {
+            "client" => ["Common"],
+            "Full" => ["Common", "FullOnly"],
+            _ => ["Common", "FullOnly", "NoProfile"]
+        };
+        string folder = usePathFallback ? "lib" : "ref/netcoreapp5.0";
+        CollectionAssert.AreEqual(expectedNames.Select(name => fixture.PathInPack(folder + "/" + name + ".dll")).ToArray(),
+            prepared.ReferencesToAdd.Select(item => item.ItemSpec).ToArray());
+        CollectionAssert.AreEqual(ordinary.ReferencesToAdd.Select(item => item.ItemSpec).ToArray(),
+            prepared.ReferencesToAdd.Select(item => item.ItemSpec).ToArray());
+        string languageAnalyzer = language == "C#" ? "cs/CSharp" : "vb/VisualBasic";
+        string[] expectedAnalyzers =
+        [
+            fixture.PathInPack("analyzers/dotnet/CommonAnalyzer.dll"),
+            fixture.PathInPack("analyzers/dotnet/" + languageAnalyzer + ".dll")
+        ];
+        CollectionAssert.AreEqual(expectedAnalyzers, prepared.AnalyzersToAdd.Select(item => item.ItemSpec).ToArray());
+        CollectionAssert.AreEqual(ordinary.AnalyzersToAdd.Select(item => item.ItemSpec).ToArray(),
+            prepared.AnalyzersToAdd.Select(item => item.ItemSpec).ToArray());
+        foreach (ITaskItem reference in prepared.ReferencesToAdd)
+        {
+            Assert.AreEqual("Synthetic.Framework", reference.GetMetadata("FrameworkReferenceName"));
+            Assert.AreEqual("Synthetic.Ref", reference.GetMetadata("NuGetPackageId"));
+            Assert.AreEqual("1.0.0", reference.GetMetadata("FrameworkReferenceVersion"));
+            Assert.AreEqual("1.2.3.4", reference.GetMetadata("AssemblyVersion"));
+            Assert.AreEqual("5.6.7.8", reference.GetMetadata("FileVersion"));
+            Assert.AreEqual("false", reference.GetMetadata("Private"));
+            Assert.AreEqual("true", reference.GetMetadata("ExternallyResolved"));
+        }
+        CollectionAssert.AreEqual(new[] { "Synthetic.Runtime" }, prepared.UsedRuntimeFrameworks.Select(item => item.ItemSpec).ToArray());
+        Assert.AreEqual("Synthetic.Ref", prepared.PackageConflictPreferredPackages);
+        CollectionAssert.AreEqual(new[] { fixture.PathInPack("data/PlatformManifest.txt") },
+            prepared.PlatformManifests.Select(item => item.ItemSpec).ToArray());
+        Assert.AreEqual("Other.Package|1.0.0", prepared.PackageConflictOverrides.Single().GetMetadata("OverriddenPackages"));
+    }
+
+    [TestMethod]
+    public void CapturePreservesLocalizedAnalyzerCompanionsNotListedInFrameworkList()
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        (ITaskItem[] facts, ITaskItem[] resources) = fixture.Capture();
+        Directory.Delete(fixture.PackRoot, recursive: true);
+        var prepared = fixture.Selection(new Prepared.ResolveTargetingPackAssets(), "client", "C#");
+        prepared.ResourceFactsVersion = "1";
+        prepared.ResourceFacts = facts;
+        prepared.PackResources = resources;
+        Assert.IsTrue(prepared.Execute());
+
+        CollectionAssert.AreEquivalent(new[]
+        {
+            fixture.PathInPack("analyzers/dotnet/CommonAnalyzer.dll"),
+            fixture.PathInPack("analyzers/dotnet/cs/CSharp.dll"),
+            fixture.PathInPack("analyzers/dotnet/vb/VisualBasic.dll"),
+            fixture.PathInPack("analyzers/dotnet/cs/fr/CSharp.resources.dll")
+        }, prepared.FrameworkAnalyzerFiles.Select(item => item.ItemSpec).ToArray());
+        Assert.IsFalse(prepared.AnalyzersToAdd.Any(item => item.ItemSpec.EndsWith(".resources.dll", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    [DataRow("version")]
+    [DataRow("context")]
+    [DataRow("pack")]
+    [DataRow("probe")]
+    public void PreparedSelectionRejectsMissingAcquisitionFactsInsteadOfProbingDisk(string missing)
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        (ITaskItem[] facts, ITaskItem[] resources) = fixture.Capture();
+        var prepared = fixture.Selection(new Prepared.ResolveTargetingPackAssets(), "", "C#");
+        prepared.ResourceFactsVersion = missing == "version" ? "" : "1";
+        prepared.ResourceFacts = missing == "context" ? [] : facts;
+        prepared.PackResources = missing == "pack" ? [] : resources;
+        if (missing == "probe")
+        {
+            XElement pack = XElement.Parse(resources.Single().GetMetadata("Content"));
+            pack.Elements("Probe").Single(item => (string?)item.Attribute("Path") == "ref/net5.0").Remove();
+            resources.Single().SetMetadata("Content", ProjectCollection.Escape(pack.ToString()));
+        }
+
+        // The complete pack still exists, so filesystem fallback would make this incorrectly succeed.
+        Assert.IsTrue(File.Exists(fixture.PathInPack("data/FrameworkList.xml")));
+        Assert.IsFalse(prepared.Execute());
+        Assert.AreEqual(1, ((RecordingEngine)prepared.BuildEngine).Errors.Count);
+        StringAssert.Contains(((RecordingEngine)prepared.BuildEngine).Errors.Single(), missing switch
+        {
+            "version" => "raw framework-pack facts",
+            "context" => "acquisition context",
+            "pack" or "probe" => "presence fact",
+            _ => throw new InvalidOperationException()
+        });
+    }
+
+    [TestMethod]
+    public void PreparedPackageLookupDistinguishesAcquiredAbsenceFromUnacquiredLookup()
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        (ITaskItem[] facts, ITaskItem[] resources) = fixture.Capture();
+        var resourcesWithLookup = new FrameworkPackResources("1", facts, resources, fixture.Environment);
+        Assert.AreEqual(fixture.PackRoot, resourcesWithLookup.Lookup("Package", "Synthetic.Ref", "1.0.0"));
+        Assert.ThrowsExactly<FormatException>(() => resourcesWithLookup.Lookup("Package", "Unacquired.Ref", "1.0.0"));
+        Assert.ThrowsExactly<FormatException>(() => resourcesWithLookup.ResolveVersion("Unacquired.Ref", "**FromWorkload**"));
+
+        ITaskItem absent = Item("Package/Absent.Ref/1.0.0", ("Kind", "Lookup"), ("Path", ""));
+        var resourcesWithAbsence = new FrameworkPackResources("1", [.. facts, absent], resources, fixture.Environment);
+        Assert.IsNull(resourcesWithAbsence.Lookup("Package", "Absent.Ref", "1.0.0"));
+    }
+
+    [TestMethod]
+    [DataRow("../escape.dll")]
+    [DataRow("/absolute.dll")]
+    [DataRow("ref//empty.dll")]
+    [DataRow("ref/./dot.dll")]
+    [DataRow("ref\\backslash.dll")]
+    [DataRow("")]
+    public void CaptureAndPreparedResourcesRejectMalformedArchiveMemberPaths(string member)
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        fixture.AddArchiveMember(member);
+        WriteFrameworkPackInputs capture = fixture.CaptureTask();
+        Assert.IsFalse(capture.Execute());
+        StringAssert.Contains(((RecordingEngine)capture.BuildEngine).Errors.Single(), "member path");
+        Assert.IsFalse(File.Exists(capture.OutputFile));
+
+        ITaskItem context = Item("Context", ("Kind", "Context"), ("IsWindows", "false"));
+        ITaskItem resource = Item(fixture.PackRoot, ("Content",
+            new XElement("Pack", new XElement("Member", new XAttribute("Path", member))).ToString()));
+        Assert.ThrowsExactly<FormatException>(() =>
+            new FrameworkPackResources("1", [context], [resource], fixture.Environment));
+    }
+
+    [TestMethod]
+    public void DifferentExplicitCatalogsForOneLooseRootPreserveBothSnapshotsInOneBuild()
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        var engine = new RecordingEngine();
+        WriteFrameworkPackInputs first = fixture.CaptureTask();
+        first.BuildEngine = engine;
+        first.PackRequests = [];
+        first.PackageFolders = [];
+        first.LookupFacts = [Item("Installed/Synthetic.Ref/1.0.0", ("Kind", "Lookup"), ("Path", fixture.PackRoot))];
+        first.PackMembers = [Item("CSharp", ("PackRoot", fixture.PackRoot), ("Path", "analyzers/dotnet/cs/CSharp.dll"))];
+        fixture.Capture(first);
+        string firstResourceFile = ImportedResourceFile(first.OutputFile);
+        string firstResourceContent = File.ReadAllText(firstResourceFile);
+
+        WriteFrameworkPackInputs second = fixture.CaptureTask();
+        second.BuildEngine = engine;
+        second.OutputFile = fixture.Environment.GetAbsolutePath("second-inputs.props").Value;
+        second.PackRequests = [];
+        second.PackageFolders = [];
+        second.LookupFacts = first.LookupFacts;
+        second.PackMembers = [Item("VisualBasic", ("PackRoot", fixture.PackRoot), ("Path", "analyzers/dotnet/vb/VisualBasic.dll"))];
+        fixture.Capture(second);
+
+        Assert.AreNotEqual(firstResourceFile, ImportedResourceFile(second.OutputFile));
+        Assert.AreEqual(firstResourceContent, File.ReadAllText(firstResourceFile));
+        Directory.Delete(fixture.PackRoot, recursive: true);
+        (ITaskItem[] firstFacts, ITaskItem[] firstResources) = PackFixture.ReadCapture(first.OutputFile);
+        (ITaskItem[] secondFacts, ITaskItem[] secondResources) = PackFixture.ReadCapture(second.OutputFile);
+        var firstSnapshot = new FrameworkPackResources("1", firstFacts, firstResources, fixture.Environment);
+        var secondSnapshot = new FrameworkPackResources("1", secondFacts, secondResources, fixture.Environment);
+        CollectionAssert.AreEqual(new[] { fixture.PathInPack("analyzers/dotnet/cs/CSharp.dll") },
+            firstSnapshot.AnalyzerCandidates().Select(item => item.ItemSpec).ToArray());
+        CollectionAssert.AreEqual(new[] { fixture.PathInPack("analyzers/dotnet/vb/VisualBasic.dll") },
+            secondSnapshot.AnalyzerCandidates().Select(item => item.ItemSpec).ToArray());
+    }
+
+    [TestMethod]
+    [DataRow("duplicate-data")]
+    [DataRow("parentless-legacy-file")]
+    public void MalformedPackResourcesReportControlledTaskErrors(string malformed)
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        (ITaskItem[] facts, ITaskItem[] resources) = fixture.Capture();
+        XElement pack = XElement.Parse(resources.Single().GetMetadata("Content"));
+        if (malformed == "duplicate-data")
+        {
+            pack.Add(new XElement(pack.Elements("Data").Single(item => (string?)item.Attribute("Path") == "data/FrameworkList.xml")));
+        }
+        else
+        {
+            pack.Add(new XElement("LegacyFile", new XAttribute("Path", "Orphan.dll")));
+        }
+        resources.Single().SetMetadata("Content", ProjectCollection.Escape(pack.ToString()));
+        var prepared = fixture.Selection(new Prepared.ResolveTargetingPackAssets(), "", "C#");
+        if (malformed == "parentless-legacy-file")
+        {
+            prepared.ResolvedTargetingPacks.Single().SetMetadata("TargetingPackFormat", "NETStandardLegacy");
+        }
+        prepared.ResourceFactsVersion = "1";
+        prepared.ResourceFacts = facts;
+        prepared.PackResources = resources;
+
+        Assert.IsFalse(prepared.Execute());
+        Assert.AreEqual(1, ((RecordingEngine)prepared.BuildEngine).Errors.Count);
+        StringAssert.Contains(((RecordingEngine)prepared.BuildEngine).Errors.Single(),
+            malformed == "duplicate-data" ? "Duplicate framework-pack data" : "Invalid legacy framework-pack member path");
+    }
+
+    [TestMethod]
+    public void RelativeCaptureOutputsResolveAgainstTaskEnvironmentProjectDirectory()
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        WriteFrameworkPackInputs capture = fixture.CaptureTask();
+        string relativeDirectory = "relative-framework-pack-" + Guid.NewGuid().ToString("N");
+        capture.OutputFile = Path.Combine(relativeDirectory, "inputs.props");
+        capture.ResourceDirectory = Path.Combine(relativeDirectory, "resources");
+        string expectedOutput = fixture.Environment.GetAbsolutePath(capture.OutputFile).Value;
+        string expectedResourceDirectory = fixture.Environment.GetAbsolutePath(capture.ResourceDirectory).Value;
+        Assert.IsFalse(Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), relativeDirectory)));
+
+        (ITaskItem[] facts, ITaskItem[] resources) = fixture.Capture(capture);
+
+        Assert.AreEqual(expectedOutput, capture.OutputFile);
+        Assert.AreEqual(expectedResourceDirectory, capture.ResourceDirectory);
+        Assert.IsTrue(File.Exists(expectedOutput));
+        Assert.AreEqual(expectedResourceDirectory, Path.GetDirectoryName(ImportedResourceFile(expectedOutput)));
+        Assert.IsFalse(Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), relativeDirectory)));
+        var snapshot = new FrameworkPackResources("1", facts, resources, fixture.Environment);
+        Assert.AreEqual(fixture.PackRoot, snapshot.Lookup("Package", "Synthetic.Ref", "1.0.0"));
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public void LegacyTargetingInventoryIsRequiredForFreshAndCachedCaptures(bool hasInventory, bool warmCache)
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        fixture.PrepareLegacyPack();
+        var engine = new RecordingEngine();
+        WriteFrameworkPackInputs capture = fixture.CaptureTask();
+        capture.BuildEngine = engine;
+        capture.PackageFolders = [];
+        capture.LookupFacts = [Item("Installed/Synthetic.Ref/1.0.0", ("Kind", "Lookup"), ("Path", fixture.PackRoot))];
+        capture.PackRequests = [Item("Synthetic.Framework", ("NuGetPackageId", "Synthetic.Ref"),
+            ("NuGetPackageVersion", "1.0.0"), ("TargetFramework", "netstandard1.6"), ("Path", fixture.PackRoot))];
+        capture.PackMembers = hasInventory
+            ? [
+                Item("netstandard", ("PackRoot", fixture.PackRoot), ("Path", "build/netstandard1.6/ref/netstandard.dll")),
+                Item("Facade", ("PackRoot", fixture.PackRoot), ("Path", "build/netstandard1.6/ref/Facade.dll"))
+            ]
+            : [];
+        if (warmCache)
+        {
+            // Acquisition without a targeting request can cache this loose root before admission.
+            WriteFrameworkPackInputs warmup = fixture.CaptureTask();
+            warmup.BuildEngine = engine;
+            warmup.OutputFile = fixture.Environment.GetAbsolutePath("warm-inputs.props").Value;
+            warmup.PackageFolders = [];
+            warmup.PackRequests = [];
+            warmup.LookupFacts = capture.LookupFacts;
+            warmup.PackMembers = capture.PackMembers;
+            fixture.Capture(warmup);
+        }
+
+        if (!hasInventory)
+        {
+            Assert.IsFalse(capture.Execute());
+            Assert.AreEqual(1, engine.Errors.Count);
+            StringAssert.Contains(engine.Errors.Single(), "requires an acquired archive or explicit member catalog");
+            Assert.IsFalse(File.Exists(capture.OutputFile));
+            return;
+        }
+
+        (ITaskItem[] facts, ITaskItem[] resources) = fixture.Capture(capture);
+        Directory.Delete(fixture.PackRoot, recursive: true);
+        var prepared = fixture.Selection(new Prepared.ResolveTargetingPackAssets(), "", "C#");
+        prepared.ResolvedTargetingPacks.Single().SetMetadata("TargetingPackFormat", "NETStandardLegacy");
+        prepared.ResolvedTargetingPacks.Single().SetMetadata("TargetFramework", "netstandard1.6");
+        prepared.ResourceFactsVersion = "1";
+        prepared.ResourceFacts = facts;
+        prepared.PackResources = resources;
+        Assert.IsTrue(prepared.Execute(), string.Join("\n", ((RecordingEngine)prepared.BuildEngine).Errors));
+        CollectionAssert.AreEquivalent(new[]
+        {
+            fixture.PathInPack("build/netstandard1.6/ref/netstandard.dll"),
+            fixture.PathInPack("build/netstandard1.6/ref/Facade.dll")
+        }, prepared.ReferencesToAdd.Select(item => item.ItemSpec).ToArray());
+        Assert.AreEqual("", prepared.ReferencesToAdd.Single(item => Path.GetFileName(item.ItemSpec) == "netstandard.dll").GetMetadata("Facade"));
+        Assert.AreEqual("true", prepared.ReferencesToAdd.Single(item => Path.GetFileName(item.ItemSpec) == "Facade.dll").GetMetadata("Facade"));
+        foreach (ITaskItem reference in prepared.ReferencesToAdd)
+        {
+            Assert.AreEqual("Synthetic.Framework", reference.GetMetadata("FrameworkReferenceName"));
+            Assert.AreEqual("Synthetic.Ref", reference.GetMetadata("NuGetPackageId"));
+            Assert.AreEqual("1.0.0", reference.GetMetadata("NuGetPackageVersion"));
+            Assert.AreEqual("false", reference.GetMetadata("Private"));
+            Assert.AreEqual("true", reference.GetMetadata("ExternallyResolved"));
+        }
+        Assert.AreEqual(0, prepared.AnalyzersToAdd.Length);
+    }
+
+    private static string ImportedResourceFile(string outputFile) => ProjectCollection.Unescape(
+        XDocument.Load(outputFile).Root!.Elements("Import").Single().Attribute("Project")!.Value);
+
+    private static TaskItem Item(string identity, params (string Name, string Value)[] metadata)
+    {
+        var item = new TaskItem(ProjectCollection.Escape(identity));
+        foreach ((string name, string value) in metadata)
+        {
+            item.SetMetadata(name, ProjectCollection.Escape(value));
+        }
+        return item;
+    }
+
+    private sealed class PackFixture : IDisposable
+    {
+        private readonly string _directory = Path.Combine(Path.GetTempPath(), "framework-pack-tests-" + Guid.NewGuid().ToString("N"));
+        private readonly string _packageFolder;
+        private readonly string _archive;
+        public string PackRoot { get; }
+        public TaskEnvironment Environment { get; }
+
+        public PackFixture(bool usePathFallback)
+        {
+            _packageFolder = Path.Combine(_directory, "packages");
+            PackRoot = Path.Combine(_packageFolder, "synthetic.ref", "1.0.0");
+            Environment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(_directory, new Dictionary<string, string>());
+            _archive = Path.Combine(PackRoot, "synthetic.ref.1.0.0.nupkg");
+            Directory.CreateDirectory(PackRoot);
+            File.WriteAllText(Path.Combine(PackRoot, "synthetic.ref.1.0.0.nupkg.sha512"), "synthetic");
+            File.WriteAllText(Path.Combine(PackRoot, ".nupkg.metadata"), "{}");
+            XElement list = new("FileList",
+                FileEntry("Common", "lib/Common.dll", "Managed", "Full;Client"),
+                FileEntry("FullOnly", "lib/FullOnly.dll", "Managed", "Full"),
+                FileEntry("NoProfile", "lib/NoProfile.dll", "Managed", null),
+                FileEntry("OptIn", "lib/OptIn.dll", "Managed", "Full;Client", referencedByDefault: false),
+                FileEntry("CommonAnalyzer", "analyzers/dotnet/CommonAnalyzer.dll", "Analyzer", "Full;Client"),
+                FileEntry("CSharp", "analyzers/dotnet/cs/CSharp.dll", "Analyzer", "Full;Client", language: "cs"),
+                FileEntry("VisualBasic", "analyzers/dotnet/vb/VisualBasic.dll", "Analyzer", "Full;Client", language: "vb"));
+            Write("data/FrameworkList.xml", list.ToString());
+            Write("data/PlatformManifest.txt", "");
+            Write("data/PackageOverrides.txt", "Other.Package|1.0.0");
+            foreach (string name in new[] { "Common", "FullOnly", "NoProfile", "OptIn" })
+            {
+                Write((usePathFallback ? "lib/" : "ref/netcoreapp5.0/") + name + ".dll", "");
+            }
+            foreach (string path in new[]
+            {
+                "analyzers/dotnet/CommonAnalyzer.dll", "analyzers/dotnet/cs/CSharp.dll",
+                "analyzers/dotnet/vb/VisualBasic.dll", "analyzers/dotnet/cs/fr/CSharp.resources.dll"
+            })
+            {
+                Write(path, "");
+            }
+            using ZipArchive archive = ZipFile.Open(_archive, ZipArchiveMode.Create);
+            foreach (string path in Directory.GetFiles(PackRoot, "*", SearchOption.AllDirectories))
+            {
+                if (path != _archive)
+                {
+                    archive.CreateEntry(Path.GetRelativePath(PackRoot, path).Replace('\\', '/'));
+                }
+            }
+        }
+
+        public string PathInPack(string path) => Path.Combine(PackRoot, path.Replace('/', Path.DirectorySeparatorChar));
+
+        public void PrepareLegacyPack()
+        {
+            File.Delete(_archive);
+            File.Delete(PathInPack("data/FrameworkList.xml"));
+            Write("build/netstandard1.6/ref/netstandard.dll", "");
+            Write("build/netstandard1.6/ref/Facade.dll", "");
+            Write("build/netstandard1.6/ref/Notes.txt", "");
+        }
+
+        public void AddArchiveMember(string path)
+        {
+            using ZipArchive archive = ZipFile.Open(_archive, ZipArchiveMode.Update);
+            // ZipArchive itself rejects an empty name; a raw resource exercises that case below.
+            archive.CreateEntry(path.Length == 0 ? "ref//empty.dll" : path);
+        }
+
+        public WriteFrameworkPackInputs CaptureTask() => new()
+        {
+            BuildEngine = new RecordingEngine(),
+            TaskEnvironment = Environment,
+            OutputFile = Path.Combine(_directory, "inputs.props"),
+            ResourceDirectory = Path.Combine(_directory, "resources"),
+            PackageFolders = [Item(_packageFolder)],
+            PackRequests = [Item("Synthetic.Framework", ("NuGetPackageId", "Synthetic.Ref"),
+                ("NuGetPackageVersion", "1.0.0"), ("TargetFramework", "net5.0"))]
+        };
+
+        public (ITaskItem[] Facts, ITaskItem[] Resources) Capture(WriteFrameworkPackInputs? capture = null)
+        {
+            capture ??= CaptureTask();
+            Assert.IsTrue(capture.Execute(), string.Join("\n", ((RecordingEngine)capture.BuildEngine).Errors));
+            return ReadCapture(capture.OutputFile);
+        }
+
+        public static (ITaskItem[] Facts, ITaskItem[] Resources) ReadCapture(string outputFile)
+        {
+            XElement project = XDocument.Load(outputFile).Root!;
+            Assert.AreEqual("1", project.Element("PropertyGroup")!.Element("_RawFrameworkPackFactsVersion")!.Value);
+            Assert.IsFalse(project.Descendants().Any(item => item.Name.LocalName.Contains("CompileReference", StringComparison.Ordinal)));
+            ITaskItem[] facts = project.Element("ItemGroup")!.Elements().Select(ReadItem).ToArray();
+            ITaskItem[] resources = project.Elements("Import").SelectMany(import =>
+                XDocument.Load(ProjectCollection.Unescape(import.Attribute("Project")!.Value))
+                    .Root!.Element("ItemGroup")!.Elements().Select(ReadItem)).ToArray();
+            Assert.AreEqual(1, resources.Length);
+            return (facts, resources);
+        }
+
+        public T Selection<T>(T task, string profile, string language) where T : ResolveTargetingPackAssets
+        {
+            task.BuildEngine = new RecordingEngine();
+            task.TaskEnvironment = Environment;
+            task.FrameworkReferences = [Item("Synthetic.Framework")];
+            task.ResolvedTargetingPacks = [Item("Synthetic.Framework", ("Path", PackRoot),
+                ("NuGetPackageId", "Synthetic.Ref"), ("NuGetPackageVersion", "1.0.0"),
+                ("TargetFramework", "net5.0"), ("Profile", profile), ("PackageConflictPreferredPackages", "Synthetic.Ref"))];
+            task.RuntimeFrameworks = [Item("Synthetic.Runtime", ("FrameworkName", "Synthetic.Framework")),
+                Item("Unused.Runtime", ("FrameworkName", "Unused.Framework"))];
+            task.ProjectLanguage = language;
+            task.GenerateErrorForMissingTargetingPacks = true;
+            return task;
+        }
+
+        private static TaskItem ReadItem(XElement element) => Item(
+            ProjectCollection.Unescape(element.Attribute("Include")!.Value),
+            element.Elements().Select(metadata => (metadata.Name.LocalName, ProjectCollection.Unescape(metadata.Value))).ToArray());
+
+        private static XElement FileEntry(string name, string path, string type, string? profile,
+            string? language = null, bool referencedByDefault = true) => new("File",
+                new XAttribute("AssemblyName", name), new XAttribute("Path", path), new XAttribute("Type", type),
+                new XAttribute("AssemblyVersion", "1.2.3.4"), new XAttribute("FileVersion", "5.6.7.8"),
+                new XAttribute("PublicKeyToken", "null"),
+                profile is null ? null : new XAttribute("Profile", profile),
+                language is null ? null : new XAttribute("Language", language),
+                new XAttribute("ReferencedByDefault", referencedByDefault));
+
+        private void Write(string path, string content)
+        {
+            string file = PathInPack(path);
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            File.WriteAllText(file, content);
+        }
+
+        public void Dispose()
+        {
+            if (Directory.Exists(_directory))
+            {
+                Directory.Delete(_directory, recursive: true);
+            }
+        }
+    }
+
+    private sealed class RecordingEngine : IBuildEngine4
+    {
+        private readonly Dictionary<(object, RegisteredTaskObjectLifetime), object> _objects = [];
+        public List<string> Errors { get; } = [];
+        public bool IsRunningMultipleNodes => false;
+        public bool ContinueOnError => false;
+        public int LineNumberOfTaskNode => 0;
+        public int ColumnNumberOfTaskNode => 0;
+        public string ProjectFileOfTaskNode => "";
+        public void LogErrorEvent(BuildErrorEventArgs e) => Errors.Add(e.Message ?? "");
+        public void LogWarningEvent(BuildWarningEventArgs e) { }
+        public void LogMessageEvent(BuildMessageEventArgs e) { }
+        public void LogCustomEvent(CustomBuildEventArgs e) { }
+        public bool BuildProjectFile(string projectFileName, string[] targetNames, IDictionary globalProperties, IDictionary targetOutputs)
+            => throw new NotSupportedException();
+        public bool BuildProjectFile(string projectFileName, string[] targetNames, IDictionary globalProperties,
+            IDictionary targetOutputs, string toolsVersion) => throw new NotSupportedException();
+        public bool BuildProjectFilesInParallel(string[] projectFileNames, string[] targetNames, IDictionary[] globalProperties,
+            IDictionary[] targetOutputsPerProject, string[] toolsVersion, bool useResultsCache, bool unloadProjectsOnCompletion)
+            => throw new NotSupportedException();
+        public BuildEngineResult BuildProjectFilesInParallel(string[] projectFileNames, string[] targetNames,
+            IDictionary[] globalProperties, IList<string>[] removeGlobalProperties, string[] toolsVersion, bool returnTargetOutputs)
+            => throw new NotSupportedException();
+        public void Yield() => throw new NotSupportedException();
+        public void Reacquire() => throw new NotSupportedException();
+        public void RegisterTaskObject(object key, object obj, RegisteredTaskObjectLifetime lifetime, bool allowEarlyCollection)
+            => _objects.TryAdd((key, lifetime), obj);
+        public object? GetRegisteredTaskObject(object key, RegisteredTaskObjectLifetime lifetime)
+            => _objects.TryGetValue((key, lifetime), out object? value) ? value : null;
+        public object? UnregisterTaskObject(object key, RegisteredTaskObjectLifetime lifetime)
+        {
+            _objects.Remove((key, lifetime), out object? value);
+            return value;
+        }
+    }
+}

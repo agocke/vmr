@@ -14,6 +14,17 @@ namespace Microsoft.NET.Build.Tasks
     {
         public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
 
+        internal FrameworkPackResources PreparedResources { get; set; }
+        public string ResourceFactsVersion { get; set; } = "";
+        public ITaskItem[] ResourceFacts { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] PackResources { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
+        public bool CaptureFrameworkPackInputs { get; set; }
+        private readonly List<ITaskItem> _packLookupFacts = new();
+        [Output]
+        public ITaskItem[] PackLookupFacts => _packLookupFacts.ToArray();
+
         public string TargetFrameworkIdentifier { get; set; }
 
         public string TargetFrameworkVersion { get; set; }
@@ -248,7 +259,8 @@ namespace Microsoft.NET.Build.Tasks
             }
 
             string bestAppHostRuntimeIdentifier = NuGetUtils.GetBestMatchingRidWithExclusion(
-                new RuntimeGraphCache(this).GetRuntimeGraph(RuntimeGraphPath),
+                PreparedResources is not null ? PreparedResources.RuntimeGraph(RuntimeGraphPath)
+                    : new RuntimeGraphCache(this).GetRuntimeGraph(RuntimeGraphPath),
                 runtimeIdentifier,
                 runtimeIdentifiersToExclude.Split(';'),
                 appHostRuntimeIdentifiers.Split(';'),
@@ -299,8 +311,20 @@ namespace Microsoft.NET.Build.Tasks
                     appHostPackPathAbsolute = TaskEnvironment.GetAbsolutePath(appHostPackPath).Value;
                 }
 
-                if (appHostPackPathAbsolute != null && Directory.Exists(appHostPackPathAbsolute))
+                string preparedPackPath = PreparedResources?.Lookup("Host", hostPackName, appHostPackVersion);
+                bool packExists = PreparedResources is not null ? preparedPackPath != null
+                    : appHostPackPathAbsolute != null && Directory.Exists(appHostPackPathAbsolute);
+                if (CaptureFrameworkPackInputs)
                 {
+                    TaskItem fact = new(Microsoft.Build.Evaluation.ProjectCollection.Escape(
+                        FrameworkPackResources.LookupKey("Host", hostPackName, appHostPackVersion)));
+                    fact.SetMetadata("Kind", "Lookup");
+                    fact.SetMetadata("Path", Microsoft.Build.Evaluation.ProjectCollection.Escape(packExists ? appHostPackPath : ""));
+                    _packLookupFacts.Add(fact);
+                }
+                if (packExists)
+                {
+                    appHostPackPath = preparedPackPath ?? appHostPackPath;
                     //  Use AppHost from packs folder
                     appHostItem.SetMetadata(MetadataKeys.PackageDirectory, appHostPackPath);
                     appHostItem.SetMetadata(MetadataKeys.Path, Path.Combine(appHostPackPath, hostRelativePathInPackage));

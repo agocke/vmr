@@ -10,6 +10,8 @@ namespace Microsoft.NET.Build.Tasks
     [MSBuildMultiThreadableTask]
     public class CheckForDuplicateFrameworkReferences : TaskBase
     {
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
         [Required]
         public ITaskItem[] FrameworkReferences { get; set; }
 

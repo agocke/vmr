@@ -1,0 +1,46 @@
+<Project DefaultTargets="ReadReferences">
+  <PropertyGroup>
+    <FrameworkPackTargetFramework Condition="'$(FrameworkPackTargetFramework)' == ''">net11.0</FrameworkPackTargetFramework>
+  </PropertyGroup>
+  <Import Project="$(FrameworkPackInputs)" />
+  <Target Name="ReadContext">
+    <Error Condition="'$(_RawFrameworkPackFactsVersion)' != '1'" Text="The fixture requires raw acquired framework-pack facts." />
+    <ItemGroup>
+      <_CorePackLookup Include="@(_FrameworkPackFact)"
+                       Condition="'%(_FrameworkPackFact.Kind)' == 'Lookup' And
+                                  $([System.String]::Copy('%(_FrameworkPackFact.Identity)').StartsWith('Package/Microsoft.NETCore.App.Ref/')) And
+                                  '%(_FrameworkPackFact.Path)' != ''" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_CorePackRoot>@(_CorePackLookup->'%(Path)')</_CorePackRoot>
+      <_CorePackVersion Condition="'$(_CorePackRoot)' != ''">$([System.IO.Path]::GetFileName('$(_CorePackRoot)'))</_CorePackVersion>
+    </PropertyGroup>
+    <ItemGroup>
+      <_CorePackResource Include="@(_FrameworkPackResource)" Condition="'%(_FrameworkPackResource.Identity)' == '$(_CorePackRoot)'" />
+    </ItemGroup>
+    <Error Condition="'@(_CorePackResource->Count())' != '1'" Text="The fixture requires one acquired core-framework pack resource." />
+  </Target>
+  <Target Name="ReadReferences" DependsOnTargets="ReadContext" Returns="@(_Reference)">
+    <XmlPeek XmlContent="%(_CorePackResource.Content)"
+             Query="/Pack/Member[starts-with(@Path, 'ref/$(FrameworkPackTargetFramework)/') and substring(@Path, string-length(@Path)-3) = '.dll']/@Path">
+      <Output TaskParameter="Result" ItemName="_ReferenceMember" />
+    </XmlPeek>
+    <ItemGroup>
+      <_Reference Include="@(_ReferenceMember->'$(_CorePackRoot)/%(Identity)')" NuGetPackageVersion="$(_CorePackVersion)" />
+    </ItemGroup>
+  </Target>
+  <Target Name="ReadAnalyzers" DependsOnTargets="ReadContext" Returns="@(_Analyzer)">
+    <XmlPeek XmlContent="%(_CorePackResource.Content)"
+             Query="/Pack/Member[starts-with(@Path, 'analyzers/') and substring(@Path, string-length(@Path)-3) = '.dll']/@Path">
+      <Output TaskParameter="Result" ItemName="_AnalyzerMember" />
+    </XmlPeek>
+    <ItemGroup>
+      <_Analyzer Include="@(_AnalyzerMember->'$(_CorePackRoot)/%(Identity)')" />
+    </ItemGroup>
+  </Target>
+  <Target Name="WriteFixtureInputs" DependsOnTargets="ReadReferences;ReadAnalyzers">
+    <WriteLinesToFile File="$(FrameworkFixtureInputs)"
+                      Lines="&lt;Project&gt;&lt;PropertyGroup&gt;&lt;_FixtureFrameworkPackRoot&gt;$(_CorePackRoot)&lt;/_FixtureFrameworkPackRoot&gt;&lt;/PropertyGroup&gt;&lt;ItemGroup&gt;;@(_Reference->'&lt;_FixtureFrameworkReference Include=&quot;%(Identity)&quot; /&gt;');@(_Analyzer->'&lt;_CompilerFrameworkFile Include=&quot;%(Identity)&quot; /&gt;');&lt;/ItemGroup&gt;&lt;/Project&gt;"
+                      Overwrite="true" />
+  </Target>
+</Project>

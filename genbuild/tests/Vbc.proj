@@ -44,7 +44,7 @@
     <IntermediateAssembly Include="obj/Hello.dll" />
     <IntermediateRefAssembly Include="obj/ref/Hello.dll" />
     <DocFileItem Include="obj/Hello.xml" />
-    <ReferencePathWithRefAssemblies Include="@(_FrameworkReferenceManifestCompileReference)" />
+    <ReferencePathWithRefAssemblies Include="@(_FixtureFrameworkReference)" />
     <EmbeddedResource Include="obj/sub/Strings.resx" Type="Resx" WithCulture="false">
       <TargetPath>linked/path/Strings.resx</TargetPath>
       <DependentUpon Condition="'$(TestCase)' == 'dependent'">Program.vb</DependentUpon>
@@ -63,7 +63,7 @@
   <Target Name="_BeforeVBCSCoreCompile" DependsOnTargets="CoreResGen;_GenerateCompileInputs" />
   <Target Name="Produce">
     <ItemGroup Condition="'$(TestCase)' == 'explicit-runtime'">
-      <_RuntimeReference Include="@(_FrameworkReferenceManifestCompileReference)" Condition="'%(_FrameworkReferenceManifestCompileReference.Filename)' == 'Microsoft.VisualBasic'" />
+      <_RuntimeReference Include="@(_FixtureFrameworkReference)" Condition="'%(_FixtureFrameworkReference.Filename)' == 'Microsoft.VisualBasic'" />
     </ItemGroup>
     <CopyFiles SourceFiles="@(_RuntimeReference)" DestinationFiles="obj/runtime/Microsoft.VisualBasic.dll"
                DeclaredInputs="@(_RuntimeReference)" DeclaredOutputs="obj/runtime/Microsoft.VisualBasic.dll"

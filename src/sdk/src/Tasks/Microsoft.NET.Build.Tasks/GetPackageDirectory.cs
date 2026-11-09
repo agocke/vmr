@@ -15,6 +15,11 @@ namespace Microsoft.NET.Build.Tasks
     public class GetPackageDirectory : TaskBase, IMultiThreadableTask
     {
         public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+        public string ResourceFactsVersion { get; set; } = "";
+        public ITaskItem[] ResourceFacts { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] PackResources { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
 
         public ITaskItem[] Items { get; set; } = Array.Empty<ITaskItem>();
 
@@ -24,6 +29,28 @@ namespace Microsoft.NET.Build.Tasks
 
         [Output]
         public ITaskItem[] Output { get; set; }
+
+        internal void ExecutePrepared(FrameworkPackResources resources)
+        {
+            Output = Items.Select(item =>
+            {
+                string name = item.GetMetadata(MetadataKeys.NuGetPackageId);
+                string version = item.GetMetadata(MetadataKeys.NuGetPackageVersion);
+                if (name.Length == 0 || version.Length == 0 ||
+                    item.GetMetadata(MetadataKeys.PackageDirectory).Length != 0)
+                {
+                    return item;
+                }
+                string directory = resources.Lookup("Package", name, version);
+                if (directory is null)
+                {
+                    return item;
+                }
+                TaskItem resolved = new(item);
+                resolved.SetMetadata(MetadataKeys.PackageDirectory, directory);
+                return resolved;
+            }).ToArray();
+        }
 
         protected override void ExecuteCore()
         {

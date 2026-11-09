@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Xml;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
 using NuGet.ProjectModel;
 
 namespace Microsoft.NET.Build.Tasks;
@@ -24,6 +25,9 @@ public sealed class WriteNuGetInputs : TaskBase
     public string CompilerApiVersion { get; set; } = "";
 
     public string ProjectLanguage { get; set; } = "";
+
+    [Output]
+    public ITaskItem[] PackageFolders { get; set; } = [];
 
     protected override void ExecuteCore()
     {
@@ -92,6 +96,8 @@ public sealed class WriteNuGetInputs : TaskBase
         // Discovery is confined to preparation. Build reconstructs only the model
         // fields used by selection, directly from the persisted facts.
         LockFile lockFile = new LockFileFormat().Parse(root.GetRawText(), InputFile);
+        PackageFolders = lockFile.PackageFolders.Select(folder =>
+            new TaskItem(Escape(folder.Path))).ToArray();
         if (lockFile.Version is not (3 or 4))
         {
             throw new FormatException("Invalid assets model during package preparation.");

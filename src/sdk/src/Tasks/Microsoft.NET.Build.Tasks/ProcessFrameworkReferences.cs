@@ -24,6 +24,20 @@ namespace Microsoft.NET.Build.Tasks
     {
         public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
 
+        internal FrameworkPackResources? PreparedResources { get; set; }
+        public string ResourceFactsVersion { get; set; } = "";
+        public ITaskItem[] ResourceFacts { get; set; } = [];
+        public ITaskItem[] PackResources { get; set; } = [];
+        public ITaskItem[] DeclaredInputs { get; set; } = [];
+        public ITaskItem[] DeclaredOutputs { get; set; } = [];
+        public bool CaptureFrameworkPackInputs { get; set; }
+        private readonly List<ITaskItem> _packLookupFacts = [];
+        private readonly List<ITaskItem> _packVersionFacts = [];
+        [Output]
+        public ITaskItem[] PackLookupFacts => _packLookupFacts.ToArray();
+        [Output]
+        public ITaskItem[] PackVersionFacts => _packVersionFacts.ToArray();
+
         public string? TargetFrameworkIdentifier { get; set; }
 
         [Required]
@@ -234,7 +248,7 @@ namespace Microsoft.NET.Build.Tasks
 
                 // Handle Windows-only frameworks on non-Windows platforms
                 if (knownFrameworkReference.IsWindowsOnly &&
-                    !RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                    !(PreparedResources?.IsWindows ?? RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) &&
                     !EnableWindowsTargeting)
                 {
                     // It is an error to reference the framework from non-Windows
@@ -720,7 +734,7 @@ namespace Microsoft.NET.Build.Tasks
             bool addRuntimePackAndDownloadIfNecessary,
             bool wasReferencedDirectly)
         {
-            var runtimeGraph = new RuntimeGraphCache(this).GetRuntimeGraph(RuntimeGraphPath);
+            var runtimeGraph = GetRuntimeGraph();
             var knownFrameworkReferenceRuntimePackRuntimeIdentifiers = selectedRuntimePack.RuntimePackRuntimeIdentifiers.Split(';');
             var knownFrameworkReferenceRuntimePackExcludedRuntimeIdentifiers = selectedRuntimePack.RuntimePackExcludedRuntimeIdentifiers.Split(';');
             Log.LogMessage(MessageImportance.Low, $"Finding best RID match for pack {selectedRuntimePack.Name}@{runtimePackVersion} for target RID '{runtimeIdentifier}' from '{selectedRuntimePack.RuntimePackRuntimeIdentifiers}' excluding '{selectedRuntimePack.RuntimePackExcludedRuntimeIdentifiers}'");
@@ -874,7 +888,7 @@ namespace Microsoft.NET.Build.Tasks
                 // This makes non-portable SDKs behave the same as portable SDKs except for the specific case of targetting a non-portable RID.
                 // This ensures that targeting portable RIDs doesn't require any non-portable assets that aren't packaged in the SDK.
                 // Due to size concerns, the non-portable ILCompiler and Crossgen2 aren't included by default in non-portable SDK distributions.
-                var runtimeGraph = new RuntimeGraphCache(this).GetRuntimeGraph(RuntimeGraphPath);
+                var runtimeGraph = GetRuntimeGraph();
 
                 // Prefer portable when the "supported RID" for the tool pack is the same RID as the "supported portable RID".
                 // This makes non-portable SDKs behave the same as portable SDKs except for the specific cases added to "supported", such as targeting the non-portable RID.
@@ -945,7 +959,7 @@ namespace Microsoft.NET.Build.Tasks
                                     aotPackRuntimeIdentifiers.Add(aotPackRuntimeIdentifier);
                                 }
                             }
-                            
+
 
                             foreach (var aotPackRuntimeIdentifier in aotPackRuntimeIdentifiers)
                             {
@@ -987,7 +1001,7 @@ namespace Microsoft.NET.Build.Tasks
                                         TargetILCompilerPacks = new[] { targetIlcPack };
                                         Log.LogMessage(MessageImportance.Low, $"Added {targetIlcPackName}@{packVersion} for cross-targeting compilation for {aotPackRuntimeIdentifier}");
                                     }
-                                    
+
 
                                     string? targetILCompilerPackPath = GetPackPath(targetIlcPackName, packVersion);
                                     if (targetILCompilerPackPath != null)
@@ -1136,6 +1150,10 @@ namespace Microsoft.NET.Build.Tasks
 
         private string? GetPackPath(string packName, string packVersion)
         {
+            if (PreparedResources is not null)
+            {
+                return PreparedResources.Lookup("Framework", packName, packVersion);
+            }
             IEnumerable<string> GetPackFolders()
             {
                 var packRootEnvironmentVariable = TaskEnvironment.GetEnvironmentVariable(EnvironmentVariableNames.WORKLOAD_PACK_ROOTS);
@@ -1170,11 +1188,29 @@ namespace Microsoft.NET.Build.Tasks
 
                 if (Directory.Exists(absolutePackPath))
                 {
+                    ObservePack(packName, packVersion, packPath);
                     return packPath;
                 }
             }
 
+            ObservePack(packName, packVersion, null);
             return null;
+        }
+
+        private NuGet.RuntimeModel.RuntimeGraph GetRuntimeGraph()
+            => PreparedResources is not null ? PreparedResources.RuntimeGraph(RuntimeGraphPath)
+                : new RuntimeGraphCache(this).GetRuntimeGraph(RuntimeGraphPath);
+
+        private void ObservePack(string name, string version, string? path)
+        {
+            if (CaptureFrameworkPackInputs)
+            {
+                TaskItem fact = new(Microsoft.Build.Evaluation.ProjectCollection.Escape(
+                    FrameworkPackResources.LookupKey("Framework", name, version)));
+                fact.SetMetadata("Kind", "Lookup");
+                fact.SetMetadata("Path", Microsoft.Build.Evaluation.ProjectCollection.Escape(path ?? ""));
+                _packLookupFacts.Add(fact);
+            }
         }
 
         Lazy<WorkloadResolver> _workloadResolver
@@ -1183,11 +1219,15 @@ namespace Microsoft.NET.Build.Tasks
             {
                 field ??= LazyCreateWorkloadResolver();
                 return field;
-             }
+            }
         }
 
         private string GetResolvedPackVersion(string packID, string packVersion)
         {
+            if (PreparedResources is not null)
+            {
+                return PreparedResources.ResolveVersion(packID, packVersion);
+            }
             if (!packVersion.Equals("**FromWorkload**", StringComparison.OrdinalIgnoreCase))
             {
                 return packVersion;
@@ -1199,6 +1239,13 @@ namespace Microsoft.NET.Build.Tasks
                 Log.LogError(Strings.CouldNotGetPackVersionFromWorkloadManifests, packID);
                 return packVersion;
             }
+            if (CaptureFrameworkPackInputs)
+            {
+                TaskItem fact = new(Microsoft.Build.Evaluation.ProjectCollection.Escape(packID));
+                fact.SetMetadata("Kind", "Version");
+                fact.SetMetadata("ResolvedVersion", packInfo.Version);
+                _packVersionFacts.Add(fact);
+            }
             return packInfo.Version;
         }
 
@@ -1206,19 +1253,19 @@ namespace Microsoft.NET.Build.Tasks
         {
             return new(() =>
         {
-                string? userProfileDir = new CliFolderPathCalculatorCore(TaskEnvironment.GetEnvironmentVariable).GetDotnetUserProfileFolderPath();
-                string? absoluteUserProfileDir = string.IsNullOrEmpty(userProfileDir) ? null : (string)TaskEnvironment.GetAbsolutePath(userProfileDir);
+            string? userProfileDir = new CliFolderPathCalculatorCore(TaskEnvironment.GetEnvironmentVariable).GetDotnetUserProfileFolderPath();
+            string? absoluteUserProfileDir = string.IsNullOrEmpty(userProfileDir) ? null : (string)TaskEnvironment.GetAbsolutePath(userProfileDir);
 
 
-                string netCoreRoot = string.IsNullOrWhiteSpace(NetCoreRoot) ? NetCoreRoot : TaskEnvironment.GetAbsolutePath(NetCoreRoot);
+            string netCoreRoot = string.IsNullOrWhiteSpace(NetCoreRoot) ? NetCoreRoot : TaskEnvironment.GetAbsolutePath(NetCoreRoot);
 
-                //  Use TaskEnvironment.ProjectDirectory (rather than Directory.GetCurrentDirectory) as the starting point
-                //  to search for global.json, since the current directory is not guaranteed to match the project directory
-                //  when tasks run on MSBuild worker nodes.
-                string? globalJsonPath = SdkDirectoryWorkloadManifestProvider.GetGlobalJsonPath(TaskEnvironment.ProjectDirectory);
+            //  Use TaskEnvironment.ProjectDirectory (rather than Directory.GetCurrentDirectory) as the starting point
+            //  to search for global.json, since the current directory is not guaranteed to match the project directory
+            //  when tasks run on MSBuild worker nodes.
+            string? globalJsonPath = SdkDirectoryWorkloadManifestProvider.GetGlobalJsonPath(TaskEnvironment.ProjectDirectory);
 
-                var manifestProvider = new SdkDirectoryWorkloadManifestProvider(netCoreRoot, NETCoreSdkVersion, TaskEnvironment.GetEnvironmentVariable, absoluteUserProfileDir, globalJsonPath);
-                return WorkloadResolver.Create(manifestProvider, netCoreRoot, NETCoreSdkVersion, absoluteUserProfileDir, TaskEnvironment.GetEnvironmentVariable);
+            var manifestProvider = new SdkDirectoryWorkloadManifestProvider(netCoreRoot, NETCoreSdkVersion, TaskEnvironment.GetEnvironmentVariable, absoluteUserProfileDir, globalJsonPath);
+            return WorkloadResolver.Create(manifestProvider, netCoreRoot, NETCoreSdkVersion, absoluteUserProfileDir, TaskEnvironment.GetEnvironmentVariable);
         });
         }
 

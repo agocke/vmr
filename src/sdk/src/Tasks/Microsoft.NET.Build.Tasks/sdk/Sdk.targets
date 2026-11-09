@@ -106,7 +106,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     </PropertyGroup>
     <WriteNuGetInputs InputFile="$(_NuGetInputFile)" OutputFile="$(NuGetInputsPath)"
                       CapturePackageContext="$(MSBuildRestoreGraphInputs)" CompilerApiVersion="$(CompilerApiVersion)"
-                      ProjectLanguage="$(Language)" />
+                      ProjectLanguage="$(Language)">
+      <Output TaskParameter="PackageFolders" ItemName="_FrameworkPackPackageFolder" />
+    </WriteNuGetInputs>
   </Target>
 
   <Target Name="_ComputeFrameworkReferenceFetchManifestProfile"

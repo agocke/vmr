@@ -14,6 +14,16 @@ namespace Microsoft.NET.Build.Tasks
     public class ResolveTargetingPackAssets : TaskBase, IMultiThreadableTask
     {
         public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+        private FrameworkPackResources _preparedResources;
+        public string ResourceFactsVersion { get; set; } = "";
+        public ITaskItem[] ResourceFacts { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] PackResources { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
+        [Output]
+        public ITaskItem[] FrameworkAnalyzerFiles { get; set; } = Array.Empty<ITaskItem>();
+        [Output]
+        public ITaskItem[] PlatformConflictItems { get; set; } = Array.Empty<ITaskItem>();
 
         public ITaskItem[] FrameworkReferences { get; set; } = Array.Empty<ITaskItem>();
 
@@ -89,6 +99,17 @@ namespace Microsoft.NET.Build.Tasks
                 results = Resolve(inputs, BuildEngine4, allowCacheLookup);
             }
 
+            Publish(results);
+        }
+
+        internal void ExecutePrepared(FrameworkPackResources resources)
+        {
+            _preparedResources = resources;
+            Publish(Resolve(GetInputs(), null, false));
+        }
+
+        private void Publish(ResolvedAssetsCacheEntry results)
+        {
             foreach (var error in results.Errors)
             {
                 Log.LogError(error);
@@ -152,7 +173,8 @@ namespace Microsoft.NET.Build.Tasks
                 bool foundTargetingPack = resolvedTargetingPacks.TryGetValue(frameworkReference.Name, out TargetingPack targetingPack);
                 AbsolutePath targetingPackRoot = targetingPack?.Path ?? default;
 
-                if (string.IsNullOrEmpty(targetingPackRoot.Value) || !Directory.Exists(targetingPackRoot))
+                if (string.IsNullOrEmpty(targetingPackRoot.Value) ||
+                    !(_preparedResources is null ? Directory.Exists(targetingPackRoot) : _preparedResources.Exists(targetingPackRoot.Value)))
                 {
                     if (inputs.GenerateErrorForMissingTargetingPacks)
                     {
@@ -212,7 +234,7 @@ namespace Microsoft.NET.Build.Tasks
                             Path.Combine(targetingPackRoot.OriginalValue, "ref", targetingPackTargetFramework));
 
                         //  Fall back to netcoreapp5.0 folder if looking for net5.0 and it's not found
-                        if (!Directory.Exists(targetingPackDllFolder) &&
+                        if (!(_preparedResources is null ? Directory.Exists(targetingPackDllFolder) : _preparedResources.Exists(targetingPackDllFolder.Value)) &&
                             targetingPackTargetFramework.Equals("net5.0", StringComparison.OrdinalIgnoreCase))
                         {
                             targetingPackTargetFramework = "netcoreapp5.0";
@@ -243,12 +265,12 @@ namespace Microsoft.NET.Build.Tasks
 
                         AddItemsFromFrameworkList(definition, buildEngine, referencesToAdd, analyzersToAdd, allowCacheLookup);
 
-                        if (File.Exists(platformManifestPath))
+                        if (_preparedResources is null ? File.Exists(platformManifestPath) : _preparedResources.Exists(platformManifestPath.Value))
                         {
                             platformManifests.Add(new TaskItem(platformManifestPath.OriginalValue));
                         }
 
-                        if (File.Exists(packageOverridesPath))
+                        if (_preparedResources is null ? File.Exists(packageOverridesPath) : _preparedResources.Exists(packageOverridesPath.Value))
                         {
                             packageConflictOverrides.Add(CreatePackageOverride(targetingPack.NuGetPackageId, packageOverridesPath));
                         }
@@ -295,10 +317,12 @@ namespace Microsoft.NET.Build.Tasks
             return deduplicatedItems;
         }
 
-        private static TaskItem CreatePackageOverride(string runtimeFrameworkName, AbsolutePath packageOverridesPath)
+        private TaskItem CreatePackageOverride(string runtimeFrameworkName, AbsolutePath packageOverridesPath)
         {
             TaskItem packageOverride = new(runtimeFrameworkName);
-            packageOverride.SetMetadata("OverriddenPackages", File.ReadAllText(packageOverridesPath));
+            packageOverride.SetMetadata("OverriddenPackages", _preparedResources is null ? File.ReadAllText(packageOverridesPath)
+                : _preparedResources.Text(Path.GetDirectoryName(Path.GetDirectoryName(packageOverridesPath.Value)),
+                    "data/PackageOverrides.txt"));
             return packageOverride;
         }
 
@@ -308,7 +332,9 @@ namespace Microsoft.NET.Build.Tasks
             AbsolutePath targetingPackAssetPath = TaskEnvironment.GetAbsolutePath(
                 Path.Combine(targetingPackRoot.OriginalValue, "build", targetingPackTargetFramework, "ref"));
 
-            foreach (var dll in Directory.GetFiles(targetingPackAssetPath, "*.dll"))
+            IEnumerable<string> files = _preparedResources is null ? Directory.GetFiles(targetingPackAssetPath, "*.dll")
+                : _preparedResources.LegacyFiles(targetingPackRoot.Value, "build/" + targetingPackTargetFramework + "/ref");
+            foreach (var dll in files)
             {
                 string itemSpec = Path.Combine(targetingPackAssetPath.OriginalValue, Path.GetFileName(dll));
 
@@ -327,8 +353,19 @@ namespace Microsoft.NET.Build.Tasks
             }
         }
 
-        private static void AddItemsFromFrameworkList(FrameworkListDefinition definition, IBuildEngine4 buildEngine4, List<TaskItem> referenceItems, List<TaskItem> analyzerItems, bool allowCacheLookup)
+        private void AddItemsFromFrameworkList(FrameworkListDefinition definition, IBuildEngine4 buildEngine4, List<TaskItem> referenceItems, List<TaskItem> analyzerItems, bool allowCacheLookup)
         {
+            if (_preparedResources is not null)
+            {
+                XDocument document = XDocument.Parse(_preparedResources.Text(definition.TargetingPackRoot.Value, "data/FrameworkList.xml"));
+                XElement first = document.Root.Elements("File").FirstOrDefault();
+                bool fallback = first != null && !_preparedResources.Exists(
+                    Path.Combine(definition.TargetingPackDllFolder.Value, first.Attribute("AssemblyName").Value + ".dll"));
+                FrameworkList prepared = SelectFrameworkList(definition, document, fallback);
+                analyzerItems.AddRange(prepared.Analyzers);
+                referenceItems.AddRange(prepared.References);
+                return;
+            }
             string frameworkListKey = definition.CacheKey();
 
             if (allowCacheLookup && buildEngine4 is not null)
@@ -364,11 +401,14 @@ namespace Microsoft.NET.Build.Tasks
         private static FrameworkList ReadFrameworkList(FrameworkListDefinition definition)
         {
             XDocument frameworkListDoc = XDocument.Load(definition.FrameworkListPath);
+            return SelectFrameworkList(definition, frameworkListDoc,
+                TestFirstFileInFrameworkListUsingAssemblyNameConvention(definition.TargetingPackDllFolder, frameworkListDoc));
+        }
 
+        private static FrameworkList SelectFrameworkList(FrameworkListDefinition definition, XDocument frameworkListDoc,
+                                                        bool usePathElementsInFrameworkListAsFallBack)
+        {
             string profile = definition.Profile;
-
-            bool usePathElementsInFrameworkListAsFallBack =
-                TestFirstFileInFrameworkListUsingAssemblyNameConvention(definition.TargetingPackDllFolder, frameworkListDoc);
 
             List<TaskItem> referenceItemsFromThisFramework = new();
             List<TaskItem> analyzerItemsFromThisFramework = new();

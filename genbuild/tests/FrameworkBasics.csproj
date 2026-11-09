@@ -15,6 +15,10 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" Condition="'$(MSBuildProjectName)' == 'Multiple'" />
   </ItemGroup>
   <Target Name="CheckFrameworkReferences" AfterTargets="ResolveReferences">
+    <PropertyGroup>
+      <_ExpectedCoreReferenceCount Condition="'$(DisableImplicitFrameworkReferences)' != 'true'">1</_ExpectedCoreReferenceCount>
+      <_ExpectedCoreReferenceCount Condition="'$(DisableImplicitFrameworkReferences)' == 'true'">0</_ExpectedCoreReferenceCount>
+    </PropertyGroup>
     <ItemGroup>
       <_PackageReference Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == 'NETStandard.Library'" />
       <_WebReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'Microsoft.AspNetCore.Components'" />
@@ -23,7 +27,14 @@
     <Error Condition="'$(MSBuildProjectName)' == 'Library' and
                       ('@(FrameworkReference)' != '' or '@(_PackageReference)' == '' or '%(_PackageReference.Private)' != 'false')"
            Text="Normal netstandard references must come from package-authored file items, not a synthetic framework reference." />
-    <Error Condition="'$(MSBuildProjectName)' == 'Multiple' and ('@(_WebReference->Count())' != '1' or '@(_CoreReference->Count())' != '1')"
+    <Error Condition="'$(MSBuildProjectName)' == 'Multiple' and ('@(_WebReference->Count())' != '1' or '@(_CoreReference->Count())' != '$(_ExpectedCoreReferenceCount)')"
+           DeclaredInputs="" DeclaredOutputs=""
            Text="All selected targeting packs must contribute references as ordinary MSBuild items." />
+  </Target>
+  <Target Name="CheckAppHost" DependsOnTargets="_GetAppHostPaths">
+    <Error Condition="'$(AppHostSourcePath)' == ''" DeclaredInputs="" DeclaredOutputs=""
+           Text="Apphost selection must resolve the acquired host pack." />
+    <WriteLinesToFile File="$(AppHostResult)" Lines="$(AppHostSourcePath)" Overwrite="true"
+                      DeclaredInputs="$(AppHostSourcePath)" DeclaredOutputs="$(AppHostResult)" />
   </Target>
 </Project>

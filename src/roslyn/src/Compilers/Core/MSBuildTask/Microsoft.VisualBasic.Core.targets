@@ -18,15 +18,8 @@
 
   <Target Name="_CaptureVbcToolInputs"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
-    <ItemGroup>
-      <_VbcAnalyzerDirectory Include="@(Analyzer->'%(RootDir)%(Directory)')"
-                            Condition="'%(Analyzer.FrameworkReferenceName)' != ''" KeepDuplicates="false" />
-    </ItemGroup>
-    <ItemGroup>
-      <_VbcToolInput Include="%(_VbcAnalyzerDirectory.Identity)**/*" Condition="'%(_VbcAnalyzerDirectory.Identity)' != ''" />
-    </ItemGroup>
     <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_VbcInputManifestPath)'))" />
-    <WriteCscInputs Inputs="@(_VbcToolInput)" OutputFile="$(_VbcInputManifestPath)" ItemName="_VbcPreparedToolInput" />
+    <WriteCscInputs Inputs="" OutputFile="$(_VbcInputManifestPath)" ItemName="_VbcPreparedToolInput" />
   </Target>
 
   <Target Name="CoreCompile"
@@ -271,7 +264,7 @@
     </FormatVbc>
 
     <ResolveCompilerDependencies Condition="'$(MSBuildHardenedGraph)' == 'true'"
-                                 Analyzers="@(Analyzer)" CandidateFiles="@(_CompilerPackageFile);@(_CompilerAnalyzerFile)"
+                                 Analyzers="@(Analyzer)" CandidateFiles="@(_CompilerPackageFile);@(_CompilerAnalyzerFile);@(_CompilerFrameworkFile)"
                                  DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="Dependencies" ItemName="_CompilerAnalyzerDependency" />
     </ResolveCompilerDependencies>

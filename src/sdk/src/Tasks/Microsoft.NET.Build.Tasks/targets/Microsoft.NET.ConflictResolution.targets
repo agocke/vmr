@@ -22,6 +22,10 @@ Copyright (c) .NET Foundation. All rights reserved.
           AfterTargets="ResolveAssemblyReferences"
           Condition="'$(MSBuildHardenedGraph)' == 'true'">
     <ItemGroup>
+      <_PreparedFrameworkReferenceSelection Include="@(_FrameworkReferenceManifestFrameworkReference)"
+                                           Condition="'$(_RawFrameworkPackFactsVersion)' == ''" />
+      <_PreparedFrameworkReferenceSelection Include="@(ResolvedFrameworkReference)"
+                                           Condition="'$(_RawFrameworkPackFactsVersion)' == '1'" />
       <_PreparedRuntimeConflictItem Include="@(RuntimeCopyLocalItems);@(NativeCopyLocalItems);@(ResourceCopyLocalItems);@(RuntimeTargetsCopyLocalItems)"
                                    Exclude="@(ReferenceCopyLocalPaths)" />
     </ItemGroup>
@@ -31,7 +35,7 @@ Copyright (c) .NET Foundation. All rights reserved.
                               FileFacts="@(_NuGetConflictFile)"
                               PlatformItems="@(_PreparedPlatformConflictItem)"
                               FrameworkReferences="@(FrameworkReference)"
-                              PreparedFrameworkReferences="@(_FrameworkReferenceManifestFrameworkReference)"
+                              PreparedFrameworkReferences="@(_PreparedFrameworkReferenceSelection)"
                               References="@(ReferencePath)"
                               Analyzers="@(Analyzer)"
                               ReferenceCopyLocalPaths="@(ReferenceCopyLocalPaths)"

@@ -11,6 +11,8 @@ namespace Microsoft.NET.Build.Tasks
     [MSBuildMultiThreadableTask]
     public class ResolveFrameworkReferences : TaskBase
     {
+        public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
+        public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
         public ITaskItem[] FrameworkReferences { get; set; } = Array.Empty<ITaskItem>();
 
         public ITaskItem[] ResolvedTargetingPacks { get; set; } = Array.Empty<ITaskItem>();

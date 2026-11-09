@@ -60,8 +60,8 @@
     <Compile Include="Program.cs;obj/Generated.cs" />
     <IntermediateAssembly Include="obj/Hello.dll" />
     <IntermediateRefAssembly Include="obj/ref/Hello.dll" />
-    <ReferencePathWithRefAssemblies Include="@(_FrameworkReferenceManifestCompileReference)" />
-    <Analyzer Include="@(_FrameworkReferenceManifestFrameworkReference->'%(TargetingPackPath)/analyzers/dotnet/cs/System.Text.RegularExpressions.Generator.dll')"
+    <ReferencePathWithRefAssemblies Include="@(_FixtureFrameworkReference)" />
+    <Analyzer Include="$(_FixtureFrameworkPackRoot)/analyzers/dotnet/cs/System.Text.RegularExpressions.Generator.dll"
               FrameworkReferenceName="Microsoft.NETCore.App" />
     <Analyzer Include="$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.NetAnalyzers.dll;$(MSBuildSDKsPath)/Microsoft.NET.Sdk/analyzers/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll" />
   </ItemGroup>

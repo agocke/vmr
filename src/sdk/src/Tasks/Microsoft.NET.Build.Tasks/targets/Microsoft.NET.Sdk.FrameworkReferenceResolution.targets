@@ -19,10 +19,19 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <UsingTask TaskName="CreateWindowsSdkKnownFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="GetPackagesToPrune" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
-  <UsingTask TaskName="CheckForDuplicateFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
-  <UsingTask TaskName="ProcessFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
-  <UsingTask TaskName="ResolveAppHosts" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="CheckForDuplicateFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="Microsoft.NET.Build.Tasks.Prepared.CheckForDuplicateFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+  <UsingTask TaskName="ProcessFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="Microsoft.NET.Build.Tasks.Prepared.ProcessFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+  <UsingTask TaskName="ResolveAppHosts" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="Microsoft.NET.Build.Tasks.Prepared.ResolveAppHosts" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   <UsingTask TaskName="WriteFrameworkReferenceFetchManifest" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="WriteFrameworkPackInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+
+  <PropertyGroup>
+    <_FrameworkReferenceFetchDependsOn>ResolveTargetingPackAssets;_CollectFrameworkReferenceFetchManifestRuntimeFrameworks;_GetAppHostPaths</_FrameworkReferenceFetchDependsOn>
+    <_FrameworkReferenceFetchDependsOn Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">ProcessFrameworkReferences;_CaptureNuGetInputs</_FrameworkReferenceFetchDependsOn>
+  </PropertyGroup>
 
   <Target Name="_CollectFrameworkReferenceFetchManifestRuntimeFrameworks"
           DependsOnTargets="ProcessFrameworkReferences">
@@ -33,18 +42,19 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Target Name="_GenerateFrameworkReferenceFetchManifest"
           AfterTargets="Restore"
-          DependsOnTargets="_InvalidateUnsupportedFrameworkReferenceFetchManifest;_ReportUnsupportedFrameworkReferenceFetchManifestProfile;ResolveTargetingPackAssets;_CollectFrameworkReferenceFetchManifestRuntimeFrameworks;_GetAppHostPaths"
+          DependsOnTargets="_InvalidateUnsupportedFrameworkReferenceFetchManifest;_ReportUnsupportedFrameworkReferenceFetchManifestProfile;$(_FrameworkReferenceFetchDependsOn)"
           Condition="'$(MSBuildHardenedGraph)' != 'true' and
                      (('$(MSBuildRestoreGraphInputs)' == 'true' and '$(_MSBuildPreparingGraphInputs)' == 'true') or
                       ('$(MSBuildRestoreGraphInputs)' != 'true' and '$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))">
     <!-- Project-declared references stay in authoring and use path-only resolution during hardened Build. -->
-    <ItemGroup>
+    <ItemGroup Condition="'$(MSBuildRestoreGraphInputs)' != 'true'">
       <_FrameworkReferenceFetchManifestCompileReference Include="@(Reference)"
                                                        Condition="'%(Reference.FrameworkReferenceName)' != ''" />
       <_FrameworkReferenceFetchManifestAnalyzer Include="@(Analyzer)"
                                                Condition="'%(Analyzer.FrameworkReferenceName)' != ''" />
     </ItemGroup>
     <WriteFrameworkReferenceFetchManifest
+      Condition="'$(MSBuildRestoreGraphInputs)' != 'true'"
       OutputFile="$(FrameworkReferenceFetchManifestPath)"
       TargetFramework="$(TargetFramework)"
       TargetPlatformIdentifier="$(TargetPlatformIdentifier)"
@@ -59,6 +69,26 @@ Copyright (c) .NET Foundation. All rights reserved.
       PreferredPackages="$(PackageConflictPreferredPackages)"
       AppHostSourcePath="$(AppHostSourcePath)"
       AppHostRuntimeIdentifier="$(AppHostRuntimeIdentifier)" />
+
+    <PropertyGroup>
+      <FrameworkPackResourceDirectory Condition="'$(FrameworkPackResourceDirectory)' == '' And '$(MSBuildGraphSdkBindingsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildGraphSdkBindingsDirectory)', 'framework-pack-resources'))</FrameworkPackResourceDirectory>
+      <FrameworkPackResourceDirectory Condition="'$(FrameworkPackResourceDirectory)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildProjectExtensionsPath)', 'framework-pack-resources'))</FrameworkPackResourceDirectory>
+    </PropertyGroup>
+    <WriteFrameworkPackInputs Condition="'$(MSBuildRestoreGraphInputs)' == 'true'"
+      OutputFile="$(FrameworkReferenceFetchManifestPath)"
+      ResourceDirectory="$(FrameworkPackResourceDirectory)"
+      LookupFacts="@(_FrameworkPackLookup)"
+      VersionFacts="@(_FrameworkPackVersion)"
+      PackRequests="@(TargetingPack);@(RuntimePack);@(AppHostPack);@(SingleFileHostPack);@(ComHostPack);@(IjwHostPack);@(Crossgen2Pack);@(HostILCompilerPack);@(TargetILCompilerPack);@(PackAsToolShimAppHostPack)"
+      PackageFolders="@(_FrameworkPackPackageFolder)"
+      PackMembers="@(FrameworkPackMember)"
+      RuntimeGraphPath="$(RuntimeIdentifierGraphPath)"
+      TargetingPackRoot="$(NetCoreTargetingPackRoot)"
+      NetCoreRoot="$(NetCoreRoot)"
+      NETCoreSdkVersion="$(NETCoreSdkVersion)"
+      TargetPlatformIdentifier="$(TargetPlatformIdentifier)"
+      TargetPlatformVersion="$(TargetPlatformVersion)"
+      TargetPlatformDisplayName="$(TargetPlatformDisplayName)" />
   </Target>
 
 
@@ -128,9 +158,10 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Target Name="ProcessFrameworkReferences" BeforeTargets="_CheckForInvalidConfigurationAndPlatform;CollectPackageReferences;CollectPackageDownloads"
           DependsOnTargets="_ComputeTargetLatestRuntimePatch;AddWindowsSdkKnownFrameworkReferences"
-          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And ('@(FrameworkReference)' != '' Or '$(_RequiresILLinkPack)' == 'true')">
+          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(_RawFrameworkPackFactsVersion)' == '1') And ('@(FrameworkReference)' != '' Or '$(_RequiresILLinkPack)' == 'true')">
 
     <CheckForDuplicateFrameworkReferences
+        DeclaredInputs="" DeclaredOutputs=""
         FrameworkReferences="@(FrameworkReference)"
         MoreInformationLink="https://aka.ms/sdkimplicitrefs">
       <Output TaskParameter="ItemsToRemove" ItemName="_FrameworkReferenceToRemove" />
@@ -157,6 +188,10 @@ Copyright (c) .NET Foundation. All rights reserved.
     </ItemGroup>
 
     <ProcessFrameworkReferences FrameworkReferences="@(FrameworkReference)"
+                                CaptureFrameworkPackInputs="$(MSBuildRestoreGraphInputs)"
+                                ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+                                ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+                                DeclaredInputs="" DeclaredOutputs=""
                                 KnownFrameworkReferences="@(KnownFrameworkReference)"
                                 KnownRuntimePacks="@(KnownRuntimePack)"
                                 TargetFrameworkIdentifier="$(TargetFrameworkIdentifier)"
@@ -218,6 +253,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="UnavailableRuntimePacks" ItemName="UnavailableRuntimePack" />
       <Output TaskParameter="ImplicitPackageReferences" ItemName="_ImplicitPackageReference" />
       <Output TaskParameter="KnownRuntimeIdentifierPlatforms" ItemName="_KnownRuntimeIdentifierPlatformsForTargetFramework" />
+      <Output TaskParameter="PackLookupFacts" ItemName="_FrameworkPackLookup" />
+      <Output TaskParameter="PackVersionFacts" ItemName="_FrameworkPackVersion" />
 
     </ProcessFrameworkReferences>
 
@@ -228,6 +265,10 @@ Copyright (c) .NET Foundation. All rights reserved.
     </PropertyGroup>
 
     <ResolveAppHosts TargetFrameworkIdentifier="$(TargetFrameworkIdentifier)"
+                     CaptureFrameworkPackInputs="$(MSBuildRestoreGraphInputs)"
+                     ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+                     ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+                     DeclaredInputs="" DeclaredOutputs=""
                      TargetFrameworkVersion="$(_TargetFrameworkVersionWithoutV)"
                      TargetingPackRoot="$(NetCoreTargetingPackRoot)"
                      AppHostRuntimeIdentifier="$(AppHostRuntimeIdentifier)"
@@ -250,6 +291,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="ComHost" ItemName="ComHostPack" />
       <Output TaskParameter="IjwHost" ItemName="IjwHostPack" />
       <Output TaskParameter="PackAsToolShimAppHostPacks" ItemName="PackAsToolShimAppHostPack" />
+      <Output TaskParameter="PackLookupFacts" ItemName="_FrameworkPackLookup" />
 
     </ResolveAppHosts>
 
@@ -259,13 +301,13 @@ Copyright (c) .NET Foundation. All rights reserved.
       <UsePackageDownload Condition="'$(UsePackageDownload)' == ''">false</UsePackageDownload>
     </PropertyGroup>
 
-    <ItemGroup Condition="'$(UsePackageDownload)' == 'true'">
+    <ItemGroup Condition="'$(UsePackageDownload)' == 'true' And '$(MSBuildHardenedGraph)' != 'true'">
       <PackageDownload Include="@(_PackageToDownload)">
         <Version>[%(_PackageToDownload.Version)]</Version>
       </PackageDownload>
     </ItemGroup>
 
-    <ItemGroup Condition="'$(UsePackageDownload)' != 'true'">
+    <ItemGroup Condition="'$(UsePackageDownload)' != 'true' And '$(MSBuildHardenedGraph)' != 'true'">
       <PackageReference Include="@(_PackageToDownload)"
                         IsImplicitlyDefined="true"
                         PrivateAssets="all"
@@ -273,7 +315,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     </ItemGroup>
 
     <!-- Add implicit package references that don't already exist in PackageReference. -->
-    <ItemGroup>
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <_ImplicitPackageReference Remove="@(PackageReference)" />
       <PackageReference Include="@(_ImplicitPackageReference)"
                         IsImplicitlyDefined="true"
@@ -302,11 +344,12 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   </Target>
 
-  <UsingTask TaskName="ResolveFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="ResolveFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="Microsoft.NET.Build.Tasks.Prepared.ResolveFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
   <Target Name="_ResolveFrameworkReferenceManifest"
           BeforeTargets="ResolveFrameworkReferences;ResolveTargetingPackAssets"
-          Condition="'$(_UsingFrameworkReferenceManifest)' == 'true'">
+          Condition="'$(_UsingFrameworkReferenceManifest)' == 'true' And '$(_RawFrameworkPackFactsVersion)' == ''">
     <ItemGroup>
       <ResolvedFrameworkReference Include="@(_FrameworkReferenceManifestFrameworkReference)"
                                   Condition="'%(_FrameworkReferenceManifestFrameworkReference.TargetFramework)' == '$(TargetFramework)'"
@@ -358,11 +401,14 @@ Copyright (c) .NET Foundation. All rights reserved.
     ============================================================
     -->
   <Target Name="ResolveFrameworkReferences" DependsOnTargets="ProcessFrameworkReferences;ResolvePackageAssets"
-          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And '@(FrameworkReference)' != ''"
+          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(_RawFrameworkPackFactsVersion)' == '1') And '@(FrameworkReference)' != ''"
           Returns="@(ResolvedFrameworkReference)">
 
     <GetPackageDirectory
       Items="@(TargetingPack)"
+      ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+      ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+      DeclaredInputs="" DeclaredOutputs=""
       PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="ResolvedTargetingPack" />
@@ -377,6 +423,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <GetPackageDirectory
       Items="@(AppHostPack)"
+      ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+      ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+      DeclaredInputs="" DeclaredOutputs=""
       PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="ResolvedAppHostPack" />
@@ -385,6 +434,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <GetPackageDirectory
       Items="@(SingleFileHostPack)"
+      ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+      ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+      DeclaredInputs="" DeclaredOutputs=""
       PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="ResolvedSingleFileHostPack" />
@@ -393,6 +445,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <GetPackageDirectory
       Items="@(Crossgen2Pack)"
+      ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+      ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+      DeclaredInputs="" DeclaredOutputs=""
       PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="ResolvedCrossgen2Pack" />
@@ -401,6 +456,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <GetPackageDirectory
       Items="@(HostILCompilerPack)"
+      ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+      ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+      DeclaredInputs="" DeclaredOutputs=""
       PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="ResolvedILCompilerPack" />
@@ -408,6 +466,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <GetPackageDirectory
       Items="@(TargetILCompilerPack)"
+      ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+      ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+      DeclaredInputs="" DeclaredOutputs=""
       PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="ResolvedTargetILCompilerPack" />
@@ -415,6 +476,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <GetPackageDirectory
       Items="@(PackAsToolShimAppHostPack)"
+      ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+      ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+      DeclaredInputs="" DeclaredOutputs=""
       PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="_ApphostsForShimRuntimeIdentifiersGetPackageDirectory" />
@@ -423,6 +487,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <GetPackageDirectory
       Items="@(ComHostPack)"
+      ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+      ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+      DeclaredInputs="" DeclaredOutputs=""
       PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="ResolvedComHostPack" />
@@ -431,6 +498,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <GetPackageDirectory
      Items="@(IjwHostPack)"
+     ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+     ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+     DeclaredInputs="" DeclaredOutputs=""
      PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="ResolvedIjwHostPack" />
@@ -484,6 +554,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <GetPackageDirectory
       Items="@(RuntimePack)"
+      ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+      ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+      DeclaredInputs="" DeclaredOutputs=""
       PackageFolders="@(AssetsFilePackageFolder)">
 
       <Output TaskParameter="Output" ItemName="ResolvedRuntimePack" />
@@ -491,6 +564,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     </GetPackageDirectory>
 
     <ResolveFrameworkReferences
+      DeclaredInputs="" DeclaredOutputs=""
       FrameworkReferences="@(FrameworkReference)"
       ResolvedTargetingPacks="@(ResolvedTargetingPack)"
       ResolvedRuntimePacks="@(ResolvedRuntimePack)">
@@ -501,8 +575,10 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   </Target>
 
-  <UsingTask TaskName="GetPackageDirectory" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
-  <UsingTask TaskName="ResolveTargetingPackAssets" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="GetPackageDirectory" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="Microsoft.NET.Build.Tasks.Prepared.GetPackageDirectory" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+  <UsingTask TaskName="ResolveTargetingPackAssets" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' != 'true'" />
+  <UsingTask TaskName="Microsoft.NET.Build.Tasks.Prepared.ResolveTargetingPackAssets" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
 
   <!--
     ============================================================
@@ -512,7 +588,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     ============================================================
     -->
   <Target Name="ResolveTargetingPackAssets" DependsOnTargets="ResolveFrameworkReferences"
-          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And '@(FrameworkReference)' != ''">
+          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(_RawFrameworkPackFactsVersion)' == '1') And '@(FrameworkReference)' != ''">
 
     <!-- For design-time builds, don't generate an error if a targeting pack isn't available (ie because it hasn't been restored yet) -->
     <PropertyGroup Condition="'$(GenerateErrorForMissingTargetingPacks)' == ''">
@@ -521,6 +597,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     </PropertyGroup>
 
     <ResolveTargetingPackAssets FrameworkReferences="@(FrameworkReference)"
+                                ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
+                                ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
+                                DeclaredInputs="" DeclaredOutputs=""
                                 ProjectLanguage="$(Language)"
                                 ResolvedTargetingPacks="@(ResolvedTargetingPack)"
                                 RuntimeFrameworks="@(RuntimeFramework)"
@@ -535,6 +614,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="PackageConflictOverrides" ItemName="PackageConflictOverrides" />
       <Output TaskParameter="PackageConflictOverrides" ItemName="_TargetingPackConflictOverride" />
       <Output TaskParameter="UsedRuntimeFrameworks" ItemName="_UsedRuntimeFramework" />
+      <Output TaskParameter="FrameworkAnalyzerFiles" ItemName="_CompilerFrameworkFile" />
+      <Output TaskParameter="PlatformConflictItems" ItemName="_PreparedPlatformConflictItem" />
 
     </ResolveTargetingPackAssets>
 
