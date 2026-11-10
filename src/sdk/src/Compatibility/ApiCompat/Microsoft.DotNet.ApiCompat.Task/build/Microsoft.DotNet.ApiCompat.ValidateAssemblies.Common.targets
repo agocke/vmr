@@ -16,14 +16,14 @@
     <Microsoft.DotNet.ApiCompat.Task.FormatApiCompatInputs
       Condition="'$(MSBuildHardenedGraph)' == 'true'"
       DeclaredInputs="" DeclaredOutputs=""
+      FormatVersion="$(_ApiCompatInputsVersion)"
       LeftAssemblies="@(ApiCompatLeftAssemblies)"
       RightAssemblies="@(ApiCompatRightAssemblies)"
       LeftAssembliesReferences="@(ApiCompatLeftAssembliesReferences)"
       RightAssembliesReferences="@(ApiCompatRightAssembliesReferences)"
       SuppressionFiles="@(ApiCompatSuppressionFile)"
       ExcludeAttributesFiles="@(ApiCompatExcludeAttributesFile)"
-      PreparedReferenceDirectories="@(_ApiCompatPreparedReferenceDirectory)"
-      PreparedReferenceFiles="@(_ApiCompatPreparedReferenceFile)"
+      ReferenceFileCandidates="@(_CompilerPackageFile);@(_ApiCompatFrameworkFile);@(ReferencePathWithRefAssemblies);@(ApiCompatReferenceFile)"
       ProducedReferenceDirectories="@(ApiCompatProducedReferenceDirectory)"
       ProducedReferenceFiles="@(ApiCompatProducedReferenceFile)"
       RoslynAssembliesPath="$(RoslynAssembliesPath)"
@@ -31,11 +31,12 @@
       SemaphoreFile="$(_ApiCompatValidateAssembliesSemaphoreFile)">
       <Output TaskParameter="FileInputs" ItemName="_ApiCompatDeclaredInput" />
       <Output TaskParameter="FileOutputs" ItemName="_ApiCompatDeclaredOutput" />
+      <Output TaskParameter="ReferenceDirectories" ItemName="_ApiCompatReferenceDirectory" />
     </Microsoft.DotNet.ApiCompat.Task.FormatApiCompatInputs>
     <Microsoft.DotNet.ApiCompat.Task.ValidateAssembliesTask
       DeclaredInputs="@(_ApiCompatDeclaredInput)"
       DeclaredOutputs="@(_ApiCompatDeclaredOutput)"
-      DeclaredReferenceDirectories="@(_ApiCompatPreparedReferenceDirectory);@(ApiCompatProducedReferenceDirectory)"
+      DeclaredReferenceDirectories="@(_ApiCompatReferenceDirectory)"
       RoslynAssembliesPath="$(RoslynAssembliesPath)"
       LeftAssemblies="@(ApiCompatLeftAssemblies)"
       RightAssemblies="@(ApiCompatRightAssemblies)"

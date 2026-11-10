@@ -34,11 +34,8 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Target Name="_CaptureApiCompatInputs"
           AfterTargets="_GenerateFrameworkReferenceFetchManifest"
-          DependsOnTargets="ResolvePackageAssets;ResolveTargetingPackAssets"
           Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(IsCrossTargetingBuild)' != 'true'">
     <Microsoft.DotNet.ApiCompat.Task.PrepareApiCompatInputs
-      ReferencePaths="$(ApiCompatContractAssembly);@(ApiCompatContractAssemblyReferences);@(ApiCompatAssemblyReferences);@(Reference);@(ReferencePathWithRefAssemblies);@(_ResolvedCompileFileDefinitions)"
-      ProducedReferenceDirectories="@(ApiCompatProducedReferenceDirectory)"
       DefaultSuppressionFile="$(MSBuildProjectDirectory)/CompatibilitySuppressions.xml"
       OutputFile="$(_ApiCompatInputsPath)" />
   </Target>

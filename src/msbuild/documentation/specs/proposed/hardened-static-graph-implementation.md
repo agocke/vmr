@@ -658,7 +658,7 @@ selection moves out of evaluation-time snapshots. Thirteen resource-only satelli
 compilers no longer admit unused framework analyzer DLLs; their analyzer-free command
 operands are unchanged. No matched Restore-performance claim is made. Configured
 preparation recursion and framework-discovery capture remain until acquisition
-finalization and the remaining ApiCompat capture are migrated.
+finalization and reference-property identity preservation are implemented.
 
 Cold baseline/new Ninja executions subsequently completed using identical physical
 execution paths and isolated publication through `LibrariesOverridePath` and
@@ -1172,16 +1172,39 @@ Completed targets are removed from the validator's active stack before their
 after-targets run: an ApiCompat after-target may legitimately depend on the
 completed `CoreCompile`, directly or through preparation targets.
 
-ApiCompat assembly validation now captures existing reference-directory members
-and default-suppression existence during ordinary preparation. A pure
-`FormatApiCompatInputs` declares primary/reference assemblies, suppression and
-attribute-exclusion files, and both Roslyn assemblies. The existing comparison
+ApiCompat assembly validation captures only default-suppression existence during
+ordinary preparation, with `_ApiCompatInputsVersion=2`. Its capture target no
+longer forces `ResolvePackageAssets` or `ResolveTargetingPackAssets` and does not
+inspect reference directories. Older directory-inventory snapshots must be regenerated.
+A pure
+[`FormatApiCompatInputs`](../../../../sdk/src/Compatibility/ApiCompat/Microsoft.DotNet.ApiCompat.Task/FormatApiCompatInputs.cs)
+selects primary/reference assemblies, suppression and attribute-exclusion files,
+and both Roslyn assemblies during graph construction. Candidates reuse the
+already-reconstructed NuGet package member inventory, acquired framework pack
+members and FrameworkList rows (including non-default/profile-excluded members),
+and current reference files. Framework reference catalogs are emitted only when
+ApiCompat is enabled; no extra Restore selection or package-model parse is added.
+Loose external references can supply `ApiCompatReferenceFile` items for neighboring
+DLLs needed by the loader. A directory without acquired or explicitly declared
+members is rejected; it is not an invitation to discover filesystem contents.
+The existing comparison
 runs independently with a declared success semaphore, preserving reference
 precedence and restricting resolution to declared files. Failure preserves the
 previous semaphore. Ordinary behavior is unchanged; hardened suppression
 generation and primary globs/directories are explicitly unsupported.
 `TestApiCompat` exercises ordinary/action diagnostic parity, suppression edits,
 reference precedence, undeclared sibling rejection and no-work rebuilds.
+
+The explicit-catalog migration passes 16 focused cases, current-.NET/.NET-Framework
+SDK task builds, and ApiCompat, runtime reference-layout and framework smoke tests.
+A fresh runtime Restore using the newly packed ApiCompat task writes all 297
+suppression-only manifests. Graph construction preserves all 5,320 action/output
+signatures and all 55 ApiCompat file-input/required-producer sets and reference-group
+ordering. Compiler operands and ordering are unchanged apart from the isolated
+validation setup's additional primary/fallback package-cache `PathMap` entry.
+No runtime-library actions are executed for this migration and no matched
+Restore-performance claim is made. The configured preparation walk still needs
+retained-instance finalization and reference-property identity preservation.
 
 Source-built reference directories use `ApiCompatProducedReferenceDirectory`
 and explicit `ApiCompatProducedReferenceFile` members. Runtime exports the
@@ -1197,7 +1220,8 @@ appended after direct files, respecting the contract-side implementation-referen
 opt-out; public transitive implementation binaries are not promoted over pack
 references. These queries do not introduce implementation-build cycles or change
 pack directory fallback into explicit-file precedence.
-Preparation skips these roots even if stale files exist. The formatter adds
+Acquired/loose candidates under produced roots are ignored even if stale files exist.
+The formatter adds
 their selected members as exact inputs with `RequireProducer=true` metadata;
 the graph writer requires prior declared output owners before publication.
 An unused directory may have no members, but unresolved required references
@@ -1241,7 +1265,7 @@ C# and Visual Basic projects targeting `net11.0` and `net11.0-windows` through
 a traversal, verifies the configured C# validation action, and rejects a missing
 inner snapshot without publishing a partial graph. ApiCompat preparation runs
 after framework-reference capture rather than the C#-only compiler-input hook,
-so both languages receive configured snapshots without compiling products.
+so both languages receive suppression-presence facts without compiling products.
 
 [`WriteFrameworkReferenceFetchManifest`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkReferenceFetchManifest.cs)
 also captures platform SDK display metadata with its platform identifier/version.

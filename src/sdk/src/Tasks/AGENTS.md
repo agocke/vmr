@@ -50,6 +50,19 @@ when FrameworkList is incomplete. `_CompilerFrameworkFile` supplies these candid
 to final analyzer dependency selection. The configured preparation walk remains;
 do not add reference traversal or new selection passes just to collect resource facts.
 
+## Declared ApiCompat reference inputs
+
+ApiCompat Restore capture records only the default suppression-file presence fact
+and `_ApiCompatInputsVersion=2`. Do not add configured package/targeting-pack
+resolution or reference-directory inventories to `_CaptureApiCompatInputs`.
+[`FormatApiCompatInputs`](../Compatibility/ApiCompat/Microsoft.DotNet.ApiCompat.Task/FormatApiCompatInputs.cs)
+selects file inputs during graph construction from existing package inventories,
+prepared framework catalogs, current references and explicit `ApiCompatReferenceFile`
+items. Loose external directories need an explicit file catalog; do not discover
+ambient DLLs. Produced directories use `ApiCompatProducedReferenceFile` members
+with required producer ownership, never stale acquired/loose files.
+Preserve reference-group ordering and explicit-file precedence in the loader.
+
 ## Build diagnostics (NETSDK errors / warnings / info)
 
 These are conventions that aren't visible from the code alone — getting them wrong

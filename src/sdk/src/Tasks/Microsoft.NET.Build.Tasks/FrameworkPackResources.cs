@@ -213,6 +213,22 @@ internal sealed class FrameworkPackResources
         return files.ToArray();
     }
 
+    public IEnumerable<ITaskItem> ReferenceCandidates()
+    {
+        foreach (KeyValuePair<string, XElement> entry in _packs)
+        {
+            foreach (XElement member in entry.Value.Elements().Where(item => item.Name == "Member" || item.Name == "LegacyFile"))
+            {
+                string path = Required(member, "Path");
+                if (path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return new TaskItem(Microsoft.Build.Evaluation.ProjectCollection.Escape(
+                        Path.Combine(entry.Key, path.Replace('/', Path.DirectorySeparatorChar))));
+                }
+            }
+        }
+    }
+
     public static string LookupKey(string scope, string name, string version)
         => scope + "/" + name + "/" + version;
 

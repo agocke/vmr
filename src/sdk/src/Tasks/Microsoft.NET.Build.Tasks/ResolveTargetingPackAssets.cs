@@ -22,6 +22,9 @@ namespace Microsoft.NET.Build.Tasks
         public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
         [Output]
         public ITaskItem[] FrameworkAnalyzerFiles { get; set; } = Array.Empty<ITaskItem>();
+        public bool CollectReferenceFiles { get; set; }
+        [Output]
+        public ITaskItem[] FrameworkReferenceFiles { get; set; } = Array.Empty<ITaskItem>();
         [Output]
         public ITaskItem[] PlatformConflictItems { get; set; } = Array.Empty<ITaskItem>();
 
@@ -105,6 +108,7 @@ namespace Microsoft.NET.Build.Tasks
         internal void ExecutePrepared(FrameworkPackResources resources)
         {
             _preparedResources = resources;
+            FrameworkReferenceFiles = Array.Empty<ITaskItem>();
             Publish(Resolve(GetInputs(), null, false));
         }
 
@@ -361,7 +365,11 @@ namespace Microsoft.NET.Build.Tasks
                 XElement first = document.Root.Elements("File").FirstOrDefault();
                 bool fallback = first != null && !_preparedResources.Exists(
                     Path.Combine(definition.TargetingPackDllFolder.Value, first.Attribute("AssemblyName").Value + ".dll"));
-                FrameworkList prepared = SelectFrameworkList(definition, document, fallback);
+                FrameworkList prepared = SelectFrameworkList(definition, document, fallback, CollectReferenceFiles);
+                if (CollectReferenceFiles)
+                {
+                    FrameworkReferenceFiles = FrameworkReferenceFiles.Concat(prepared.ReferenceFiles).ToArray();
+                }
                 analyzerItems.AddRange(prepared.Analyzers);
                 referenceItems.AddRange(prepared.References);
                 return;
@@ -406,15 +414,24 @@ namespace Microsoft.NET.Build.Tasks
         }
 
         private static FrameworkList SelectFrameworkList(FrameworkListDefinition definition, XDocument frameworkListDoc,
-                                                        bool usePathElementsInFrameworkListAsFallBack)
+                                                        bool usePathElementsInFrameworkListAsFallBack, bool collectReferenceFiles = false)
         {
             string profile = definition.Profile;
 
             List<TaskItem> referenceItemsFromThisFramework = new();
             List<TaskItem> analyzerItemsFromThisFramework = new();
+            List<ITaskItem> referenceFiles = new();
 
             foreach (var fileElement in frameworkListDoc.Root.Elements("File"))
             {
+                if (collectReferenceFiles &&
+                    !string.Equals(fileElement.Attribute("Type")?.Value, "Analyzer", StringComparison.OrdinalIgnoreCase))
+                {
+                    string path = usePathElementsInFrameworkListAsFallBack
+                        ? Path.Combine(definition.TargetingPackRoot.OriginalValue, fileElement.Attribute("Path").Value)
+                        : GetDllPathViaAssemblyName(definition.TargetingPackDllFolder.OriginalValue, fileElement.Attribute("AssemblyName").Value);
+                    referenceFiles.Add(new TaskItem(path));
+                }
                 if (!string.IsNullOrEmpty(profile))
                 {
                     var profileAttributeValue = fileElement.Attribute("Profile")?.Value;
@@ -484,6 +501,7 @@ namespace Microsoft.NET.Build.Tasks
             {
                 Analyzers = analyzerItemsFromThisFramework.ToArray(),
                 References = referenceItemsFromThisFramework.ToArray(),
+                ReferenceFiles = referenceFiles.ToArray(),
             };
         }
 
@@ -609,6 +627,7 @@ namespace Microsoft.NET.Build.Tasks
 
         private class FrameworkList
         {
+            public ITaskItem[] ReferenceFiles;
             public IReadOnlyList<TaskItem> Analyzers;
             public IReadOnlyList<TaskItem> References;
         }

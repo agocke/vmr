@@ -31,6 +31,7 @@
                                         Condition="'$(ApiCompatUseExplicitReferences)' != 'false'" />
     <ApiCompatContractAssemblyReferences Include="$(MSBuildProjectDirectory)/../explicit/Dependency.dll"
                                         Condition="'$(ApiCompatUseExplicitReferences)' != 'false'" />
+    <ApiCompatReferenceFile Include="$(MSBuildProjectDirectory)/../fallback/Dependency.dll" />
   </ItemGroup>
   <ItemGroup Condition="'$(ApiCompatProducedCase)' != ''">
     <ApiCompatProducedReferenceDirectory Include="$(_ApiCompatFutureDirectory)" />

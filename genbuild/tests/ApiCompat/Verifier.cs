@@ -57,15 +57,13 @@ internal static class Verifier
         Require(SamePath(prepared.Descendants("_ApiCompatPreparedDefaultSuppressionFile").Single().Value,
             Path.Combine(root, "CompatibilitySuppressions.xml")), "Restore did not capture the default suppression existence fact.");
         string referenceDirectory = args[2];
-        string[] inventory = prepared.Descendants("_ApiCompatPreparedReferenceFile")
-            .Select(item => item.Attribute("Include")!.Value).ToArray();
-        Require(prepared.Descendants("_ApiCompatPreparedReferenceDirectory").Any(item =>
-            SamePath(item.Attribute("Include")!.Value, referenceDirectory)), "Restore did not prepare the reference directory.");
-        Require(inventory.Length != 0, "Restore captured an empty reference-directory inventory.");
-        foreach (string file in Directory.GetFiles(referenceDirectory, "*.dll"))
-        {
-            Require(inventory.Any(entry => SamePath(entry, file)), "Prepared inventory omitted directory member: " + file);
-        }
+        Require(prepared.Descendants("_ApiCompatInputsVersion").Single().Value == "2",
+            "Restore must capture versioned acquisition facts.");
+        Require(!prepared.Descendants("_ApiCompatPreparedReferenceFile").Any() &&
+            !prepared.Descendants("_ApiCompatPreparedReferenceDirectory").Any(),
+            "Restore must not snapshot configured reference files or directory contents.");
+        string[] inventory = Directory.GetFiles(referenceDirectory, "*.dll");
+        Require(inventory.Length != 0, "The acquired framework reference pack must not be empty.");
 
         int comparisons = 0;
         foreach (string manifest in Directory.GetFiles(graph + ".actions", "*.json"))
@@ -117,6 +115,10 @@ internal static class Verifier
         bool producesFile = testCase is "future" or "stale" or "precedence";
         XElement prepared = XElement.Load(Path.Combine(root,
             "obj/apicompatinputs/Debug/AnyCPU/net11.0/ApiCompat.csproj.g.props"));
+        Require(prepared.Descendants("_ApiCompatInputsVersion").Single().Value == "2" &&
+            !prepared.Descendants("_ApiCompatPreparedReferenceDirectory").Any() &&
+            !prepared.Descendants("_ApiCompatPreparedReferenceFile").Any(),
+            "Preparation must capture only acquisition facts, not reference-directory inventories.");
         Require(!prepared.Descendants("_ApiCompatPreparedReferenceDirectory")
             .Any(item => SamePath(item.Attribute("Include")!.Value, future)),
             "Preparation must not inventory a producer-owned directory: " + testCase);
@@ -151,9 +153,7 @@ internal static class Verifier
             Path.Combine(root, "excluded-attributes.txt"),
             Path.Combine(roslyn, "Microsoft.CodeAnalysis.dll"),
             Path.Combine(roslyn, "Microsoft.CodeAnalysis.CSharp.dll"),
-            .. prepared.Descendants("_ApiCompatPreparedReferenceFile")
-                .Where(item => SamePath(item.Element("ReferenceDirectory")!.Value, framework))
-                .Select(item => item.Attribute("Include")!.Value),
+            .. Directory.GetFiles(framework, "*.dll"),
         ];
         if (producesFile)
         {

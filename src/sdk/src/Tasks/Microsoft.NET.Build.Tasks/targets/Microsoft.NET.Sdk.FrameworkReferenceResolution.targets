@@ -597,6 +597,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     </PropertyGroup>
 
     <ResolveTargetingPackAssets FrameworkReferences="@(FrameworkReference)"
+                                CollectReferenceFiles="$(ApiCompatValidateAssemblies)"
                                 ResourceFactsVersion="$(_RawFrameworkPackFactsVersion)"
                                 ResourceFacts="@(_FrameworkPackFact)" PackResources="@(_FrameworkPackResource)"
                                 DeclaredInputs="" DeclaredOutputs=""
@@ -615,6 +616,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="PackageConflictOverrides" ItemName="_TargetingPackConflictOverride" />
       <Output TaskParameter="UsedRuntimeFrameworks" ItemName="_UsedRuntimeFramework" />
       <Output TaskParameter="FrameworkAnalyzerFiles" ItemName="_CompilerFrameworkFile" />
+      <Output TaskParameter="FrameworkReferenceFiles" ItemName="_ApiCompatFrameworkFile" />
       <Output TaskParameter="PlatformConflictItems" ItemName="_PreparedPlatformConflictItem" />
 
     </ResolveTargetingPackAssets>

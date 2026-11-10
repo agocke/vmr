@@ -14,14 +14,14 @@ public sealed class FormatApiCompatInputs : MSBuildTask, IMultiThreadableTask
     public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
     public ITaskItem[] DeclaredInputs { get; set; } = [];
     public ITaskItem[] DeclaredOutputs { get; set; } = [];
+    public string FormatVersion { get; set; } = "";
     public string[] LeftAssemblies { get; set; } = [];
     public string[] RightAssemblies { get; set; } = [];
     public string[] LeftAssembliesReferences { get; set; } = [];
     public string[] RightAssembliesReferences { get; set; } = [];
     public string[] SuppressionFiles { get; set; } = [];
     public string[] ExcludeAttributesFiles { get; set; } = [];
-    public ITaskItem[] PreparedReferenceDirectories { get; set; } = [];
-    public ITaskItem[] PreparedReferenceFiles { get; set; } = [];
+    public ITaskItem[] ReferenceFileCandidates { get; set; } = [];
     public ITaskItem[] ProducedReferenceDirectories { get; set; } = [];
     public ITaskItem[] ProducedReferenceFiles { get; set; } = [];
     public string RoslynAssembliesPath { get; set; } = "";
@@ -34,23 +34,46 @@ public sealed class FormatApiCompatInputs : MSBuildTask, IMultiThreadableTask
     [Output]
     public ITaskItem[] FileOutputs { get; private set; } = [];
 
+    [Output]
+    public ITaskItem[] ReferenceDirectories { get; private set; } = [];
+
     public override bool Execute()
     {
-        if (GenerateSuppressionFile)
+        if (FormatVersion != "2" || GenerateSuppressionFile)
         {
-            throw ApiCompatInputPaths.Invalid(nameof(GenerateSuppressionFile));
+            throw ApiCompatInputPaths.Invalid(FormatVersion != "2" ? nameof(FormatVersion) : nameof(GenerateSuppressionFile));
         }
 
         HashSet<string> inputs = new(ApiCompatInputPaths.Comparer);
         HashSet<string> producedDirectories = new(ProducedReferenceDirectories.Select(
             item => Canonical(item.ItemSpec)), ApiCompatInputPaths.Comparer);
-        HashSet<string> directories = new(PreparedReferenceDirectories.Concat(ProducedReferenceDirectories).Select(
-            item => Canonical(item.ItemSpec)), ApiCompatInputPaths.Comparer);
+        HashSet<string> directories = new(producedDirectories, ApiCompatInputPaths.Comparer);
+        Dictionary<string, HashSet<string>> members = new(ApiCompatInputPaths.Comparer);
+        foreach (ITaskItem candidate in ReferenceFileCandidates)
+        {
+            if (!string.Equals(Path.GetExtension(candidate.ItemSpec), ".dll", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            string path = Canonical(candidate.ItemSpec);
+            string directory = Path.GetDirectoryName(path)!;
+            if (producedDirectories.Contains(directory))
+            {
+                continue;
+            }
+            if (!members.TryGetValue(directory, out HashSet<string>? files))
+            {
+                files = new(ApiCompatInputPaths.Comparer);
+                members.Add(directory, files);
+            }
+            files.Add(path);
+        }
         HashSet<string> producedFiles = new(ApiCompatInputPaths.Comparer);
         foreach (ITaskItem member in ProducedReferenceFiles)
         {
             string path = Canonical(member.ItemSpec);
-            if (!producedDirectories.Contains(Path.GetDirectoryName(path)!))
+            if (!producedDirectories.Contains(Path.GetDirectoryName(path)!) ||
+                !string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase))
             {
                 throw ApiCompatInputPaths.Invalid(member.ItemSpec);
             }
@@ -60,12 +83,12 @@ public sealed class FormatApiCompatInputs : MSBuildTask, IMultiThreadableTask
             .Concat(SuppressionFiles).Concat(ExcludeAttributesFiles))
         {
             string fullPath = Canonical(path);
-            if (directories.Contains(fullPath))
+            if (producedDirectories.Contains(fullPath) || members.ContainsKey(fullPath))
             {
                 throw ApiCompatInputPaths.Invalid(path);
             }
             inputs.Add(fullPath);
-            AddPreparedMembers(Path.GetDirectoryName(fullPath));
+            AddMembers(Path.GetDirectoryName(fullPath));
         }
 
         foreach (string group in LeftAssembliesReferences.Concat(RightAssembliesReferences))
@@ -73,12 +96,19 @@ public sealed class FormatApiCompatInputs : MSBuildTask, IMultiThreadableTask
             foreach (string path in group.Split(',', StringSplitOptions.RemoveEmptyEntries))
             {
                 string fullPath = Canonical(path);
-                string? directory = directories.Contains(fullPath) ? fullPath : Path.GetDirectoryName(fullPath);
-                if (!directories.Contains(fullPath))
+                bool isDirectory = producedDirectories.Contains(fullPath) || members.ContainsKey(fullPath);
+                string? directory = isDirectory ? fullPath : Path.GetDirectoryName(fullPath);
+                if (!isDirectory)
                 {
+                    if (!string.Equals(Path.GetExtension(fullPath), ".dll", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(Path.GetExtension(fullPath), ".exe", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(Path.GetExtension(fullPath), ".winmd", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw ApiCompatInputPaths.Invalid(path);
+                    }
                     inputs.Add(fullPath);
                 }
-                AddPreparedMembers(directory);
+                AddMembers(directory);
             }
         }
 
@@ -94,20 +124,19 @@ public sealed class FormatApiCompatInputs : MSBuildTask, IMultiThreadableTask
             return (ITaskItem)item;
         }).ToArray();
         FileOutputs = [new TaskItem(Canonical(SemaphoreFile))];
+        ReferenceDirectories = directories.Order(StringComparer.Ordinal).Select(path => (ITaskItem)new TaskItem(path)).ToArray();
         return true;
 
-        void AddPreparedMembers(string? directory)
+        void AddMembers(string? directory)
         {
-            foreach (ITaskItem member in PreparedReferenceFiles)
+            if (directory is null)
             {
-                if (ApiCompatInputPaths.Comparer.Equals(Canonical(member.GetMetadata("ReferenceDirectory")), directory))
-                {
-                    if (producedDirectories.Contains(directory!))
-                    {
-                        throw ApiCompatInputPaths.Invalid(member.ItemSpec);
-                    }
-                    inputs.Add(Canonical(member.ItemSpec));
-                }
+                return;
+            }
+            directories.Add(directory);
+            if (members.TryGetValue(directory, out HashSet<string>? files))
+            {
+                inputs.UnionWith(files);
             }
             foreach (ITaskItem member in ProducedReferenceFiles)
             {

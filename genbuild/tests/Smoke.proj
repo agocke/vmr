@@ -4601,7 +4601,7 @@
                       $([System.IO.File]::GetLastWriteTimeUtc('$(_ApiCompatOrderAction)$(_ApiCompatSemaphore)').Ticks) != '$(_ApiCompatOrderSuccessTime)'"
            Text="A newly appearing undeclared sibling must not become an implicit loader fallback or change the prior success semaphore." />
     <CallTarget Targets="TestApiCompatProducedReferences" />
-    <Message Importance="high" Text="Source ApiCompat smoke checks passed: C#/VB cross-targeting metadata parity, prepared platform SDK validation, required inner snapshots, prepared directory inventory, explicit file footprint, future compiler output, independent validation, no-op rebuild, semaphore-only recovery, exclusion invalidation and recovery with ordinary CP0014 parity, ordinary CP0002 parity, suppression replay, failure semaphore preservation, atomic rejection, explicit-file precedence and undeclared sibling rejection. $(_ApiCompatRoot)" />
+    <Message Importance="high" Text="Source ApiCompat smoke checks passed: C#/VB cross-targeting metadata parity, prepared platform SDK validation, required acquisition facts without directory inventories, graph-selected explicit file footprint, future compiler output, independent validation, no-op rebuild, semaphore-only recovery, exclusion invalidation and recovery with ordinary CP0014 parity, ordinary CP0002 parity, suppression replay, failure semaphore preservation, atomic rejection, explicit-file precedence and undeclared sibling rejection. $(_ApiCompatRoot)" />
   </Target>
   <Target Name="TestApiCompatProducedReferences">
     <PropertyGroup>

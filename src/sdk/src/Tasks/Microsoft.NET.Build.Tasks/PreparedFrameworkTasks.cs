@@ -89,6 +89,11 @@ public sealed class ResolveTargetingPackAssets : global::Microsoft.NET.Build.Tas
                 return;
             }
             FrameworkAnalyzerFiles = resources.AnalyzerCandidates();
+            if (CollectReferenceFiles)
+            {
+                FrameworkReferenceFiles = FrameworkReferenceFiles.Concat(resources.ReferenceCandidates())
+                    .Concat(ReferencesToAdd).ToArray();
+            }
             List<ITaskItem> platformItems = [];
             foreach (ITaskItem manifest in PlatformManifests)
             {
