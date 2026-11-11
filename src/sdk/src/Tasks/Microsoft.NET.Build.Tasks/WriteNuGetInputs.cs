@@ -14,6 +14,10 @@ namespace Microsoft.NET.Build.Tasks;
 
 public sealed class WriteNuGetInputs : TaskBase
 {
+    public WriteNuGetInputs() { }
+
+    internal WriteNuGetInputs(Logger logger) : base(logger) { }
+
     [Required]
     public string InputFile { get; set; } = null!;
 
@@ -98,6 +102,10 @@ public sealed class WriteNuGetInputs : TaskBase
         LockFile lockFile = new LockFileFormat().Parse(root.GetRawText(), InputFile);
         PackageFolders = lockFile.PackageFolders.Select(folder =>
             new TaskItem(Escape(folder.Path))).ToArray();
+        foreach (ITaskItem folder in PackageFolders)
+        {
+            WriteContextItem(writer, "_NuGetAcquiredPackageFolder", folder.ItemSpec);
+        }
         if (lockFile.Version is not (3 or 4))
         {
             throw new FormatException("Invalid assets model during package preparation.");

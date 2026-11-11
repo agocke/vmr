@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0</TargetFrameworks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <Target Name="RejectExtraPreparation"
+          BeforeTargets="Restore;_CaptureNuGetInputs;_PrepareHardenedGraphInputs;PrepareProjectReferences"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'">
+    <Error Text="NuGet acquisition facts must not require child Restore, capture, or configured reference preparation." />
+  </Target>
+</Project>

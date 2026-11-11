@@ -3,6 +3,7 @@
 <Project>
   <!-- SDK hardened builds use the same facts as explicitly imported asset views. -->
   <PropertyGroup>
+    <NuGetInputsPath Condition="'$(NuGetInputsPath)' == '' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildGraphNuGetInputsTaskAssembly)' != ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(MSBuildProjectFile).g.props</NuGetInputsPath>
     <NuGetInputsPath Condition="'$(NuGetInputsPath)' == ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</NuGetInputsPath>
     <NuGetInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(NuGetInputsPath)'))</NuGetInputsPath>
   </PropertyGroup>

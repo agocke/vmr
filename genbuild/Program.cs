@@ -40,6 +40,7 @@ try
     start.ArgumentList.Add("-m:1");
     start.ArgumentList.Add("-nr:false");
     start.ArgumentList.Add("-p:MSBuildRestoreGraphInputs=true");
+    start.ArgumentList.Add($"-p:MSBuildGraphNuGetInputsTaskAssembly={Path.Combine(toolset, "Sdks", "Microsoft.NET.Sdk", "tools", "net11.0", "Microsoft.NET.Build.Tasks.dll")}");
     start.ArgumentList.Add($"-p:MSBuildGraphSdkBindingsDirectory={Path.Combine(Path.GetDirectoryName(project)!, "obj", "genbuild", "sdk-bindings")}");
 
     if (args[0] == "restore")

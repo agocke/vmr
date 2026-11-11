@@ -1204,7 +1204,7 @@ ordering. Compiler operands and ordering are unchanged apart from the isolated
 validation setup's additional primary/fallback package-cache `PathMap` entry.
 No runtime-library actions are executed for this migration and no matched
 Restore-performance claim is made. The configured preparation walk still needs
-retained-instance finalization.
+its remaining resource producers migrated to acquisition-result processing.
 
 Ordinary NuGet acquisition now preserves request identity when
 `MSBuildRestoreGraphInputs=true`.
@@ -1251,9 +1251,44 @@ Request identity associates actual acquisition evaluations, requirements and res
 It is not a resource identity or a required identity for a later configured Build
 request, and the transient property record is not a persisted evaluated-property
 catalog. Fresh Build evaluation still owns configured selection and graph topology.
-The retained-instance finalization coordinator and removal of the configured
+Migration of remaining resource producers and removal of the configured
 preparation recursion/framework-discovery capture remain subsequent work; this
 change adds neither another traversal nor a Restore-performance claim.
+
+NuGet fact production now consumes acquisition results directly. Existing
+per-framework Restore visits emit finite assets/output/compiler/language bindings;
+`ValidateRestoreRequestsTask` retains these bindings from all equivalent admitted
+contexts. Immediately after successful `RestoreTask`, the packaged SDK
+[`WriteNuGetRestoreInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteNuGetRestoreInputs.cs)
+validates destination compatibility and serializes each distinct output once
+through `WriteNuGetInputs`. A shared per-project manifest contains the entire
+assets model and ordered acquired package folders. Fresh configured Build imports
+it for selection; the remaining legacy resource collectors reuse its package
+folders rather than rewriting the NuGet model. The explicit processor-assembly
+binding lets plain NuGet/Traversal roots drive this without importing the .NET SDK.
+The ordinary non-prototype capture path remains unchanged.
+
+`TestNuGetAcquisitionInputs` uses a plain root and a two-framework child reached
+under two equivalent acquisition contexts. It requires four bindings but one
+written model, rejects any child Restore/capture/configured preparation, and
+verifies an up-to-date Restore recreates a deleted fact manifest. This migration
+adds no retained-instance registry, new project evaluation or reference walk.
+Other resource producers and their preparation traversal remain; fewer NuGet
+serializations alone are not a Restore-performance result.
+
+Validation passes current-.NET/.NET-Framework task builds, 19 source-linked SDK
+fact cases against the packaged task assembly, eight packaged NuGet admission
+cases, and the acquisition/request/framework/discovery smokes. The full SDK test
+project remains blocked by unrelated stale `ResolveNuGetAssets` test APIs; the
+focused harness replaces only its directory-creation helper. Isolated runtime
+Restore processes 645 bindings into 343 shared models in one root task, replacing
+987 legacy `WriteNuGetInputs` task invocations. Evaluation and project-request
+counts remain unchanged at 4,898 and 69,562 respectively, because the other
+preparation producers have not moved. Fresh graph construction preserves all
+5,320 action/output signatures, 500 compiler commands and 55 ApiCompat input sets
+after separately accounting for Git revision and private-profile relocation.
+No unexpected parameter differences, missing external inputs or protected-product
+changes are observed. Runtime-library actions are not executed.
 
 Source-built reference directories use `ApiCompatProducedReferenceDirectory`
 and explicit `ApiCompatProducedReferenceFile` members. Runtime exports the

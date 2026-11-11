@@ -97,6 +97,7 @@ public sealed class ValidateRestoreRequestsTask : Microsoft.Build.Utilities.Task
         foreach (ITaskItem item in RestoreGraphItems)
         {
             if (string.Equals(item.GetMetadata("Type"), "RestoreSpec", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(item.GetMetadata("Type"), "NuGetInputRequest", StringComparison.OrdinalIgnoreCase)
                 || !selectedRequests.TryGetValue(item.GetMetadata("ProjectUniqueName"), out string? identity)
                 || string.Equals(item.GetMetadata(RequestIdentityMetadata), identity, StringComparison.Ordinal))
             {

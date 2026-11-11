@@ -856,9 +856,10 @@ task-specific sandbox implementations.
 
 ## Proposed capture-once fetch
 
-**Status: design proposal, not implemented.** The preparation and mandatory
-per-project imports described above remain the current contract until their
-producers and consumers are migrated together.
+**Status: incremental migration.** NuGet assets facts are processed directly from
+acquisition bindings. The additional preparation walk and mandatory imports
+described above remain for the other resource producers until their producers
+and consumers are migrated together.
 
 ### Boundary and success criteria
 
@@ -920,10 +921,9 @@ cache/marker paths. These records are aggregated at the root; collecting them
 must not schedule another project walk.
 
 Preserve authored reference properties and removals when issuing acquisition
-requests. The current
+requests. The
 [path collector](../../../../nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.targets)
-converts references into a string property and recreates path items, losing
-their metadata. The replacement retains the request identity and applies
+retains the request identity in the prototype profile and applies
 explicit `AdditionalProperties`, property removals, and supplied
 configuration/platform/framework assignments. It does not run
 `AssignProjectConfiguration` or nearest-framework selection to manufacture
@@ -949,19 +949,27 @@ path alone does not require one. Missing fact coverage is an error, not a reason
 to discover that state during construction. Likewise, Restore-generated authoring
 that needs external state must register the intent before the root capture barrier.
 
-Restore finalization needs an explicit migration contract. A child project's
+Post-acquisition processing needs an explicit migration contract. A child project's
 ordinary NuGet graph visit does not execute that child's `Restore` target or
 its `AfterTargets="Restore"` hooks. Do not preserve those effects by restoring
-every child again. Integrations that produce known post-acquisition imports
-register a finalizer while their existing Restore instance is evaluated.
-Run it on that retained instance after acquisition, with explicit acquisition
-results, without changing global properties, reloading imports, or walking
-references. It cannot depend on newly imported package authoring or use SDK
-build resolution as a discovery helper. Keep the required instances alive
-through finalization; a lost instance is a failed Restore, not permission for
-a hidden capture evaluation.
+every child again. Prefer direct processing of successful acquisition results
+plus finite resource bindings collected in the existing acquisition visits.
+Ninja needs the resulting resource facts, not retained Restore project instances.
+Do not introduce instance retention or a target-dispatch coordinator unless a
+concrete resource producer demonstrates why its finite bindings are insufficient.
+Processing must not change global properties, reload imports, walk references,
+or use SDK build resolution as a discovery helper.
 
-Existing child Restore/capture hooks must be adapted to this finalizer/intent
+The NuGet integration collects assets/output paths and compiler/language identity
+during existing per-framework Restore visits. After successful acquisition, a
+single root task validates the bindings and writes each distinct output once,
+including on an up-to-date Restore. Equivalent admitted request contexts retain
+all their resource bindings. The default manifest is shared across frameworks
+and configurations because it contains the whole assets model, not a configured
+selection; conflicting bindings for one destination fail. This first producer
+migration does not remove the remaining preparation walk.
+
+Existing child Restore/capture hooks must be adapted to this result/intent
 contract, including the fresh-import regression. Package-only hooks invisible
 to the Restore evaluation cannot be invoked magically after acquisition:
 acquired package inventories cover package-local inputs, and other external

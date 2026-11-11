@@ -1,0 +1,23 @@
+<Project>
+  <PropertyGroup>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <TargetFramework>net11.0</TargetFramework>
+    <TargetFrameworkMoniker>.NETCoreApp,Version=v11.0</TargetFrameworkMoniker>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/Root/</MSBuildProjectExtensionsPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="Library/Library.csproj" AdditionalProperties="Flavor=One" />
+    <ProjectReference Include="Library/./Library.csproj" AdditionalProperties="Flavor=Two" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)/NuGet.targets" />
+  <Target Name="CheckAcquisitionInputs" AfterTargets="Restore"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">
+    <ItemGroup>
+      <_InputRequest Include="@(_RestoreGraphEntryFiltered->WithMetadataValue('Type', 'NuGetInputRequest'))" />
+    </ItemGroup>
+    <Error Condition="'@(_InputRequest->Count())' != '4' or '$(_NuGetInputModelsWritten)' != '1'"
+           Text="Both framework visits in both acquisition contexts must produce bindings, but one shared assets model must be written once." />
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/Library/obj/nugetinputs/Library.csproj.g.props')"
+           Text="Child NuGet facts must exist immediately after root acquisition without running child Restore or capture targets." />
+  </Target>
+</Project>

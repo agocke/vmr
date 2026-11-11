@@ -7,6 +7,23 @@
     <_App>&quot;$(GenBuildTestHost)&quot; &quot;$(GenBuildApp)&quot;</_App>
     <_AppDirectory>$([System.IO.Path]::GetDirectoryName('$(GenBuildApp)'))</_AppDirectory>
   </PropertyGroup>
+  <Target Name="TestNuGetAcquisitionInputs">
+    <PropertyGroup>
+      <_NuGetAcquisitionRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'nuget-acquisition-inputs'))</_NuGetAcquisitionRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_NuGetAcquisitionRoot)Library" />
+    <WriteLinesToFile File="$(_NuGetAcquisitionRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_NuGetAcquisitionRoot)Directory.Build.targets" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <WriteLinesToFile File="$(_NuGetAcquisitionRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)NuGetAcquisitionInputs.proj;$(MSBuildThisFileDirectory)NuGetAcquisitionInputs.csproj"
+          DestinationFiles="$(_NuGetAcquisitionRoot)Root.proj;$(_NuGetAcquisitionRoot)Library/Library.csproj" />
+    <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -bl:&quot;$(_NuGetAcquisitionRoot)restore.binlog&quot;" />
+    <Delete Files="$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props" />
+    <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -p:MSBuildRestoreGraphInputs=false -bl:&quot;$(_NuGetAcquisitionRoot)ordinary.binlog&quot;" />
+    <Error Condition="Exists('$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props')"
+           Text="Ordinary Restore must not publish prototype NuGet facts merely because the processor assembly is bound." />
+    <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -bl:&quot;$(_NuGetAcquisitionRoot)up-to-date.binlog&quot;" />
+  </Target>
   <Target Name="TestRestoreRequests">
     <PropertyGroup>
       <_RestoreRequestsRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'restore-requests'))</_RestoreRequestsRoot>
@@ -77,6 +94,7 @@
     <Error Condition="'$(_InvalidExitCode)' == '0'" Text="Invalid commands must fail." />
     <CallTarget Targets="TestNuGetSdkResolution" />
     <CallTarget Targets="TestRestoreRequests" />
+    <CallTarget Targets="TestNuGetAcquisitionInputs" />
     <CallTarget Targets="TestDirectoryImports" />
     <CallTarget Targets="TestArcadeLayout" />
     <CallTarget Targets="TestArcadeTargetFrameworkInputs" />
@@ -564,11 +582,14 @@
       </_PreparedFactKind>
       <_DiscoveredPreparedFramework Include="net11.0;net10.0;netstandard2.0;net462" />
       <_DiscoveredPreparedFact Include="@(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/frameworkreferences/Debug/AnyCPU/%(Identity)/Library.csproj.g.props');
-                                       @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/nugetinputs/Debug/AnyCPU/%(Identity)/Library.csproj.g.props');
+                                       $(_PreparedFactsRoot)Library/obj/nugetinputs/Library.csproj.g.props;
                                        @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/cscinputs/Debug/AnyCPU/%(Identity)/Library.csproj.g.props');
                                        @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/sourcelink/Debug/AnyCPU/%(Identity)/Library.csproj.g.targets')" />
       <_MissingDiscoveredPreparedFact Include="@(_PreparedFactKind)">
         <Path>$(_PreparedFactsRoot)Library/obj/%(Identity)/Debug/AnyCPU/net10.0/Library.csproj.g.%(ManifestExtension)</Path>
+      </_MissingDiscoveredPreparedFact>
+      <_MissingDiscoveredPreparedFact Condition="'%(_MissingDiscoveredPreparedFact.Identity)' == 'nugetinputs'">
+        <Path>$(_PreparedFactsRoot)Library/obj/nugetinputs/Library.csproj.g.props</Path>
       </_MissingDiscoveredPreparedFact>
     </ItemGroup>
     <Error Condition="!Exists('%(_DiscoveredPreparedFact.Identity)')"

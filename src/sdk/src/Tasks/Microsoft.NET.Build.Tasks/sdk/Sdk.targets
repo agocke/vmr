@@ -94,6 +94,35 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <UsingTask TaskName="WriteNuGetInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
+  <PropertyGroup Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildGraphNuGetInputsTaskAssembly)' != ''">
+    <NuGetInputsPath Condition="'$(NuGetInputsPath)' == ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(MSBuildProjectFile).g.props</NuGetInputsPath>
+    <NuGetInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(NuGetInputsPath)'))</NuGetInputsPath>
+  </PropertyGroup>
+  <Import Project="$(NuGetInputsPath)"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildGraphNuGetInputsTaskAssembly)' != '' and
+                     '$(_MSBuildCapturingGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
+
+  <Target Name="_CollectNuGetInputRequest"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
+          DependsOnTargets="_GetRestoreProjectStyle;_ResolveCompilerVersion"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and
+                     '$(MSBuildGraphNuGetInputsTaskAssembly)' != ''">
+    <PropertyGroup>
+      <_NuGetAcquiredAssetsFile Condition="'$(ProjectAssetsFile)' == ''">$(MSBuildProjectExtensionsPath)project.assets.json</_NuGetAcquiredAssetsFile>
+      <_NuGetAcquiredAssetsFile Condition="'$(ProjectAssetsFile)' != ''">$(ProjectAssetsFile)</_NuGetAcquiredAssetsFile>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(RestoreProjectStyle)' == 'PackageReference'">
+      <_RestoreGraphEntry Include="$([System.Guid]::NewGuid())">
+        <Type>NuGetInputRequest</Type>
+        <ProjectUniqueName>$(MSBuildProjectFullPath)</ProjectUniqueName>
+        <AssetsFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(_NuGetAcquiredAssetsFile)'))</AssetsFile>
+        <OutputFile>$(NuGetInputsPath)</OutputFile>
+        <CompilerApiVersion>$(CompilerApiVersion)</CompilerApiVersion>
+        <ProjectLanguage>$(Language)</ProjectLanguage>
+      </_RestoreGraphEntry>
+    </ItemGroup>
+  </Target>
+
   <Target Name="_CaptureNuGetInputs"
           DependsOnTargets="$(_CaptureNuGetInputsDependsOn)"
           Condition="'$(MSBuildHardenedGraph)' != 'true'">
@@ -104,11 +133,15 @@ Copyright (c) .NET Foundation. All rights reserved.
       <NuGetInputsPath Condition="'$(NuGetInputsPath)' == ''">$(MSBuildProjectExtensionsPath)nugetinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</NuGetInputsPath>
       <NuGetInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(NuGetInputsPath)'))</NuGetInputsPath>
     </PropertyGroup>
-    <WriteNuGetInputs InputFile="$(_NuGetInputFile)" OutputFile="$(NuGetInputsPath)"
+    <WriteNuGetInputs Condition="'$(MSBuildRestoreGraphInputs)' != 'true' or '$(MSBuildGraphNuGetInputsTaskAssembly)' == ''"
+                      InputFile="$(_NuGetInputFile)" OutputFile="$(NuGetInputsPath)"
                       CapturePackageContext="$(MSBuildRestoreGraphInputs)" CompilerApiVersion="$(CompilerApiVersion)"
                       ProjectLanguage="$(Language)">
       <Output TaskParameter="PackageFolders" ItemName="_FrameworkPackPackageFolder" />
     </WriteNuGetInputs>
+    <ItemGroup Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildGraphNuGetInputsTaskAssembly)' != ''">
+      <_FrameworkPackPackageFolder Include="@(_NuGetAcquiredPackageFolder)" />
+    </ItemGroup>
   </Target>
 
   <Target Name="_ComputeFrameworkReferenceFetchManifestProfile"
