@@ -1204,7 +1204,56 @@ ordering. Compiler operands and ordering are unchanged apart from the isolated
 validation setup's additional primary/fallback package-cache `PathMap` entry.
 No runtime-library actions are executed for this migration and no matched
 Restore-performance claim is made. The configured preparation walk still needs
-retained-instance finalization and reference-property identity preservation.
+retained-instance finalization.
+
+Ordinary NuGet acquisition now preserves request identity when
+`MSBuildRestoreGraphInputs=true`.
+[`PrepareRestoreRequests`](../../../src/Tasks/PrepareRestoreRequests.cs) records
+the normalized project path and effective global properties, retaining authored
+reference assignments and removals without negotiating Build configurations.
+Distinct property contexts for one project remain separate requests; equivalent
+requests deduplicate. The ordinary, non-prototype Restore path remains path-based.
+Both MSBuild task implementations replay these requests through an invocation-local,
+versioned property record, preserving escaped values instead of converting the
+complete global-property dictionary into a semicolon-delimited `Properties` string.
+Graph entries carry the compact request identity; only request records carry the
+full property state.
+The fixed-toolset profile rejects authored `ToolsVersion` overrides.
+
+NuGet still acquires one specification per project path.
+`ValidateRestoreRequestsTask` reconstructs and compares specifications only for
+projects reached under multiple requests. Equivalent specifications share
+acquisition while retaining the originating request markers; incompatible
+specifications fail before acquisition, rather than silently combining requirements
+or overwriting one assets file. Automatic compatible batching and disjoint output
+allocation are not implemented. Those requests require separate Restore invocations
+with disjoint restore output paths.
+
+This admission check exposed runtime analyzer/generator references inheriting
+`TargetFramework=net11.0` from ILLink.Tasks despite targeting `netstandard2.0`.
+Runtime now explicitly removes the consuming framework on those tool references,
+including the analyzer/code-fix projects packaged by ILLink.Tasks. This is authored
+acquisition policy, not Restore-side nearest-framework negotiation.
+`TestRestoreRequests` covers a diamond with distinct/equivalent contexts, explicit
+framework/configuration/platform assignments, removed globals, unchanged ordinary
+Restore, incompatible-spec rejection without modifying assets, and replay using
+the real runtime generator/live-ILLink reference metadata.
+All 16 focused request/admission cases pass, including admission tests against
+the packaged NuGet task. Isolated runtime Restore and graph construction preserve
+all 5,320 action/output signatures, all 500 compiler argument strings and all 55
+ApiCompat input/required-producer sets and reference groups. The comparison
+accounts separately for the earlier baseline's Git revision in SourceLink metadata
+and relocation-dependent ordering of ApiCompat's otherwise identical declared
+input sets. Protected originals remain unchanged; runtime-library actions are
+not executed.
+
+Request identity associates actual acquisition evaluations, requirements and results.
+It is not a resource identity or a required identity for a later configured Build
+request, and the transient property record is not a persisted evaluated-property
+catalog. Fresh Build evaluation still owns configured selection and graph topology.
+The retained-instance finalization coordinator and removal of the configured
+preparation recursion/framework-discovery capture remain subsequent work; this
+change adds neither another traversal nor a Restore-performance claim.
 
 Source-built reference directories use `ApiCompatProducedReferenceDirectory`
 and explicit `ApiCompatProducedReferenceFile` members. Runtime exports the

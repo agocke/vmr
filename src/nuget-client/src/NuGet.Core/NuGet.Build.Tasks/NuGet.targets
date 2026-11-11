@@ -163,6 +163,7 @@ Copyright (c) .NET Foundation. All rights reserved.
   <UsingTask TaskName="NuGet.Build.Tasks.RestoreTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
   <UsingTask TaskName="NuGet.Build.Tasks.WriteRestoreGraphTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
   <UsingTask TaskName="NuGet.Build.Tasks.GetRestoreProjectReferencesTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
+  <UsingTask TaskName="NuGet.Build.Tasks.ValidateRestoreRequestsTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
   <UsingTask TaskName="NuGet.Build.Tasks.GetRestorePackageReferencesTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
   <UsingTask TaskName="NuGet.Build.Tasks.GetCentralPackageVersionsTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
   <UsingTask TaskName="NuGet.Build.Tasks.GetRestorePackageDownloadsTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
@@ -512,11 +513,19 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Remove duplicates -->
     <RemoveDuplicates
+      Condition="'$(MSBuildRestoreGraphInputs)' != 'true'"
       Inputs="@(_FilteredRestoreGraphProjectInputItemsTmp)">
       <Output
           TaskParameter="Filtered"
           ItemName="FilteredRestoreGraphProjectInputItemsWithoutDuplicates" />
     </RemoveDuplicates>
+
+    <PrepareRestoreRequests
+      Condition="'$(MSBuildRestoreGraphInputs)' == 'true'"
+      ProjectReferences="@(_FilteredRestoreGraphProjectInputItemsTmp)"
+      Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)">
+      <Output TaskParameter="PreparedRequests" ItemName="FilteredRestoreGraphProjectInputItemsWithoutDuplicates" />
+    </PrepareRestoreRequests>
 
     <!-- Remove projects that do not support restore. -->
     <!-- With SkipNonexistentTargets support -->
@@ -592,6 +601,16 @@ Copyright (c) .NET Foundation. All rights reserved.
           TaskParameter="TargetOutputs"
           ItemName="_RestoreGraphEntry" />
     </MSBuild>
+
+    <ValidateRestoreRequestsTask
+      Condition="'$(MSBuildRestoreGraphInputs)' == 'true'"
+      RestoreGraphItems="@(_RestoreGraphEntry)">
+      <Output TaskParameter="ValidatedGraphItems" ItemName="_ValidatedRestoreGraphEntry" />
+    </ValidateRestoreRequestsTask>
+    <ItemGroup Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">
+      <_RestoreGraphEntry Remove="@(_RestoreGraphEntry)" />
+      <_RestoreGraphEntry Include="@(_ValidatedRestoreGraphEntry)" />
+    </ItemGroup>
   </Target>
 
   <!--
@@ -1230,13 +1249,17 @@ Copyright (c) .NET Foundation. All rights reserved.
     Returns="@(_RestoreProjectPathItems)">
 
     <!-- Get the absolute paths to all projects -->
-    <ConvertToAbsolutePath Paths="@(ProjectReference)">
+    <ConvertToAbsolutePath Paths="@(ProjectReference)" Condition="'$(MSBuildRestoreGraphInputs)' != 'true'">
       <Output TaskParameter="AbsolutePaths" PropertyName="_RestoreGraphAbsoluteProjectPaths" />
     </ConvertToAbsolutePath>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(MSBuildRestoreGraphInputs)' != 'true'">
       <_RestoreProjectPathItems Include="$(_RestoreGraphAbsoluteProjectPaths)" />
     </ItemGroup>
+
+    <ConvertToAbsolutePath Paths="@(ProjectReference)" Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">
+      <Output TaskParameter="AbsolutePaths" ItemName="_RestoreProjectPathItems" />
+    </ConvertToAbsolutePath>
   </Target>
 
   <!--
@@ -1251,11 +1274,20 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Drop any duplicate items -->
     <RemoveDuplicates
+      Condition="'$(MSBuildRestoreGraphInputs)' != 'true'"
       Inputs="@(_RestoreProjectPathItems)">
       <Output
           TaskParameter="Filtered"
           ItemName="_CurrentRestoreProjectPathItems" />
     </RemoveDuplicates>
+
+    <PrepareRestoreRequests
+      Condition="'$(MSBuildRestoreGraphInputs)' == 'true'"
+      ProjectReferences="@(_RestoreProjectPathItems)"
+      Properties="$(_GenerateRestoreGraphProjectEntryInputProperties)"
+      RemoveProperties="$(_GlobalPropertiesToRemoveFromProjectReferences)">
+      <Output TaskParameter="PreparedRequests" ItemName="_CurrentRestoreProjectPathItems" />
+    </PrepareRestoreRequests>
   </Target>
 
   <!--
@@ -1341,17 +1373,28 @@ Copyright (c) .NET Foundation. All rights reserved.
     </MSBuild>
 
     <!-- Include the current project in the result -->
-    <ItemGroup>
+    <ItemGroup Condition="'$(MSBuildRestoreGraphInputs)' != 'true'">
       <_GenerateRestoreProjectPathWalkOutputs Include="$(MSBuildProjectFullPath)" />
     </ItemGroup>
 
     <!-- Remove duplicates -->
     <RemoveDuplicates
+      Condition="'$(MSBuildRestoreGraphInputs)' != 'true'"
       Inputs="@(_GenerateRestoreProjectPathWalkOutputs)">
       <Output
           TaskParameter="Filtered"
           ItemName="_RestoreProjectPathItems" />
     </RemoveDuplicates>
+
+    <ItemGroup Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">
+      <_RestoreProjectPathItems Remove="@(_RestoreProjectPathItems)" />
+    </ItemGroup>
+    <PrepareRestoreRequests
+      Condition="'$(MSBuildRestoreGraphInputs)' == 'true'"
+      Requests="@(_GenerateRestoreProjectPathWalkOutputs)"
+      CurrentProject="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="PreparedRequests" ItemName="_RestoreProjectPathItems" />
+    </PrepareRestoreRequests>
   </Target>
 
   <!--
@@ -1398,11 +1441,18 @@ Copyright (c) .NET Foundation. All rights reserved.
 
     <!-- Remove duplicates -->
     <RemoveDuplicates
+      Condition="'$(MSBuildRestoreGraphInputs)' != 'true'"
       Inputs="@(_RestoreProjectPathItemsOutputs)">
       <Output
           TaskParameter="Filtered"
           ItemName="_RestoreProjectPathItemsWithoutDupes" />
     </RemoveDuplicates>
+
+    <PrepareRestoreRequests
+      Condition="'$(MSBuildRestoreGraphInputs)' == 'true'"
+      Requests="@(_RestoreProjectPathItemsOutputs)">
+      <Output TaskParameter="PreparedRequests" ItemName="_RestoreProjectPathItemsWithoutDupes" />
+    </PrepareRestoreRequests>
 
     <!-- Remove projects that do not support restore. -->
     <!-- With SkipNonexistentTargets -->
@@ -1582,9 +1632,14 @@ Copyright (c) .NET Foundation. All rights reserved.
   <Target Name="_IsProjectRestoreSupported"
           Returns="@(_ValidProjectsForRestore)">
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(MSBuildRestoreGraphInputs)' != 'true'">
       <_ValidProjectsForRestore Include="$(MSBuildProjectFullPath)" />
     </ItemGroup>
+    <PrepareRestoreRequests
+      Condition="'$(MSBuildRestoreGraphInputs)' == 'true'"
+      CurrentProject="$(MSBuildProjectFullPath)">
+      <Output TaskParameter="PreparedRequests" ItemName="_ValidProjectsForRestore" />
+    </PrepareRestoreRequests>
   </Target>
 
   <!--

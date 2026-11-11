@@ -1,0 +1,39 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LibrariesProjectRoot>$(RuntimeRoot)src/libraries/</LibrariesProjectRoot>
+    <ToolsProjectRoot>$(RuntimeRoot)src/tools/</ToolsProjectRoot>
+    <LibrariesConfiguration>Release</LibrariesConfiguration>
+    <ToolsConfiguration>Release</ToolsConfiguration>
+    <NetCoreAppToolCurrent>net11.0</NetCoreAppToolCurrent>
+    <NetFrameworkToolCurrent>net472</NetFrameworkToolCurrent>
+    <_RequiresLiveILLink>true</_RequiresLiveILLink>
+  </PropertyGroup>
+  <ItemGroup>
+    <EnabledGenerators Include="LibraryImportGenerator;DownlevelLibraryImportGenerator;ComInterfaceGenerator;EventSourceGenerator" />
+  </ItemGroup>
+  <Import Project="$(RuntimeRoot)eng/generators.targets" Condition="'$(MSBuildProjectName)' == 'ToolRoot'" />
+  <Import Project="$(RuntimeRoot)eng/liveILLink.targets" Condition="'$(MSBuildProjectName)' == 'ToolRoot'" />
+  <Target Name="Restore" DependsOnTargets="CheckRuntimeToolRequests" />
+  <Target Name="CheckRuntimeToolRequests">
+    <ItemGroup>
+      <_AnalyzerReference Include="@(ProjectReference)" Condition="'%(ProjectReference.OutputItemType)' == 'Analyzer'" />
+      <_ToolProbe Include="@(_AnalyzerReference->'$(MSBuildProjectDirectory)/ToolChild.proj')" />
+    </ItemGroup>
+    <Error Condition="'@(_AnalyzerReference->Count())' != '7'" Text="The probe must exercise all runtime generator and live ILLink analyzer references." />
+    <PrepareRestoreRequests ProjectReferences="@(_ToolProbe)">
+      <Output TaskParameter="PreparedRequests" ItemName="_ToolRequest" />
+    </PrepareRestoreRequests>
+    <Error Condition="'@(_ToolRequest->Count())' != '1'" Text="All host-tool requests must agree on removing the consuming framework." />
+    <MSBuild Projects="@(_ToolRequest)" Targets="CheckToolFramework">
+      <Output TaskParameter="TargetOutputs" ItemName="_CheckedTool" />
+    </MSBuild>
+    <Error Condition="'@(_CheckedTool->Count())' != '1'" Text="The host-tool framework probe must run." />
+  </Target>
+  <Target Name="CheckToolFramework" Returns="@(_CheckedFramework)">
+    <Error Condition="'$(TargetFramework)' != 'netstandard2.0' or '$(Configuration)' != 'Release'" Text="A host analyzer must use its own framework and the authored tool configuration, not the consumer globals." />
+    <ItemGroup>
+      <_CheckedFramework Include="$(TargetFramework)" />
+    </ItemGroup>
+  </Target>
+</Project>

@@ -534,6 +534,7 @@ namespace Microsoft.Build.BackEnd
             var toolsVersions = new string[projects.Length];
             var projectProperties = new Dictionary<string, string>[projects.Length];
             var undefinePropertiesPerProject = new List<string>[projects.Length];
+            bool[] restoreRequests = null;
 
             for (int i = 0; i < projectNames.Length; i++)
             {
@@ -626,6 +627,19 @@ namespace Microsoft.Build.BackEnd
                         projectProperties[i] = combinedTable;
                     }
 
+                    if (projects[i].GetMetadata(RestoreRequest.PropertiesMetadata).Length != 0)
+                    {
+                        restoreRequests ??= new bool[projects.Length];
+                        restoreRequests[i] = true;
+                        if (!RestoreRequest.Apply(projects[i], buildEngine, message => log.LogError(message), out Dictionary<string, string> requestProperties, out List<string> requestRemovals))
+                        {
+                            return false;
+                        }
+
+                        projectProperties[i] = requestProperties;
+                        undefinePropertiesPerProject[i] = requestRemovals;
+                    }
+
                     // If the user specified a different toolsVersion for this project - then override the setting
                     if (!String.IsNullOrEmpty(projects[i].GetMetadata("ToolsVersion")))
                     {
@@ -691,7 +705,14 @@ namespace Microsoft.Build.BackEnd
 
                                         // Copy the custom item metadata from the "Projects" items to these
                                         // output items.
-                                        projects[i].CopyMetadataTo(outputItemFromTarget);
+                                        if (restoreRequests == null || !restoreRequests[i])
+                                        {
+                                            projects[i].CopyMetadataTo(outputItemFromTarget);
+                                        }
+                                        else if (outputItemFromTarget.GetMetadata(RestoreRequest.PropertiesMetadata).Length == 0)
+                                        {
+                                            outputItemFromTarget.SetMetadata(RestoreRequest.IdentityMetadata, projects[i].GetMetadata(RestoreRequest.IdentityMetadata));
+                                        }
 
                                         // Set a metadata on the output items called "MSBuildProjectFile" which tells you which project file produced this item.
                                         if (String.IsNullOrEmpty(outputItemFromTarget.GetMetadata(ItemMetadataNames.msbuildSourceProjectFile)))

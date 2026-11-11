@@ -50,8 +50,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ILLink.CodeFix\ILLink.CodeFixProvider.csproj" ReferenceOutputAssembly="false" PackAsAnalyzer="true" />
-    <ProjectReference Include="..\ILLink.RoslynAnalyzer\ILLink.RoslynAnalyzer.csproj" ReferenceOutputAssembly="false" PackAsAnalyzer="true" />
+    <ProjectReference Include="..\ILLink.CodeFix\ILLink.CodeFixProvider.csproj" ReferenceOutputAssembly="false" PackAsAnalyzer="true" GlobalPropertiesToRemove="TargetFramework" />
+    <ProjectReference Include="..\ILLink.RoslynAnalyzer\ILLink.RoslynAnalyzer.csproj" ReferenceOutputAssembly="false" PackAsAnalyzer="true" GlobalPropertiesToRemove="TargetFramework" />
     <ProjectReference Include="..\linker\Mono.Linker.csproj" Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'" />
 
     <PackageReference Include="Microsoft.DotNet.Cecil" Version="$(MicrosoftDotNetCecilVersion)" />    

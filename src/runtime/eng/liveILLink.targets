@@ -50,6 +50,7 @@
                       ReferenceOutputAssembly="false"
                       Private="false"
                       OutputItemType="Analyzer"
+                      GlobalPropertiesToRemove="TargetFramework"
                       SetConfiguration="Configuration=$(ToolsConfiguration)" />
 
     <!-- Add the code fix provider for IDE fix suggestions -->
@@ -57,6 +58,7 @@
                       ReferenceOutputAssembly="false"
                       Private="false"
                       OutputItemType="Analyzer"
+                      GlobalPropertiesToRemove="TargetFramework"
                       SetConfiguration="Configuration=$(ToolsConfiguration)" />
   </ItemGroup>
 

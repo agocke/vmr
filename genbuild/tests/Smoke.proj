@@ -7,6 +7,61 @@
     <_App>&quot;$(GenBuildTestHost)&quot; &quot;$(GenBuildApp)&quot;</_App>
     <_AppDirectory>$([System.IO.Path]::GetDirectoryName('$(GenBuildApp)'))</_AppDirectory>
   </PropertyGroup>
+  <Target Name="TestRestoreRequests">
+    <PropertyGroup>
+      <_RestoreRequestsRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'restore-requests'))</_RestoreRequestsRoot>
+      <_RestoreRequestsArguments>-p:Configuration=Debug -p:Platform=AnyCPU -p:RemovedForLeaf=parent -p:RequestReport=&quot;$(_RestoreRequestsRoot)requests.txt&quot;</_RestoreRequestsArguments>
+    </PropertyGroup>
+    <MakeDir Directories="$(_RestoreRequestsRoot)feed" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RestoreRequests.proj;$(MSBuildThisFileDirectory)RestoreRequests.proj;$(MSBuildThisFileDirectory)RestoreRequests.proj;$(MSBuildThisFileDirectory)RestoreRequests.proj"
+          DestinationFiles="$(_RestoreRequestsRoot)Root.proj;$(_RestoreRequestsRoot)Left.proj;$(_RestoreRequestsRoot)Right.proj;$(_RestoreRequestsRoot)Leaf.proj" />
+    <Exec Command="$(_App) restore &quot;$(_RestoreRequestsRoot)Root.proj&quot; $(_RestoreRequestsArguments) -bl:&quot;$(_RestoreRequestsRoot)distinct.binlog&quot;" />
+    <ReadLinesFromFile File="$(_RestoreRequestsRoot)requests.txt">
+      <Output TaskParameter="Lines" ItemName="_DistinctRestoreRequests" />
+    </ReadLinesFromFile>
+    <RemoveDuplicates Inputs="@(_DistinctRestoreRequests)">
+      <Output TaskParameter="Filtered" ItemName="_UniqueRestoreRequests" />
+    </RemoveDuplicates>
+    <Error Condition="'@(_DistinctRestoreRequests->Count())' != '2' or '@(_UniqueRestoreRequests->Count())' != '2'" Text="A diamond must retain two distinct property contexts for the same project and deduplicate equivalent references." />
+
+    <Exec Command="$(_App) restore &quot;$(_RestoreRequestsRoot)Root.proj&quot; $(_RestoreRequestsArguments) -p:RightFlavor=A -bl:&quot;$(_RestoreRequestsRoot)equivalent.binlog&quot;" />
+    <ReadLinesFromFile File="$(_RestoreRequestsRoot)requests.txt">
+      <Output TaskParameter="Lines" ItemName="_EquivalentRestoreRequests" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_EquivalentRestoreRequests->Count())' != '1'" Text="Equivalent diamond requests must deduplicate by effective properties." />
+
+    <Exec Command="$(_App) restore &quot;$(_RestoreRequestsRoot)Root.proj&quot; $(_RestoreRequestsArguments) -p:MSBuildRestoreGraphInputs=false -bl:&quot;$(_RestoreRequestsRoot)ordinary.binlog&quot;" />
+    <ReadLinesFromFile File="$(_RestoreRequestsRoot)requests.txt">
+      <Output TaskParameter="Lines" ItemName="_OrdinaryRestoreRequests" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_OrdinaryRestoreRequests->Count())' != '1'" Text="Ordinary Restore must retain its existing path-based behavior." />
+    <ItemGroup>
+      <_RestoreRequestAssets Include="$(_RestoreRequestsRoot)obj/*/project.assets.json" />
+    </ItemGroup>
+    <GetFileHash Files="@(_RestoreRequestAssets)">
+      <Output TaskParameter="Items" ItemName="_RestoreAssetsBeforeConflict" />
+    </GetFileHash>
+    <Exec Command="$(_App) restore &quot;$(_RestoreRequestsRoot)Root.proj&quot; $(_RestoreRequestsArguments) -p:Conflict=true -flp:&quot;LogFile=$(_RestoreRequestsRoot)conflict.log;Verbosity=normal&quot; -bl:&quot;$(_RestoreRequestsRoot)conflict.binlog&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_RestoreRequestConflictExitCode" />
+    </Exec>
+    <Error Condition="'$(_RestoreRequestConflictExitCode)' == '0'" Text="Incompatible NuGet specifications for one project path must fail before acquisition." />
+    <ReadLinesFromFile File="$(_RestoreRequestsRoot)conflict.log">
+      <Output TaskParameter="Lines" ItemName="_RestoreRequestConflictLog" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <_RestoreRequestConflictDiagnostic Include="@(_RestoreRequestConflictLog)"
+          Condition="$([System.String]::Copy('%(Identity)').Contains('Distinct acquisition requests for'))" />
+    </ItemGroup>
+    <Error Condition="'@(_RestoreRequestConflictDiagnostic)' == ''" Text="The failure must identify incompatible acquisition requests, not a later NuGet or project failure." />
+    <GetFileHash Files="@(_RestoreRequestAssets)">
+      <Output TaskParameter="Items" ItemName="_RestoreAssetsAfterConflict" />
+    </GetFileHash>
+    <Error Condition="'@(_RestoreAssetsBeforeConflict->'%(Identity)|%(FileHash)')' != '@(_RestoreAssetsAfterConflict->'%(Identity)|%(FileHash)')'" Text="Rejected acquisition requests must not overwrite existing assets files." />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)RuntimeToolRestoreRequests.proj;$(MSBuildThisFileDirectory)RuntimeToolRestoreRequests.proj"
+          DestinationFiles="$(_RestoreRequestsRoot)ToolRoot.proj;$(_RestoreRequestsRoot)ToolChild.proj" />
+    <Exec Command="$(_App) restore &quot;$(_RestoreRequestsRoot)ToolRoot.proj&quot; -p:TargetFramework=net11.0 -p:Configuration=Debug -p:RuntimeRoot=&quot;$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '../../src/runtime'))&quot; -bl:&quot;$(_RestoreRequestsRoot)runtime-tools.binlog&quot;" />
+  </Target>
   <Target Name="Test">
     <Error Condition="!Exists('$(GenBuildApp)') or !Exists('$(GenBuildTestHost)')" Text="Build genbuild.proj first and set GenBuildTestHost to an external dotnet runtime." />
     <Error Condition="Exists('$(_AppDirectory)/shared') or Exists('$(_AppDirectory)/host') or Exists('$(_AppDirectory)/sdk')" Text="The app must not bundle a runtime or an SDK installation." />
@@ -21,6 +76,7 @@
     </Exec>
     <Error Condition="'$(_InvalidExitCode)' == '0'" Text="Invalid commands must fail." />
     <CallTarget Targets="TestNuGetSdkResolution" />
+    <CallTarget Targets="TestRestoreRequests" />
     <CallTarget Targets="TestDirectoryImports" />
     <CallTarget Targets="TestArcadeLayout" />
     <CallTarget Targets="TestArcadeTargetFrameworkInputs" />

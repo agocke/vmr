@@ -1,0 +1,40 @@
+<Project>
+  <PropertyGroup>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <TargetFramework>net11.0</TargetFramework>
+    <TargetFrameworkMoniker>.NETCoreApp,Version=v11.0</TargetFrameworkMoniker>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/$(MSBuildProjectName)/</MSBuildProjectExtensionsPath>
+    <RestoreSources>$(MSBuildProjectDirectory)/feed</RestoreSources>
+    <RightFlavor Condition="'$(RightFlavor)' == ''">B</RightFlavor>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="Left.proj;Right.proj" Condition="'$(MSBuildProjectName)' == 'Root'" />
+    <ProjectReference Include="Leaf.proj;./Leaf.proj" Condition="'$(MSBuildProjectName)' == 'Left'">
+      <AdditionalProperties>Flavor=A</AdditionalProperties>
+      <GlobalPropertiesToRemove>RemovedForLeaf</GlobalPropertiesToRemove>
+      <SetConfiguration>Configuration=Release</SetConfiguration>
+      <SetPlatform>Platform=Explicit</SetPlatform>
+      <SetTargetFramework>TargetFramework=net11.0</SetTargetFramework>
+    </ProjectReference>
+    <ProjectReference Include="Leaf.proj" Condition="'$(MSBuildProjectName)' == 'Right'">
+      <AdditionalProperties>Flavor=$(RightFlavor)</AdditionalProperties>
+      <GlobalPropertiesToRemove>RemovedForLeaf</GlobalPropertiesToRemove>
+      <SetConfiguration>Configuration=Release</SetConfiguration>
+      <SetPlatform>Platform=Explicit</SetPlatform>
+      <SetTargetFramework>TargetFramework=net11.0</SetTargetFramework>
+    </ProjectReference>
+    <PackageReference Include="Must.Not.Be.Acquired" Version="1.0.0" Condition="'$(Conflict)' == 'true' and '$(Flavor)' == 'B'" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)/NuGet.targets" />
+  <Target Name="CheckLeafRequest" BeforeTargets="_GenerateRestoreProjectPathItems"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildProjectName)' == 'Leaf'">
+    <Error Condition="'$(Flavor)' != 'A' and '$(Flavor)' != 'B'" Text="The authored reference properties were lost." />
+    <Error Condition="'$(RemovedForLeaf)' != ''" Text="Removed global properties were inherited during replay." />
+    <Error Condition="'$(Configuration)' != 'Release' or '$(Platform)' != 'Explicit' or '$(TargetFramework)' != 'net11.0'" Text="Explicit reference assignments were lost." />
+  </Target>
+  <Target Name="ReportLeafRequests" AfterTargets="_GenerateRestoreGraph" Condition="'$(RequestReport)' != ''">
+    <WriteLinesToFile File="$(RequestReport)"
+                      Lines="@(_RestoreProjectPathItems->WithMetadataValue('Filename', 'Leaf')->'%(Filename)|%(_MSBuildRestoreRequestId)')"
+                      Overwrite="true" />
+  </Target>
+</Project>
