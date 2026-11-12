@@ -1828,7 +1828,7 @@
              Properties="FrameworkPackInputs=$(_ArbitrationRoot)seed/obj/frameworkreferences/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props">
       <Output TaskParameter="TargetOutputs" ItemName="_ArbitrationCompilerReference" />
     </MSBuild>
-    <XmlPeek XmlInputPath="$(_ArbitrationRoot)seed/obj/nugetinputs/Debug/AnyCPU/net11.0/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_NuGetInput[@Include='%2524/project/restore/packagesPath']/Value/text()">
+    <XmlPeek XmlInputPath="$(_ArbitrationRoot)seed/obj/nugetinputs/HelloWorld.csproj.g.props" Query="/Project/ItemGroup/_NuGetInput[@Include='%2524/project/restore/packagesPath']/Value/text()">
       <Output TaskParameter="Result" PropertyName="_ArbitrationSeedCache" />
     </XmlPeek>
     <PropertyGroup>

@@ -7,6 +7,8 @@ using System.Text;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
+using Microsoft.NET.Build.Tasks.ConflictResolution;
+using NuGet.RuntimeModel;
 using NuGet.Versioning;
 
 namespace Microsoft.NET.Build.Tasks;
@@ -18,7 +20,7 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
     private sealed class ResourceCache
     {
         public Dictionary<string, XElement> Packs { get; } = new(StringComparer.Ordinal);
-        public Dictionary<string, string> RuntimeGraphs { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, XElement[]> RuntimeGraphs { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, string> Written { get; } = new(StringComparer.Ordinal);
     }
     public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
@@ -45,7 +47,7 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
         {
             lock (s_captureLock)
             {
-                const string key = "Microsoft.NET.Build.Tasks.WriteFrameworkPackInputs.Resources.v1";
+                const string key = "Microsoft.NET.Build.Tasks.WriteFrameworkPackInputs.Resources.v2";
                 ResourceCache cache = BuildEngine4?.GetRegisteredTaskObject(key, RegisteredTaskObjectLifetime.Build)
                     as ResourceCache ?? new();
                 if (BuildEngine4 is not null && BuildEngine4.GetRegisteredTaskObject(key, RegisteredTaskObjectLifetime.Build) is null)
@@ -142,9 +144,9 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
                 AddReferenceProbes(resource, root, frameworks);
             }
             string resourceFile = Path.Combine(ResourceDirectory, ResourceKey(cacheKey) + ".g.props");
-            XElement item = new("_FrameworkPackResource", new XAttribute("Include", ProjectCollection.Escape(root)),
-                new XElement("Content", ProjectCollection.Escape(resource.ToString(SaveOptions.DisableFormatting))));
-            WriteResource(cache, resourceFile, new XElement("Project", new XElement("ItemGroup", item)));
+            WriteResource(cache, resourceFile, new XElement("Project", new XElement("ItemGroup",
+                new[] { ResourceElement(root, new XElement("Pack")) }
+                    .Concat(resource.Elements().Select(row => ResourceElement(root, row))))));
             imports.Add(new XElement("Import", new XAttribute("Project", ProjectCollection.Escape(resourceFile))));
         }
 
@@ -160,22 +162,21 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
         {
             string path = TaskEnvironment.GetAbsolutePath(RuntimeGraphPath).Value;
             context.SetMetadata("RuntimeGraphPath", ProjectCollection.Escape(path));
-            if (!cache.RuntimeGraphs.TryGetValue(path, out string? json))
+            if (!cache.RuntimeGraphs.TryGetValue(path, out XElement[]? rows))
             {
-                json = File.ReadAllText(path);
-                cache.RuntimeGraphs.Add(path, json);
+                rows = RuntimeGraphInputs.Write(JsonRuntimeFormat.ReadRuntimeGraph(path)).ToArray();
+                cache.RuntimeGraphs.Add(path, rows);
             }
             string resourceFile = Path.Combine(ResourceDirectory, ResourceKey("RuntimeGraph/" + path) + ".g.props");
-            WriteResource(cache, resourceFile, new XElement("Project", new XElement("ItemGroup",
-                new XElement("_FrameworkPackResource", new XAttribute("Include", ProjectCollection.Escape(path)),
-                    new XElement("Kind", "RuntimeGraph"), new XElement("Content", ProjectCollection.Escape(json))))));
+            WriteResource(cache, resourceFile, new XElement("Project",
+                new XElement("ItemGroup", rows.Select(row => ResourceElement(path, row)))));
             imports.Add(new XElement("Import", new XAttribute("Project", ProjectCollection.Escape(resourceFile))));
         }
         facts.Add(context);
         XElement project = new("Project",
             new XElement("PropertyGroup",
                 new XElement("_FrameworkReferenceFetchManifestVersion", "2"),
-                new XElement("_RawFrameworkPackFactsVersion", "1"),
+                new XElement("_RawFrameworkPackFactsVersion", "2"),
                 new XElement("_FrameworkReferenceConflictFactsVersion", "1"),
                 new XElement("_FrameworkReferencePlatformSDKFactsVersion", "1"),
                 new XElement("_FrameworkReferenceManifestTargetPlatformIdentifier", ProjectCollection.Escape(TargetPlatformIdentifier)),
@@ -200,7 +201,41 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
             pack.Add(new XElement("Probe", new XAttribute("Path", relative), new XAttribute("Exists", exists)));
             if (exists)
             {
-                pack.Add(new XElement("Data", new XAttribute("Path", relative), File.ReadAllText(path)));
+                pack.Add(new XElement("Data", new XAttribute("Path", relative)));
+                switch (name)
+                {
+                    case "FrameworkList.xml":
+                        XElement list = XElement.Load(path);
+                        pack.Add(new XElement("FrameworkList", list.Attributes()));
+                        pack.Add(list.Elements("File").Select(file => new XElement("FrameworkFile", file.Attributes())));
+                        break;
+                    case "PlatformManifest.txt":
+                        using (StreamReader reader = File.OpenText(path))
+                        {
+                            foreach (ConflictItem item in PlatformManifestReader.ReadConflictItems(reader, path, Log))
+                            {
+                                pack.Add(new XElement("PlatformFile",
+                                    new XAttribute("FileName", item.FileName ?? ""),
+                                    new XAttribute("PackageId", item.PackageId ?? ""),
+                                    new XAttribute("AssemblyVersion", item.AssemblyVersion?.ToString() ?? ""),
+                                    new XAttribute("FileVersion", item.FileVersion?.ToString() ?? "")));
+                            }
+                        }
+                        if (Log.HasLoggedErrors)
+                        {
+                            throw new FormatException($"Invalid framework-pack platform manifest '{path}'.");
+                        }
+                        break;
+                    case "PackageOverrides.txt":
+                        TaskItem overrides = new("Pack");
+                        overrides.SetMetadata("OverriddenPackages", ProjectCollection.Escape(File.ReadAllText(path)));
+                        foreach (KeyValuePair<string, NuGetVersion> item in PackageOverride.Create(overrides).OverriddenPackages)
+                        {
+                            pack.Add(new XElement("PackageOverride",
+                                new XAttribute("PackageId", item.Key), new XAttribute("Version", item.Value.ToString())));
+                        }
+                        break;
+                }
             }
         }
         IEnumerable<string> members;
@@ -212,10 +247,8 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
         }
         else
         {
-            XElement? frameworkList = pack.Elements("Data").SingleOrDefault(item =>
-                (string?)item.Attribute("Path") == "data/FrameworkList.xml");
-            if (supplied.Length == 0 && frameworkList is not null &&
-                XElement.Parse(frameworkList.Value).Elements("File").Any(item =>
+            if (supplied.Length == 0 &&
+                pack.Elements("FrameworkFile").Any(item =>
                     string.Equals((string?)item.Attribute("Type"), "Analyzer", StringComparison.OrdinalIgnoreCase)))
             {
                 throw new FormatException($"Framework pack '{root}' requires an acquired archive or explicit member catalog.");
@@ -244,8 +277,6 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
 
     private static void AddReferenceProbes(XElement pack, string root, IEnumerable<string> frameworks)
     {
-        XElement? data = pack.Elements("Data").SingleOrDefault(item => (string?)item.Attribute("Path") == "data/FrameworkList.xml");
-        XElement? list = data is null ? null : XElement.Parse(data.Value);
         foreach (string framework in frameworks
                      .Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -254,7 +285,7 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
             {
                 string relative = "ref/" + folder;
                 AddProbe(pack, relative, () => Directory.Exists(Path.Combine(root, "ref", folder)));
-                XElement? first = list?.Elements("File").FirstOrDefault();
+                XElement? first = pack.Elements("FrameworkFile").FirstOrDefault();
                 if (first is not null)
                 {
                     string file = relative + "/" + (string?)first.Attribute("AssemblyName") + ".dll";
@@ -279,6 +310,13 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
         return BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(value)))
             .Replace("-", "").ToLowerInvariant();
     }
+
+    private static XElement ResourceElement(string root, XElement row)
+        => new("_FrameworkPackResource", new XAttribute("Include", ProjectCollection.Escape(root)),
+            new XElement("Kind", row.Name.LocalName),
+            row.Attributes().Select(attribute => new XElement(
+                "Attribute_" + System.Xml.XmlConvert.EncodeLocalName(attribute.Name.ToString()),
+                ProjectCollection.Escape(attribute.Value))));
 
     private static void WriteResource(ResourceCache cache, string file, XElement project)
     {

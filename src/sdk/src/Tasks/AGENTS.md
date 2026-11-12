@@ -49,6 +49,10 @@ analyzer companions absent from FrameworkList; loose packs need explicit catalog
 when FrameworkList is incomplete. `_CompilerFrameworkFile` supplies these candidates
 to final analyzer dependency selection. The configured preparation walk remains;
 do not add reference traversal or new selection passes just to collect resource facts.
+Native pack format 2 compiles FrameworkList attributes, platform rows, package override
+relationships and SDK runtime-graph records into item metadata during acquisition.
+Do not embed original resource text in `Content` or reparse it during construction;
+preserve record order and empty/absent distinctions and leave selection in Build.
 
 ## Declared ApiCompat reference inputs
 

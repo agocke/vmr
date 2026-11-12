@@ -15,7 +15,7 @@ internal sealed class FrameworkPackResources
     private readonly Dictionary<string, bool> _presence;
     private readonly TaskEnvironment _environment;
     private readonly string _runtimeGraphPath;
-    private readonly string _runtimeGraphJson;
+    private readonly XElement[] _runtimeGraphRows;
     private readonly ITaskItem _context;
     private RuntimeGraph? _runtimeGraph;
 
@@ -24,7 +24,7 @@ internal sealed class FrameworkPackResources
     public FrameworkPackResources(string version, ITaskItem[] facts, ITaskItem[] resources,
                                  TaskEnvironment environment)
     {
-        if (version != "1")
+        if (version != "2")
         {
             throw new FormatException("Missing or unsupported raw framework-pack facts.");
         }
@@ -70,24 +70,25 @@ internal sealed class FrameworkPackResources
         IsWindows = isWindows;
         _context = context;
         _runtimeGraphPath = context.GetMetadata("RuntimeGraphPath");
-        _runtimeGraphJson = "";
-        foreach (ITaskItem resource in resources)
+        _runtimeGraphRows = [];
+        foreach (IGrouping<string, ITaskItem> group in resources.GroupBy(resource => Absolute(resource.ItemSpec), paths))
         {
-            string root = Absolute(resource.ItemSpec);
-            if (resource.GetMetadata("Kind") == "RuntimeGraph")
+            string root = group.Key;
+            XElement[] rows = group.Select(ReadRow).ToArray();
+            if (rows.Any(row => row.Name == "RuntimeGraph"))
             {
-                if (!paths.Equals(root, _runtimeGraphPath) || _runtimeGraphJson.Length != 0)
+                if (!paths.Equals(root, _runtimeGraphPath) || rows.Count(row => row.Name == "RuntimeGraph") != 1)
                 {
                     throw new FormatException("Invalid or duplicate framework runtime graph resource.");
                 }
-                _runtimeGraphJson = resource.GetMetadata("Content");
+                _runtimeGraphRows = rows;
                 continue;
             }
-            XElement pack = XElement.Parse(resource.GetMetadata("Content"));
-            if (pack.Name != "Pack" || _packs.ContainsKey(root))
+            if (rows.Count(row => row.Name == "Pack") != 1)
             {
                 throw new FormatException($"Invalid or duplicate framework-pack resource '{root}'.");
             }
+            XElement pack = new("Pack", rows.Where(row => row.Name != "Pack"));
             _packs.Add(root, pack);
             _presence.Add(root, true);
             HashSet<string> dataPaths = new(StringComparer.Ordinal);
@@ -98,6 +99,44 @@ internal sealed class FrameworkPackResources
                 if (!dataPaths.Add(path))
                 {
                     throw new FormatException($"Duplicate framework-pack data '{path}'.");
+                }
+            }
+            foreach (XElement row in pack.Elements())
+            {
+                switch (row.Name.LocalName)
+                {
+                    case "FrameworkList":
+                        if (pack.Elements("FrameworkList").Count() != 1)
+                        {
+                            throw new FormatException("Duplicate framework-pack framework list.");
+                        }
+                        break;
+                    case "FrameworkFile":
+                        if (row.Attribute("Path") is not null)
+                        {
+                            ValidateRelativePath(Required(row, "Path"));
+                        }
+                        break;
+                    case "PlatformFile":
+                        foreach (string attribute in new[] { "FileName", "PackageId", "AssemblyVersion", "FileVersion" })
+                        {
+                            Required(row, attribute);
+                        }
+                        break;
+                    case "PackageOverride":
+                        Required(row, "PackageId");
+                        if (!NuGet.Versioning.NuGetVersion.TryParse(Required(row, "Version"), out _))
+                        {
+                            throw new FormatException("Invalid framework-pack package override version.");
+                        }
+                        break;
+                    case "Data":
+                    case "Member":
+                    case "LegacyFile":
+                    case "Probe":
+                        break;
+                    default:
+                        throw new FormatException($"Unknown framework-pack resource kind '{row.Name}'.");
                 }
             }
             foreach (XElement member in pack.Elements().Where(item => item.Name == "Member" || item.Name == "LegacyFile"))
@@ -151,11 +190,11 @@ internal sealed class FrameworkPackResources
     public RuntimeGraph RuntimeGraph(string path)
     {
         if (!_packs.Comparer.Equals(Absolute(path), _runtimeGraphPath) ||
-            _runtimeGraphJson.Length == 0)
+            _runtimeGraphRows.Length == 0)
         {
             throw new FormatException("Missing acquired framework runtime graph.");
         }
-        return _runtimeGraph ??= JsonRuntimeFormat.ReadRuntimeGraph(new StringReader(_runtimeGraphJson));
+        return _runtimeGraph ??= RuntimeGraphInputs.Read(_runtimeGraphRows);
     }
 
     public void ValidateContext(string targetingPackRoot, string? netCoreRoot = null, string? sdkVersion = null)
@@ -178,13 +217,26 @@ internal sealed class FrameworkPackResources
         return exists;
     }
 
-    public string Text(string root, string name)
+    public IReadOnlyList<IReadOnlyDictionary<string, string>> FrameworkFiles(string root)
     {
         XElement pack = Pack(root);
-        XElement? file = pack.Elements("Data").SingleOrDefault(item =>
-            string.Equals((string?)item.Attribute("Path"), name, StringComparison.Ordinal));
-        return file?.Value ?? throw new FormatException($"Missing acquired pack data '{name}'.");
+        if (!pack.Elements("FrameworkList").Any())
+        {
+            throw new FormatException("Missing acquired framework list.");
+        }
+        return pack.Elements("FrameworkFile").Select(row =>
+            (IReadOnlyDictionary<string, string>)row.Attributes().ToDictionary(attribute =>
+                attribute.Name.ToString(), attribute => attribute.Value, StringComparer.Ordinal)).ToArray();
     }
+
+    public IEnumerable<ITaskItem> PlatformItems(string root)
+        => Pack(root).Elements("PlatformFile").Select(row => Item(Required(row, "FileName"),
+            ("PackageId", Required(row, "PackageId")), ("AssemblyVersion", Required(row, "AssemblyVersion")),
+            ("FileVersion", Required(row, "FileVersion"))));
+
+    public IEnumerable<TaskItem> PackageOverrides(string root, string packageId)
+        => Pack(root).Elements("PackageOverride").Select(row => Item(packageId,
+            ("OverriddenPackageId", Required(row, "PackageId")), ("OverriddenPackageVersion", Required(row, "Version"))));
 
     public string[] Members(string root)
         => Pack(root).Elements("Member").Select(item =>
@@ -255,4 +307,35 @@ internal sealed class FrameworkPackResources
     private static string Required(XElement element, string attribute)
         => (string?)element.Attribute(attribute)
             ?? throw new FormatException($"Missing framework-pack '{attribute}' attribute.");
+
+    private static XElement ReadRow(ITaskItem resource)
+    {
+        string kind = resource.GetMetadata("Kind");
+        if (kind.Length == 0 || System.Xml.XmlConvert.EncodeLocalName(kind) != kind ||
+            resource.GetMetadata("Content").Length != 0)
+        {
+            throw new FormatException("Invalid native framework-pack resource row.");
+        }
+        XElement row = new(kind);
+        foreach (System.Collections.DictionaryEntry metadata in resource.CloneCustomMetadata())
+        {
+            string name = (string)metadata.Key;
+            if (name.StartsWith("Attribute_", StringComparison.Ordinal))
+            {
+                row.Add(new XAttribute(System.Xml.XmlConvert.DecodeName(name.Substring("Attribute_".Length)),
+                    (string?)metadata.Value ?? ""));
+            }
+        }
+        return row;
+    }
+
+    private static TaskItem Item(string identity, params (string Name, string Value)[] metadata)
+    {
+        TaskItem item = new(Microsoft.Build.Evaluation.ProjectCollection.Escape(identity));
+        foreach ((string name, string value) in metadata)
+        {
+            item.SetMetadata(name, Microsoft.Build.Evaluation.ProjectCollection.Escape(value));
+        }
+        return item;
+    }
 }

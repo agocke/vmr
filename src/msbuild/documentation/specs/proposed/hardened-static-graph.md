@@ -983,12 +983,18 @@ applying project-specific build selection. Typed collectors bound their reads
 to the requested resources; a directory root is not permission for arbitrary
 filesystem exploration.
 
+Resource capture is a translation/compilation boundary: encode consumed external
+formats as MSBuild items, properties and metadata, not opaque XML/JSON/text blobs
+inside generated props. Preserve ordering, identities, empty/absent distinctions
+and data needed by selection. Construction may rebuild typed models from these
+facts, but should not need the original serialization or its parser.
+
 | Resource | Capture | Pure construction-time work |
 | --- | --- | --- |
 | Assets and packages | Successful assets data, package locations/folder precedence, package file inventory, conflict versions, related-file presence, locale facts | Framework/RID assets, dependency, analyzer, copy-local and conflict selection |
 | Framework/host packs | Available/missing pack locations, raw framework/platform/override data, legacy inventories, path-convention existence facts, host files | Framework/profile/language filtering, references/analyzers, runtime frameworks, preferred packages and apphost choice |
 | Compiler/analyzer tools | Unavoidable tool-location/identity facts; reuse packaged tool and dependency manifests rather than assume directory enumeration is required | Supply the finite compiler/analyzer dependency set from explicit items, manifests and producer outputs |
-| Runtime graph | Explicit graph path and JSON contents | Framework and RID compatibility |
+| Runtime graph | Explicit graph identity, ordered RID imports, dependency sets/ranges and compatibility-profile records | Framework and RID compatibility |
 | Git | Repository/worktree, remote/configuration scope, roots/revision/branch and tracked/untracked state | Project `Compile` intersection, source-root projection and URL translation |
 | Platform SDK | Location/discovery options and results, relevant existence and metadata-directory facts | Derive platform properties and reference paths |
 | Unavoidable external presence facts | Presence values that actually affect graph structure, such as an optional suppression file | Derive explicit references and companion inputs; keep file-content analysis within declared actions |
@@ -996,11 +1002,15 @@ filesystem exploration.
 
 The existing
 [NuGet writer](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteNuGetInputs.cs)
-and [runtime-graph writer](../../../../arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/WriteTargetFrameworkInputs.cs)
-already preserve underlying data rather than a winning selection.
-The [framework manifest](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkReferenceFetchManifest.cs)
-instead receives selected references and analyzers. Its replacement must
-preserve all inputs to the selection in
+already encodes assets structurally as native facts.
+The [SDK pack writer](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkPackInputs.cs)
+likewise translates pack contents and its runtime graph rather than recording winners.
+The [Arcade runtime-graph writer](../../../../arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/WriteTargetFrameworkInputs.cs)
+preserves underlying data but still embeds JSON and needs the same native translation.
+The ordinary opt-in
+[framework manifest](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkReferenceFetchManifest.cs)
+continues to receive selected references and analyzers. Hardened resources preserve
+all inputs to the selection in
 [targeting-pack resolution](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/ResolveTargetingPackAssets.cs),
 including profile and language metadata, legacy enumeration, duplicate rules,
 `net5.0` path fallback, first-reference existence fallback, and conflict data.

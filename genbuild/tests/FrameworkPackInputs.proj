@@ -4,7 +4,7 @@
   </PropertyGroup>
   <Import Project="$(FrameworkPackInputs)" />
   <Target Name="ReadContext">
-    <Error Condition="'$(_RawFrameworkPackFactsVersion)' != '1'" Text="The fixture requires raw acquired framework-pack facts." />
+    <Error Condition="'$(_RawFrameworkPackFactsVersion)' != '2'" Text="The fixture requires native acquired framework-pack facts." />
     <ItemGroup>
       <_CorePackLookup Include="@(_FrameworkPackFact)"
                        Condition="'%(_FrameworkPackFact.Kind)' == 'Lookup' And
@@ -16,25 +16,24 @@
       <_CorePackVersion Condition="'$(_CorePackRoot)' != ''">$([System.IO.Path]::GetFileName('$(_CorePackRoot)'))</_CorePackVersion>
     </PropertyGroup>
     <ItemGroup>
-      <_CorePackResource Include="@(_FrameworkPackResource)" Condition="'%(_FrameworkPackResource.Identity)' == '$(_CorePackRoot)'" />
+      <_CorePackResource Include="@(_FrameworkPackResource)" Condition="'%(_FrameworkPackResource.Identity)' == '$(_CorePackRoot)' And '%(_FrameworkPackResource.Kind)' == 'Pack'" />
+      <_CorePackMember Include="@(_FrameworkPackResource)" Condition="'%(_FrameworkPackResource.Identity)' == '$(_CorePackRoot)' And '%(_FrameworkPackResource.Kind)' == 'Member'" />
     </ItemGroup>
     <Error Condition="'@(_CorePackResource->Count())' != '1'" Text="The fixture requires one acquired core-framework pack resource." />
   </Target>
   <Target Name="ReadReferences" DependsOnTargets="ReadContext" Returns="@(_Reference)">
-    <XmlPeek XmlContent="%(_CorePackResource.Content)"
-             Query="/Pack/Member[starts-with(@Path, 'ref/$(FrameworkPackTargetFramework)/') and substring(@Path, string-length(@Path)-3) = '.dll']/@Path">
-      <Output TaskParameter="Result" ItemName="_ReferenceMember" />
-    </XmlPeek>
     <ItemGroup>
+      <_ReferenceMember Include="@(_CorePackMember->'%(Attribute_Path)')"
+                        Condition="$([System.String]::Copy('%(_CorePackMember.Attribute_Path)').StartsWith('ref/$(FrameworkPackTargetFramework)/')) And
+                                   $([System.String]::Copy('%(_CorePackMember.Attribute_Path)').EndsWith('.dll'))" />
       <_Reference Include="@(_ReferenceMember->'$(_CorePackRoot)/%(Identity)')" NuGetPackageVersion="$(_CorePackVersion)" />
     </ItemGroup>
   </Target>
   <Target Name="ReadAnalyzers" DependsOnTargets="ReadContext" Returns="@(_Analyzer)">
-    <XmlPeek XmlContent="%(_CorePackResource.Content)"
-             Query="/Pack/Member[starts-with(@Path, 'analyzers/') and substring(@Path, string-length(@Path)-3) = '.dll']/@Path">
-      <Output TaskParameter="Result" ItemName="_AnalyzerMember" />
-    </XmlPeek>
     <ItemGroup>
+      <_AnalyzerMember Include="@(_CorePackMember->'%(Attribute_Path)')"
+                       Condition="$([System.String]::Copy('%(_CorePackMember.Attribute_Path)').StartsWith('analyzers/')) And
+                                  $([System.String]::Copy('%(_CorePackMember.Attribute_Path)').EndsWith('.dll'))" />
       <_Analyzer Include="@(_AnalyzerMember->'$(_CorePackRoot)/%(Identity)')" />
     </ItemGroup>
   </Target>

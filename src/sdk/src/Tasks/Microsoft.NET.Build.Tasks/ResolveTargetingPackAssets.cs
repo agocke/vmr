@@ -276,7 +276,15 @@ namespace Microsoft.NET.Build.Tasks
 
                         if (_preparedResources is null ? File.Exists(packageOverridesPath) : _preparedResources.Exists(packageOverridesPath.Value))
                         {
-                            packageConflictOverrides.Add(CreatePackageOverride(targetingPack.NuGetPackageId, packageOverridesPath));
+                            if (_preparedResources is null)
+                            {
+                                packageConflictOverrides.Add(CreatePackageOverride(targetingPack.NuGetPackageId, packageOverridesPath));
+                            }
+                            else
+                            {
+                                packageConflictOverrides.AddRange(_preparedResources.PackageOverrides(
+                                    targetingPackRoot.Value, targetingPack.NuGetPackageId));
+                            }
                         }
 
                         preferredPackages.AddRange(targetingPack.PackageConflictPreferredPackages.Split(';'));
@@ -324,9 +332,7 @@ namespace Microsoft.NET.Build.Tasks
         private TaskItem CreatePackageOverride(string runtimeFrameworkName, AbsolutePath packageOverridesPath)
         {
             TaskItem packageOverride = new(runtimeFrameworkName);
-            packageOverride.SetMetadata("OverriddenPackages", _preparedResources is null ? File.ReadAllText(packageOverridesPath)
-                : _preparedResources.Text(Path.GetDirectoryName(Path.GetDirectoryName(packageOverridesPath.Value)),
-                    "data/PackageOverrides.txt"));
+            packageOverride.SetMetadata("OverriddenPackages", File.ReadAllText(packageOverridesPath));
             return packageOverride;
         }
 
@@ -361,11 +367,11 @@ namespace Microsoft.NET.Build.Tasks
         {
             if (_preparedResources is not null)
             {
-                XDocument document = XDocument.Parse(_preparedResources.Text(definition.TargetingPackRoot.Value, "data/FrameworkList.xml"));
-                XElement first = document.Root.Elements("File").FirstOrDefault();
+                IReadOnlyList<IReadOnlyDictionary<string, string>> files = _preparedResources.FrameworkFiles(definition.TargetingPackRoot.Value);
+                IReadOnlyDictionary<string, string> first = files.FirstOrDefault();
                 bool fallback = first != null && !_preparedResources.Exists(
-                    Path.Combine(definition.TargetingPackDllFolder.Value, first.Attribute("AssemblyName").Value + ".dll"));
-                FrameworkList prepared = SelectFrameworkList(definition, document, fallback, CollectReferenceFiles);
+                    Path.Combine(definition.TargetingPackDllFolder.Value, RequiredAttribute(first, "AssemblyName") + ".dll"));
+                FrameworkList prepared = SelectFrameworkList(definition, files, fallback, CollectReferenceFiles);
                 if (CollectReferenceFiles)
                 {
                     FrameworkReferenceFiles = FrameworkReferenceFiles.Concat(prepared.ReferenceFiles).ToArray();
@@ -409,11 +415,13 @@ namespace Microsoft.NET.Build.Tasks
         private static FrameworkList ReadFrameworkList(FrameworkListDefinition definition)
         {
             XDocument frameworkListDoc = XDocument.Load(definition.FrameworkListPath);
-            return SelectFrameworkList(definition, frameworkListDoc,
+            return SelectFrameworkList(definition, frameworkListDoc.Root.Elements("File").Select(file =>
+                    (IReadOnlyDictionary<string, string>)file.Attributes().ToDictionary(attribute => attribute.Name.ToString(),
+                        attribute => attribute.Value)).ToArray(),
                 TestFirstFileInFrameworkListUsingAssemblyNameConvention(definition.TargetingPackDllFolder, frameworkListDoc));
         }
 
-        private static FrameworkList SelectFrameworkList(FrameworkListDefinition definition, XDocument frameworkListDoc,
+        private static FrameworkList SelectFrameworkList(FrameworkListDefinition definition, IReadOnlyList<IReadOnlyDictionary<string, string>> files,
                                                         bool usePathElementsInFrameworkListAsFallBack, bool collectReferenceFiles = false)
         {
             string profile = definition.Profile;
@@ -422,19 +430,19 @@ namespace Microsoft.NET.Build.Tasks
             List<TaskItem> analyzerItemsFromThisFramework = new();
             List<ITaskItem> referenceFiles = new();
 
-            foreach (var fileElement in frameworkListDoc.Root.Elements("File"))
+            foreach (IReadOnlyDictionary<string, string> file in files)
             {
                 if (collectReferenceFiles &&
-                    !string.Equals(fileElement.Attribute("Type")?.Value, "Analyzer", StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(Attribute(file, "Type"), "Analyzer", StringComparison.OrdinalIgnoreCase))
                 {
                     string path = usePathElementsInFrameworkListAsFallBack
-                        ? Path.Combine(definition.TargetingPackRoot.OriginalValue, fileElement.Attribute("Path").Value)
-                        : GetDllPathViaAssemblyName(definition.TargetingPackDllFolder.OriginalValue, fileElement.Attribute("AssemblyName").Value);
+                        ? Path.Combine(definition.TargetingPackRoot.OriginalValue, RequiredAttribute(file, "Path"))
+                        : GetDllPathViaAssemblyName(definition.TargetingPackDllFolder.OriginalValue, RequiredAttribute(file, "AssemblyName"));
                     referenceFiles.Add(new TaskItem(path));
                 }
                 if (!string.IsNullOrEmpty(profile))
                 {
-                    var profileAttributeValue = fileElement.Attribute("Profile")?.Value;
+                    var profileAttributeValue = Attribute(file, "Profile");
 
                     if (profileAttributeValue == null)
                     {
@@ -450,7 +458,7 @@ namespace Microsoft.NET.Build.Tasks
                     }
                 }
 
-                string referencedByDefaultAttributeValue = fileElement.Attribute("ReferencedByDefault")?.Value;
+                string referencedByDefaultAttributeValue = Attribute(file, "ReferencedByDefault");
                 if (referencedByDefaultAttributeValue != null &&
                     referencedByDefaultAttributeValue.Equals("false", StringComparison.OrdinalIgnoreCase))
                 {
@@ -458,25 +466,25 @@ namespace Microsoft.NET.Build.Tasks
                     continue;
                 }
 
-                string itemType = fileElement.Attribute("Type")?.Value;
+                string itemType = Attribute(file, "Type");
                 bool isAnalyzer = itemType?.Equals("Analyzer", StringComparison.OrdinalIgnoreCase) ?? false;
 
-                string assemblyName = fileElement.Attribute("AssemblyName").Value;
+                string assemblyName = RequiredAttribute(file, "AssemblyName");
 
                 string dllPath = usePathElementsInFrameworkListAsFallBack || isAnalyzer ?
-                    Path.Combine(definition.TargetingPackRoot.OriginalValue, fileElement.Attribute("Path").Value) :
+                    Path.Combine(definition.TargetingPackRoot.OriginalValue, RequiredAttribute(file, "Path")) :
                     GetDllPathViaAssemblyName(definition.TargetingPackDllFolder.OriginalValue, assemblyName);
 
                 var item = CreateItem(dllPath, definition.FrameworkReferenceName, definition.NuGetPackageId, definition.NuGetPackageVersion);
 
                 item.SetMetadata("AssemblyName", assemblyName);
-                item.SetMetadata("AssemblyVersion", fileElement.Attribute("AssemblyVersion").Value);
-                item.SetMetadata("FileVersion", fileElement.Attribute("FileVersion").Value);
-                item.SetMetadata("PublicKeyToken", fileElement.Attribute("PublicKeyToken").Value);
+                item.SetMetadata("AssemblyVersion", RequiredAttribute(file, "AssemblyVersion"));
+                item.SetMetadata("FileVersion", RequiredAttribute(file, "FileVersion"));
+                item.SetMetadata("PublicKeyToken", RequiredAttribute(file, "PublicKeyToken"));
 
                 if (isAnalyzer)
                 {
-                    string itemLanguage = fileElement.Attribute("Language")?.Value;
+                    string itemLanguage = Attribute(file, "Language");
 
                     if (itemLanguage != null)
                     {
@@ -504,6 +512,12 @@ namespace Microsoft.NET.Build.Tasks
                 ReferenceFiles = referenceFiles.ToArray(),
             };
         }
+
+        private static string Attribute(IReadOnlyDictionary<string, string> file, string name)
+            => file.TryGetValue(name, out string value) ? value : null;
+
+        private static string RequiredAttribute(IReadOnlyDictionary<string, string> file, string name)
+            => Attribute(file, name) ?? throw new FormatException($"Missing framework-list '{name}' attribute.");
 
         /// <summary>
         /// Due to https://github.com/dotnet/sdk/issues/12098 we fall back to use "Path" when "AssemblyName" will

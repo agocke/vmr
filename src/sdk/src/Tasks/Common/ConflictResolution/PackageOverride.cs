@@ -39,6 +39,14 @@ namespace Microsoft.NET.Build.Tasks.ConflictResolution
         public static PackageOverride Create(ITaskItem packageOverrideItem)
         {
             string packageName = packageOverrideItem.ItemSpec;
+            string overriddenPackageId = packageOverrideItem.GetMetadata("OverriddenPackageId");
+            if (overriddenPackageId.Length != 0)
+            {
+                return new PackageOverride(packageName, new[]
+                {
+                    (overriddenPackageId, OverrideVersion.Parse(packageOverrideItem.GetMetadata("OverriddenPackageVersion")))
+                });
+            }
             string overriddenPackagesString = packageOverrideItem.GetMetadata(MetadataKeys.OverriddenPackages);
 
             return new PackageOverride(packageName, CreateOverriddenPackages(overriddenPackagesString));

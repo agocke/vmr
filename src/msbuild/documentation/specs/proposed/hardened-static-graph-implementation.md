@@ -632,15 +632,25 @@ or missing resource observations fail before graph publication.
 Windows SDK normalization is imported only for Windows platform authoring, preserving
 ordinary normalization without validating unused Windows-only expressions elsewhere.
 
-Hardened framework fetch manifests use version 2 with raw resource format 1.
+Hardened framework fetch manifests use version 2 with native resource format 2.
 [`WriteFrameworkPackInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkPackInputs.cs)
 captures acquisition bindings, workload-resolved versions, pack data, presence
-observations and archive/explicit member catalogs. Pack XML and runtime-graph JSON
-are shared within one acquisition generation, independent of project language/profile.
+observations and archive/explicit member catalogs. Acquisition compiles FrameworkList
+attributes, platform-manifest rows, package-override relationships and SDK runtime-graph
+records into `_FrameworkPackResource` items. `Kind` identifies the record, its item
+identity identifies the pack or graph, and `Attribute_*` metadata carries escaped
+fields. Empty lists, absent resources and empty runtime/dependency/profile records
+remain distinguishable; framework-file and RID-import order is preserved. No original
+XML, JSON or manifest text is embedded in `Content` metadata. Resources are shared
+within one acquisition generation, independent of project language/profile.
 [`PreparedFrameworkTasks`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/PreparedFrameworkTasks.cs)
 injects those resources into existing SDK policy; configured reference, analyzer,
 runtime-framework and apphost selection has no filesystem/workload fallback.
 The ordinary opt-in version-1 selected manifest remains supported.
+Older raw-resource snapshots require a fresh Restore. Arcade's separate runtime-graph
+capture still carries JSON; migrating that producer and moving framework fact
+processing to the acquisition-result barrier are follow-up work. This format change
+does not remove configured preparation traversal.
 
 Framework analyzer members now feed final compiler dependency selection directly.
 C#/VB preparation no longer inventories framework analyzer directories. The runtime
@@ -1573,8 +1583,9 @@ is unchanged. See the [package fixture](../../../../../genbuild/tests/PackageRef
 - [x] Reject missing, malformed and unresolved facts without publishing a graph.
 
 `_FrameworkReferenceConflictFactsVersion=1` identifies pack conflict resources.
-The raw framework resource path parses platform items during graph-time targeting
-selection and retains pack-owned override rules and ordered preferred packages.
+The native framework resource path compiles platform items and package-override
+relationships during acquisition; graph-time targeting selection supplies those
+items and ordered preferred packages to conflict policy without reparsing pack text.
 `_NuGetConflictFactsVersion=1` adds `_NuGetConflictFile` assembly/file versions for
 non-placeholder package assets. Capture uses the existing portable binary-version
 reader; unusual native/version-resource profiles are not established by these

@@ -158,7 +158,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Target Name="ProcessFrameworkReferences" BeforeTargets="_CheckForInvalidConfigurationAndPlatform;CollectPackageReferences;CollectPackageDownloads"
           DependsOnTargets="_ComputeTargetLatestRuntimePatch;AddWindowsSdkKnownFrameworkReferences"
-          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(_RawFrameworkPackFactsVersion)' == '1') And ('@(FrameworkReference)' != '' Or '$(_RequiresILLinkPack)' == 'true')">
+          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(_RawFrameworkPackFactsVersion)' != '') And ('@(FrameworkReference)' != '' Or '$(_RequiresILLinkPack)' == 'true')">
 
     <CheckForDuplicateFrameworkReferences
         DeclaredInputs="" DeclaredOutputs=""
@@ -401,7 +401,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     ============================================================
     -->
   <Target Name="ResolveFrameworkReferences" DependsOnTargets="ProcessFrameworkReferences;ResolvePackageAssets"
-          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(_RawFrameworkPackFactsVersion)' == '1') And '@(FrameworkReference)' != ''"
+          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(_RawFrameworkPackFactsVersion)' != '') And '@(FrameworkReference)' != ''"
           Returns="@(ResolvedFrameworkReference)">
 
     <GetPackageDirectory
@@ -588,7 +588,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     ============================================================
     -->
   <Target Name="ResolveTargetingPackAssets" DependsOnTargets="ResolveFrameworkReferences"
-          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(_RawFrameworkPackFactsVersion)' == '1') And '@(FrameworkReference)' != ''">
+          Condition="('$(_UsingFrameworkReferenceManifest)' != 'true' Or '$(_RawFrameworkPackFactsVersion)' != '') And '@(FrameworkReference)' != ''">
 
     <!-- For design-time builds, don't generate an error if a targeting pack isn't available (ie because it hasn't been restored yet) -->
     <PropertyGroup Condition="'$(GenerateErrorForMissingTargetingPacks)' == ''">

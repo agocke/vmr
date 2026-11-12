@@ -25,7 +25,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       <_PreparedFrameworkReferenceSelection Include="@(_FrameworkReferenceManifestFrameworkReference)"
                                            Condition="'$(_RawFrameworkPackFactsVersion)' == ''" />
       <_PreparedFrameworkReferenceSelection Include="@(ResolvedFrameworkReference)"
-                                           Condition="'$(_RawFrameworkPackFactsVersion)' == '1'" />
+                                           Condition="'$(_RawFrameworkPackFactsVersion)' != ''" />
       <_PreparedRuntimeConflictItem Include="@(RuntimeCopyLocalItems);@(NativeCopyLocalItems);@(ResourceCopyLocalItems);@(RuntimeTargetsCopyLocalItems)"
                                    Exclude="@(ReferenceCopyLocalPaths)" />
     </ItemGroup>

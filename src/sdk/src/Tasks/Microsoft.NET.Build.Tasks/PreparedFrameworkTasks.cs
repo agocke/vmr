@@ -1,10 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
-using Microsoft.Build.Utilities;
-using Microsoft.NET.Build.Tasks.ConflictResolution;
 
 namespace Microsoft.NET.Build.Tasks.Prepared;
 
@@ -99,15 +96,7 @@ public sealed class ResolveTargetingPackAssets : global::Microsoft.NET.Build.Tas
             {
                 string root = Path.GetDirectoryName(Path.GetDirectoryName(
                     TaskEnvironment.GetAbsolutePath(manifest.ItemSpec).Value))!;
-                using StringReader reader = new(resources.Text(root, "data/PlatformManifest.txt"));
-                foreach (ConflictItem fact in PlatformManifestReader.ReadConflictItems(reader, manifest.ItemSpec, Log))
-                {
-                    TaskItem item = new(ProjectCollection.Escape(fact.FileName!));
-                    item.SetMetadata("PackageId", ProjectCollection.Escape(fact.PackageId ?? ""));
-                    item.SetMetadata("AssemblyVersion", fact.AssemblyVersion?.ToString() ?? "");
-                    item.SetMetadata("FileVersion", fact.FileVersion?.ToString() ?? "");
-                    platformItems.Add(item);
-                }
+                platformItems.AddRange(resources.PlatformItems(root));
             }
             PlatformConflictItems = platformItems.ToArray();
         }
