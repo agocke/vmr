@@ -40,7 +40,7 @@
       <_FixtureP2PResolved>true</_FixtureP2PResolved>
     </PropertyGroup>
   </Target>
-  <Target Name="Restore" DependsOnTargets="_CaptureTargetFrameworkInputs;ResolveP2PReferences">
+  <Target Name="Restore" DependsOnTargets="RestoreRuntimeGraphInputs;ResolveP2PReferences">
     <MSBuild Projects="@(ProjectReference)" Targets="Restore"
              Properties="%(ProjectReference.SetConfiguration);%(ProjectReference.SetPlatform);%(ProjectReference.SetTargetFramework)"
              RemoveProperties="%(ProjectReference.GlobalPropertiesToRemove);%(ProjectReference.UndefineProperties)"

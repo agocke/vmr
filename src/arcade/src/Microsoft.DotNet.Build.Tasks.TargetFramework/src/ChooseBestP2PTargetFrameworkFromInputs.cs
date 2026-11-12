@@ -1,10 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.IO;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Shared;
 using Microsoft.Build.Utilities;
-using NuGet.RuntimeModel;
 
 namespace Microsoft.DotNet.Build.Tasks.TargetFramework;
 
@@ -12,7 +11,13 @@ namespace Microsoft.DotNet.Build.Tasks.TargetFramework;
 public sealed class ChooseBestP2PTargetFrameworkFromInputs : Task
 {
     [Required]
-    public string RuntimeGraphContents { get; set; } = null!;
+    public string RuntimeGraphPath { get; set; } = null!;
+
+    [Required]
+    public string RuntimeGraphInputsVersion { get; set; } = null!;
+
+    [Required]
+    public ITaskItem[] RuntimeGraphResources { get; set; } = [];
 
     [Required]
     public string CurrentProjectTargetFramework { get; set; } = null!;
@@ -46,7 +51,7 @@ public sealed class ChooseBestP2PTargetFrameworkFromInputs : Task
 
     private TargetFrameworkResolver CreateResolver()
     {
-        using StringReader reader = new(RuntimeGraphContents);
-        return new TargetFrameworkResolver(JsonRuntimeFormat.ReadRuntimeGraph(reader));
+        return new TargetFrameworkResolver(RuntimeGraphInputs.ReadItems(
+            RuntimeGraphInputsVersion, RuntimeGraphPath, RuntimeGraphResources));
     }
 }

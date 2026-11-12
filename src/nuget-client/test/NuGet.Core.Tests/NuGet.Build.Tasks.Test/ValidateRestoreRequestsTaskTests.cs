@@ -54,6 +54,7 @@ namespace NuGet.Build.Tasks.Test
         [InlineData("NuGetInputRequest")]
         [InlineData("FrameworkPackInputRequest")]
         [InlineData("FrameworkPackInput")]
+        [InlineData("RuntimeGraphInputRequest")]
         public void Execute_EquivalentRequests_RetainsAllResourceBindings(string type)
         {
             ITaskItem[] first = CreateGraph("first");

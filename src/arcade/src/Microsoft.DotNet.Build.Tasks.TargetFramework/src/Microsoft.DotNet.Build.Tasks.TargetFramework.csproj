@@ -11,6 +11,7 @@
 
 
   <ItemGroup>
+    <Compile Include="../../Shared/RuntimeGraphInputs.cs" Link="Shared/RuntimeGraphInputs.cs" />
     <PackageReference Include="Microsoft.Build" />
     <PackageReference Include="Microsoft.Build.Tasks.Core" />
     <PackageReference Include="NuGet.Packaging" />

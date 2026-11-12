@@ -66,7 +66,9 @@
     </ChooseBestTargetFrameworksTask>
     <ChooseBestTargetFrameworksFromInputs BuildTargetFrameworks="@(BinPlaceTargetFrameworks)"
                                           SupportedTargetFrameworks="@(_LibrarySupportedFramework)"
-                                          RuntimeGraphContents="$(_TargetFrameworkInputsRuntimeGraphContents)"
+                                          RuntimeGraphPath="$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', $([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))))"
+                                          RuntimeGraphInputsVersion="$(_RuntimeGraphInputsVersion)"
+                                          RuntimeGraphResources="@(_RuntimeGraphResource)"
                                           DeclaredInputs="" DeclaredOutputs=""
                                           Condition="'$(MSBuildHardenedGraph)' == 'true' and '@(BinPlaceTargetFrameworks)' != ''">
       <Output TaskParameter="BestTargetFrameworks" ItemName="_LibraryLayoutFramework" />

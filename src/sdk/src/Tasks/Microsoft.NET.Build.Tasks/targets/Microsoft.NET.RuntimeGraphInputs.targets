@@ -1,0 +1,33 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+  <PropertyGroup>
+    <_RuntimeGraphInputsTargetsImported>true</_RuntimeGraphInputsTargetsImported>
+    <RuntimeGraphInputsPath Condition="'$(RuntimeGraphInputsPath)' == '' And '$(TargetFrameworkInputsPath)' != ''">$(TargetFrameworkInputsPath)</RuntimeGraphInputsPath>
+    <RuntimeGraphInputsPath Condition="'$(RuntimeGraphInputsPath)' == ''">$(MSBuildProjectExtensionsPath)runtimegraphinputs/$(MSBuildProjectFile).g.props</RuntimeGraphInputsPath>
+    <RuntimeGraphInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(RuntimeGraphInputsPath)'))</RuntimeGraphInputsPath>
+    <RuntimeGraphResourceDirectory Condition="'$(RuntimeGraphResourceDirectory)' == '' And '$(MSBuildGraphSdkBindingsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildGraphSdkBindingsDirectory)', 'runtime-graph-resources'))</RuntimeGraphResourceDirectory>
+    <RuntimeGraphResourceDirectory Condition="'$(RuntimeGraphResourceDirectory)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildProjectExtensionsPath)', 'runtime-graph-resources'))</RuntimeGraphResourceDirectory>
+  </PropertyGroup>
+
+  <UsingTask TaskName="Microsoft.NET.Build.Tasks.WriteRuntimeGraphInputs" AssemblyFile="$(MSBuildGraphNuGetInputsTaskAssembly)" />
+  <Import Project="$(RuntimeGraphInputsPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+
+  <Target Name="_CollectRuntimeGraphInputRequest"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' And '$(MSBuildHardenedGraph)' != 'true'">
+    <PropertyGroup>
+      <_AcquisitionRuntimeGraph>$([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))</_AcquisitionRuntimeGraph>
+    </PropertyGroup>
+    <ItemGroup>
+      <_RuntimeGraphRequest Include="$(_AcquisitionRuntimeGraph)" Condition="'$(_AcquisitionRuntimeGraph)' != ''" />
+      <_RuntimeGraphRequest Include="@(RuntimeGraphResource)" />
+      <_RestoreGraphEntry Include="$([System.Guid]::NewGuid())" Condition="'@(_RuntimeGraphRequest)' != ''">
+        <Type>RuntimeGraphInputRequest</Type>
+        <ProjectUniqueName>$(MSBuildProjectFullPath)</ProjectUniqueName>
+        <RuntimeGraphPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '%(_RuntimeGraphRequest.Identity)'))</RuntimeGraphPath>
+        <OutputFile>$(RuntimeGraphInputsPath)</OutputFile>
+        <ResourceDirectory>$(RuntimeGraphResourceDirectory)</ResourceDirectory>
+      </_RestoreGraphEntry>
+    </ItemGroup>
+  </Target>
+</Project>

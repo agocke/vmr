@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Xml.Linq;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Shared;
 using Microsoft.Build.Utilities;
 using Microsoft.NET.Build.Tasks.ConflictResolution;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -21,6 +22,120 @@ namespace Microsoft.NET.Build.Tasks.UnitTests;
 [TestClass]
 public class GivenRawFrameworkPackInputs
 {
+    [TestMethod]
+    public void RuntimeGraphAcquisitionSharesNativeResourcesAndRepublishesMissingFiles()
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        string graph = fixture.Environment.GetAbsolutePath("runtime;literal%.json").Value;
+        string other = fixture.Environment.GetAbsolutePath("other-runtime.json").Value;
+        File.WriteAllText(graph, """
+            {"runtimes":{"specific":{"#import":["second","first"],"Root":{"Dependency":"[1.0,2.0)"},"Empty":{}},"first":{},"second":{}},
+             "supports":{"profile":{"net8.0":["second","first"]},"empty":{}}}
+            """);
+        File.WriteAllText(other, """{"runtimes":{"different":{}}}""");
+        RuntimeGraph expected = JsonRuntimeFormat.ReadRuntimeGraph(graph);
+        string output = fixture.Environment.GetAbsolutePath("native/inputs.g.props").Value;
+        string secondOutput = fixture.Environment.GetAbsolutePath("other/inputs.g.props").Value;
+        string directory = fixture.Environment.GetAbsolutePath("shared").Value;
+        ITaskItem Binding(string input, string file) => Item(Guid.NewGuid().ToString(),
+            ("RuntimeGraphPath", input), ("OutputFile", file), ("ResourceDirectory", directory));
+        var engine = new RecordingEngine();
+        var writer = new WriteRuntimeGraphInputs
+        {
+            BuildEngine = engine,
+            Requests = [Binding(graph, output), Binding(graph, secondOutput), Binding(other, output)]
+        };
+        Assert.IsTrue(writer.Execute(), string.Join("\n", engine.Errors));
+        Assert.AreEqual(2, writer.WrittenResources);
+        Assert.AreEqual(2, Directory.GetFiles(directory).Length);
+        string resource = XDocument.Load(secondOutput).Root!.Element("Import")!.Attribute("Project")!.Value;
+        File.Delete(output);
+        File.Delete(resource);
+        Assert.IsTrue(writer.Execute(), string.Join("\n", engine.Errors));
+        Assert.IsTrue(File.Exists(output));
+        Assert.IsTrue(File.Exists(resource));
+        using var collection = new ProjectCollection();
+        Project evaluated = collection.LoadProject(output);
+        ITaskItem[] rows = evaluated.GetItems("_RuntimeGraphResource").Select(item =>
+            Item(item.EvaluatedInclude, item.Metadata.Select(metadata => (metadata.Name, metadata.EvaluatedValue)).ToArray())).ToArray();
+        File.Delete(graph);
+        File.Delete(other);
+        Assert.IsTrue(expected.Equals(RuntimeGraphInputs.ReadItems("1", graph, rows)));
+        Assert.AreEqual("different", RuntimeGraphInputs.ReadItems("1", other, rows).Runtimes.Single().Key);
+        Assert.IsTrue(rows.All(item => item.GetMetadata("Content").Length == 0));
+    }
+
+    [TestMethod]
+    [DataRow("version")]
+    [DataRow("missing")]
+    [DataRow("duplicate")]
+    [DataRow("opaque")]
+    [DataRow("order")]
+    [DataRow("kind")]
+    public void NativeRuntimeGraphProcessingRejectsInvalidFactsWithoutReadingResources(string invalid)
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        string graph = fixture.Environment.GetAbsolutePath("not-on-disk.json").Value;
+        string version = invalid == "version" ? "future" : "1";
+        ITaskItem[] rows = [Item(graph, ("Kind", "RuntimeGraph")), Item(graph, ("Kind", "Runtime"), ("Attribute_Runtime", "any"))];
+        switch (invalid)
+        {
+            case "missing":
+                graph += ".other";
+                break;
+            case "duplicate":
+                rows = [.. rows, rows[0]];
+                break;
+            case "opaque":
+                rows[0].SetMetadata("Content", "{}");
+                break;
+            case "order":
+                rows = [rows[0], Item(graph, ("Kind", "RuntimeImport"), ("Attribute_Runtime", "any"), ("Attribute_Import", "missing")), rows[1]];
+                break;
+            case "kind":
+                rows[1].SetMetadata("Kind", "Unknown");
+                break;
+        }
+        Assert.ThrowsExactly<FormatException>(() => RuntimeGraphInputs.ReadItems(version, graph, rows));
+    }
+
+    [TestMethod]
+    [DataRow("relative")]
+    [DataRow("alias")]
+    [DataRow("scope")]
+    [DataRow("malformed")]
+    public void RuntimeGraphAcquisitionRejectsIncompatibleBindings(string invalid)
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        string graph = fixture.Environment.GetAbsolutePath("runtime.json").Value;
+        string output = fixture.Environment.GetAbsolutePath("native.g.props").Value;
+        string directory = fixture.Environment.GetAbsolutePath("resources").Value;
+        ITaskItem first = Item("first", ("RuntimeGraphPath", graph), ("OutputFile", output), ("ResourceDirectory", directory));
+        ITaskItem second = new TaskItem(first);
+        if (invalid == "relative")
+        {
+            second.SetMetadata("RuntimeGraphPath", "relative.json");
+        }
+        else if (invalid == "alias")
+        {
+            second.SetMetadata("OutputFile", ProjectCollection.Escape(graph));
+        }
+        else if (invalid == "scope")
+        {
+            second.SetMetadata("ResourceDirectory", ProjectCollection.Escape(directory + "-other"));
+        }
+        else
+        {
+            File.WriteAllText(graph, "{");
+        }
+        var engine = new RecordingEngine();
+        var writer = new WriteRuntimeGraphInputs { BuildEngine = engine, Requests = [first, second] };
+        Assert.IsFalse(writer.Execute());
+        Assert.AreEqual(1, engine.Errors.Count);
+        Assert.AreEqual(0, writer.WrittenResources);
+        Assert.IsFalse(File.Exists(output));
+    }
+
     [TestMethod]
     public void AcquisitionResultsTranslateAllBindingsWithoutConfiguredPreparation()
     {

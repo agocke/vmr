@@ -33,4 +33,9 @@
   <PropertyGroup>
     <CleanDependsOn>CoreClean</CleanDependsOn>
   </PropertyGroup>
+  <Target Name="RestoreRuntimeGraphInputs" DependsOnTargets="_CollectRuntimeGraphInputRequest">
+    <Microsoft.NET.Build.Tasks.WriteRuntimeGraphInputs
+      Requests="@(_RestoreGraphEntry->WithMetadataValue('Type', 'RuntimeGraphInputRequest'))"
+      Condition="'$(MSBuildRestoreGraphInputs)' == 'true'" />
+  </Target>
 </Project>

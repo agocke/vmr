@@ -64,6 +64,14 @@ Native pack format 2 compiles FrameworkList attributes, platform rows, package o
 relationships and SDK runtime-graph records into item metadata during acquisition.
 Do not embed original resource text in `Content` or reparse it during construction;
 preserve record order and empty/absent distinctions and leave selection in Build.
+SDK and Arcade share the native runtime codec through linked
+[`RuntimeGraphInputs`](../../../arcade/src/Shared/RuntimeGraphInputs.cs) source.
+[`WriteRuntimeGraphInputs`](Microsoft.NET.Build.Tasks/WriteRuntimeGraphInputs.cs)
+compiles acquisition-visible graph bindings into `_RuntimeGraphResource` rows and
+unconfigured project import manifests. `RuntimeGraphResource` items declare
+additional graphs before acquisition; cold package targets cannot register later
+through configured capture. Arcade's FromInputs selectors rebuild the model from
+items without JSON parsing or filesystem fallback.
 
 ## Declared ApiCompat reference inputs
 

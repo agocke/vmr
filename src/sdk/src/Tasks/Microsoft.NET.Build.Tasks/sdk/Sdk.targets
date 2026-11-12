@@ -25,6 +25,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     <FrameworkPackInputsPath Condition="'$(_FrameworkPackDirectInputs)' == 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(FrameworkPackInputsPath)'))</FrameworkPackInputsPath>
   </PropertyGroup>
 
+  <Import Project="$(MSBuildThisFileDirectory)..\targets\Microsoft.NET.RuntimeGraphInputs.targets"
+          Condition="'$(MSBuildGraphNuGetInputsTaskAssembly)' != '' And '$(_RuntimeGraphInputsTargetsImported)' != 'true'" />
+
   <Import Project="$(FrameworkReferenceFetchManifestPath)"
           Condition="'$(EnableFrameworkReferenceFetchManifest)' == 'true' and
                      ('$(MSBuildHardenedGraph)' != 'true' or '$(TargetFramework)' != '') and
@@ -33,6 +36,9 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Import Project="$(FrameworkPackInputsPath)"
           Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(MSBuildHardenedGraph)' == 'true' And '$(TargetFramework)' != ''" />
+  <ItemGroup Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(MSBuildHardenedGraph)' == 'true'">
+    <_FrameworkPackResource Include="@(_RuntimeGraphResource)" />
+  </ItemGroup>
 
   <Import Project="$(BeforeMicrosoftNETSdkTargets)" Condition="'$(BeforeMicrosoftNETSdkTargets)' != ''"/>
 

@@ -6,29 +6,16 @@
   <UsingTask TaskName="ChooseBestTargetFrameworksTask" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" Runtime="NET" Architecture="*" />
   <UsingTask TaskName="ChooseBestP2PTargetFrameworkFromInputs" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" />
   <UsingTask TaskName="ChooseBestTargetFrameworksFromInputs" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" />
-  <UsingTask TaskName="WriteTargetFrameworkInputs" AssemblyFile="$(DotNetBuildTasksTargetFrameworkAssembly)" />
-
-  <PropertyGroup>
-    <TargetFrameworkInputsPath Condition="'$(TargetFrameworkInputsPath)' == ''">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(MSBuildProjectExtensionsPath)', 'targetframeworkinputs', '$(Configuration)', '$(Platform)', '$(TargetFramework)', '$(MSBuildProjectFile).g.props'))</TargetFrameworkInputsPath>
-    <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_CaptureTargetFrameworkInputs</MSBuildPrepareGraphInputsDependsOn>
-  </PropertyGroup>
-
-  <Import Project="$(TargetFrameworkInputsPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
-
-  <Target Name="_CaptureTargetFrameworkInputs"
-          Condition="'$(MSBuildHardenedGraph)' != 'true' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(_MSBuildPreparingGraphInputs)' == 'true'">
-    <WriteTargetFrameworkInputs
-      RuntimeGraph="$([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))"
-      OutputFile="$(TargetFrameworkInputsPath)" />
-  </Target>
+  <Import Project="$(MSBuildToolsPath)/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.RuntimeGraphInputs.targets"
+          Condition="'$(MSBuildGraphNuGetInputsTaskAssembly)' != '' And '$(_RuntimeGraphInputsTargetsImported)' != 'true'" />
 
   <Target Name="_ValidateTargetFrameworkInputs" Condition="'$(MSBuildHardenedGraph)' == 'true'">
     <PropertyGroup>
       <_CurrentTargetFrameworkRuntimeGraphPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', $([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))))</_CurrentTargetFrameworkRuntimeGraphPath>
     </PropertyGroup>
-    <Error Condition="'$(_TargetFrameworkInputsVersion)' != '1' or '$(_TargetFrameworkInputsRuntimeGraphContents)' == '' or
-                      '$(_TargetFrameworkInputsRuntimeGraphPath)' != '$(_CurrentTargetFrameworkRuntimeGraphPath)'"
-           Text="Target-framework inputs are missing or incompatible. Run Restore with MSBuildRestoreGraphInputs=true and the same configured runtime graph."
+    <Error Condition="'$(_RuntimeGraphInputsVersion)' != '1' or
+                      '@(_RuntimeGraphResource->WithMetadataValue('Identity', '$(_CurrentTargetFrameworkRuntimeGraphPath)')->WithMetadataValue('Kind', 'RuntimeGraph')->Count())' != '1'"
+           Text="Target-framework inputs are missing or incompatible. Run Restore with MSBuildRestoreGraphInputs=true and acquire the requested runtime graph."
            DeclaredInputs="" DeclaredOutputs="" />
   </Target>
   
@@ -95,7 +82,9 @@
                                           AnnotatedProjectReferences="@(_ProjectReferenceWithTargetFrameworks)"
                                           CurrentProjectTargetFramework="$(ReferringTargetFrameworkForProjectReferences)"
                                           CurrentProjectTargetPlatform="$(TargetPlatformMoniker)"
-                                          RuntimeGraphContents="$(_TargetFrameworkInputsRuntimeGraphContents)"
+                                          RuntimeGraphPath="$(_CurrentTargetFrameworkRuntimeGraphPath)"
+                                          RuntimeGraphInputsVersion="$(_RuntimeGraphInputsVersion)"
+                                          RuntimeGraphResources="@(_RuntimeGraphResource)"
                                           OmitIncompatibleProjectReferences="$(OmitIncompatibleProjectReferences)"
                                           DeclaredInputs="" DeclaredOutputs="">
       <Output TaskParameter="AssignedProjects" ItemName="AnnotatedProjects" />

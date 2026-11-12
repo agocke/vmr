@@ -56,7 +56,7 @@
   <Target Name="GetCopyToOutputDirectoryItems" />
   <Target Name="PrepareResourceNames" />
   <Target Name="ComputeIntermediateSatelliteAssemblies" />
-  <Target Name="Restore" DependsOnTargets="ValidateProducerConfiguration;_CaptureTargetFrameworkInputs" />
+  <Target Name="Restore" DependsOnTargets="ValidateProducerConfiguration;RestoreRuntimeGraphInputs" />
   <Target Name="ValidateProducerConfiguration">
     <PropertyGroup>
       <_BadConfiguration Condition="'$(ParentOnlyProperty)' != '' or '$(ParentUndefined)' != '' or

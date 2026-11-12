@@ -648,8 +648,8 @@ injects those resources into existing SDK policy; configured reference, analyzer
 runtime-framework and apphost selection has no filesystem/workload fallback.
 The ordinary opt-in version-1 selected manifest remains supported.
 Older raw-resource snapshots require a fresh Restore. Framework fact processing now
-runs at the acquisition-result barrier described below. Arcade's separate runtime-graph
-capture still carries JSON and remains follow-up work. Neither migration removes
+runs at the acquisition-result barrier described below. SDK and Arcade runtime graphs
+now use shared native acquisition resources as well. Neither migration removes
 configured preparation traversal on its own.
 
 Framework analyzer members now feed final compiler dependency selection directly.
@@ -783,24 +783,25 @@ and executes it through Ninja with literal arguments, metadata, and typed values
 matching ordinary execution. Invalid implementation contracts and parameter types
 fail in the executor; empty-footprint tasks remain audited during construction.
 Arcade's file-backed chooser now shares selection with an audited in-memory
-`ChooseBestP2PTargetFrameworkFromInputs`. Configured preparation captures the
-selected runtime-graph JSON, not project-reference winners. Required
-`targetframeworkinputs` imports supply that data during construction; the existing
+`ChooseBestP2PTargetFrameworkFromInputs`. Existing acquisition visits register
+runtime-graph identities, not project-reference winners. Required unconfigured
+`runtimegraphinputs` manifests import native resource rows during construction; the existing
 NuGet matching algorithm still selects among current framework/platform and
 reference metadata. `SetRidAgnosticValueForProjects` already has an audited
 empty-footprint implementation; its hardened call now supplies both declarations.
 The [packaged fixtures](../../../../../genbuild/tests/ArcadeTargetFrameworkInputs.proj)
 compare ordinary and hardened metadata, runtime/platform fallback, omission,
-explicit framework overrides, configured queries and literal JSON. They also
-cover missing/incompatible inputs, replay with the original JSON absent, and
-[automatic capture through real NuGet package imports](../../../../../genbuild/tests/ArcadeTargetFrameworkPackage.csproj).
+explicit framework overrides and configured queries. They also
+cover missing/incompatible native inputs, selection with the original JSON absent, and
+[cold NuGet package imports](../../../../../genbuild/tests/ArcadeTargetFrameworkPackage.csproj)
+whose resource requirements were registered before the package targets were available.
 Both the ordinary Arcade task project and selected-source component build, and
 the complete SDK-free packaged smoke passes.
 
 The real probe explicitly selects an isolated local task package and the
 prototype's packaged `CSharpCoreTargetsPath`. Without that compiler-target
 binding, runtime's compiler package replaces the prototype integration authoring.
-Restore now captures five Arcade input files and produces zero DLLs. Build runs
+Restore publishes Arcade resource facts and produces zero DLLs. Build runs
 the in-memory chooser and RID metadata task. Hardened reference resolution
 accepts `{RawFileName}` for explicit project-relative or absolute paths without
 probing file existence; generated-reference and bare-name rejection regressions
@@ -972,7 +973,7 @@ Ordinary publication preserves existing paths and best-effort copy/link settings
 Hardened publication uses explicit byte-copy actions and static `FileWrites`,
 without creating a new manifest format or adapting legacy clean ledgers.
 Framework selection reuses the ordinary NuGet matching policy with prepared
-runtime-graph JSON, not a restored winning framework or a live construction-time
+native runtime-graph records, not a restored winning framework or a live construction-time
 read. The layout regression passes legacy/ordinary/independent byte and placement
 parity, custom and escaped paths, inactive and fallback frameworks, explicit
 publication with automatic binplacing disabled, configured symbol/doc exclusion,
@@ -1338,6 +1339,37 @@ normalization. Ninja graph audits preserve all 27,257 nodes, 277,035 dependency
 edges including order-only markers, rule commands and acyclicity. Protected original
 products and frozen compiler/engine files are unchanged. No runtime-library actions
 are executed and no Restore-performance improvement is claimed.
+
+Runtime graphs now have a separate neutral resource contract.
+[`Microsoft.NET.RuntimeGraphInputs.targets`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.RuntimeGraphInputs.targets)
+registers the selected graph and explicit `RuntimeGraphResource` items during
+existing acquisition visits, including before Arcade package targets are available.
+The root [`WriteRuntimeGraphInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteRuntimeGraphInputs.cs)
+translates each graph identity once, emits shared `_RuntimeGraphResource` rows and
+unconfigured per-project import manifests, and republishes deleted files on
+up-to-date acquisition. Native records preserve ordered imports, dependency
+sets/ranges, compatibility profiles and empty records. SDK and Arcade link the
+same codec source; FromInputs selectors reconstruct the typed model without
+reading the JSON, querying the environment or selecting a restored winner.
+Unknown graphs or incompatible facts fail closed. `_CaptureTargetFrameworkInputs`
+and its configured preparation registration are removed, but the other producers
+still retain the overall preparation traversal.
+
+Validation passes both SDK task frameworks, the standalone Arcade component,
+55 packaged actual-source SDK cases and 12 packaged NuGet admission cases.
+Arcade/native/framework/discovery and both runtime layout smokes pass, including
+offline selection from multiple explicitly declared graphs and cold package imports.
+An isolated runtime Restore processes 645 bindings into 343 project manifests
+and two shared graph resources in one root task; the old Arcade capture target
+and task execute zero times. The 4,898 evaluations and 69,562 project requests
+remain unchanged because other preparation obligations remain.
+Fresh graph construction preserves all 5,320 action/output signatures, 500 compiler
+commands, 55 ApiCompat input sets, 27,257 Ninja nodes and 277,035 dependency edges,
+including order-only markers. Only 717 Git-revision parameter differences require
+normalization; there are no unexpected differences or missing inputs.
+Original products and 105 frozen engine/compiler files remain unchanged.
+No runtime-library actions are executed and no timing improvement is claimed.
+Old configured JSON manifests require a fresh Restore to publish native facts.
 
 Source-built reference directories use `ApiCompatProducedReferenceDirectory`
 and explicit `ApiCompatProducedReferenceFile` members. Runtime exports the

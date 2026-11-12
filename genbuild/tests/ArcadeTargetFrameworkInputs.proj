@@ -19,6 +19,8 @@
           Condition="'$(_IsArcadeInputParent)' == 'true'" />
 
   <ItemGroup Condition="'$(_IsArcadeInputParent)' == 'true'">
+    <RuntimeGraphResource Include="$(MSBuildProjectDirectory)/extra-runtime.json" Condition="'$(DeclareAdditionalRuntimeGraph)' == 'true'" />
+    <_RuntimeGraphResource Remove="@(_RuntimeGraphResource)" Condition="'$(TestCase)' == 'empty-resources'" />
     <ProjectReference Include="Nearest.proj;Platform.proj">
       <SetConfiguration>Configuration=Release</SetConfiguration>
       <SetPlatform>Platform=x64</SetPlatform>
@@ -36,7 +38,14 @@
 
   <Target Name="ResolvePackageDependenciesForBuild" />
   <Target Name="_AddOutputPathToGlobalPropertiesToRemove" />
-  <Target Name="Restore" DependsOnTargets="_CaptureTargetFrameworkInputs" Condition="'$(_IsArcadeInputParent)' == 'true'" />
+  <Target Name="Restore" DependsOnTargets="_CollectRuntimeGraphInputRequest" Condition="'$(_IsArcadeInputParent)' == 'true'">
+    <Microsoft.NET.Build.Tasks.WriteRuntimeGraphInputs
+      Requests="@(_RestoreGraphEntry->WithMetadataValue('Type', 'RuntimeGraphInputRequest'))"
+      Condition="'$(MSBuildRestoreGraphInputs)' == 'true'" />
+  </Target>
+  <Target Name="_CaptureTargetFrameworkInputs">
+    <Error Text="Runtime-graph facts must not require configured preparation." />
+  </Target>
   <Target Name="Ordinary" DependsOnTargets="Restore;Build" />
 
   <Target Name="GetTargetFrameworks" Returns="@(_ChildFrameworkInfo)">
@@ -96,13 +105,8 @@
                       '%(_Bypass.SkipGetTargetFrameworkProperties)' != 'true' or '%(_Bypass.Payload)' != 'bypass'"
            Text="Explicit SetTargetFramework metadata must remain untouched."
            DeclaredInputs="" DeclaredOutputs="" />
-    <PropertyGroup>
-      <_ResultGraphPath Condition="'$(MSBuildHardenedGraph)' != 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', $([MSBuild]::ValueOrDefault('$(RuntimeIdentifierGraphPath)', '$(BundledRuntimeIdentifierGraphFile)'))))</_ResultGraphPath>
-      <_ResultGraphContents Condition="'$(MSBuildHardenedGraph)' != 'true'">$([System.IO.File]::ReadAllText('$(_ResultGraphPath)'))</_ResultGraphContents>
-      <_ResultGraphContents Condition="'$(MSBuildHardenedGraph)' == 'true'">$(_TargetFrameworkInputsRuntimeGraphContents)</_ResultGraphContents>
-    </PropertyGroup>
     <WriteLinesToFile File="$(ResultFile)" Overwrite="true"
-                      Lines="@(ProjectReference->'%(Filename)|%(NearestTargetFramework)|%(TargetFrameworks)|%(HasSingleTargetFramework)|%(IsRidAgnostic)|%(SetTargetFramework)|%(UndefineProperties)|%(SetConfiguration)|%(SetPlatform)|%(AdditionalProperties)|%(GlobalPropertiesToRemove)|%(Payload)|%(ChildConfiguration)|%(SkipGetTargetFrameworkProperties)');graph=$(_ResultGraphContents)"
+                      Lines="@(ProjectReference->'%(Filename)|%(NearestTargetFramework)|%(TargetFrameworks)|%(HasSingleTargetFramework)|%(IsRidAgnostic)|%(SetTargetFramework)|%(UndefineProperties)|%(SetConfiguration)|%(SetPlatform)|%(AdditionalProperties)|%(GlobalPropertiesToRemove)|%(Payload)|%(ChildConfiguration)|%(SkipGetTargetFrameworkProperties)')"
                       DeclaredInputs="" DeclaredOutputs="$(ResultFile)" />
   </Target>
 </Project>

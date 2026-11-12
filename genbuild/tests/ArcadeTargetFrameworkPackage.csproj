@@ -8,11 +8,13 @@
     <PackageReference Include="Microsoft.DotNet.Build.Tasks.TargetFramework"
                       Version="$(ArcadeTargetFrameworkPackageVersion)" PrivateAssets="all" />
   </ItemGroup>
-  <Target Name="CheckArcadePackageCaptureContext" BeforeTargets="_CaptureTargetFrameworkInputs"
-          Condition="'$(_MSBuildPreparingGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
-    <Error Condition="'$(_MSBuildCapturingGraphInputs)' != 'true' or '$(MSBuildIsRestoring)' != 'false' or
-                      '$(DotNetBuildTasksTargetFrameworkAssembly)' == ''"
-           Text="Fresh SDK capture must import restored Arcade package props and targets without Restore's extension suppression."
+  <Target Name="_CaptureTargetFrameworkInputs">
+    <Error Text="A newly restored Arcade package must not require configured capture." />
+  </Target>
+  <Target Name="CheckArcadePackageInputs" BeforeTargets="Build"
+          Condition="'$(MSBuildHardenedGraph)' == 'true'">
+    <Error Condition="'$(_RuntimeGraphInputsVersion)' != '1' Or '@(_RuntimeGraphResource)' == ''"
+           Text="Fresh Build must import native runtime-graph facts registered before the package targets were available."
            DeclaredInputs="" DeclaredOutputs="" />
   </Target>
 </Project>

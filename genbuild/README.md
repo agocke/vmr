@@ -115,16 +115,19 @@ distinct intermediate paths.
 
 The app stages the selected Arcade task package at
 `toolset/Arcade/TargetFramework/`. Ordinary selection still reads the configured
-runtime-graph file. Restore preparation captures that file's JSON in
-`targetframeworkinputs/Configuration/Platform/TargetFramework/Project.g.props`
-under the project's extensions directory. Hardened selection consumes the
-captured data in memory, using the same NuGet matching policy over the current
+runtime-graph file. Existing acquisition visits register graph identities, including
+explicit `RuntimeGraphResource` items. After successful acquisition, the root
+translator compiles native RID/import/dependency/profile records into shared
+resources. Unconfigured `runtimegraphinputs/Project.g.props` manifests under each
+project's extensions directory import those resources. Hardened selection consumes
+the native items with zero-I/O tasks, using the same NuGet matching policy over the current
 framework/platform and referenced-project metadata. Restore does not capture
 the winning framework. Changed runtime-graph inputs require a fresh Restore.
 
-Capture runs in a fresh non-restoring evaluation so NuGet-generated props and
-targets participate, including their preparation hooks. The normal guard against
-building products/tools during preparation remains enabled.
+SDK acquisition authoring registers requirements even when Arcade's package
+targets are not yet imported. Fresh Build imports the package and resource facts;
+it does not replay package-only capture hooks. A different external graph needs
+an acquisition-visible declaration, not another configured project traversal.
 
 A repository consuming a pinned Arcade target-framework package must explicitly
 select the local package; `ArcadeSdkDir` alone does not replace NuGet imports.

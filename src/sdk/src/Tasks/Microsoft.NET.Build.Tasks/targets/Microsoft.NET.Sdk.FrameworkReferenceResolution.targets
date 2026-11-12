@@ -52,7 +52,6 @@ Copyright (c) .NET Foundation. All rights reserved.
       VersionFacts="@(_FrameworkPackVersion)"
       PackRequests="@(TargetingPack);@(RuntimePack);@(AppHostPack);@(SingleFileHostPack);@(ComHostPack);@(IjwHostPack);@(Crossgen2Pack);@(HostILCompilerPack);@(TargetILCompilerPack);@(PackAsToolShimAppHostPack)"
       PackMembers="@(FrameworkPackMember)"
-      RuntimeGraphPath="$(RuntimeIdentifierGraphPath)"
       TargetingPackRoot="$(NetCoreTargetingPackRoot)"
       NetCoreRoot="$(NetCoreRoot)"
       NETCoreSdkVersion="$(NETCoreSdkVersion)">

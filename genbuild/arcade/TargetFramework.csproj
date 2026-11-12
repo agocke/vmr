@@ -15,6 +15,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(_TaskSource)*.cs" Exclude="$(_TaskSource)MSBuildDeclaredIOTaskAttribute.cs" />
+    <Compile Include="../../src/arcade/src/Shared/RuntimeGraphInputs.cs" Link="Shared/RuntimeGraphInputs.cs" />
     <Reference Include="Microsoft.Build" HintPath="$(_Engine)Microsoft.Build.dll" Private="false" />
     <Reference Include="Microsoft.Build.Framework" HintPath="$(_Engine)Microsoft.Build.Framework.dll" Private="false" />
     <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(_Engine)Microsoft.Build.Utilities.Core.dll" Private="false" />

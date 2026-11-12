@@ -1018,8 +1018,12 @@ The existing
 already encodes assets structurally as native facts.
 The [SDK pack writer](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkPackInputs.cs)
 likewise translates pack contents and its runtime graph rather than recording winners.
-The [Arcade runtime-graph writer](../../../../arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/WriteTargetFrameworkInputs.cs)
-preserves underlying data but still embeds JSON and needs the same native translation.
+The [shared runtime-graph writer](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteRuntimeGraphInputs.cs)
+compiles acquisition-visible graph bindings into native rows for both SDK and
+Arcade consumers. Unconfigured project manifests import the shared resources;
+Arcade's zero-I/O selectors reconstruct typed models directly from those items.
+Additional external graphs require acquisition-visible `RuntimeGraphResource`
+declarations, including when package targets become available only in fresh Build.
 The ordinary opt-in
 [framework manifest](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkReferenceFetchManifest.cs)
 continues to receive selected references and analyzers. Hardened resources preserve
