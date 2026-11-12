@@ -647,10 +647,10 @@ within one acquisition generation, independent of project language/profile.
 injects those resources into existing SDK policy; configured reference, analyzer,
 runtime-framework and apphost selection has no filesystem/workload fallback.
 The ordinary opt-in version-1 selected manifest remains supported.
-Older raw-resource snapshots require a fresh Restore. Arcade's separate runtime-graph
-capture still carries JSON; migrating that producer and moving framework fact
-processing to the acquisition-result barrier are follow-up work. This format change
-does not remove configured preparation traversal.
+Older raw-resource snapshots require a fresh Restore. Framework fact processing now
+runs at the acquisition-result barrier described below. Arcade's separate runtime-graph
+capture still carries JSON and remains follow-up work. Neither migration removes
+configured preparation traversal on its own.
 
 Framework analyzer members now feed final compiler dependency selection directly.
 C#/VB preparation no longer inventories framework analyzer directories. The runtime
@@ -1299,6 +1299,45 @@ preparation producers have not moved. Fresh graph construction preserves all
 after separately accounting for Git revision and private-profile relocation.
 No unexpected parameter differences, missing external inputs or protected-product
 changes are observed. Runtime-library actions are not executed.
+
+Framework-pack translation now uses the same successful-acquisition boundary.
+[`CollectFrameworkPackInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/CollectFrameworkPackInputs.cs)
+records finite pack requests, original installed-pack lookup results, resolved
+versions, explicit loose-pack member catalogs, runtime-graph identities and output
+bindings during the existing per-framework acquisition visits. It performs no
+resource reads and adds no `ProcessFrameworkReferences` pass. Equivalent NuGet
+requests retain every binding header and payload row.
+[`WriteFrameworkRestoreInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkRestoreInputs.cs)
+then compiles the successful acquired resources once per shared manifest. Bindings
+sharing an output must agree on machine roots, SDK identity, package-folder
+precedence and any explicit member catalogs for the same pack root. Incompatible
+scopes fail rather than overwrite or silently merge observations; callers may
+choose separate output/resource scopes. Original installed misses remain distinct
+from post-acquisition package hits. A shared manifest admits multiple explicitly
+identified runtime graphs without conflating their RID relationships.
+
+Platform display-name observations are not pack data: configured platform coverage
+can exceed the acquisition visits. The existing preparation hook therefore now
+calls only
+[`WriteFrameworkPlatformInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkPlatformInputs.cs)
+in this direct mode. It writes platform properties and the shared pack-manifest
+locator, without framework/host selection or pack translation. Fresh Build imports
+that locator before the shared facts, preserving alternate metadata entry points.
+This intentionally retains the platform producer and preparation traversal; it
+does not introduce retained instances, additional evaluations or a reference walk.
+The acquisition-only fixture rejects the old framework producer, requires all four
+framework bindings to produce one shared model, and checks ordinary-mode isolation
+and re-publication after an up-to-date Restore.
+
+Validation passes current-.NET/.NET-Framework task builds, 44 focused actual-source
+SDK cases against the packaged assembly, 11 packaged NuGet admission cases, and
+the acquisition/framework/discovery/reference/ApiCompat smokes. An isolated runtime
+Restore and fresh graph retain all 5,320 action/output signatures, 500 compiler
+commands and 55 ApiCompat input sets after known Git-revision and private-profile
+normalization. Ninja graph audits preserve all 27,257 nodes, 277,035 dependency
+edges including order-only markers, rule commands and acyclicity. Protected original
+products and frozen compiler/engine files are unchanged. No runtime-library actions
+are executed and no Restore-performance improvement is claimed.
 
 Source-built reference directories use `ApiCompatProducedReferenceDirectory`
 and explicit `ApiCompatProducedReferenceFile` members. Runtime exports the

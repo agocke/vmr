@@ -3,6 +3,7 @@
     <FrameworkPackTargetFramework Condition="'$(FrameworkPackTargetFramework)' == ''">net11.0</FrameworkPackTargetFramework>
   </PropertyGroup>
   <Import Project="$(FrameworkPackInputs)" />
+  <Import Project="$(FrameworkPackInputsPath)" Condition="'$(_RawFrameworkPackFactsVersion)' == '' And '$(FrameworkPackInputsPath)' != ''" />
   <Target Name="ReadContext">
     <Error Condition="'$(_RawFrameworkPackFactsVersion)' != '2'" Text="The fixture requires native acquired framework-pack facts." />
     <ItemGroup>

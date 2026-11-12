@@ -18,10 +18,10 @@
     <Copy SourceFiles="$(MSBuildThisFileDirectory)NuGetAcquisitionInputs.proj;$(MSBuildThisFileDirectory)NuGetAcquisitionInputs.csproj"
           DestinationFiles="$(_NuGetAcquisitionRoot)Root.proj;$(_NuGetAcquisitionRoot)Library/Library.csproj" />
     <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -bl:&quot;$(_NuGetAcquisitionRoot)restore.binlog&quot;" />
-    <Delete Files="$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props" />
+    <Delete Files="$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props;$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/inputs.g.props" />
     <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -p:MSBuildRestoreGraphInputs=false -bl:&quot;$(_NuGetAcquisitionRoot)ordinary.binlog&quot;" />
-    <Error Condition="Exists('$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props')"
-           Text="Ordinary Restore must not publish prototype NuGet facts merely because the processor assembly is bound." />
+    <Error Condition="Exists('$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props') Or Exists('$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/inputs.g.props')"
+           Text="Ordinary Restore must not publish prototype acquisition facts merely because the processor assembly is bound." />
     <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -bl:&quot;$(_NuGetAcquisitionRoot)up-to-date.binlog&quot;" />
   </Target>
   <Target Name="TestRestoreRequests">

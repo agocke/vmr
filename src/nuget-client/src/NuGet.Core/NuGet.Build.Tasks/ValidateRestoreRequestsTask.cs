@@ -98,6 +98,8 @@ public sealed class ValidateRestoreRequestsTask : Microsoft.Build.Utilities.Task
         {
             if (string.Equals(item.GetMetadata("Type"), "RestoreSpec", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(item.GetMetadata("Type"), "NuGetInputRequest", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(item.GetMetadata("Type"), "FrameworkPackInputRequest", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(item.GetMetadata("Type"), "FrameworkPackInput", StringComparison.OrdinalIgnoreCase)
                 || !selectedRequests.TryGetValue(item.GetMetadata("ProjectUniqueName"), out string? identity)
                 || string.Equals(item.GetMetadata(RequestIdentityMetadata), identity, StringComparison.Ordinal))
             {

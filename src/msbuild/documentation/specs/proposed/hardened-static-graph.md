@@ -969,6 +969,19 @@ and configurations because it contains the whole assets model, not a configured
 selection; conflicting bindings for one destination fail. This first producer
 migration does not remove the remaining preparation walk.
 
+Framework-pack bindings use the same boundary: existing acquisition visits record
+pack requirements, lookup/version observations, explicit member catalogs and
+runtime-graph/resource-output identities. Successful acquisition supplies ordered
+package folders; the root translator compiles compatible bindings into a shared
+resource manifest without another framework-resolution pass. Preserve original
+installed misses separately from package fallback hits. Reject incompatible
+machine context, folder precedence or same-root explicit catalogs rather than
+quietly merging them; separate scopes can use separate outputs. Resources may be
+shared without equating their acquisition request or configured Build identities.
+Platform display-name observations remain a separate narrow preparation producer
+with a locator to the shared pack manifest, imported before its resource facts.
+This split does not yet remove configured preparation traversal.
+
 Existing child Restore/capture hooks must be adapted to this result/intent
 contract, including the fresh-import regression. Package-only hooks invisible
 to the Restore evaluation cannot be invoked magically after acquisition:

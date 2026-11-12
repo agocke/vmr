@@ -4,8 +4,8 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <Target Name="RejectExtraPreparation"
-          BeforeTargets="Restore;_CaptureNuGetInputs;_PrepareHardenedGraphInputs;PrepareProjectReferences"
+          BeforeTargets="Restore;_CaptureNuGetInputs;_GenerateFrameworkReferenceFetchManifest;_PrepareHardenedGraphInputs;PrepareProjectReferences"
           Condition="'$(MSBuildHardenedGraph)' != 'true'">
-    <Error Text="NuGet acquisition facts must not require child Restore, capture, or configured reference preparation." />
+    <Error Text="Acquisition facts must not require child Restore, capture, or configured reference preparation." />
   </Target>
 </Project>

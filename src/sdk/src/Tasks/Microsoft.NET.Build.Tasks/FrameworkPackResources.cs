@@ -14,10 +14,9 @@ internal sealed class FrameworkPackResources
     private readonly Dictionary<string, XElement> _packs;
     private readonly Dictionary<string, bool> _presence;
     private readonly TaskEnvironment _environment;
-    private readonly string _runtimeGraphPath;
-    private readonly XElement[] _runtimeGraphRows;
+    private readonly Dictionary<string, XElement[]> _runtimeGraphRows;
     private readonly ITaskItem _context;
-    private RuntimeGraph? _runtimeGraph;
+    private readonly Dictionary<string, RuntimeGraph> _runtimeGraphs;
 
     public bool IsWindows { get; }
 
@@ -33,6 +32,8 @@ internal sealed class FrameworkPackResources
             ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         _packs = new(paths);
         _presence = new(paths);
+        _runtimeGraphRows = new(paths);
+        _runtimeGraphs = new(paths);
         ITaskItem? context = null;
         foreach (ITaskItem fact in facts)
         {
@@ -69,19 +70,17 @@ internal sealed class FrameworkPackResources
         }
         IsWindows = isWindows;
         _context = context;
-        _runtimeGraphPath = context.GetMetadata("RuntimeGraphPath");
-        _runtimeGraphRows = [];
         foreach (IGrouping<string, ITaskItem> group in resources.GroupBy(resource => Absolute(resource.ItemSpec), paths))
         {
             string root = group.Key;
             XElement[] rows = group.Select(ReadRow).ToArray();
             if (rows.Any(row => row.Name == "RuntimeGraph"))
             {
-                if (!paths.Equals(root, _runtimeGraphPath) || rows.Count(row => row.Name == "RuntimeGraph") != 1)
+                if (rows.Count(row => row.Name == "RuntimeGraph") != 1)
                 {
                     throw new FormatException("Invalid or duplicate framework runtime graph resource.");
                 }
-                _runtimeGraphRows = rows;
+                _runtimeGraphRows.Add(root, rows);
                 continue;
             }
             if (rows.Count(row => row.Name == "Pack") != 1)
@@ -189,12 +188,17 @@ internal sealed class FrameworkPackResources
 
     public RuntimeGraph RuntimeGraph(string path)
     {
-        if (!_packs.Comparer.Equals(Absolute(path), _runtimeGraphPath) ||
-            _runtimeGraphRows.Length == 0)
+        string absolute = Absolute(path);
+        if (!_runtimeGraphRows.TryGetValue(absolute, out XElement[]? rows))
         {
             throw new FormatException("Missing acquired framework runtime graph.");
         }
-        return _runtimeGraph ??= RuntimeGraphInputs.Read(_runtimeGraphRows);
+        if (!_runtimeGraphs.TryGetValue(absolute, out RuntimeGraph? graph))
+        {
+            graph = RuntimeGraphInputs.Read(rows);
+            _runtimeGraphs.Add(absolute, graph);
+        }
+        return graph;
     }
 
     public void ValidateContext(string targetingPackRoot, string? netCoreRoot = null, string? sdkVersion = null)

@@ -39,15 +39,26 @@ and package-adjacent files absent from the acquired inventory.
 Both primary and satellite `CompileManaged` calls consume `_CompilerToolInput`
 directly from the packaged Build catalog, not Restore snapshots.
 
-Hardened framework preparation captures raw acquired pack resources through
-[`WriteFrameworkPackInputs`](Microsoft.NET.Build.Tasks/WriteFrameworkPackInputs.cs),
-not configured references, analyzers, runtime frameworks or apphost paths.
+Existing per-framework acquisition visits declare finite pack requests and lookup,
+version, member-catalog and resource-output bindings through
+[`CollectFrameworkPackInputs`](Microsoft.NET.Build.Tasks/CollectFrameworkPackInputs.cs).
+After successful root acquisition,
+[`WriteFrameworkRestoreInputs`](Microsoft.NET.Build.Tasks/WriteFrameworkRestoreInputs.cs)
+validates compatible resource scopes and invokes
+[`WriteFrameworkPackInputs`](Microsoft.NET.Build.Tasks/WriteFrameworkPackInputs.cs)
+once per shared output, not once per configured preparation request.
+These are raw acquired resources, not configured references, analyzers,
+runtime frameworks or apphost paths.
 [`PreparedFrameworkTasks`](Microsoft.NET.Build.Tasks/PreparedFrameworkTasks.cs)
 reuses SDK selection with those resources during graph construction, without
 filesystem/workload discovery fallback. Archive member inventories preserve
 analyzer companions absent from FrameworkList; loose packs need explicit catalogs
 when FrameworkList is incomplete. `_CompilerFrameworkFile` supplies these candidates
-to final analyzer dependency selection. The configured preparation walk remains;
+to final analyzer dependency selection. Platform display-name observations and the
+shared pack-manifest locator remain in the narrow configured
+[`WriteFrameworkPlatformInputs`](Microsoft.NET.Build.Tasks/WriteFrameworkPlatformInputs.cs)
+producer. Import that locator before the shared facts so alternate Build entry
+points find the original acquisition scope. The configured preparation walk remains;
 do not add reference traversal or new selection passes just to collect resource facts.
 Native pack format 2 compiles FrameworkList attributes, platform rows, package override
 relationships and SDK runtime-graph records into item metadata during acquisition.

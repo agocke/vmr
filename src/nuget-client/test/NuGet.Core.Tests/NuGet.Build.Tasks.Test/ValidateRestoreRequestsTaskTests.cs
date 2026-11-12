@@ -51,6 +51,33 @@ namespace NuGet.Build.Tasks.Test
         }
 
         [Theory]
+        [InlineData("NuGetInputRequest")]
+        [InlineData("FrameworkPackInputRequest")]
+        [InlineData("FrameworkPackInput")]
+        public void Execute_EquivalentRequests_RetainsAllResourceBindings(string type)
+        {
+            ITaskItem[] first = CreateGraph("first");
+            ITaskItem[] second = CreateGraph("second");
+            var bindings = new[] { first, second }.Select(graph =>
+            {
+                var item = new TaskItem(graph[0]);
+                item.ItemSpec += "-binding";
+                item.SetMetadata("Type", type);
+                item.SetMetadata("Binding", graph[0].ItemSpec);
+                return (ITaskItem)item;
+            }).ToArray();
+            var task = new ValidateRestoreRequestsTask
+            {
+                BuildEngine = new TestBuildEngine(),
+                RestoreGraphItems = first.Concat(second).Concat(bindings).ToArray()
+            };
+
+            Assert.True(task.Execute());
+            Assert.Equal(bindings, task.ValidatedGraphItems.Where(item => item.GetMetadata("Type") == type));
+            AssertPackageRequirements(task.ValidatedGraphItems);
+        }
+
+        [Theory]
         [InlineData("Dependency", "VersionRange", "[2.0.0]")]
         [InlineData("ProjectSpec", "OutputPath", "other-obj")]
         [InlineData("ProjectSpec", "ProjectName", "OtherName")]

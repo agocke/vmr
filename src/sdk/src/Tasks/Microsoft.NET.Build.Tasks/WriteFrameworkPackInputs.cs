@@ -16,6 +16,10 @@ namespace Microsoft.NET.Build.Tasks;
 [MSBuildMultiThreadableTask]
 public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
 {
+    public WriteFrameworkPackInputs() { }
+
+    internal WriteFrameworkPackInputs(Logger logger) : base(logger) { }
+
     private static readonly object s_captureLock = new();
     private sealed class ResourceCache
     {
@@ -34,6 +38,8 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
     public ITaskItem[] PackageFolders { get; set; } = [];
     public ITaskItem[] PackMembers { get; set; } = [];
     public string RuntimeGraphPath { get; set; } = "";
+    public ITaskItem[] RuntimeGraphPaths { get; set; } = [];
+    public bool CapturePlatformSDK { get; set; } = true;
     public string TargetingPackRoot { get; set; } = "";
     public string NetCoreRoot { get; set; } = "";
     public string NETCoreSdkVersion { get; set; } = "";
@@ -158,10 +164,14 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
         context.SetMetadata("NetCoreRoot", ProjectCollection.Escape(NetCoreRoot.Length == 0
             ? "" : TaskEnvironment.GetAbsolutePath(NetCoreRoot).Value));
         context.SetMetadata("NETCoreSdkVersion", ProjectCollection.Escape(NETCoreSdkVersion));
+        IEnumerable<string> graphPaths = RuntimeGraphPaths.Select(item => item.ItemSpec);
         if (RuntimeGraphPath.Length != 0)
         {
-            string path = TaskEnvironment.GetAbsolutePath(RuntimeGraphPath).Value;
-            context.SetMetadata("RuntimeGraphPath", ProjectCollection.Escape(path));
+            graphPaths = graphPaths.Append(RuntimeGraphPath);
+        }
+        foreach (string graphPath in graphPaths.Distinct(StringComparer.Ordinal))
+        {
+            string path = TaskEnvironment.GetAbsolutePath(graphPath).Value;
             if (!cache.RuntimeGraphs.TryGetValue(path, out XElement[]? rows))
             {
                 rows = RuntimeGraphInputs.Write(JsonRuntimeFormat.ReadRuntimeGraph(path)).ToArray();
@@ -178,10 +188,8 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
                 new XElement("_FrameworkReferenceFetchManifestVersion", "2"),
                 new XElement("_RawFrameworkPackFactsVersion", "2"),
                 new XElement("_FrameworkReferenceConflictFactsVersion", "1"),
-                new XElement("_FrameworkReferencePlatformSDKFactsVersion", "1"),
-                new XElement("_FrameworkReferenceManifestTargetPlatformIdentifier", ProjectCollection.Escape(TargetPlatformIdentifier)),
-                new XElement("_FrameworkReferenceManifestTargetPlatformVersion", ProjectCollection.Escape(TargetPlatformVersion)),
-                new XElement("_FrameworkReferenceManifestTargetPlatformDisplayName", ProjectCollection.Escape(TargetPlatformDisplayName)),
+                CapturePlatformSDK ? WriteFrameworkPlatformInputs.Properties(
+                    TargetPlatformIdentifier, TargetPlatformVersion, TargetPlatformDisplayName) : null,
                 new XElement("_UsingFrameworkReferenceManifest", "true"),
                 new XElement("DisableCheckingDuplicateNuGetItems", "true"),
                 new XElement("UseAppHostFromAssetsFile", "false")),
@@ -321,7 +329,7 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
     private static void WriteResource(ResourceCache cache, string file, XElement project)
     {
         string content = project.ToString() + "\n";
-        if (!cache.Written.TryGetValue(file, out string? previous) || previous != content)
+        if (!cache.Written.TryGetValue(file, out string? previous) || previous != content || !File.Exists(file))
         {
             Write(file, project);
             cache.Written[file] = content;

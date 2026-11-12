@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text.Json;
 using System.Xml.Linq;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
@@ -20,6 +21,120 @@ namespace Microsoft.NET.Build.Tasks.UnitTests;
 [TestClass]
 public class GivenRawFrameworkPackInputs
 {
+    [TestMethod]
+    public void AcquisitionResultsTranslateAllBindingsWithoutConfiguredPreparation()
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        ITaskItem[] first = fixture.Bindings();
+        ITaskItem[] second = fixture.Bindings();
+        string graph = fixture.Environment.GetAbsolutePath("runtime.json").Value;
+        File.WriteAllText(graph, """{"runtimes":{"specific":{"#import":["any"]},"any":{}}}""");
+        first[0].SetMetadata("RuntimeGraphPath", ProjectCollection.Escape(graph));
+        string otherGraph = fixture.Environment.GetAbsolutePath("other-runtime.json").Value;
+        File.WriteAllText(otherGraph, """{"runtimes":{"specific":{"#import":["other"]},"other":{}}}""");
+        second[0].SetMetadata("RuntimeGraphPath", ProjectCollection.Escape(otherGraph));
+        var engine = new RecordingEngine();
+        var translator = new WriteFrameworkRestoreInputs { BuildEngine = engine, Requests = [.. first, .. second] };
+        Assert.IsTrue(translator.Execute(), string.Join("\n", engine.Errors));
+        Assert.AreEqual(1, translator.WrittenModels);
+        string output = first[0].GetMetadata("OutputFile");
+        (ITaskItem[] facts, ITaskItem[] resources) = PackFixture.ReadCapture(output);
+        Assert.IsNull(XDocument.Load(output).Root!.Element("PropertyGroup")!.Element("_FrameworkReferencePlatformSDKFactsVersion"));
+        File.Delete(graph);
+        File.Delete(otherGraph);
+        Directory.Delete(fixture.PackRoot, recursive: true);
+        var snapshot = new FrameworkPackResources("2", facts, resources, fixture.Environment);
+        Assert.IsNull(snapshot.Lookup("Framework", "Synthetic.Ref", "1.0.0"));
+        Assert.AreEqual(fixture.PackRoot, snapshot.Lookup("Package", "Synthetic.Ref", "1.0.0"));
+        Assert.IsTrue(snapshot.RuntimeGraph(graph).AreCompatible("specific", "any"));
+        Assert.IsTrue(snapshot.RuntimeGraph(otherGraph).AreCompatible("specific", "other"));
+        Assert.IsFalse(snapshot.RuntimeGraph(otherGraph).AreCompatible("specific", "any"));
+        var prepared = fixture.Selection(new Prepared.ResolveTargetingPackAssets(), "client", "C#");
+        prepared.ResourceFactsVersion = "2";
+        prepared.ResourceFacts = facts;
+        prepared.PackResources = resources;
+        Assert.IsTrue(prepared.Execute(), string.Join("\n", ((RecordingEngine)prepared.BuildEngine).Errors));
+        CollectionAssert.AreEqual(new[] { fixture.PathInPack("ref/netcoreapp5.0/Common.dll") },
+            prepared.ReferencesToAdd.Select(item => item.ItemSpec).ToArray());
+    }
+
+    [TestMethod]
+    [DataRow("context")]
+    [DataRow("folders")]
+    [DataRow("unbound")]
+    [DataRow("overwrite")]
+    [DataRow("assets")]
+    [DataRow("catalogs")]
+    [DataRow("lookup")]
+    public void AcquisitionTranslatorRejectsIncompatibleBindingsBeforePublishing(string invalid)
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        ITaskItem[] first = fixture.Bindings();
+        ITaskItem[] second = fixture.Bindings();
+        ITaskItem header = second[0];
+        switch (invalid)
+        {
+            case "context":
+                header.SetMetadata("TargetingPackRoot", ProjectCollection.Escape(fixture.Environment.GetAbsolutePath("different").Value));
+                break;
+            case "folders":
+                string assets = fixture.Environment.GetAbsolutePath("other-assets.json").Value;
+                File.WriteAllText(assets, JsonSerializer.Serialize(new
+                {
+                    packageFolders = new Dictionary<string, object>
+                    {
+                        [fixture.Environment.GetAbsolutePath("other-packages").Value] = new { }
+                    }
+                }));
+                header.SetMetadata("AssetsFile", ProjectCollection.Escape(assets));
+                break;
+            case "unbound":
+                second[1].SetMetadata("Binding", "missing");
+                break;
+            case "overwrite":
+                header.SetMetadata("OutputFile", ProjectCollection.Escape(first[0].GetMetadata("AssetsFile")));
+                break;
+            case "assets":
+                File.WriteAllText(header.GetMetadata("AssetsFile"), "invalid-json");
+                break;
+            case "catalogs":
+                first = [.. first, Item("first-member", ("Type", "FrameworkPackInput"), ("Binding", first[0].ItemSpec),
+                    ("InputKind", "Member"), ("InputIdentity", "first"), ("PackRoot", fixture.PackRoot), ("Path", "first.dll"))];
+                second = [.. second, Item("second-member", ("Type", "FrameworkPackInput"), ("Binding", second[0].ItemSpec),
+                    ("InputKind", "Member"), ("InputIdentity", "second"), ("PackRoot", fixture.PackRoot), ("Path", "second.dll"))];
+                break;
+            case "lookup":
+                second.Single(item => item.GetMetadata("InputKind") == "Lookup")
+                    .SetMetadata("Path", ProjectCollection.Escape(fixture.PackRoot));
+                break;
+        }
+        var engine = new RecordingEngine();
+        var translator = new WriteFrameworkRestoreInputs { BuildEngine = engine, Requests = [.. first, .. second] };
+        Assert.IsFalse(translator.Execute());
+        Assert.AreEqual(0, translator.WrittenModels);
+        Assert.AreEqual(1, engine.Errors.Count);
+        Assert.IsFalse(File.Exists(first[0].GetMetadata("OutputFile")));
+    }
+
+    [TestMethod]
+    public void UpToDateAcquisitionRepublishesDeletedFrameworkFacts()
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        ITaskItem[] bindings = fixture.Bindings();
+        var translator = new WriteFrameworkRestoreInputs { BuildEngine = new RecordingEngine(), Requests = bindings };
+        Assert.IsTrue(translator.Execute());
+        string file = bindings[0].GetMetadata("OutputFile");
+        string expected = File.ReadAllText(file);
+        string resource = ImportedResourceFile(file);
+        string expectedResource = File.ReadAllText(resource);
+        File.Delete(file);
+        File.Delete(resource);
+        Assert.IsTrue(translator.Execute());
+        Assert.AreEqual(expected, File.ReadAllText(file));
+        Assert.AreEqual(expectedResource, File.ReadAllText(resource));
+        Assert.AreEqual(1, translator.WrittenModels);
+    }
+
     [TestMethod]
     public void CaptureCompilesFrameworkAttributesAndConflictRecordsIntoNativeItems()
     {
@@ -565,6 +680,32 @@ public class GivenRawFrameworkPackInputs
             PackRequests = [Item("Synthetic.Framework", ("NuGetPackageId", "Synthetic.Ref"),
                 ("NuGetPackageVersion", "1.0.0"), ("TargetFramework", "net5.0"))]
         };
+
+        public ITaskItem[] Bindings()
+        {
+            string assets = Environment.GetAbsolutePath("project.assets.json").Value;
+            File.WriteAllText(assets, JsonSerializer.Serialize(new
+            {
+                packageFolders = new Dictionary<string, object>
+                {
+                    [_packageFolder] = new { }
+                }
+            }));
+            WriteFrameworkPackInputs capture = CaptureTask();
+            var collect = new CollectFrameworkPackInputs
+            {
+                BuildEngine = new RecordingEngine(),
+                TaskEnvironment = Environment,
+                ProjectPath = Environment.GetAbsolutePath("Project.csproj").Value,
+                AssetsFile = assets,
+                OutputFile = capture.OutputFile,
+                ResourceDirectory = capture.ResourceDirectory,
+                PackRequests = capture.PackRequests,
+                LookupFacts = [Item("Framework/Synthetic.Ref/1.0.0", ("Kind", "Lookup"), ("Path", ""))],
+            };
+            Assert.IsTrue(collect.Execute());
+            return collect.Bindings;
+        }
 
         public (ITaskItem[] Facts, ITaskItem[] Resources) Capture(WriteFrameworkPackInputs? capture = null)
         {

@@ -27,11 +27,38 @@ Copyright (c) .NET Foundation. All rights reserved.
   <UsingTask TaskName="Microsoft.NET.Build.Tasks.Prepared.ResolveAppHosts" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
   <UsingTask TaskName="WriteFrameworkReferenceFetchManifest" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="WriteFrameworkPackInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="CollectFrameworkPackInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="WriteFrameworkPlatformInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
   <PropertyGroup>
     <_FrameworkReferenceFetchDependsOn>ResolveTargetingPackAssets;_CollectFrameworkReferenceFetchManifestRuntimeFrameworks;_GetAppHostPaths</_FrameworkReferenceFetchDependsOn>
     <_FrameworkReferenceFetchDependsOn Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">ProcessFrameworkReferences;_CaptureNuGetInputs</_FrameworkReferenceFetchDependsOn>
+    <_FrameworkReferenceFetchDependsOn Condition="'$(_FrameworkPackDirectInputs)' == 'true'"></_FrameworkReferenceFetchDependsOn>
   </PropertyGroup>
+
+  <Target Name="_CollectFrameworkPackInputRequest"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
+          Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(RestoreProjectStyle)' == 'PackageReference'">
+    <PropertyGroup>
+      <_FrameworkPackAssetsFile Condition="'$(ProjectAssetsFile)' == ''">$(MSBuildProjectExtensionsPath)project.assets.json</_FrameworkPackAssetsFile>
+      <_FrameworkPackAssetsFile Condition="'$(ProjectAssetsFile)' != ''">$(ProjectAssetsFile)</_FrameworkPackAssetsFile>
+    </PropertyGroup>
+    <CollectFrameworkPackInputs
+      ProjectPath="$(MSBuildProjectFullPath)"
+      AssetsFile="$(_FrameworkPackAssetsFile)"
+      OutputFile="$(FrameworkPackInputsPath)"
+      ResourceDirectory="$(FrameworkPackResourceDirectory)"
+      LookupFacts="@(_FrameworkPackLookup)"
+      VersionFacts="@(_FrameworkPackVersion)"
+      PackRequests="@(TargetingPack);@(RuntimePack);@(AppHostPack);@(SingleFileHostPack);@(ComHostPack);@(IjwHostPack);@(Crossgen2Pack);@(HostILCompilerPack);@(TargetILCompilerPack);@(PackAsToolShimAppHostPack)"
+      PackMembers="@(FrameworkPackMember)"
+      RuntimeGraphPath="$(RuntimeIdentifierGraphPath)"
+      TargetingPackRoot="$(NetCoreTargetingPackRoot)"
+      NetCoreRoot="$(NetCoreRoot)"
+      NETCoreSdkVersion="$(NETCoreSdkVersion)">
+      <Output TaskParameter="Bindings" ItemName="_RestoreGraphEntry" />
+    </CollectFrameworkPackInputs>
+  </Target>
 
   <Target Name="_CollectFrameworkReferenceFetchManifestRuntimeFrameworks"
           DependsOnTargets="ProcessFrameworkReferences">
@@ -74,7 +101,13 @@ Copyright (c) .NET Foundation. All rights reserved.
       <FrameworkPackResourceDirectory Condition="'$(FrameworkPackResourceDirectory)' == '' And '$(MSBuildGraphSdkBindingsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildGraphSdkBindingsDirectory)', 'framework-pack-resources'))</FrameworkPackResourceDirectory>
       <FrameworkPackResourceDirectory Condition="'$(FrameworkPackResourceDirectory)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildProjectExtensionsPath)', 'framework-pack-resources'))</FrameworkPackResourceDirectory>
     </PropertyGroup>
-    <WriteFrameworkPackInputs Condition="'$(MSBuildRestoreGraphInputs)' == 'true'"
+    <WriteFrameworkPlatformInputs Condition="'$(_FrameworkPackDirectInputs)' == 'true'"
+      OutputFile="$(FrameworkReferenceFetchManifestPath)"
+      PackInputsFile="$(FrameworkPackInputsPath)"
+      TargetPlatformIdentifier="$(TargetPlatformIdentifier)"
+      TargetPlatformVersion="$(TargetPlatformVersion)"
+      TargetPlatformDisplayName="$(TargetPlatformDisplayName)" />
+    <WriteFrameworkPackInputs Condition="'$(MSBuildRestoreGraphInputs)' == 'true' And '$(_FrameworkPackDirectInputs)' != 'true'"
       OutputFile="$(FrameworkReferenceFetchManifestPath)"
       ResourceDirectory="$(FrameworkPackResourceDirectory)"
       LookupFacts="@(_FrameworkPackLookup)"

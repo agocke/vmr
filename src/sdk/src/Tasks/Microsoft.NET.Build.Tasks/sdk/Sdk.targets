@@ -18,6 +18,11 @@ Copyright (c) .NET Foundation. All rights reserved.
     <_DisableNuGetRestoreTargetFrameworksOverride Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">true</_DisableNuGetRestoreTargetFrameworksOverride>
     <FrameworkReferenceFetchManifestPath Condition="('$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true') and '$(FrameworkReferenceFetchManifestPath)' == ''">$(MSBuildProjectExtensionsPath)frameworkreferences/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</FrameworkReferenceFetchManifestPath>
     <FrameworkReferenceFetchManifestPath Condition="'$(MSBuildRestoreGraphInputs)' == 'true' or '$(EnableFrameworkReferenceFetchManifest)' == 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(FrameworkReferenceFetchManifestPath)'))</FrameworkReferenceFetchManifestPath>
+    <_FrameworkPackDirectInputs Condition="'$(MSBuildGraphNuGetInputsTaskAssembly)' != '' And ('$(MSBuildRestoreGraphInputs)' == 'true' Or '$(MSBuildHardenedGraph)' == 'true')">true</_FrameworkPackDirectInputs>
+    <FrameworkPackResourceDirectory Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(FrameworkPackResourceDirectory)' == '' And '$(MSBuildGraphSdkBindingsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildGraphSdkBindingsDirectory)', 'framework-pack-resources'))</FrameworkPackResourceDirectory>
+    <FrameworkPackResourceDirectory Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(FrameworkPackResourceDirectory)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildProjectExtensionsPath)', 'framework-pack-resources'))</FrameworkPackResourceDirectory>
+    <FrameworkPackInputsPath Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(FrameworkPackInputsPath)' == ''">$(FrameworkPackResourceDirectory)inputs.g.props</FrameworkPackInputsPath>
+    <FrameworkPackInputsPath Condition="'$(_FrameworkPackDirectInputs)' == 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(FrameworkPackInputsPath)'))</FrameworkPackInputsPath>
   </PropertyGroup>
 
   <Import Project="$(FrameworkReferenceFetchManifestPath)"
@@ -25,6 +30,9 @@ Copyright (c) .NET Foundation. All rights reserved.
                      ('$(MSBuildHardenedGraph)' != 'true' or '$(TargetFramework)' != '') and
                      '$(MSBuildIsRestoring)' != 'true' and
                      ('$(MSBuildHardenedGraph)' == 'true' or '$(MSBuildRestoreGraphInputs)' != 'true')" />
+
+  <Import Project="$(FrameworkPackInputsPath)"
+          Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(MSBuildHardenedGraph)' == 'true' And '$(TargetFramework)' != ''" />
 
   <Import Project="$(BeforeMicrosoftNETSdkTargets)" Condition="'$(BeforeMicrosoftNETSdkTargets)' != ''"/>
 
