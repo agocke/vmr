@@ -517,24 +517,10 @@
       <_ConfiguredSnapshot Include="$(_ConfiguredRoot)Parent/obj/nugetinputs/Parent.csproj.g.props;$(_ConfiguredRoot)Child/obj/nugetinputs/Child.csproj.g.props" />
     </ItemGroup>
     <Error Condition="!Exists('%(_ConfiguredSnapshot.Identity)')" Text="Missing configured preparation snapshot: %(_ConfiguredSnapshot.Identity)" />
-    <Error Condition="Exists('$(_ConfiguredRoot)Parent/bin') or Exists('$(_ConfiguredRoot)Child/bin') or Exists('$(_ConfiguredRoot)Child/obj/cscinputs/Debug') or Exists('$(_ConfiguredRoot)Child/obj/cscinputs/Release/AnyCPU/net11.0')"
-           Text="Preparation must not build products or force the parent's configuration/framework onto its child." />
-    <XmlPeek XmlInputPath="$(_ConfiguredRoot)Parent/obj/cscinputs/Debug/AnyCPU/net11.0/Parent.csproj.g.props" Query="/Project/ItemGroup/_CscPreparedToolInput/@Include">
-      <Output TaskParameter="Result" ItemName="_ConfiguredDebugInput" />
-    </XmlPeek>
-    <XmlPeek XmlInputPath="$(_ConfiguredRoot)Parent/obj/cscinputs/Release/AnyCPU/net11.0/Parent.csproj.g.props" Query="/Project/ItemGroup/_CscPreparedToolInput/@Include">
-      <Output TaskParameter="Result" ItemName="_ConfiguredReleaseInput" />
-    </XmlPeek>
-    <XmlPeek XmlInputPath="$(_ConfiguredRoot)Child/obj/cscinputs/Release/AnyCPU/net10.0/Child.csproj.g.props" Query="/Project/ItemGroup/_CscPreparedToolInput/@Include">
-      <Output TaskParameter="Result" ItemName="_ConfiguredChildInput" />
-    </XmlPeek>
-    <PropertyGroup>
-      <_ConfiguredDebugInputs>@(_ConfiguredDebugInput)</_ConfiguredDebugInputs>
-      <_ConfiguredReleaseInputs>@(_ConfiguredReleaseInput)</_ConfiguredReleaseInputs>
-      <_ConfiguredChildInputs>@(_ConfiguredChildInput)</_ConfiguredChildInputs>
-    </PropertyGroup>
-    <Error Condition="$(_ConfiguredDebugInputs.Contains('Debug.inputs')) or $(_ConfiguredReleaseInputs.Contains('Release.inputs')) or $(_ConfiguredChildInputs.Contains('Release.inputs'))"
-           Text="Explicit project dependencies must not be duplicated into compiler preparation snapshots." />
+    <Error Condition="Exists('$(_ConfiguredRoot)Parent/bin') or Exists('$(_ConfiguredRoot)Child/bin')"
+           Text="Preparation must not build products." />
+    <Error Condition="Exists('$(_ConfiguredRoot)Parent/obj/cscinputs') or Exists('$(_ConfiguredRoot)Child/obj/cscinputs')"
+           Text="Configured acquisition must not publish empty compiler manifests; explicit dependencies belong in graph construction." />
     <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:Configuration=Debug -bl:&quot;$(_ConfiguredRoot)outer-build-rejected.binlog&quot;"
           IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
       <Output TaskParameter="ExitCode" PropertyName="_ConfiguredOuterExit" />
@@ -586,7 +572,7 @@
           DestinationFiles="$(_PreparedFactsRoot)App/App.csproj;$(_PreparedFactsRoot)Library/Library.csproj;$(_PreparedFactsRoot)Metadata.proj;$(_PreparedFactsRoot)App/Program.cs;$(_PreparedFactsRoot)Library/Greeting.cs" />
     <Exec Command="$(_App) restore &quot;$(_PreparedFactsRoot)App/App.csproj&quot; $(_PreparedFactsArguments) -bl:&quot;$(_PreparedFactsRoot)restore.binlog&quot;" />
     <ItemGroup>
-      <_PreparedFactKind Include="frameworkpackinputs;nugetinputs;cscinputs;sourcelink">
+      <_PreparedFactKind Include="frameworkpackinputs;nugetinputs;sourcelink">
         <ManifestExtension>props</ManifestExtension>
       </_PreparedFactKind>
       <_PreparedFactKind Condition="'%(_PreparedFactKind.Identity)' == 'sourcelink'">
@@ -595,7 +581,6 @@
       <_DiscoveredPreparedFramework Include="net11.0;net10.0;netstandard2.0;net462" />
       <_DiscoveredPreparedFact Include="$(_PreparedFactsRoot)Library/obj/frameworkpackinputs/Library.csproj.g.props;
                                        $(_PreparedFactsRoot)Library/obj/nugetinputs/Library.csproj.g.props;
-                                       @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/cscinputs/Debug/AnyCPU/%(Identity)/Library.csproj.g.props');
                                        @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/sourcelink/Debug/AnyCPU/%(Identity)/Library.csproj.g.targets')" />
       <_MissingDiscoveredPreparedFact Include="@(_PreparedFactKind)">
         <Path>$(_PreparedFactsRoot)Library/obj/%(Identity)/Debug/AnyCPU/net10.0/Library.csproj.g.%(ManifestExtension)</Path>
@@ -610,7 +595,7 @@
     <Error Condition="!Exists('%(_DiscoveredPreparedFact.Identity)')"
            Text="Restore must capture inputs for every configured framework request reached during discovery: %(_DiscoveredPreparedFact.Identity)" />
     <Error Condition="Exists('$(_PreparedFactsRoot)App/bin') or Exists('$(_PreparedFactsRoot)Library/bin') or
-                      Exists('$(_PreparedFactsRoot)Library/obj/cscinputs/Release')"
+                      Exists('$(_PreparedFactsRoot)Library/obj/sourcelink/Release')"
            Text="Discovery-inclusive capture must not compile products or synthesize unrequested configurations." />
     <Exec Command="$(_App) restore &quot;$(_PreparedFactsRoot)Metadata.proj&quot; -t:Build $(_PreparedFactsArguments) -p:MetadataFile=ordinary.txt -bl:&quot;$(_PreparedFactsRoot)ordinary.binlog&quot;" />
     <Exec Command="$(_App) build &quot;$(_PreparedFactsRoot)Metadata.proj&quot; $(_PreparedFactsArguments) -p:MetadataFile=discovered.txt -p:MSBuildEmitActionGraph=&quot;$(_PreparedFactsRoot)discovered-metadata.ninja&quot; -bl:&quot;$(_PreparedFactsRoot)discovered-metadata.binlog&quot;" />
@@ -1975,11 +1960,8 @@
                       Lines="&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;&lt;PropertyGroup&gt;&lt;TargetFramework&gt;net11.0&lt;/TargetFramework&gt;&lt;UseAppHost&gt;false&lt;/UseAppHost&gt;&lt;EnableNETAnalyzers&gt;false&lt;/EnableNETAnalyzers&gt;&lt;DisableImplicitFrameworkReferences&gt;true&lt;/DisableImplicitFrameworkReferences&gt;&lt;/PropertyGroup&gt;&lt;ItemGroup&gt;&lt;PackageReference Include=&quot;GenBuild.Compiler.Inputs&quot; Version=&quot;1.0.0&quot; /&gt;&lt;/ItemGroup&gt;&lt;/Project&gt;" Overwrite="true" />
     <WriteLinesToFile File="$(_CompilerPackageRoot)Program.cs" Lines="public class Program { }" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_CompilerPackageRoot)App.csproj&quot; $(_CompilerPackageArguments) -bl:&quot;$(_CompilerPackageRoot)restore.binlog&quot;" />
-    <PropertyGroup>
-      <_CompilerPackagePreparedInputs>$([System.IO.File]::ReadAllText('$(_CompilerPackageRoot)obj/cscinputs/Debug/AnyCPU/net11.0/App.csproj.g.props'))</_CompilerPackagePreparedInputs>
-    </PropertyGroup>
-    <Error Condition="$(_CompilerPackagePreparedInputs.Contains('genbuild.compiler.inputs')) or $(_CompilerPackagePreparedInputs.Contains('bincore/'))"
-           Text="Compiler preparation must not inventory package analyzer directories or snapshot the static compiler catalog." />
+    <Error Condition="Exists('$(_CompilerPackageRoot)obj/cscinputs')"
+           Text="Compiler dependencies must come from the packaged catalog and acquired inventories, not a per-project compiler manifest." />
     <WriteLinesToFile File="$(_CompilerPackageDirectory)analyzers/dotnet/cs/not-in-package.json" Lines="not acquired" Overwrite="true" />
     <Exec Command="$(_App) build &quot;$(_CompilerPackageRoot)App.csproj&quot; $(_CompilerPackageArguments) -p:MSBuildEmitActionGraph=&quot;$(_CompilerPackageRoot)build.ninja&quot; -bl:&quot;$(_CompilerPackageRoot)build.binlog&quot;" />
     <PropertyGroup>
@@ -2066,8 +2048,8 @@
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/Library/Actions.proj;$(MSBuildThisFileDirectory)ProjectReference/Library/Library.csproj;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs" DestinationFolder="$(_ProjectReferenceRoot)Library" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)ProjectReference/App/App.csproj;$(MSBuildThisFileDirectory)ProjectReference/App/Program.cs" DestinationFolder="$(_ProjectReferenceRoot)App" />
     <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)App/App.csproj&quot; $(_ProjectReferenceArguments) -bl:&quot;$(_ProjectReferenceRoot)restore.binlog&quot;" />
-    <Error Condition="!Exists('$(_ProjectReferenceRoot)App/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)Library/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)App/obj/frameworkpackinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/frameworkpackinputs/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/cscinputs/Debug/AnyCPU/net11.0/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/cscinputs/Debug/AnyCPU/net11.0/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/nugetinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/nugetinputs/Library.csproj.g.props')"
-           Text="SDK Restore must prepare NuGet/framework/compiler inputs throughout the project-reference closure." />
+    <Error Condition="!Exists('$(_ProjectReferenceRoot)App/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)Library/obj/project.assets.json') or !Exists('$(_ProjectReferenceRoot)App/obj/frameworkpackinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/frameworkpackinputs/Library.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)App/obj/nugetinputs/App.csproj.g.props') or !Exists('$(_ProjectReferenceRoot)Library/obj/nugetinputs/Library.csproj.g.props')"
+           Text="SDK Restore must prepare NuGet/framework inputs throughout the project-reference closure." />
     <Error Condition="Exists('$(_ProjectReferenceRoot)App/bin') or Exists('$(_ProjectReferenceRoot)Library/bin') or Exists('$(_ProjectReferenceRoot)App/obj/Debug/net11.0/App.dll') or Exists('$(_ProjectReferenceRoot)Library/obj/Debug/net11.0/Renamed.Library.dll')"
            Text="Project-reference preparation must not prebuild referenced assemblies." />
     <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)Metadata.proj&quot; -t:Build $(_ProjectReferenceArguments) -p:MetadataFile=ordinary-metadata.txt -bl:&quot;$(_ProjectReferenceRoot)ordinary-metadata.binlog&quot;" />
@@ -3618,6 +3600,8 @@
     </XmlPeek>
     <WriteLinesToFile File="%(_VbcDirectory.Identity)Resources.targets" Lines="&lt;Project&gt;;@(_VbcResourceTargets);&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_VbcRoot)%(_VbcCase.Identity)/project/Vbc.proj&quot;" />
+    <Error Condition="Exists('$(_VbcRoot)%(_VbcCase.Identity)/project/obj/vbcinputs')"
+           Text="Standalone VB acquisition must not publish empty compiler manifests." />
     <Exec Command="$(_App) build &quot;$(_VbcRoot)%(_VbcExecution.Identity)/project/Vbc.proj&quot; -p:TestCase=&quot;%(_VbcExecution.Identity)&quot;" />
     <Error Condition="Exists('$(_VbcRoot)%(_VbcExecution.Identity)/project/obj/Generated.vb') or Exists('$(_VbcRoot)%(_VbcExecution.Identity)/project/obj/Hello.dll') or Exists('$(_VbcRoot)%(_VbcExecution.Identity)/project/obj/sub/Strings.resx')"
            Text="VB construction must not execute source/resource producers or the compiler." />
@@ -3701,6 +3685,8 @@
     <WriteLinesToFile File="%(_CscRoot.Identity)Resources.targets"
                       Lines="&lt;Project&gt;;@(_CscResourceTargets);&lt;/Project&gt;" Overwrite="true" />
     <Exec Command="$(_App) restore &quot;$(_TestDirectory)csc/%(_CscCase.Identity)/project/Csc.proj&quot;" />
+    <Error Condition="Exists('$(_TestDirectory)csc/%(_CscCase.Identity)/project/obj/cscinputs')"
+           Text="Standalone C# acquisition must not publish empty compiler manifests." />
     <PropertyGroup>
       <_CscSkipRoot>$(_TestDirectory)csc/skip-analyzers/project/</_CscSkipRoot>
       <_CscSkipMarker>$(_CscSkipRoot)obj/Csc.proj.BuildWithSkipAnalyzers</_CscSkipMarker>

@@ -1344,7 +1344,7 @@ Copyright (c) .NET Foundation. All rights reserved.
                 CompilerAssembly="$([MSBuild]::NormalizePath('$(_BuildTasksDirectory)', 'bincore/csc.dll'))"
                 CompilerArguments="$(_HardenedSatelliteCscArguments)"
                 PathMappings="@(_HardenedSatelliteCscPathMapping)"
-                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CompilerToolInput);@(_CscPreparedToolInput);@(_HardenedSatelliteCscInput)"
+                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CompilerToolInput);@(_HardenedSatelliteCscInput)"
                 DeclaredOutputs="@(_HardenedSatelliteCscOutput)" />
     <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
       <FileWrites Include="$(_AssemblyInfoFile);@(_HardenedSatelliteCscOutput)" />

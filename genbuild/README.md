@@ -732,10 +732,12 @@ SourceLink generation composes zero-I/O `FormatSourceLink` with overwrite-only
 output. Empty hardened mappings clear the compiler's SourceLink argument and
 emit no file action; stale JSON remains unreferenced rather than being deleted.
 Ordinary builds retain their comparison and deletion behavior.
-Hardened C# compilation composes zero-I/O `FormatCsc` with `CompileCsc`, leaving
-ordinary `Csc` unchanged. Restore captures compiler/analyzer dependency files
-in `obj/cscinputs/`; Build requires that prepared manifest rather than discovering
-tool files. Determinism and deterministic source paths are mandatory. Automatic
+Hardened C#/VB compilation composes zero-I/O `FormatCsc`/`FormatVbc` with
+`CompileManaged`, leaving ordinary `Csc`/`Vbc` unchanged. Build imports the
+packaged `CompilerInputs.props` tool catalog and selects analyzer companions from
+acquired package/framework inventories and explicit `AnalyzerDependency` items.
+No per-project compiler manifest or tool-directory discovery is needed.
+Determinism and deterministic source paths are mandatory. Automatic
 path maps preserve SourceLink repository mappings and cover the project,
 generated-source and output paths, including the PE's CodeView PDB path.
 Analyzer/generator assemblies and dependencies, configuration and additional

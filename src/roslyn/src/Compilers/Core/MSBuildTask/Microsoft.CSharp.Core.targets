@@ -4,23 +4,6 @@
   <Import Project="Microsoft.Managed.Core.targets"/>
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.FormatCsc" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.CompileManaged" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
-  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.WriteCscInputs" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
-
-  <PropertyGroup>
-    <_CscInputManifestPath>$(MSBuildProjectExtensionsPath)cscinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</_CscInputManifestPath>
-  </PropertyGroup>
-  <Import Project="$(_CscInputManifestPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
-
-  <Target Name="_CaptureStandaloneCscToolInputsAfterRestore"
-          AfterTargets="Restore"
-          DependsOnTargets="_CaptureCscToolInputs"
-          Condition="'$(UsingMicrosoftNETSdk)' != 'true' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
-
-  <Target Name="_CaptureCscToolInputs"
-          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
-    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_CscInputManifestPath)'))" />
-    <WriteCscInputs Inputs="" OutputFile="$(_CscInputManifestPath)" />
-  </Target>
 
   <PropertyGroup>
     <!-- .NETCoreApp < 3.0, .NETStandard < 2.1, or any other target framework -->
@@ -306,7 +289,7 @@
                 CompilerAssembly="$([MSBuild]::NormalizePath('$(_BuildTasksDirectory)', 'bincore/csc.dll'))"
                 CompilerArguments="$(_HardenedCscArguments)"
                 PathMappings="@(_HardenedCscPathMapping)"
-                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CompilerToolInput);@(_CscPreparedToolInput);@(_CompilerAnalyzerDependency);@(_HardenedCscInput)"
+                DeclaredInputs="$(DOTNET_HOST_PATH);@(_CompilerToolInput);@(_CompilerAnalyzerDependency);@(_HardenedCscInput)"
                 DeclaredOutputs="@(_HardenedCscOutput)"
                 DeclaredOutputTrees="@(_HardenedCscTree)" />
 

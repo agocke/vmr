@@ -400,9 +400,10 @@ provider versions, metadata validation, stale replacement, and independent error
   formatting without ordinary Csc's server, IDE host, or discovery paths.
 - [x] Compose pure `FormatVbc` with the same executor and shared footprint/path-map
   helper; retain VB options, explicit runtime inputs and VB resource naming.
-- [x] Capture compiler/analyzer dependency closures during Restore as `cscinputs`;
-  capture VB closures as `vbcinputs` and keep later tool/documentation/module
-  inputs explicit.
+- [x] Import the packaged compiler/tool catalog directly and select analyzer
+  companions from acquired package/framework inventories during graph construction,
+  without per-project C#/VB compiler snapshots; keep loose analyzer,
+  documentation and module inputs explicit.
 - [x] Require deterministic compilation and automatic stable path maps consistent
   with SourceLink, covering project, generated-source, and output paths.
 - [x] Declare analyzers/generators, dependencies, configs, and additional files;

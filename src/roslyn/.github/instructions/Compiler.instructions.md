@@ -36,8 +36,9 @@ relocatable catalog from its compiler and SDK-analyzer copy items.
 `ResolveCompilerDependencies` is a filesystem-free selector over candidate files
 and the final `Analyzer` items; run it inside `CoreCompile` after `BeforeTargets`
 hooks, not as an earlier dependency target. Loose/generated analyzer companions
-require explicit `AnalyzerDependency` items. Compiler preparation retains only
-framework-pack analyzer discovery pending the framework migration.
+require explicit `AnalyzerDependency` items. Acquired package and framework-pack
+inventories supply the remaining candidates; compiler targets need no per-project
+Restore manifest.
 
 ## Code Generation
 
@@ -97,12 +98,11 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
   independent `CompileManaged` action, not server/IDE/tool-discovery execution. Both
   deterministic compilation and deterministic source paths are mandatory.
   Automatic mappings preserve SourceLink root aliases and cover project,
-  generated-source and output paths, including CodeView. Restore's
-  `_CaptureCscToolInputs`/`_CaptureVbcToolInputs` capture framework-analyzer directory facts under
-  `$(MSBuildProjectExtensionsPath)cscinputs/` and `vbcinputs/`; hardened evaluation requires that
-  import. SDK preparation covers the configured metadata requests reached during
-  framework discovery as well as selected compilation requests. Capturing a
-  framework-analyzer snapshot does not request compilation of that framework.
+  generated-source and output paths, including CodeView. Both compilers consume
+  the packaged `CompilerInputs.props` catalog directly. Final analyzer dependency
+  selection uses acquired package/framework inventories and explicit
+  `AnalyzerDependency` items, without per-project compiler snapshot imports or
+  directory discovery.
   Declare analyzer/generator dependencies, configs and additional files and
   trust their nominal compiler-input-only contract; enforcement is deferred
   without per-plugin gates. `CompileManaged` controls the child environment and

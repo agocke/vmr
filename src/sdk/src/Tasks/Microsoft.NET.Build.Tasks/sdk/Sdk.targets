@@ -109,8 +109,6 @@ Copyright (c) .NET Foundation. All rights reserved.
   <PropertyGroup>
     <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_CaptureNuGetInputs</MSBuildPrepareGraphInputsDependsOn>
     <MSBuildPrepareGraphInputsDependsOn Condition="'$(_FrameworkPackDirectInputs)' != 'true'">$(MSBuildPrepareGraphInputsDependsOn);_GenerateFrameworkReferenceFetchManifest</MSBuildPrepareGraphInputsDependsOn>
-    <MSBuildPrepareGraphInputsDependsOn Condition="'$(Language)' == 'C#'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureCscToolInputs</MSBuildPrepareGraphInputsDependsOn>
-    <MSBuildPrepareGraphInputsDependsOn Condition="'$(Language)' == 'VB'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureVbcToolInputs</MSBuildPrepareGraphInputsDependsOn>
     <_CaptureNuGetInputsDependsOn Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">_ResolveCompilerVersion</_CaptureNuGetInputsDependsOn>
   </PropertyGroup>
 

@@ -4,23 +4,6 @@
   <Import Project="Microsoft.Managed.Core.targets"/>
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.FormatVbc" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
   <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.CompileManaged" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
-  <UsingTask TaskName="Microsoft.CodeAnalysis.BuildTasks.WriteCscInputs" AssemblyFile="$(_BuildTasksDirectory)$(_BuildTasksAssemblyName).dll" />
-
-  <PropertyGroup>
-    <_VbcInputManifestPath>$(MSBuildProjectExtensionsPath)vbcinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</_VbcInputManifestPath>
-  </PropertyGroup>
-  <Import Project="$(_VbcInputManifestPath)" Condition="'$(MSBuildHardenedGraph)' == 'true'" />
-
-  <Target Name="_CaptureStandaloneVbcToolInputsAfterRestore"
-          AfterTargets="Restore"
-          DependsOnTargets="_CaptureVbcToolInputs"
-          Condition="'$(UsingMicrosoftNETSdk)' != 'true' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'" />
-
-  <Target Name="_CaptureVbcToolInputs"
-          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true'">
-    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(_VbcInputManifestPath)'))" />
-    <WriteCscInputs Inputs="" OutputFile="$(_VbcInputManifestPath)" ItemName="_VbcPreparedToolInput" />
-  </Target>
 
   <Target Name="CoreCompile"
           Inputs="$(MSBuildAllProjects);
@@ -274,7 +257,7 @@
                     CompilerAssembly="$([MSBuild]::NormalizePath('$(_BuildTasksDirectory)', 'bincore/vbc.dll'))"
                     CompilerArguments="$(_HardenedVbcArguments)"
                     PathMappings="@(_HardenedVbcPathMapping)"
-                    DeclaredInputs="$(DOTNET_HOST_PATH);@(_CompilerToolInput);@(_VbcPreparedToolInput);@(_CompilerAnalyzerDependency);@(_HardenedVbcInput)"
+                    DeclaredInputs="$(DOTNET_HOST_PATH);@(_CompilerToolInput);@(_CompilerAnalyzerDependency);@(_HardenedVbcInput)"
                     DeclaredOutputs="@(_HardenedVbcOutput)"
                     DeclaredOutputTrees="@(_HardenedVbcTree)" />
     <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">

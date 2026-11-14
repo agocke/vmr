@@ -38,6 +38,8 @@ preparation. Explicit `AnalyzerDependency` authoring covers loose/generated file
 and package-adjacent files absent from the acquired inventory.
 Both primary and satellite `CompileManaged` calls consume `_CompilerToolInput`
 directly from the packaged Build catalog, not Restore snapshots.
+SDK preparation does not register compiler manifest capture; C# and VB consume
+the packaged catalog and acquired inventories directly.
 
 Existing per-framework acquisition visits declare finite pack requests and lookup,
 version, member-catalog and resource-output bindings through

@@ -276,17 +276,14 @@ formatters and the independent
 action rather than annotating ordinary compiler server, IDE-host and tool-discovery
 execution path.
 
-Restore captures the pinned compiler and analyzer dependency closure in
-`$(MSBuildProjectExtensionsPath)cscinputs/$(MSBuildProjectFile).g.props` for C#,
-or `vbcinputs/` for VB.
-SDK graph preparation/replay inserts
-`$(Configuration)/$(Platform)/$(TargetFramework)/` beneath the compiler directory, matching
-the framework, NuGet and SourceLink snapshot identity.
-Build imports those explicit files; it does not enumerate external tool
-directories. Keep this manifest outside Common's automatic project-extension
-wildcards so it is imported only at its explicit preparation boundary.
-Late-added analyzers need their dependencies supplied through
-`@(AnalyzerDependency)`. Sources, references, analyzer configurations, additional
+Build imports the pinned compiler/tool catalog from the packaged
+`CompilerInputs.props` (`CompilerInputsPath` can override its location).
+`ResolveCompilerDependencies` selects companions for the final analyzer items
+from acquired package/framework inventories and the SDK analyzer catalog, without
+enumerating external tool directories or requiring a per-project compiler
+manifest. Loose/generated analyzers and companions absent from acquired
+inventories need explicit `@(AnalyzerDependency)` items.
+Sources, references, analyzer configurations, additional
 files, embedded sources, resources, signing inputs and SourceLink are semantic
 inputs. XML documentation includes must be explicit `@(EmbeddedDocumentation)`
 or `@(CustomAdditionalCompileInputs)` inputs, including transitive dependencies.
