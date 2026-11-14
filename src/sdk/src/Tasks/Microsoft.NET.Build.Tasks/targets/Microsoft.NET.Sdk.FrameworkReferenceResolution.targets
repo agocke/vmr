@@ -28,7 +28,6 @@ Copyright (c) .NET Foundation. All rights reserved.
   <UsingTask TaskName="WriteFrameworkReferenceFetchManifest" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="WriteFrameworkPackInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="CollectFrameworkPackInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
-  <UsingTask TaskName="WriteFrameworkPlatformInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
   <PropertyGroup>
     <_FrameworkReferenceFetchDependsOn>ResolveTargetingPackAssets;_CollectFrameworkReferenceFetchManifestRuntimeFrameworks;_GetAppHostPaths</_FrameworkReferenceFetchDependsOn>
@@ -48,6 +47,7 @@ Copyright (c) .NET Foundation. All rights reserved.
       AssetsFile="$(_FrameworkPackAssetsFile)"
       OutputFile="$(FrameworkPackInputsPath)"
       ResourceDirectory="$(FrameworkPackResourceDirectory)"
+      LocatorFile="$(FrameworkPackInputsLocatorPath)"
       LookupFacts="@(_FrameworkPackLookup)"
       VersionFacts="@(_FrameworkPackVersion)"
       PackRequests="@(TargetingPack);@(RuntimePack);@(AppHostPack);@(SingleFileHostPack);@(ComHostPack);@(IjwHostPack);@(Crossgen2Pack);@(HostILCompilerPack);@(TargetILCompilerPack);@(PackAsToolShimAppHostPack)"
@@ -69,7 +69,7 @@ Copyright (c) .NET Foundation. All rights reserved.
   <Target Name="_GenerateFrameworkReferenceFetchManifest"
           AfterTargets="Restore"
           DependsOnTargets="_InvalidateUnsupportedFrameworkReferenceFetchManifest;_ReportUnsupportedFrameworkReferenceFetchManifestProfile;$(_FrameworkReferenceFetchDependsOn)"
-          Condition="'$(MSBuildHardenedGraph)' != 'true' and
+          Condition="'$(_FrameworkPackDirectInputs)' != 'true' and '$(MSBuildHardenedGraph)' != 'true' and
                      (('$(MSBuildRestoreGraphInputs)' == 'true' and '$(_MSBuildPreparingGraphInputs)' == 'true') or
                       ('$(MSBuildRestoreGraphInputs)' != 'true' and '$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))">
     <!-- Project-declared references stay in authoring and use path-only resolution during hardened Build. -->
@@ -100,12 +100,6 @@ Copyright (c) .NET Foundation. All rights reserved.
       <FrameworkPackResourceDirectory Condition="'$(FrameworkPackResourceDirectory)' == '' And '$(MSBuildGraphSdkBindingsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildGraphSdkBindingsDirectory)', 'framework-pack-resources'))</FrameworkPackResourceDirectory>
       <FrameworkPackResourceDirectory Condition="'$(FrameworkPackResourceDirectory)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildProjectExtensionsPath)', 'framework-pack-resources'))</FrameworkPackResourceDirectory>
     </PropertyGroup>
-    <WriteFrameworkPlatformInputs Condition="'$(_FrameworkPackDirectInputs)' == 'true'"
-      OutputFile="$(FrameworkReferenceFetchManifestPath)"
-      PackInputsFile="$(FrameworkPackInputsPath)"
-      TargetPlatformIdentifier="$(TargetPlatformIdentifier)"
-      TargetPlatformVersion="$(TargetPlatformVersion)"
-      TargetPlatformDisplayName="$(TargetPlatformDisplayName)" />
     <WriteFrameworkPackInputs Condition="'$(MSBuildRestoreGraphInputs)' == 'true' And '$(_FrameworkPackDirectInputs)' != 'true'"
       OutputFile="$(FrameworkReferenceFetchManifestPath)"
       ResourceDirectory="$(FrameworkPackResourceDirectory)"

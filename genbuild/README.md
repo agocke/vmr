@@ -334,6 +334,14 @@ framework references. Colliding generated/explicit files need declared version
 metadata or prepared external facts; missing facts and unresolved ties fail.
 See the [reference-selection contract](../src/msbuild/documentation/specs/proposed/hardened-static-graph.md#framework-inventories-and-final-reference-selection).
 Legacy manifest-only mode retains its narrower rejection of `Reference` items.
+Direct acquisition writes an unconfigured
+`obj/frameworkpackinputs/$(MSBuildProjectFile).g.props` locator to shared pack facts,
+not a per-configuration framework snapshot. A shared native catalog captures installed
+SDK display-name overrides, including platform aliases. A zero-I/O task selects the
+current platform's display name before framework metadata queries/validation, with
+the ordinary identifier/version fallback when no override exists. This late SDK
+fixup is target-time in hardened mode; ordinary evaluation is unchanged. The separate
+Common platform-SDK location/presence contract and other preparation hooks remain.
 Changing the framework-reference identity set requires a fresh Restore.
 Outer cross-targeting and RID preparation remain unsupported.
 The real `System.Collections.Immutable` trial targeting runtime's `net10.0`

@@ -1318,19 +1318,47 @@ from post-acquisition package hits. A shared manifest admits multiple explicitly
 identified runtime graphs without conflating their RID relationships.
 
 Platform display-name observations are not pack data: configured platform coverage
-can exceed the acquisition visits. The existing preparation hook therefore now
-calls only
-[`WriteFrameworkPlatformInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkPlatformInputs.cs)
-in this direct mode. It writes platform properties and the shared pack-manifest
-locator, without framework/host selection or pack translation. Fresh Build imports
-that locator before the shared facts, preserving alternate metadata entry points.
-This intentionally retains the platform producer and preparation traversal; it
-does not introduce retained instances, additional evaluations or a reference walk.
+can exceed the acquisition visits. At the same acquisition boundary,
+[`PlatformSDKInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/PlatformSDKInputs.cs)
+enumerates installed SDKs and registered platform aliases once, preserving ordinary
+lookup precedence. It compiles only non-null manifest `DisplayName` overrides into
+native `_PlatformSDKDisplayName` items in a versioned shared catalog. Empty names
+remain overrides; absent names use the ordinary identifier/version fallback.
+[`GetPlatformSDKDisplayNameFromInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/GetPlatformSDKDisplayNameFromInputs.cs)
+performs that selection without I/O, with case-insensitive identifiers and exact CLR
+version semantics. Unsupported, duplicate or malformed facts fail without discovery.
+The SDK's late display-name fixup runs before framework metadata queries and validation
+in direct hardened mode, rather than at evaluation time. Ordinary evaluation and
+the separate Common platform-SDK location/presence observations remain unchanged.
+
+Acquisition publishes each unconfigured
+`obj/frameworkpackinputs/$(MSBuildProjectFile).g.props` locator after successful
+resource translation. Fresh Build imports it before the shared facts, preserving
+alternate metadata entry points and acquisition scopes. Conflicting locators and
+aliases to acquisition inputs, shared outputs or the platform catalog fail.
+The configured framework/platform producer and its preparation registration are
+removed in direct mode; other producers still retain the preparation traversal.
+The SDK explicitly schedules the existing ApiCompat suppression-presence capture,
+whose package hook otherwise follows the removed framework producer.
+This adds no retained instances, evaluations or reference walk.
 The acquisition-only fixture rejects the old framework producer, requires all four
 framework bindings to produce one shared model, and checks ordinary-mode isolation
-and re-publication after an up-to-date Restore.
+and locator/catalog re-publication after an up-to-date Restore.
 
-Validation passes current-.NET/.NET-Framework task builds, 44 focused actual-source
+The platform/locator follow-up passes both task TFMs, 72 packaged actual-source SDK
+cases and acquisition/framework/discovery/reference/compiler/ApiCompat smokes,
+including offline installed-name/alias selection and C#/VB queries for an
+unvisited platform version. Isolated runtime acquisition produces one catalog and
+343 locators from 645 bindings; the old framework/platform producer executes zero
+times. All 297 ApiCompat fact files remain byte-identical. Fresh graph audits
+preserve 5,320 actions, 500 compiler commands, 55 ApiCompat input sets, 27,257 Ninja
+nodes and 277,035 dependency/order-only edges and rule commands. Only known revision
+and relocated declared-input ordering differences are normalized. Protected products
+and 105 frozen engine/compiler files are unchanged. Evaluation/request counts remain
+4,898/69,562: the preparation traversal is not removed and no timing gain is claimed.
+No runtime-library actions are executed.
+
+Earlier framework-translator validation passed current-.NET/.NET-Framework task builds, 44 focused actual-source
 SDK cases against the packaged assembly, 11 packaged NuGet admission cases, and
 the acquisition/framework/discovery/reference/ApiCompat smokes. An isolated runtime
 Restore and fresh graph retain all 5,320 action/output signatures, 500 compiler

@@ -23,6 +23,147 @@ namespace Microsoft.NET.Build.Tasks.UnitTests;
 public class GivenRawFrameworkPackInputs
 {
     [TestMethod]
+    [DataRow("myplatform", "01.0", "Installed;100%$(Literal)")]
+    [DataRow("MyPlatform", "1.0.0", "")]
+    [DataRow("MyPlatform", "1.0.0.0", "MyPlatform 1.0.0.0")]
+    [DataRow("Unknown", "1.0", "Unknown 1.0")]
+    [DataRow("MyPlatform", "invalid", "MyPlatform invalid")]
+    [DataRow("MyPlatform", "", "MyPlatform ")]
+    [DataRow("Alias", "2.0", "Alias SDK")]
+    public void PlatformDisplayNameSelectionUsesOnlyNativeFacts(string identifier, string version, string expected)
+    {
+        var engine = new RecordingEngine();
+        var select = new GetPlatformSDKDisplayNameFromInputs
+        {
+            BuildEngine = engine,
+            InputsVersion = "1",
+            TargetPlatformIdentifier = identifier,
+            TargetPlatformVersion = version,
+            SdkDisplayNames = [
+                Item("MyPlatform", ("Version", "1.0"), ("DisplayName", "Installed;100%$(Literal)")),
+                Item("MyPlatform", ("Version", "1.0.0"), ("DisplayName", "")),
+                Item("Alias", ("Version", "2.0"), ("DisplayName", "Alias SDK"))]
+        };
+        Assert.IsTrue(select.Execute(), string.Join("\n", engine.Errors));
+        Assert.AreEqual(expected, select.DisplayName);
+    }
+
+    [TestMethod]
+    [DataRow("version")]
+    [DataRow("unsupported-version")]
+    [DataRow("duplicate")]
+    [DataRow("missing-name")]
+    [DataRow("bad-version")]
+    public void PlatformDisplayNameSelectionRejectsInvalidFacts(string invalid)
+    {
+        ITaskItem row = Item("MyPlatform", ("Version", "1.0"), ("DisplayName", "SDK"));
+        var engine = new RecordingEngine();
+        var select = new GetPlatformSDKDisplayNameFromInputs
+        {
+            BuildEngine = engine,
+            InputsVersion = invalid == "version" ? "" : invalid == "unsupported-version" ? "2" : "1",
+            TargetPlatformIdentifier = "MyPlatform",
+            TargetPlatformVersion = "1.0",
+            SdkDisplayNames = invalid == "duplicate"
+                ? [row, Item("myplatform", ("Version", "01.0"), ("DisplayName", "Other SDK"))] : [row]
+        };
+        if (invalid == "missing-name")
+        {
+            row.RemoveMetadata("DisplayName");
+        }
+        else if (invalid == "bad-version")
+        {
+            row.SetMetadata("Version", "invalid");
+        }
+        Assert.IsFalse(select.Execute());
+        Assert.AreEqual(1, engine.Errors.Count);
+    }
+
+    [TestMethod]
+    public void PlatformCatalogCompilesInstalledSDKNamesAndAliasesForOfflineSelection()
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        string root = fixture.Environment.GetAbsolutePath("installed-sdks").Value;
+        string sdk = Path.Combine(root, "SyntheticPlatform", "1.0");
+        string alias = Path.Combine(sdk, "Platforms", "SyntheticAlias", "2.0");
+        string empty = Path.Combine(root, "SyntheticPlatform", "1.0.0", "SDKManifest.xml");
+        string absent = Path.Combine(root, "SyntheticNoName", "1.0", "SDKManifest.xml");
+        Directory.CreateDirectory(alias);
+        Directory.CreateDirectory(Path.GetDirectoryName(empty)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(absent)!);
+        string manifest = Path.Combine(sdk, "SDKManifest.xml");
+        File.WriteAllText(manifest, """<FileList DisplayName="Installed;100%$(Literal)" />""");
+        File.WriteAllText(empty, """<FileList DisplayName="" />""");
+        File.WriteAllText(absent, "<FileList />");
+        File.WriteAllText(Path.Combine(alias, "Platform.xml"), "<ApplicationPlatform />");
+        string registryRoot = "SOFTWARE\\GenbuildTests\\" + Guid.NewGuid().ToString("N");
+        XElement[] rows = PlatformSDKInputs.Capture([root], registryRoot).ToArray();
+        Assert.AreEqual("Installed;100%$(Literal)", ToolLocationHelper.GetPlatformSDKDisplayName(
+            "SyntheticAlias", "2.0", root, registryRoot));
+        Assert.AreEqual("SyntheticPlatform 1.0.0", ToolLocationHelper.GetPlatformSDKDisplayName(
+            "SyntheticPlatform", "1.0.0", root, registryRoot));
+        Assert.AreEqual("SyntheticNoName 1.0", ToolLocationHelper.GetPlatformSDKDisplayName(
+            "SyntheticNoName", "1.0", root, registryRoot));
+        string output = fixture.Environment.GetAbsolutePath("platforms.g.props").Value;
+        PlatformSDKInputs.Write(output, new XElement("Project",
+            new XElement("PropertyGroup", new XElement("_PlatformSDKDisplayNamesVersion", "1")),
+            new XElement("ItemGroup", rows)));
+        File.Delete(manifest);
+        File.Delete(empty);
+        File.Delete(absent);
+        File.Delete(Path.Combine(alias, "Platform.xml"));
+        using var collection = new ProjectCollection();
+        Project project = collection.LoadProject(output);
+        ITaskItem[] facts = project.GetItems("_PlatformSDKDisplayName").Select(item =>
+            Item(item.EvaluatedInclude, item.Metadata.Select(metadata => (metadata.Name, metadata.EvaluatedValue)).ToArray())).ToArray();
+        Assert.AreEqual(2, facts.Length);
+        Assert.AreEqual("Installed;100%$(Literal)", PlatformSDKInputs.Select("1", facts, "syntheticplatform", "01.0"));
+        Assert.AreEqual("Installed;100%$(Literal)", PlatformSDKInputs.Select("1", facts, "SyntheticAlias", "2.0"));
+        Assert.AreEqual("SyntheticPlatform 1.0.0", PlatformSDKInputs.Select("1", facts, "SyntheticPlatform", "1.0.0"));
+        Assert.AreEqual("SyntheticNoName 1.0", PlatformSDKInputs.Select("1", facts, "SyntheticNoName", "1.0"));
+        Assert.AreEqual("NeverAcquired 3.0", PlatformSDKInputs.Select("1", facts, "NeverAcquired", "3.0"));
+    }
+
+    [TestMethod]
+    [DataRow("assets")]
+    [DataRow("output")]
+    [DataRow("catalog")]
+    [DataRow("conflict")]
+    public void AcquisitionRejectsConflictingPackLocatorsBeforePublication(string conflict)
+    {
+        using var fixture = new PackFixture(usePathFallback: false);
+        ITaskItem[] first = fixture.Bindings();
+        ITaskItem[] second = fixture.Bindings();
+        string output = first[0].GetMetadata("OutputFile");
+        string assets = first[0].GetMetadata("AssetsFile");
+        string original = File.ReadAllText(assets);
+        string locator = conflict switch
+        {
+            "assets" => assets,
+            "output" => output,
+            "catalog" => Path.Combine(first[0].GetMetadata("ResourceDirectory"), "platform-sdk-display-names.g.props"),
+            _ => fixture.Environment.GetAbsolutePath("locator.g.props").Value
+        };
+        first[0].SetMetadata("LocatorFile", ProjectCollection.Escape(locator));
+        second[0].SetMetadata("LocatorFile", ProjectCollection.Escape(locator));
+        if (conflict == "conflict")
+        {
+            second[0].SetMetadata("OutputFile", ProjectCollection.Escape(output + ".other"));
+        }
+        var engine = new RecordingEngine();
+        var translate = new WriteFrameworkRestoreInputs
+        {
+            BuildEngine = engine,
+            Requests = first.Concat(second).ToArray()
+        };
+        Assert.IsFalse(translate.Execute());
+        Assert.AreEqual(0, translate.WrittenModels);
+        Assert.IsFalse(File.Exists(output));
+        Assert.AreEqual(original, File.ReadAllText(assets));
+        Assert.AreEqual(1, engine.Errors.Count);
+    }
+
+    [TestMethod]
     public void RuntimeGraphAcquisitionSharesNativeResourcesAndRepublishesMissingFiles()
     {
         using var fixture = new PackFixture(usePathFallback: false);
@@ -142,6 +283,9 @@ public class GivenRawFrameworkPackInputs
         using var fixture = new PackFixture(usePathFallback: false);
         ITaskItem[] first = fixture.Bindings();
         ITaskItem[] second = fixture.Bindings();
+        string locator = fixture.Environment.GetAbsolutePath("obj/frameworkpackinputs/Project.csproj.g.props").Value;
+        first[0].SetMetadata("LocatorFile", ProjectCollection.Escape(locator));
+        second[0].SetMetadata("LocatorFile", ProjectCollection.Escape(locator));
         string graph = fixture.Environment.GetAbsolutePath("runtime.json").Value;
         File.WriteAllText(graph, """{"runtimes":{"specific":{"#import":["any"]},"any":{}}}""");
         first[0].SetMetadata("RuntimeGraphPath", ProjectCollection.Escape(graph));
@@ -152,6 +296,8 @@ public class GivenRawFrameworkPackInputs
         var translator = new WriteFrameworkRestoreInputs { BuildEngine = engine, Requests = [.. first, .. second] };
         Assert.IsTrue(translator.Execute(), string.Join("\n", engine.Errors));
         Assert.AreEqual(1, translator.WrittenModels);
+        Assert.AreEqual(first[0].GetMetadata("OutputFile"),
+            ProjectCollection.Unescape(XDocument.Load(locator).Root!.Element("PropertyGroup")!.Element("FrameworkPackInputsPath")!.Value));
         string output = first[0].GetMetadata("OutputFile");
         (ITaskItem[] facts, ITaskItem[] resources) = PackFixture.ReadCapture(output);
         Assert.IsNull(XDocument.Load(output).Root!.Element("PropertyGroup")!.Element("_FrameworkReferencePlatformSDKFactsVersion"));
@@ -236,17 +382,26 @@ public class GivenRawFrameworkPackInputs
     {
         using var fixture = new PackFixture(usePathFallback: false);
         ITaskItem[] bindings = fixture.Bindings();
+        string locator = fixture.Environment.GetAbsolutePath("obj/frameworkpackinputs/Project.csproj.g.props").Value;
+        bindings[0].SetMetadata("LocatorFile", ProjectCollection.Escape(locator));
         var translator = new WriteFrameworkRestoreInputs { BuildEngine = new RecordingEngine(), Requests = bindings };
         Assert.IsTrue(translator.Execute());
         string file = bindings[0].GetMetadata("OutputFile");
         string expected = File.ReadAllText(file);
         string resource = ImportedResourceFile(file);
         string expectedResource = File.ReadAllText(resource);
+        string catalog = Path.Combine(bindings[0].GetMetadata("ResourceDirectory"), "platform-sdk-display-names.g.props");
+        string expectedCatalog = File.ReadAllText(catalog);
         File.Delete(file);
         File.Delete(resource);
+        File.Delete(locator);
+        File.Delete(catalog);
         Assert.IsTrue(translator.Execute());
         Assert.AreEqual(expected, File.ReadAllText(file));
         Assert.AreEqual(expectedResource, File.ReadAllText(resource));
+        Assert.AreEqual(expectedCatalog, File.ReadAllText(catalog));
+        Assert.AreEqual(file, ProjectCollection.Unescape(
+            XDocument.Load(locator).Root!.Element("PropertyGroup")!.Element("FrameworkPackInputsPath")!.Value));
         Assert.AreEqual(1, translator.WrittenModels);
     }
 
@@ -705,7 +860,8 @@ public class GivenRawFrameworkPackInputs
     }
 
     private static string ImportedResourceFile(string outputFile) => ProjectCollection.Unescape(
-        XDocument.Load(outputFile).Root!.Elements("Import").Single().Attribute("Project")!.Value);
+        XDocument.Load(outputFile).Root!.Elements("Import").Select(import => import.Attribute("Project")!.Value)
+            .Single(path => Path.GetFileName(path) != "platform-sdk-display-names.g.props"));
 
     private static TaskItem Item(string identity, params (string Name, string Value)[] metadata)
     {
@@ -837,7 +993,7 @@ public class GivenRawFrameworkPackInputs
             ITaskItem[] facts = project.Element("ItemGroup")!.Elements().Select(ReadItem).ToArray();
             ITaskItem[] resources = project.Elements("Import").SelectMany(import =>
                 XDocument.Load(ProjectCollection.Unescape(import.Attribute("Project")!.Value))
-                    .Root!.Element("ItemGroup")!.Elements().Select(ReadItem)).ToArray();
+                    .Root!.Element("ItemGroup")!.Elements("_FrameworkPackResource").Select(ReadItem)).ToArray();
             Assert.AreEqual(1, resources.Count(item => item.GetMetadata("Kind") == "Pack"));
             return (facts, resources);
         }

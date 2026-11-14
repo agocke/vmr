@@ -25,6 +25,7 @@ public sealed class WriteFrameworkRestoreInputs : TaskBase
             Dictionary<string, List<ITaskItem>> inputs = new(StringComparer.Ordinal);
             Dictionary<string, string[]> foldersByAssets = new(paths);
             HashSet<string> sourceFiles = new(paths);
+            Dictionary<string, string> locators = new(paths);
             foreach (ITaskItem request in Requests)
             {
                 if (request.GetMetadata("Type") == "FrameworkPackInputRequest")
@@ -69,6 +70,22 @@ public sealed class WriteFrameworkRestoreInputs : TaskBase
             }
 
             List<WriteFrameworkPackInputs> writers = [];
+            HashSet<string> outputFiles = new(headers.Values.Select(request => Absolute(request, "OutputFile")), paths);
+            foreach (ITaskItem request in headers.Values)
+            {
+                string locator = OptionalAbsolute(request, "LocatorFile");
+                string output = Absolute(request, "OutputFile");
+                if (locator.Length == 0)
+                {
+                    continue;
+                }
+                if (sourceFiles.Contains(locator) || outputFiles.Contains(locator) ||
+                    (locators.TryGetValue(locator, out string? previous) && !paths.Equals(previous, output)))
+                {
+                    throw new FormatException($"Conflicting framework-pack acquisition locator '{locator}'.");
+                }
+                locators[locator] = output;
+            }
             foreach (IGrouping<string, ITaskItem> group in headers.Values.GroupBy(request => Absolute(request, "OutputFile"), paths))
             {
                 if (sourceFiles.Contains(group.Key))
@@ -139,7 +156,23 @@ public sealed class WriteFrameworkRestoreInputs : TaskBase
                         return (ITaskItem)item;
                     })).ToArray(),
                     CapturePlatformSDK = false,
+                    PlatformSDKInputsFile = Path.Combine(Absolute(first, "ResourceDirectory"), "platform-sdk-display-names.g.props"),
                 });
+            }
+            string[] platformFiles = writers.Select(writer => writer.PlatformSDKInputsFile).Distinct(paths).ToArray();
+            foreach (string file in platformFiles)
+            {
+                if (sourceFiles.Contains(file) || outputFiles.Contains(file) || locators.ContainsKey(file))
+                {
+                    throw new FormatException("Platform SDK facts cannot overwrite acquisition inputs or bindings.");
+                }
+            }
+            XElement[] platformNames = writers.Count == 0 ? [] : PlatformSDKInputs.Capture().ToArray();
+            foreach (string file in platformFiles)
+            {
+                PlatformSDKInputs.Write(file, new XElement("Project",
+                    new XElement("PropertyGroup", new XElement("_PlatformSDKDisplayNamesVersion", "1")),
+                    new XElement("ItemGroup", platformNames)));
             }
             foreach (WriteFrameworkPackInputs writer in writers)
             {
@@ -148,6 +181,12 @@ public sealed class WriteFrameworkRestoreInputs : TaskBase
                     return;
                 }
                 WrittenModels++;
+            }
+            foreach (var locator in locators)
+            {
+                PlatformSDKInputs.Write(locator.Key, new XElement("Project",
+                    new XElement("PropertyGroup", new XElement("FrameworkPackInputsPath",
+                        ProjectCollection.Escape(locator.Value)))));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or ArgumentException

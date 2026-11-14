@@ -47,6 +47,7 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
     public string TargetPlatformIdentifier { get; set; } = "";
     public string TargetPlatformVersion { get; set; } = "";
     public string TargetPlatformDisplayName { get; set; } = "";
+    public string PlatformSDKInputsFile { get; set; } = "";
 
     protected override void ExecuteCore()
     {
@@ -189,11 +190,13 @@ public sealed class WriteFrameworkPackInputs : TaskBase, IMultiThreadableTask
                 new XElement("_FrameworkReferenceFetchManifestVersion", "2"),
                 new XElement("_RawFrameworkPackFactsVersion", "2"),
                 new XElement("_FrameworkReferenceConflictFactsVersion", "1"),
-                CapturePlatformSDK ? WriteFrameworkPlatformInputs.Properties(
+                CapturePlatformSDK ? PlatformSDKInputs.LegacyProperties(
                     TargetPlatformIdentifier, TargetPlatformVersion, TargetPlatformDisplayName) : null,
                 new XElement("_UsingFrameworkReferenceManifest", "true"),
                 new XElement("DisableCheckingDuplicateNuGetItems", "true"),
                 new XElement("UseAppHostFromAssetsFile", "false")),
+            PlatformSDKInputsFile.Length == 0 ? null : new XElement("Import",
+                new XAttribute("Project", ProjectCollection.Escape(PlatformSDKInputsFile))),
             imports,
             new XElement("ItemGroup", facts.Select(FactElement)));
         Write(OutputFile, project);

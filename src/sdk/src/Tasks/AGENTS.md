@@ -54,12 +54,20 @@ reuses SDK selection with those resources during graph construction, without
 filesystem/workload discovery fallback. Archive member inventories preserve
 analyzer companions absent from FrameworkList; loose packs need explicit catalogs
 when FrameworkList is incomplete. `_CompilerFrameworkFile` supplies these candidates
-to final analyzer dependency selection. Platform display-name observations and the
-shared pack-manifest locator remain in the narrow configured
-[`WriteFrameworkPlatformInputs`](Microsoft.NET.Build.Tasks/WriteFrameworkPlatformInputs.cs)
-producer. Import that locator before the shared facts so alternate Build entry
-points find the original acquisition scope. The configured preparation walk remains;
+to final analyzer dependency selection.
+[`PlatformSDKInputs`](Microsoft.NET.Build.Tasks/PlatformSDKInputs.cs) compiles installed
+SDK display-name overrides once at the acquisition boundary, including registered aliases.
+[`GetPlatformSDKDisplayNameFromInputs`](Microsoft.NET.Build.Tasks/GetPlatformSDKDisplayNameFromInputs.cs)
+selects the current query's name from those native items without I/O, retaining the
+ordinary identifier/version fallback. The SDK's late display-name fixup runs at framework
+metadata-query/validation time in direct hardened mode, not during evaluation.
+Acquisition also publishes the unconfigured `frameworkpackinputs/$(MSBuildProjectFile).g.props`
+locator. Import it before the shared facts so alternate Build entry points find the
+original acquisition scope. No configured framework/platform writer is registered
+in direct mode. Other preparation producers and the configured walk remain;
 do not add reference traversal or new selection passes just to collect resource facts.
+The SDK schedules `_CaptureApiCompatInputs` independently in direct preparation;
+its default-suppression observation must not depend on the removed framework hook.
 Native pack format 2 compiles FrameworkList attributes, platform rows, package override
 relationships and SDK runtime-graph records into item metadata during acquisition.
 Do not embed original resource text in `Content` or reparse it during construction;

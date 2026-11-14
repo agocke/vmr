@@ -23,17 +23,21 @@ Copyright (c) .NET Foundation. All rights reserved.
     <FrameworkPackResourceDirectory Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(FrameworkPackResourceDirectory)' == ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(MSBuildProjectExtensionsPath)', 'framework-pack-resources'))</FrameworkPackResourceDirectory>
     <FrameworkPackInputsPath Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(FrameworkPackInputsPath)' == ''">$(FrameworkPackResourceDirectory)inputs.g.props</FrameworkPackInputsPath>
     <FrameworkPackInputsPath Condition="'$(_FrameworkPackDirectInputs)' == 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(FrameworkPackInputsPath)'))</FrameworkPackInputsPath>
+    <FrameworkPackInputsLocatorPath Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(FrameworkPackInputsLocatorPath)' == ''">$(MSBuildProjectExtensionsPath)frameworkpackinputs/$(MSBuildProjectFile).g.props</FrameworkPackInputsLocatorPath>
+    <FrameworkPackInputsLocatorPath Condition="'$(_FrameworkPackDirectInputs)' == 'true'">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(FrameworkPackInputsLocatorPath)'))</FrameworkPackInputsLocatorPath>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)..\targets\Microsoft.NET.RuntimeGraphInputs.targets"
           Condition="'$(MSBuildGraphNuGetInputsTaskAssembly)' != '' And '$(_RuntimeGraphInputsTargetsImported)' != 'true'" />
 
   <Import Project="$(FrameworkReferenceFetchManifestPath)"
-          Condition="'$(EnableFrameworkReferenceFetchManifest)' == 'true' and
+          Condition="'$(_FrameworkPackDirectInputs)' != 'true' and '$(EnableFrameworkReferenceFetchManifest)' == 'true' and
                      ('$(MSBuildHardenedGraph)' != 'true' or '$(TargetFramework)' != '') and
                      '$(MSBuildIsRestoring)' != 'true' and
                      ('$(MSBuildHardenedGraph)' == 'true' or '$(MSBuildRestoreGraphInputs)' != 'true')" />
 
+  <Import Project="$(FrameworkPackInputsLocatorPath)"
+          Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(MSBuildHardenedGraph)' == 'true' And '$(TargetFramework)' != ''" />
   <Import Project="$(FrameworkPackInputsPath)"
           Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(MSBuildHardenedGraph)' == 'true' And '$(TargetFramework)' != ''" />
   <ItemGroup Condition="'$(_FrameworkPackDirectInputs)' == 'true' And '$(MSBuildHardenedGraph)' == 'true'">
@@ -100,7 +104,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     Condition="$(_IsNotSetContainersTargetsDir) AND Exists('$(_ContainersTargetsDir)Microsoft.NET.Build.Containers.targets')" />
 
   <PropertyGroup>
-    <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_CaptureNuGetInputs;_GenerateFrameworkReferenceFetchManifest</MSBuildPrepareGraphInputsDependsOn>
+    <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_CaptureNuGetInputs</MSBuildPrepareGraphInputsDependsOn>
+    <MSBuildPrepareGraphInputsDependsOn Condition="'$(_FrameworkPackDirectInputs)' != 'true'">$(MSBuildPrepareGraphInputsDependsOn);_GenerateFrameworkReferenceFetchManifest</MSBuildPrepareGraphInputsDependsOn>
+    <MSBuildPrepareGraphInputsDependsOn Condition="'$(_FrameworkPackDirectInputs)' == 'true'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureApiCompatInputs</MSBuildPrepareGraphInputsDependsOn>
     <MSBuildPrepareGraphInputsDependsOn Condition="'$(Language)' == 'C#'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureCscToolInputs</MSBuildPrepareGraphInputsDependsOn>
     <MSBuildPrepareGraphInputsDependsOn Condition="'$(Language)' == 'VB'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureVbcToolInputs</MSBuildPrepareGraphInputsDependsOn>
     <_CaptureNuGetInputsDependsOn Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">_ResolveCompilerVersion</_CaptureNuGetInputsDependsOn>

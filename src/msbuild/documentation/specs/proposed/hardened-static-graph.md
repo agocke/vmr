@@ -445,14 +445,21 @@ Graph construction never initializes or advances the marker. Ordinary builds
 retain `Touch`; its explicit clock read and preservation of prior marker bytes
 are not asserted as a deterministic action contract.
 
-Framework snapshots live in
+Legacy opt-in framework snapshots live in
 `$(MSBuildProjectExtensionsPath)frameworkreferences/$(MSBuildProjectFile).g.props`;
 repository snapshots live in
 `$(MSBuildProjectExtensionsPath)sourcelink/$(MSBuildProjectFile).g.targets`.
-For SDK graph-input preparation and hardened replay, both defaults insert
+For configured legacy framework capture and repository replay, those defaults insert
 `$(Configuration)/$(Platform)/$(TargetFramework)/` beneath the snapshot directory;
-explicit legacy manifest switches retain the unqualified defaults. NuGet and
-compiler inputs use the same configuration-qualified layout. Other input-affecting
+explicit legacy manifest switches retain the unqualified defaults. Direct acquisition
+instead publishes an unconfigured
+`$(MSBuildProjectExtensionsPath)frameworkpackinputs/$(MSBuildProjectFile).g.props`
+locator for shared pack facts. Those facts import an acquisition-time native catalog
+of installed platform SDK display-name overrides. Framework metadata queries select
+the current platform's name without I/O, or derive the ordinary identifier/version
+fallback; they do not require a matching configured acquisition visit.
+NuGet models use an unconfigured per-project manifest as well; compiler marker
+imports still use the configuration-qualified layout. Other input-affecting
 global properties require distinct intermediate paths.
 Dedicated directories prevent automatic Common project-extension imports from
 replaying stale snapshots during Restore. Capture ignores existing snapshots

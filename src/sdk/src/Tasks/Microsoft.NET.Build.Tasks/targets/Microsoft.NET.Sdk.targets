@@ -1674,18 +1674,29 @@ Copyright (c) .NET Foundation. All rights reserved.
     <TargetPlatformMoniker>$(TargetPlatformIdentifier),Version=$(TargetPlatformVersion)</TargetPlatformMoniker>
     <TargetPlatformDisplayName Condition="'$(MSBuildHardenedGraph)' != 'true'">$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPlatformSDKDisplayName($(TargetPlatformIdentifier), $(TargetPlatformVersion)))</TargetPlatformDisplayName>
     <_UsingPreparedTargetPlatformDisplayName Condition="'$(MSBuildHardenedGraph)' == 'true'">true</_UsingPreparedTargetPlatformDisplayName>
-    <TargetPlatformDisplayName Condition="'$(MSBuildHardenedGraph)' == 'true'">$(_FrameworkReferenceManifestTargetPlatformDisplayName)</TargetPlatformDisplayName>
+    <TargetPlatformDisplayName Condition="'$(MSBuildHardenedGraph)' == 'true' And '$(_FrameworkPackDirectInputs)' != 'true'">$(_FrameworkReferenceManifestTargetPlatformDisplayName)</TargetPlatformDisplayName>
   </PropertyGroup>
 
+  <UsingTask TaskName="GetPlatformSDKDisplayNameFromInputs" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <Target Name="_ValidatePreparedTargetPlatformDisplayName"
           BeforeTargets="GetTargetFrameworksWithPlatformForSingleTargetFramework;GetTargetPathWithTargetPlatformMoniker;_CheckForInvalidConfigurationAndPlatform;Build"
           Condition="'$(_UsingPreparedTargetPlatformDisplayName)' == 'true'">
-    <NETSdkError Condition="'$(_FrameworkReferencePlatformSDKFactsVersion)' != '1' or
+    <NETSdkError Condition="('$(_FrameworkPackDirectInputs)' == 'true' And '$(_PlatformSDKDisplayNamesVersion)' != '1') Or
+                           ('$(_FrameworkPackDirectInputs)' != 'true' And
+                           ('$(_FrameworkReferencePlatformSDKFactsVersion)' != '1' or
                            '$(_FrameworkReferenceManifestTargetPlatformIdentifier)' != '$(TargetPlatformIdentifier)' or
-                           '$(_FrameworkReferenceManifestTargetPlatformVersion)' != '$(TargetPlatformVersion)'"
+                           '$(_FrameworkReferenceManifestTargetPlatformVersion)' != '$(TargetPlatformVersion)'))"
                  ResourceName="InvalidPlatformSDKInputFacts"
                  DeclaredInputs="" DeclaredOutputs=""
                  FormatArguments="$(TargetPlatformIdentifier);$(TargetPlatformVersion)" />
+    <GetPlatformSDKDisplayNameFromInputs Condition="'$(_FrameworkPackDirectInputs)' == 'true'"
+                                        InputsVersion="$(_PlatformSDKDisplayNamesVersion)"
+                                        SdkDisplayNames="@(_PlatformSDKDisplayName)"
+                                        TargetPlatformIdentifier="$(TargetPlatformIdentifier)"
+                                        TargetPlatformVersion="$(TargetPlatformVersion)"
+                                        DeclaredInputs="" DeclaredOutputs="">
+      <Output TaskParameter="DisplayName" PropertyName="TargetPlatformDisplayName" />
+    </GetPlatformSDKDisplayNameFromInputs>
   </Target>
 
   <PropertyGroup>

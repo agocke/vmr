@@ -18,6 +18,7 @@ public sealed class CollectFrameworkPackInputs : TaskBase
     public string OutputFile { get; set; } = "";
     [Required]
     public string ResourceDirectory { get; set; } = "";
+    public string LocatorFile { get; set; } = "";
     public string TargetingPackRoot { get; set; } = "";
     public string NetCoreRoot { get; set; } = "";
     public string NETCoreSdkVersion { get; set; } = "";
@@ -38,6 +39,7 @@ public sealed class CollectFrameworkPackInputs : TaskBase
         Set(header, "AssetsFile", Absolute(AssetsFile));
         Set(header, "OutputFile", Absolute(OutputFile));
         Set(header, "ResourceDirectory", Absolute(ResourceDirectory));
+        Set(header, "LocatorFile", Absolute(LocatorFile));
         Set(header, "TargetingPackRoot", Absolute(TargetingPackRoot));
         Set(header, "NetCoreRoot", Absolute(NetCoreRoot));
         Set(header, "NETCoreSdkVersion", NETCoreSdkVersion);

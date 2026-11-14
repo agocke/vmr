@@ -21,7 +21,12 @@
     <Error Condition="!Exists('$(MSBuildProjectDirectory)/Library/obj/nugetinputs/Library.csproj.g.props')"
            Text="Child NuGet facts must exist immediately after root acquisition without running child Restore or capture targets." />
     <Error Condition="'@(_PackInputRequest->Count())' != '4' Or '$(_FrameworkPackInputModelsWritten)' != '1' Or
-                      !Exists('$(MSBuildGraphSdkBindingsDirectory)/framework-pack-resources/inputs.g.props')"
+                      !Exists('$(MSBuildGraphSdkBindingsDirectory)/framework-pack-resources/inputs.g.props') Or
+                      !Exists('$(MSBuildGraphSdkBindingsDirectory)/framework-pack-resources/platform-sdk-display-names.g.props') Or
+                      !Exists('$(MSBuildProjectDirectory)/Library/obj/frameworkpackinputs/Library.csproj.g.props') Or
+                      '@(_PackInputRequest->'%(LocatorFile)'->Distinct()->Count())' != '1'"
            Text="All acquisition contexts must contribute framework-pack bindings to one post-acquisition translation without child preparation." />
+    <Error Condition="Exists('$(MSBuildProjectDirectory)/Library/obj/frameworkreferences')"
+           Text="Acquisition must not publish configured framework-reference or platform display snapshots." />
   </Target>
 </Project>
