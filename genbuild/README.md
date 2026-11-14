@@ -392,14 +392,21 @@ for compilation. Each reached configuration receives ordinary Restore followed
 by fresh local capture, without recursively requesting its compilation references.
 Nested Restore requests remove the capture selector, allowing discovery and
 selected-framework preparation to share the same ordinary Restore configuration.
-Framework, NuGet, compiler, and enabled source-control imports
-remain required during hardened evaluation; incomplete capture fails rather than
+Acquired framework, NuGet, Common cache/platform, and enabled source-control imports
+remain required during hardened evaluation; missing facts fail rather than
 being hidden by optional imports. There is no metadata-only mode or discovery
 fallback. The [packaged regression](tests/DiscoveryPreparation.csproj) requires
-facts for all four inspected frameworks, checks fresh Restore-generated imports
-and ordinary/hardened metadata parity,
-and independently compiles only the negotiated dependency. Missing facts for an
-inspected but uncompiled framework fail its required imports.
+facts for all four inspected frameworks using only ordinary NuGet acquisition
+visits from a [plain root](tests/DiscoveryAcquisition.proj). It rejects child
+Restore, capture and configured reference preparation. Cold acquisition fetches
+a local package whose Build authoring adds framework metadata; fresh ordinary
+and hardened Build return identical metadata, including the package's values
+for every framework. Up-to-date acquisition republishes deleted native facts.
+Missing NuGet, framework, source-control, unmanaged-cache or .NET Framework
+platform-SDK facts fail their required imports without publishing a partial graph.
+Independent execution compiles only the negotiated dependency. This proves the
+acquisition/Build boundary for this fixture; the general configured preparation
+traversal described above remains until its separate cutover.
 The legacy framework-installation lookup is disabled by default in hardened SDK
 evaluation, including .NET Framework metadata probes.
 An isolated hardened metadata probe of runtime's actual reference project

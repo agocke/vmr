@@ -562,7 +562,10 @@
       <_PreparedFactsHostOS Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_PreparedFactsHostOS>
       <_PreparedFactsHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_PreparedFactsHostOS>
       <_PreparedFactsHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_PreparedFactsHostOS>
-      <_PreparedFactsArguments>-p:DirectoryBuildPropsPath=&quot;$(_PreparedFactsRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_PreparedFactsRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_PreparedFactsRoot)Directory.Packages.props&quot; -p:MSBuildGraphHostOS=$(_PreparedFactsHostOS)</_PreparedFactsArguments>
+      <_PreparedFactsFallbackFolder>$(NUGET_PACKAGES)</_PreparedFactsFallbackFolder>
+      <_PreparedFactsFallbackFolder Condition="'$(_PreparedFactsFallbackFolder)' == ''">$([System.Environment]::GetFolderPath(SpecialFolder.UserProfile))/.nuget/packages</_PreparedFactsFallbackFolder>
+      <_PreparedFactsPackage>$(_PreparedFactsRoot)packages/genbuild.discovery.metadata/1.0.0/</_PreparedFactsPackage>
+      <_PreparedFactsArguments>-p:DirectoryBuildPropsPath=&quot;$(_PreparedFactsRoot)Directory.Build.props&quot; -p:DirectoryBuildTargetsPath=&quot;$(_PreparedFactsRoot)Directory.Build.targets&quot; -p:DirectoryPackagesPropsPath=&quot;$(_PreparedFactsRoot)Directory.Packages.props&quot; -p:MSBuildGraphHostOS=$(_PreparedFactsHostOS) -p:RestorePackagesPath=&quot;$(_PreparedFactsRoot)packages&quot; -p:NuGetPackageRoot=&quot;$(_PreparedFactsRoot)packages/&quot; -p:RestoreFallbackFolders=&quot;$(_PreparedFactsFallbackFolder)&quot; -p:RestoreAdditionalProjectSources=&quot;$(_PreparedFactsRoot)feed&quot;</_PreparedFactsArguments>
     </PropertyGroup>
     <MakeDir Directories="$(_PreparedFactsRoot)App;$(_PreparedFactsRoot)Library" />
     <WriteLinesToFile File="$(_PreparedFactsRoot)Directory.Build.props" Lines="&lt;Project /&gt;" Overwrite="true" />
@@ -570,7 +573,14 @@
     <WriteLinesToFile File="$(_PreparedFactsRoot)Directory.Packages.props" Lines="&lt;Project /&gt;" Overwrite="true" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)DiscoveryPreparation.csproj;$(MSBuildThisFileDirectory)DiscoveryPreparation.csproj;$(MSBuildThisFileDirectory)ProjectReference/Metadata.proj;$(MSBuildThisFileDirectory)ProjectReference/App/Program.cs;$(MSBuildThisFileDirectory)ProjectReference/Library/Greeting.cs"
           DestinationFiles="$(_PreparedFactsRoot)App/App.csproj;$(_PreparedFactsRoot)Library/Library.csproj;$(_PreparedFactsRoot)Metadata.proj;$(_PreparedFactsRoot)App/Program.cs;$(_PreparedFactsRoot)Library/Greeting.cs" />
-    <Exec Command="$(_App) restore &quot;$(_PreparedFactsRoot)App/App.csproj&quot; $(_PreparedFactsArguments) -bl:&quot;$(_PreparedFactsRoot)restore.binlog&quot;" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)DiscoveryAcquisition.proj" DestinationFiles="$(_PreparedFactsRoot)Root.proj" />
+    <MakeDir Directories="$(_PreparedFactsRoot)package/build;$(_PreparedFactsRoot)feed" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)DiscoveryPackage.targets" DestinationFiles="$(_PreparedFactsRoot)package/build/GenBuild.Discovery.Metadata.targets" />
+    <WriteLinesToFile File="$(_PreparedFactsRoot)package/GenBuild.Discovery.Metadata.nuspec"
+                      Lines="&lt;package&gt;&lt;metadata&gt;&lt;id&gt;GenBuild.Discovery.Metadata&lt;/id&gt;&lt;version&gt;1.0.0&lt;/version&gt;&lt;authors&gt;genbuild&lt;/authors&gt;&lt;description&gt;Fresh Build framework metadata fixture&lt;/description&gt;&lt;/metadata&gt;&lt;/package&gt;" Overwrite="true" />
+    <ZipDirectory SourceDirectory="$(_PreparedFactsRoot)package" DestinationFile="$(_PreparedFactsRoot)feed/GenBuild.Discovery.Metadata.1.0.0.nupkg" />
+    <Error Condition="Exists('$(_PreparedFactsPackage)')" Text="Discovery acquisition must start with a cold metadata package." />
+    <Exec Command="$(_App) restore &quot;$(_PreparedFactsRoot)Root.proj&quot; $(_PreparedFactsArguments) -bl:&quot;$(_PreparedFactsRoot)restore.binlog&quot;" />
     <ItemGroup>
       <_PreparedFactKind Include="frameworkpackinputs;nugetinputs;sourcelink">
         <ManifestExtension>props</ManifestExtension>
@@ -581,7 +591,9 @@
       <_DiscoveredPreparedFramework Include="net11.0;net10.0;netstandard2.0;net462" />
       <_DiscoveredPreparedFact Include="$(_PreparedFactsRoot)Library/obj/frameworkpackinputs/Library.csproj.g.props;
                                        $(_PreparedFactsRoot)Library/obj/nugetinputs/Library.csproj.g.props;
-                                       @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/sourcelink/Debug/AnyCPU/%(Identity)/Library.csproj.g.targets')" />
+                                       @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/sourcelink/Debug/AnyCPU/%(Identity)/Library.csproj.g.targets');
+                                       @(_DiscoveredPreparedFramework->'$(_PreparedFactsRoot)Library/obj/hardened/Debug/AnyCPU/%(Identity)/Library.csproj.UnmanagedRegistration.cache.props');
+                                       $(_PreparedFactsRoot)Library/obj/hardened/Debug/AnyCPU/net462/Library.csproj.platform-sdk.props" />
       <_MissingDiscoveredPreparedFact Include="@(_PreparedFactKind)">
         <Path>$(_PreparedFactsRoot)Library/obj/%(Identity)/Debug/AnyCPU/net10.0/Library.csproj.g.%(ManifestExtension)</Path>
       </_MissingDiscoveredPreparedFact>
@@ -591,13 +603,33 @@
       <_MissingDiscoveredPreparedFact Condition="'%(_MissingDiscoveredPreparedFact.Identity)' == 'frameworkpackinputs'">
         <Path>$(_PreparedFactsRoot)Library/obj/frameworkpackinputs/Library.csproj.g.props</Path>
       </_MissingDiscoveredPreparedFact>
+      <_MissingDiscoveredPreparedFact Include="UnmanagedRegistration.cache.props">
+        <Path>$(_PreparedFactsRoot)Library/obj/hardened/Debug/AnyCPU/net10.0/Library.csproj.UnmanagedRegistration.cache.props</Path>
+      </_MissingDiscoveredPreparedFact>
+      <_MissingDiscoveredPreparedFact Include="platform-sdk">
+        <Path>$(_PreparedFactsRoot)Library/obj/hardened/Debug/AnyCPU/net462/Library.csproj.platform-sdk.props</Path>
+      </_MissingDiscoveredPreparedFact>
     </ItemGroup>
     <Error Condition="!Exists('%(_DiscoveredPreparedFact.Identity)')"
-           Text="Restore must capture inputs for every configured framework request reached during discovery: %(_DiscoveredPreparedFact.Identity)" />
+           Text="Ordinary acquisition visits must publish required discovery facts: %(_DiscoveredPreparedFact.Identity)" />
+    <Error Condition="!Exists('$(_PreparedFactsPackage)build/GenBuild.Discovery.Metadata.targets')"
+           Text="Root acquisition must acquire the package authoring used by fresh Build discovery." />
+    <GetFileHash Files="@(_DiscoveredPreparedFact)">
+      <Output TaskParameter="Items" ItemName="_DiscoveryFactsBeforeRepublication" />
+    </GetFileHash>
+    <Delete Files="@(_DiscoveredPreparedFact)" />
+    <Exec Command="$(_App) restore &quot;$(_PreparedFactsRoot)Root.proj&quot; $(_PreparedFactsArguments) -bl:&quot;$(_PreparedFactsRoot)up-to-date.binlog&quot;" />
+    <Error Condition="!Exists('%(_DiscoveredPreparedFact.Identity)')"
+           Text="Up-to-date acquisition must republish deleted discovery facts: %(_DiscoveredPreparedFact.Identity)" />
+    <GetFileHash Files="@(_DiscoveredPreparedFact)">
+      <Output TaskParameter="Items" ItemName="_DiscoveryFactsAfterRepublication" />
+    </GetFileHash>
+    <Error Condition="'@(_DiscoveryFactsBeforeRepublication->'%(FileHash)')' != '@(_DiscoveryFactsAfterRepublication->'%(FileHash)')'"
+           Text="Up-to-date acquisition must preserve the native discovery facts for unchanged inputs." />
     <Error Condition="Exists('$(_PreparedFactsRoot)App/bin') or Exists('$(_PreparedFactsRoot)Library/bin') or
                       Exists('$(_PreparedFactsRoot)Library/obj/sourcelink/Release')"
-           Text="Discovery-inclusive capture must not compile products or synthesize unrequested configurations." />
-    <Exec Command="$(_App) restore &quot;$(_PreparedFactsRoot)Metadata.proj&quot; -t:Build $(_PreparedFactsArguments) -p:MetadataFile=ordinary.txt -bl:&quot;$(_PreparedFactsRoot)ordinary.binlog&quot;" />
+           Text="Acquisition must not compile products or synthesize unrequested configurations." />
+    <Exec Command="$(_App) restore &quot;$(_PreparedFactsRoot)Metadata.proj&quot; -t:Build $(_PreparedFactsArguments) -p:MSBuildRestoreGraphInputs=false -p:MetadataFile=ordinary.txt -bl:&quot;$(_PreparedFactsRoot)ordinary.binlog&quot;" />
     <Exec Command="$(_App) build &quot;$(_PreparedFactsRoot)Metadata.proj&quot; $(_PreparedFactsArguments) -p:MetadataFile=discovered.txt -p:MSBuildEmitActionGraph=&quot;$(_PreparedFactsRoot)discovered-metadata.ninja&quot; -bl:&quot;$(_PreparedFactsRoot)discovered-metadata.binlog&quot;" />
     <Error Condition="Exists('$(_PreparedFactsRoot)discovered.txt') or Exists('$(_PreparedFactsRoot)App/bin') or Exists('$(_PreparedFactsRoot)Library/bin')"
            Text="Metadata graph construction must not execute actions or compile projects." />
@@ -608,8 +640,13 @@
     <ReadLinesFromFile File="$(_PreparedFactsRoot)discovered.txt">
       <Output TaskParameter="Lines" PropertyName="_PreparedFactsMetadata" />
     </ReadLinesFromFile>
-    <Error Condition="@(_PreparedFactsMetadataHash->'%(FileHash)'->Distinct()->Count()) != '1' or !$(_PreparedFactsMetadata.Contains('net11.0;net10.0;netstandard2.0;net462'))"
-           Text="Prepared discovery must advertise every framework and match ordinary execution." />
+    <Error Condition="@(_PreparedFactsMetadataHash->'%(FileHash)'->Distinct()->Count()) != '1' or
+                      !$(_PreparedFactsMetadata.Contains('net11.0;net10.0;netstandard2.0;net462')) or
+                      !$(_PreparedFactsMetadata.Contains('net11.0:from-acquired-package')) or
+                      !$(_PreparedFactsMetadata.Contains('net10.0:from-acquired-package')) or
+                      !$(_PreparedFactsMetadata.Contains('netstandard2.0:from-acquired-package')) or
+                      !$(_PreparedFactsMetadata.Contains('net462:from-acquired-package'))"
+           Text="Fresh Build must import acquired package authoring for every framework and match ordinary metadata." />
     <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="TestMissingDiscoveredPreparedFact"
              Properties="GenBuildApp=$(GenBuildApp);GenBuildTestHost=$(GenBuildTestHost);PreparedFactsRoot=$(_PreparedFactsRoot);PreparedFactPath=%(_MissingDiscoveredPreparedFact.Path);PreparedFactKind=%(_MissingDiscoveredPreparedFact.Identity);PreparedFactsHostOS=$(_PreparedFactsHostOS)" />
     <Exec Command="$(_App) build &quot;$(_PreparedFactsRoot)App/App.csproj&quot; $(_PreparedFactsArguments) -p:MSBuildEmitActionGraph=&quot;$(_PreparedFactsRoot)build.ninja&quot; -bl:&quot;$(_PreparedFactsRoot)build.binlog&quot;" />

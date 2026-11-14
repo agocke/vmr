@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <TargetFramework>net11.0</TargetFramework>
+    <TargetFrameworkMoniker>.NETCoreApp,Version=v11.0</TargetFrameworkMoniker>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/Root/</MSBuildProjectExtensionsPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="App/App.csproj" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)/NuGet.targets" />
+</Project>

@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <DiscoveryPackageMetadata>$(TargetFramework):from-acquired-package</DiscoveryPackageMetadata>
+  </PropertyGroup>
+  <ItemGroup>
+    <AdditionalTargetFrameworkInfoProperty Include="DiscoveryPackageMetadata" />
+  </ItemGroup>
+</Project>
