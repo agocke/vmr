@@ -655,6 +655,13 @@ explicit readonly backing fields in `PasswordBasedEncryption` and the DNS record
 types. This also avoids the problematic path with Debug compiler assertions
 enabled; no escape checks were relaxed.
 
+ApiCompat's default suppression-file presence is now observed after successful
+root acquisition, from SDK-visible bindings independent of package imports and
+configured validation settings. Fresh Build shares one unconfigured fact file
+across frameworks and selects the references and suppression inputs normally.
+Up-to-date Restore refreshes negative facts and republishes deleted files without
+child Restore or capture. The remaining preparation traversal is not yet removed.
+
 The 5,321-action libraries graph now completes through resumed execution using
 an experimental copied Ninja graph with 417 conservative adjacent-action
 fork/join diamonds. The final resume completes 1,514 actions in 440 seconds;

@@ -18,11 +18,14 @@
     <Copy SourceFiles="$(MSBuildThisFileDirectory)NuGetAcquisitionInputs.proj;$(MSBuildThisFileDirectory)NuGetAcquisitionInputs.csproj"
           DestinationFiles="$(_NuGetAcquisitionRoot)Root.proj;$(_NuGetAcquisitionRoot)Library/Library.csproj" />
     <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -bl:&quot;$(_NuGetAcquisitionRoot)restore.binlog&quot;" />
-    <Delete Files="$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props;$(_NuGetAcquisitionRoot)Library/obj/frameworkpackinputs/Library.csproj.g.props;$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/inputs.g.props;$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/platform-sdk-display-names.g.props" />
+    <Delete Files="$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props;$(_NuGetAcquisitionRoot)Library/obj/frameworkpackinputs/Library.csproj.g.props;$(_NuGetAcquisitionRoot)Library/obj/apicompatinputs/Library.csproj.g.props;$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/inputs.g.props;$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/platform-sdk-display-names.g.props" />
     <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -p:MSBuildRestoreGraphInputs=false -bl:&quot;$(_NuGetAcquisitionRoot)ordinary.binlog&quot;" />
-    <Error Condition="Exists('$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props') Or Exists('$(_NuGetAcquisitionRoot)Library/obj/frameworkpackinputs/Library.csproj.g.props') Or Exists('$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/inputs.g.props') Or Exists('$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/platform-sdk-display-names.g.props')"
+    <Error Condition="Exists('$(_NuGetAcquisitionRoot)Library/obj/nugetinputs/Library.csproj.g.props') Or Exists('$(_NuGetAcquisitionRoot)Library/obj/frameworkpackinputs/Library.csproj.g.props') Or Exists('$(_NuGetAcquisitionRoot)Library/obj/apicompatinputs/Library.csproj.g.props') Or Exists('$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/inputs.g.props') Or Exists('$(_NuGetAcquisitionRoot)obj/genbuild/sdk-bindings/framework-pack-resources/platform-sdk-display-names.g.props')"
            Text="Ordinary Restore must not publish prototype acquisition facts merely because the processor assembly is bound." />
     <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -bl:&quot;$(_NuGetAcquisitionRoot)up-to-date.binlog&quot;" />
+    <WriteLinesToFile File="$(_NuGetAcquisitionRoot)Library/CompatibilitySuppressions.xml" Lines="&lt;Suppressions /&gt;" Overwrite="true" />
+    <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -p:ExpectedSuppressionPresent=true -bl:&quot;$(_NuGetAcquisitionRoot)positive-suppression.binlog&quot;" />
+    <Delete Files="$(_NuGetAcquisitionRoot)Library/CompatibilitySuppressions.xml" />
     <Exec Command="$(_App) restore &quot;$(_NuGetAcquisitionRoot)Root.proj&quot; -p:MSBuildGraphSdkBindingsDirectory=&quot;$(_NuGetAcquisitionRoot)alternate-bindings&quot; -bl:&quot;$(_NuGetAcquisitionRoot)alternate-scope.binlog&quot;" />
   </Target>
   <Target Name="TestRestoreRequests">
@@ -4455,7 +4458,7 @@
       <_ApiCompatRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'apicompat'))</_ApiCompatRoot>
       <_ApiCompatAction>$(_ApiCompatRoot)action/</_ApiCompatAction>
       <_ApiCompatSemaphore>obj/Debug/net11.0/Microsoft.DotNet.ApiCompat.ValidateAssemblies.Common.semaphore</_ApiCompatSemaphore>
-      <_ApiCompatSnapshot>obj/apicompatinputs/Debug/AnyCPU/net11.0/ApiCompat.csproj.g.props</_ApiCompatSnapshot>
+      <_ApiCompatSnapshot>obj/apicompatinputs/ApiCompat.csproj.g.props</_ApiCompatSnapshot>
       <_ApiCompatArguments>-p:MSBuildGraphRepositoryRoot=&quot;$(_ApiCompatRoot)&quot; -p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:ApiCompatTargetsDirectory=&quot;$(_AppDirectory)/toolset/ApiCompat/build&quot; -p:DotNetApiCompatTaskAssembly=&quot;$(_AppDirectory)/toolset/Sdks/Microsoft.NET.Sdk/tools/net11.0/Microsoft.DotNet.ApiCompat.Task.dll&quot; -p:RoslynAssembliesPath=&quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot;</_ApiCompatArguments>
       <_ApiCompatVerifier>&quot;$(GenBuildTestHost)&quot; &quot;$(_ApiCompatRoot)Verifier.dll&quot;</_ApiCompatVerifier>
     </PropertyGroup>
@@ -4492,11 +4495,11 @@
     <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)cross-visualbasic/ApiCompat.vbproj&quot; $(_ApiCompatArguments) -p:TargetFramework=net11.0-windows" />
     <Error Condition="Exists('$(_ApiCompatRoot)cross-targeting/obj/apicompatinputs/Debug/AnyCPU/ApiCompat.csproj.g.props') or
                       !Exists('$(_ApiCompatRoot)cross-targeting/$(_ApiCompatSnapshot)') or
-                      !Exists('$(_ApiCompatRoot)cross-targeting/obj/apicompatinputs/Debug/AnyCPU/net11.0-windows/ApiCompat.csproj.g.props') or
+                      Exists('$(_ApiCompatRoot)cross-targeting/obj/apicompatinputs/Debug') or
                       Exists('$(_ApiCompatRoot)cross-visualbasic/obj/apicompatinputs/Debug/AnyCPU/ApiCompat.vbproj.g.props') or
-                      !Exists('$(_ApiCompatRoot)cross-visualbasic/obj/apicompatinputs/Debug/AnyCPU/net11.0/ApiCompat.vbproj.g.props') or
-                      !Exists('$(_ApiCompatRoot)cross-visualbasic/obj/apicompatinputs/Debug/AnyCPU/net11.0-windows/ApiCompat.vbproj.g.props')"
-           Text="C# and VB preparation must capture per-framework ApiCompat inputs, not outer-build snapshots." />
+                      !Exists('$(_ApiCompatRoot)cross-visualbasic/obj/apicompatinputs/ApiCompat.vbproj.g.props') or
+                      Exists('$(_ApiCompatRoot)cross-visualbasic/obj/apicompatinputs/Debug')"
+           Text="C# and VB acquisition must publish one unconfigured ApiCompat fact file, not per-framework snapshots." />
     <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)FrameworkSelection.proj&quot; $(_ApiCompatArguments) -p:MSBuildRestoreGraphInputs=false -t:Build -p:FrameworkSelectionOutput=ordinary-metadata.txt" />
     <Exec Command="$(_App) build &quot;$(_ApiCompatRoot)FrameworkSelection.proj&quot; $(_ApiCompatArguments) -p:FrameworkSelectionOutput=metadata.txt -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatRoot)metadata.ninja&quot;" />
     <Error Condition="Exists('$(_ApiCompatRoot)cross-targeting/bin') or Exists('$(_ApiCompatRoot)cross-visualbasic/bin')"
@@ -4547,12 +4550,12 @@
     <Error Condition="'$(_ApiCompatMissingSnapshotExit)' == '0' or !$(_ApiCompatMissingSnapshotDiagnostics.Contains('MSB4019')) or
                       Exists('$(_ApiCompatRoot)cross-targeting/missing-snapshot.ninja') or
                       Exists('$(_ApiCompatRoot)cross-targeting/missing-snapshot.ninja.actions')"
-           Text="Configured inner builds must still reject missing ApiCompat snapshots without publishing a partial graph." />
+           Text="Configured inner builds must reject missing ApiCompat acquisition facts without publishing a partial graph." />
     <Copy SourceFiles="$(_ApiCompatRoot)cross-targeting/snapshot.backup" DestinationFiles="$(_ApiCompatRoot)cross-targeting/$(_ApiCompatSnapshot)" />
     <Delete Files="$(_ApiCompatRoot)cross-targeting/snapshot.backup" />
     <Exec Command="$(_App) restore &quot;$(_ApiCompatAction)ApiCompat.csproj&quot; $(_ApiCompatArguments)" />
     <Error Condition="!Exists('$(_ApiCompatAction)$(_ApiCompatSnapshot)') or Exists('$(_ApiCompatAction)obj/Debug/net11.0/ApiCompatFixture.dll') or Exists('$(_ApiCompatAction)$(_ApiCompatSemaphore)') or Exists('$(_ApiCompatAction)bin')"
-           Text="Restore must capture ApiCompat directory inputs without building the consumer or touching its success semaphore." />
+           Text="Acquisition must record ApiCompat suppression presence without building the consumer or touching its success semaphore." />
     <Exec Command="$(_App) build &quot;$(_ApiCompatAction)ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatAction)build.ninja&quot;" />
     <Exec Command="$(_ApiCompatVerifier) graph &quot;$(_ApiCompatAction)&quot; &quot;$(_ApiCompatReferenceDirectory)&quot; &quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot;" />
     <Error Condition="Exists('$(_ApiCompatAction)bin')" Text="Construction must not publish the consumer assembly." />
@@ -4661,8 +4664,10 @@
                       Exists('$(_ApiCompatAction)rejected-%(_ApiCompatReject.Identity).ninja.actions') or Exists('$(_ApiCompatAction)generated-suppressions.xml')"
            Text="Unsupported ApiCompat suppression generation and directory/wildcard primary operands must fail without publishing a partial graph." />
     <Exec Command="$(_App) restore &quot;$(_ApiCompatRoot)inactive/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:ApiCompatValidateAssemblies=false" />
-    <Error Condition="Exists('$(_ApiCompatRoot)inactive/$(_ApiCompatSnapshot)') or Exists('$(_ApiCompatRoot)inactive/$(_ApiCompatSemaphore)') or Exists('$(_ApiCompatRoot)inactive/bin')"
-           Text="Inactive ApiCompat validation must not capture an unnecessary inventory or build products." />
+    <Error Condition="!Exists('$(_ApiCompatRoot)inactive/$(_ApiCompatSnapshot)') or Exists('$(_ApiCompatRoot)inactive/$(_ApiCompatSemaphore)') or Exists('$(_ApiCompatRoot)inactive/bin')"
+           Text="Acquisition must record suppression presence before ApiCompat is enabled, without inventories or build products." />
+    <Exec Command="$(_App) build &quot;$(_ApiCompatRoot)inactive/ApiCompat.csproj&quot; $(_ApiCompatArguments) -p:MSBuildEmitActionGraph=&quot;$(_ApiCompatRoot)inactive/build.ninja&quot;" />
+    <Exec Command="$(_ApiCompatVerifier) graph &quot;$(_ApiCompatRoot)inactive&quot; &quot;$(_ApiCompatReferenceDirectory)&quot; &quot;$(_AppDirectory)/toolset/Roslyn/bincore&quot;" />
     <PropertyGroup>
       <_ApiCompatOrderRoot>$(_ApiCompatRoot)reference-order/</_ApiCompatOrderRoot>
       <_ApiCompatOrderAction>$(_ApiCompatOrderRoot)action/</_ApiCompatOrderAction>

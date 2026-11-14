@@ -66,8 +66,8 @@ locator. Import it before the shared facts so alternate Build entry points find 
 original acquisition scope. No configured framework/platform writer is registered
 in direct mode. Other preparation producers and the configured walk remain;
 do not add reference traversal or new selection passes just to collect resource facts.
-The SDK schedules `_CaptureApiCompatInputs` independently in direct preparation;
-its default-suppression observation must not depend on the removed framework hook.
+ApiCompat default-suppression facts are also acquisition outputs; no direct
+preparation registration depends on the removed framework hook.
 Native pack format 2 compiles FrameworkList attributes, platform rows, package override
 relationships and SDK runtime-graph records into item metadata during acquisition.
 Do not embed original resource text in `Content` or reparse it during construction;
@@ -83,9 +83,17 @@ items without JSON parsing or filesystem fallback.
 
 ## Declared ApiCompat reference inputs
 
-ApiCompat Restore capture records only the default suppression-file presence fact
-and `_ApiCompatInputsVersion=2`. Do not add configured package/targeting-pack
-resolution or reference-directory inventories to `_CaptureApiCompatInputs`.
+The acquisition-visible SDK registers default suppression-file/output bindings
+even before newly acquired package targets enable ApiCompat. After successful
+root acquisition,
+[`WriteApiCompatInputs`](Microsoft.NET.Build.Tasks/WriteApiCompatInputs.cs) observes
+presence once per path and publishes one unconfigured
+`apicompatinputs/$(MSBuildProjectFile).g.props` per project, with
+`_ApiCompatInputsVersion=2`. Preserve negative facts, unchanged-content writes,
+up-to-date republication and conflicting-output admission. Direct mode does not
+run `_CaptureApiCompatInputs`; its configured writer remains only for legacy
+non-direct authoring. Do not add configured package/targeting-pack resolution
+or reference-directory inventories to either producer.
 [`FormatApiCompatInputs`](../Compatibility/ApiCompat/Microsoft.DotNet.ApiCompat.Task/FormatApiCompatInputs.cs)
 selects file inputs during graph construction from existing package inventories,
 prepared framework catalogs, current references and explicit `ApiCompatReferenceFile`

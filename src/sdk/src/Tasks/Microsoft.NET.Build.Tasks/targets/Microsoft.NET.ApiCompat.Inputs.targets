@@ -1,0 +1,21 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+  <PropertyGroup>
+    <_ApiCompatDirectInputs>true</_ApiCompatDirectInputs>
+    <_ApiCompatInputsPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(MSBuildProjectExtensionsPath)', 'apicompatinputs/$(MSBuildProjectFile).g.props'))</_ApiCompatInputsPath>
+  </PropertyGroup>
+
+  <!-- Package targets may first enable ApiCompat in fresh Build, after acquisition. -->
+  <Target Name="_CollectApiCompatInputRequest"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
+          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' And '$(RestoreProjectStyle)' == 'PackageReference'">
+    <ItemGroup>
+      <_RestoreGraphEntry Include="$([System.Guid]::NewGuid())">
+        <Type>ApiCompatInputRequest</Type>
+        <ProjectUniqueName>$(MSBuildProjectFullPath)</ProjectUniqueName>
+        <DefaultSuppressionFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'CompatibilitySuppressions.xml'))</DefaultSuppressionFile>
+        <OutputFile>$(_ApiCompatInputsPath)</OutputFile>
+      </_RestoreGraphEntry>
+    </ItemGroup>
+  </Target>
+</Project>

@@ -25,7 +25,7 @@ Copyright (c) .NET Foundation. All rights reserved.
   <UsingTask TaskName="Microsoft.DotNet.ApiCompat.Task.PrepareApiCompatInputs" AssemblyFile="$(DotNetApiCompatTaskAssembly)" />
 
   <PropertyGroup>
-    <_ApiCompatInputsPath>$(MSBuildProjectExtensionsPath)apicompatinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</_ApiCompatInputsPath>
+    <_ApiCompatInputsPath Condition="'$(_ApiCompatDirectInputs)' != 'true'">$(MSBuildProjectExtensionsPath)apicompatinputs/$(_GraphInputsConfiguration)$(MSBuildProjectFile).g.props</_ApiCompatInputsPath>
   </PropertyGroup>
   <Import Project="$(_ApiCompatInputsPath)" Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(IsCrossTargetingBuild)' != 'true' and '$(_ApiCompatInputsImported)' != 'true'" />
   <PropertyGroup Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(IsCrossTargetingBuild)' != 'true'">
@@ -34,7 +34,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Target Name="_CaptureApiCompatInputs"
           AfterTargets="_GenerateFrameworkReferenceFetchManifest"
-          Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(IsCrossTargetingBuild)' != 'true'">
+          Condition="'$(_ApiCompatDirectInputs)' != 'true' and '$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildHardenedGraph)' != 'true' and '$(ApiCompatValidateAssemblies)' == 'true' and '$(IsCrossTargetingBuild)' != 'true'">
     <Microsoft.DotNet.ApiCompat.Task.PrepareApiCompatInputs
       DefaultSuppressionFile="$(MSBuildProjectDirectory)/CompatibilitySuppressions.xml"
       OutputFile="$(_ApiCompatInputsPath)" />

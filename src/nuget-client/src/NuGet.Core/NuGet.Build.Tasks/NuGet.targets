@@ -170,6 +170,9 @@ Copyright (c) .NET Foundation. All rights reserved.
   <UsingTask TaskName="Microsoft.NET.Build.Tasks.WriteRuntimeGraphInputs"
              AssemblyFile="$(MSBuildGraphNuGetInputsTaskAssembly)"
              Condition="'$(MSBuildGraphNuGetInputsTaskAssembly)' != ''" />
+  <UsingTask TaskName="Microsoft.NET.Build.Tasks.WriteApiCompatInputs"
+             AssemblyFile="$(MSBuildGraphNuGetInputsTaskAssembly)"
+             Condition="'$(MSBuildGraphNuGetInputsTaskAssembly)' != ''" />
   <UsingTask TaskName="NuGet.Build.Tasks.WriteRestoreGraphTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
   <UsingTask TaskName="NuGet.Build.Tasks.GetRestoreProjectReferencesTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
   <UsingTask TaskName="NuGet.Build.Tasks.ValidateRestoreRequestsTask" AssemblyFile="$(RestoreTaskAssemblyFile)" />
@@ -240,6 +243,11 @@ Copyright (c) .NET Foundation. All rights reserved.
       Requests="@(_RestoreGraphEntryFiltered->WithMetadataValue('Type', 'RuntimeGraphInputRequest'))">
       <Output TaskParameter="WrittenResources" PropertyName="_RuntimeGraphResourcesWritten" />
     </Microsoft.NET.Build.Tasks.WriteRuntimeGraphInputs>
+    <Microsoft.NET.Build.Tasks.WriteApiCompatInputs
+      Condition="'$(MSBuildRestoreGraphInputs)' == 'true' and '$(MSBuildGraphNuGetInputsTaskAssembly)' != ''"
+      Requests="@(_RestoreGraphEntryFiltered->WithMetadataValue('Type', 'ApiCompatInputRequest'))">
+      <Output TaskParameter="WrittenModels" PropertyName="_ApiCompatInputModelsWritten" />
+    </Microsoft.NET.Build.Tasks.WriteApiCompatInputs>
   </Target>
 
   <!--

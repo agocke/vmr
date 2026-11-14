@@ -52,7 +52,7 @@ internal static class Verifier
 
         string root = args[1];
         string graph = Path.Combine(root, "build.ninja");
-        string snapshot = Path.Combine(root, "obj/apicompatinputs/Debug/AnyCPU/net11.0/ApiCompat.csproj.g.props");
+        string snapshot = Path.Combine(root, "obj/apicompatinputs/ApiCompat.csproj.g.props");
         XElement prepared = XElement.Load(snapshot);
         Require(SamePath(prepared.Descendants("_ApiCompatPreparedDefaultSuppressionFile").Single().Value,
             Path.Combine(root, "CompatibilitySuppressions.xml")), "Restore did not capture the default suppression existence fact.");
@@ -114,7 +114,7 @@ internal static class Verifier
         string member = Path.Combine(future, "Dependency.dll");
         bool producesFile = testCase is "future" or "stale" or "precedence";
         XElement prepared = XElement.Load(Path.Combine(root,
-            "obj/apicompatinputs/Debug/AnyCPU/net11.0/ApiCompat.csproj.g.props"));
+            "obj/apicompatinputs/ApiCompat.csproj.g.props"));
         Require(prepared.Descendants("_ApiCompatInputsVersion").Single().Value == "2" &&
             !prepared.Descendants("_ApiCompatPreparedReferenceDirectory").Any() &&
             !prepared.Descendants("_ApiCompatPreparedReferenceFile").Any(),

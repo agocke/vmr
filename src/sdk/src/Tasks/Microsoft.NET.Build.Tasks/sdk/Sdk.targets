@@ -30,6 +30,9 @@ Copyright (c) .NET Foundation. All rights reserved.
   <Import Project="$(MSBuildThisFileDirectory)..\targets\Microsoft.NET.RuntimeGraphInputs.targets"
           Condition="'$(MSBuildGraphNuGetInputsTaskAssembly)' != '' And '$(_RuntimeGraphInputsTargetsImported)' != 'true'" />
 
+  <Import Project="$(MSBuildThisFileDirectory)..\targets\Microsoft.NET.ApiCompat.Inputs.targets"
+          Condition="'$(MSBuildGraphNuGetInputsTaskAssembly)' != '' And ('$(MSBuildRestoreGraphInputs)' == 'true' Or '$(MSBuildHardenedGraph)' == 'true')" />
+
   <Import Project="$(FrameworkReferenceFetchManifestPath)"
           Condition="'$(_FrameworkPackDirectInputs)' != 'true' and '$(EnableFrameworkReferenceFetchManifest)' == 'true' and
                      ('$(MSBuildHardenedGraph)' != 'true' or '$(TargetFramework)' != '') and
@@ -106,7 +109,6 @@ Copyright (c) .NET Foundation. All rights reserved.
   <PropertyGroup>
     <MSBuildPrepareGraphInputsDependsOn>$(MSBuildPrepareGraphInputsDependsOn);_CaptureNuGetInputs</MSBuildPrepareGraphInputsDependsOn>
     <MSBuildPrepareGraphInputsDependsOn Condition="'$(_FrameworkPackDirectInputs)' != 'true'">$(MSBuildPrepareGraphInputsDependsOn);_GenerateFrameworkReferenceFetchManifest</MSBuildPrepareGraphInputsDependsOn>
-    <MSBuildPrepareGraphInputsDependsOn Condition="'$(_FrameworkPackDirectInputs)' == 'true'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureApiCompatInputs</MSBuildPrepareGraphInputsDependsOn>
     <MSBuildPrepareGraphInputsDependsOn Condition="'$(Language)' == 'C#'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureCscToolInputs</MSBuildPrepareGraphInputsDependsOn>
     <MSBuildPrepareGraphInputsDependsOn Condition="'$(Language)' == 'VB'">$(MSBuildPrepareGraphInputsDependsOn);_CaptureVbcToolInputs</MSBuildPrepareGraphInputsDependsOn>
     <_CaptureNuGetInputsDependsOn Condition="'$(MSBuildRestoreGraphInputs)' == 'true'">_ResolveCompilerVersion</_CaptureNuGetInputsDependsOn>

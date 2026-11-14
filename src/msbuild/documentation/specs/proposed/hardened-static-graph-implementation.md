@@ -1183,10 +1183,19 @@ Completed targets are removed from the validator's active stack before their
 after-targets run: an ApiCompat after-target may legitimately depend on the
 completed `CoreCompile`, directly or through preparation targets.
 
-ApiCompat assembly validation captures only default-suppression existence during
-ordinary preparation, with `_ApiCompatInputsVersion=2`. Its capture target no
-longer forces `ResolvePackageAssets` or `ResolveTargetingPackAssets` and does not
-inspect reference directories. Older directory-inventory snapshots must be regenerated.
+ApiCompat assembly validation records only default-suppression existence, with
+`_ApiCompatInputsVersion=2`. In direct mode the SDK registers finite source/output
+bindings in the existing acquisition visits, regardless of whether ApiCompat is
+already enabled: newly acquired package authoring may enable it in fresh Build.
+After successful root acquisition,
+[`WriteApiCompatInputs`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteApiCompatInputs.cs)
+publishes one unconfigured `apicompatinputs/$(MSBuildProjectFile).g.props` per project.
+It preserves positive/negative observations and unchanged-content timestamps,
+republishes missing facts on up-to-date Restore, and rejects conflicting outputs
+or aliases to source inputs before writing. There is no child Restore/capture
+request, configured selection or reference-directory inspection. Legacy non-direct
+authoring retains its configured capture writer. Older directory-inventory
+snapshots must be regenerated.
 A pure
 [`FormatApiCompatInputs`](../../../../sdk/src/Compatibility/ApiCompat/Microsoft.DotNet.ApiCompat.Task/FormatApiCompatInputs.cs)
 selects primary/reference assemblies, suppression and attribute-exclusion files,
@@ -1338,8 +1347,8 @@ alternate metadata entry points and acquisition scopes. Conflicting locators and
 aliases to acquisition inputs, shared outputs or the platform catalog fail.
 The configured framework/platform producer and its preparation registration are
 removed in direct mode; other producers still retain the preparation traversal.
-The SDK explicitly schedules the existing ApiCompat suppression-presence capture,
-whose package hook otherwise follows the removed framework producer.
+ApiCompat suppression-presence facts now have their own acquisition-visible SDK
+binding and root writer; direct preparation no longer schedules its package hook.
 This adds no retained instances, evaluations or reference walk.
 The acquisition-only fixture rejects the old framework producer, requires all four
 framework bindings to produce one shared model, and checks ordinary-mode isolation
@@ -1451,14 +1460,15 @@ graph/products, and a full native runtime or complete net11 library build
 remains unproven.
 
 The whole shared-framework traversal (`src/runtime/src/libraries/sfx-src.proj`)
-now completes isolated Restore preparation. ApiCompat snapshot imports and
-capture are limited to configured inner builds: framework-neutral
-`GetTargetFrameworks` evaluation needs no outer snapshot. The regression queries
+now completes isolated Restore preparation. ApiCompat fact imports are limited to
+inner builds: framework-neutral `GetTargetFrameworks` evaluation needs no outer
+snapshot. The unconfigured acquisition file serves all inner frameworks.
+The regression queries
 C# and Visual Basic projects targeting `net11.0` and `net11.0-windows` through
 a traversal, verifies the configured C# validation action, and rejects a missing
-inner snapshot without publishing a partial graph. ApiCompat preparation runs
-after framework-reference capture rather than the C#-only compiler-input hook,
-so both languages receive suppression-presence facts without compiling products.
+acquisition file without publishing a partial graph. Both languages receive
+suppression-presence facts from root acquisition without compiling products or
+running their configured capture hooks.
 
 [`WriteFrameworkReferenceFetchManifest`](../../../../sdk/src/Tasks/Microsoft.NET.Build.Tasks/WriteFrameworkReferenceFetchManifest.cs)
 also captures platform SDK display metadata with its platform identifier/version.
