@@ -93,6 +93,12 @@ project references by normalized source-project path, not project, assembly or
 package display names. Both use the explicit runtime assembly binding and its
 `UserRuntimeAssemblies` destination metadata. Runtime version reads stay in execution;
 the declared writer requires the actual DLL input, never a project-file fallback.
+Both writers are file-producing execution actions, not graph-construction tasks.
+They may consume assets JSON directly, with explicitly selected template/runtime-graph
+JSON and versioned binary inputs as needed. Model selection that only determines
+manifest contents belongs inside the action; do not move it to Restore or
+construction merely to replace JSON with items. The declared inputs must suffice,
+without ambient package/settings lookup or execution-time graph changes.
 
 ## Declared ApiCompat reference inputs
 

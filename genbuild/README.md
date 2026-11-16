@@ -789,6 +789,12 @@ newlines on every host. Published probing paths must be nonempty relative paths;
 backslashes and trailing separators are normalized. Requesting automatic probes
 from absolute NuGet-cache roots fails rather than embedding machine locations.
 Ordinary Build, Publish and designer behavior remains unchanged.
+Both manifest writers run as independent file-producing actions, not during
+graph construction. Their assets/template/runtime-graph JSON can remain declared
+file inputs: selecting their output contents does not require native item facts
+or another Restore pass. Native facts are required for data used to construct
+the graph; execution still requires all consumed file inputs and output paths
+to be known, with no ambient package/settings discovery.
 Common's hardened main assembly, reference-assembly and PDB publication uses
 content-only `CopyFiles` actions with explicit source/destination vectors.
 `MainAssembly`, `ReferenceAssembly` and `FileWrites` are computed during

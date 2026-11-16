@@ -71,14 +71,23 @@ reachable request closure. Inspecting another framework's metadata does not
 implicitly request its compilation.
 
 NuGet JSON data that influences graph construction must be prepared as MSBuild
-item/property facts during Restore. This is the eventual representation for
-**all consumed NuGet JSON data**, not just a snapshot of a task's selected
+item/property facts during Restore, not just a snapshot of a task's selected
 outputs. Preserve the underlying framework/RID, dependency, asset and metadata
 facts so configuration-dependent selection remains a pure construction-time
 operation. Files produced by project references remain future artifact paths
 with producer edges; preparation must not require those binaries to exist.
 The [initial fact capture](hardened-static-graph-implementation.md#nuget-fact-capture)
-does not yet replace every existing JSON consumer.
+serves construction-time consumers; it need not replace execution-time JSON reads.
+
+A file-producing action may read declared JSON directly when that JSON and its
+other explicit inputs fully determine the result and its complete footprint is
+known during construction. `WriteRuntimeConfig` and `WriteDepsFile` remain
+execution actions: framework/dependency-model selection that only affects their
+output contents may run there, without returning values to MSBuild or changing
+the graph. Declare assets JSON, any selected template/runtime-graph JSON, and
+runtime binaries whose versions are read. This does not authorize ambient
+package/settings discovery or defer selection needed to bind another action's
+parameters, inputs or outputs.
 
 ### Configured framework discovery
 

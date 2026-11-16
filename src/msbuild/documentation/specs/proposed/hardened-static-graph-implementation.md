@@ -471,8 +471,11 @@ Relative probing paths are normalized; absolute/invalid probes fail rather than
 embedding machine-specific package roots. Multi-file writes are not transactional.
 Ordinary Build/Publish/designer behavior stays on its original path.
 
-These actions still read declared NuGet JSON at execution. Moving every consumed
-field to prepared facts remains an explicit follow-up, not a completed milestone.
+These actions intentionally read declared NuGet JSON at execution. Their
+framework/dependency-model selection affects output contents, not graph shape,
+and does not need to move into construction or Restore. The complete assets,
+optional template/runtime-graph JSON and versioned binary inputs must suffice;
+package/settings discovery is not an implicit part of execution.
 
 ### Project references and publication
 
@@ -1669,9 +1672,10 @@ explicit raw capture without the graph-input flag retains the unqualified path.
 items. Identities are `$` plus JSON Pointer segments; `Kind`/`Value` encode nodes,
 with explicit containers. Package/project binaries are not opened for raw capture.
 
-These are underlying data, not cached outputs of one policy task. All consumed
-NuGet JSON must eventually use this representation; deps/runtime-config actions
-still reading JSON are an acknowledged intermediate state.
+These are underlying data, not cached outputs of one policy task. NuGet data
+needed during graph construction uses this representation. Deps/runtime-config
+actions may instead consume declared JSON at execution when it and their other
+explicit inputs suffice; retaining those reads is not an incomplete fact migration.
 
 ### NuGet fact consumption
 
@@ -1726,7 +1730,7 @@ are handled separately below. Ordinary package discovery/cache behavior
 is unchanged. See the [package fixture](../../../../../genbuild/tests/PackageReferences.csproj).
 
 - [ ] Extend preparation for the real configured runtime closure above.
-- [ ] Migrate remaining NuGet JSON consumers to facts without changing output semantics.
+- [ ] Migrate remaining construction-time NuGet JSON consumers to facts without changing output semantics.
 - [ ] Broaden package policy only through explicit supported profiles.
 
 ### Prepared reference conflicts
