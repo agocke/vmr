@@ -12,7 +12,10 @@ namespace Microsoft.Build.ActionTaskHost;
 
 internal sealed class TaskAssemblyLoadContext(string taskAssembly) : AssemblyLoadContext
 {
-    private readonly AssemblyDependencyResolver _resolver = new(taskAssembly);
+    // Without a deps file the runtime resolver enumerates every neighboring file.
+    // Exact adjacent-name probes suffice for manifest-less action task assemblies.
+    private readonly AssemblyDependencyResolver? _resolver =
+        File.Exists(Path.ChangeExtension(taskAssembly, ".deps.json")) ? new(taskAssembly) : null;
     private readonly string _directory = Path.GetDirectoryName(taskAssembly)!;
 
     protected override Assembly? Load(AssemblyName assemblyName)
@@ -32,13 +35,21 @@ internal sealed class TaskAssemblyLoadContext(string taskAssembly) : AssemblyLoa
             return typeof(TaskItem).Assembly;
         }
 
-        string? path = _resolver.ResolveAssemblyToPath(assemblyName);
+        string? path = _resolver?.ResolveAssemblyToPath(assemblyName);
         if (path is null)
         {
             string adjacentPath = Path.Combine(_directory, assemblyName.Name + ".dll");
             if (File.Exists(adjacentPath))
             {
                 path = adjacentPath;
+            }
+            else if (_resolver is null)
+            {
+                string adjacentExecutablePath = Path.Combine(_directory, assemblyName.Name + ".exe");
+                if (File.Exists(adjacentExecutablePath))
+                {
+                    path = adjacentExecutablePath;
+                }
             }
         }
 

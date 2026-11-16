@@ -1,0 +1,258 @@
+genbuild read audit (Linux, Python 3.9+, stdlib only)
+==================================================
+
+This opt-in observer DOES NOT sandbox a process or prove build hermeticity.
+It reads an unmodified standalone genbuild Ninja graph and its invocation JSON.
+It never changes the graph, sidecars, app, toolset, or product files itself.
+The command being traced still executes normally and may write its outputs.
+
+Run from the VMR root. Use your privately installed strace's absolute path:
+
+  python3 -B genbuild/audit.py catalog \
+    --root /absolute/external-dotnet \
+    --directory /absolute/external-dotnet/host/fxr \
+    --directory /absolute/external-dotnet/shared/Microsoft.NETCore.App \
+    --output runtime-files.json
+
+  python3 -B genbuild/audit.py catalog --directory /sys/devices/system/node \
+    --output numa-membership.json
+
+  python3 -B genbuild/audit.py trace --strace /absolute/path/to/strace \
+    --graph /absolute/project/obj/genbuild/build.ninja \
+    --cwd /absolute/project --output audit-capture \
+    -- ninja -f /absolute/project/obj/genbuild/build.ninja -j 1
+
+  python3 -B genbuild/audit.py analyze --capture audit-capture \
+    --runtime-catalog runtime-files.json --platform-catalog platform-files.json \
+    --platform-catalog numa-membership.json \
+    --allow-runtime-proc --allow-case-sensitivity-probe \
+    --report audit-report.json
+
+The capture directory must not already exist. --cwd is Ninja's effective working
+directory, not the directory containing build.ninja. Avoid Ninja -C unless it
+matches --cwd; initial cwd is inherited and subsequent chdir calls are tracked.
+Use absolute --graph paths to avoid ambiguity. -j 1 is only a suggested small
+first smoke: multiple Ninja jobs are supported. Capture a command that actually
+executes actions; an up-to-date/no-op graph is reported incomplete.
+
+trace invokes exactly:
+  STRACE -ff -ttt -yy -v -s 65535 -e trace=%file,%process,getdents64 \
+    -o CAPTURE/trace -- COMMAND [ARG...]
+It records capture.json (cwd, argv, graph path, SHA256 of graph and sidecars,
+completion status, commandExitCode) and trace.PID files. trace returns the command
+status; analyze independently rejects failed/interrupted captures. Preserve the
+graph, sidecars and filesystem/symlink layout until analysis completes. Analyze
+verifies graph/sidecar hashes against capture.json. Re-run analyze with edited
+platform catalogs without executing any products. Keep catalogs/reports outside
+the runtime catalog root; never catalog a workspace or home directory wholesale.
+Catalog output inside its root and reports overwriting capture/graph/catalog
+inputs are rejected.
+
+Exact allowance catalogs
+------------------------
+The catalog subcommand explicitly snapshots regular files under the chosen root
+(or a single file), including symlinked files. --root never authorizes directory
+discovery. Each repeated --directory separately snapshots ONE exact directory:
+  "directories": [
+    {"path": "/exact/directory", "canonicalPath": "/exact/directory",
+     "entries": ["one-immediate-entry", "another"]}
+  ]
+The entry list contains all immediate names, including hidden names but excluding
+"." and "..". It is not a glob or recursive inventory, and grants NO child file
+content reads. Use directory rules only for the two named external runtime
+selection directories and the reviewed sysfs NUMA directory in this profile.
+Do not use one to exempt app/toolset discovery.
+
+Directory identity and membership must match at analysis time AND each traced
+enumeration must expose the same complete entry set and reach EOF. -v is needed:
+old traces containing only "/* N entries */" cannot validate directory rules.
+Missing/extra entries, missing EOF or abbreviated trace entries fail closed.
+Directory-handle opens are separately reported; without getdents64 they are not
+treated as directory-content discovery (strict-probes can still reject them).
+This is not an atomic filesystem snapshot: changes between observations, entry
+inode/type/content replacement or changes undone between observations are not
+proved absent. It validates observed name sets, not child bytes or open-ended
+future discovery. Review/snapshot these immutable runtime directories BEFORE
+capture. A stale catalog must not be refreshed merely to bless unexpected reads.
+
+Use it ONLY on the external runtime installation, not an entire SDK/workspace.
+All runtime files remain individually listed and reported, not prefix exemptions.
+New runtime files require a new catalog.
+
+Author platform-files.json explicitly, for example:
+  {
+    "schemaVersion": 1,
+    "files": [
+      {"path": "/etc/ld.so.cache", "canonicalPath": "/etc/ld.so.cache"},
+      {"path": "/lib64/ld-linux-x86-64.so.2",
+       "canonicalPath": "/usr/lib64/ld-linux-x86-64.so.2"}
+    ]
+  }
+Replace these examples with exact paths on YOUR machine. Repeat --runtime-catalog
+or --platform-catalog to combine catalogs. A file entry can also be an absolute
+string; its canonical path is then resolved at analysis time. Explicit
+path/canonicalPath pairs are preferred to detect changed symlink targets.
+Missing exact file paths can admit corresponding negative probes. Directories
+in the files array are rejected, not expanded into subtree permissions. Catalog contents are
+trusted policy inputs; review them. No source, workspace, home, /proc, /sys,
+/dev, locale, or loader prefix exemptions are built in.
+Unexpected runtime probes must be explicitly cataloged or remain undeclared.
+
+Process-local and self-created runtime observations (explicit opt-in)
+--------------------------------------------------------------------
+/proc/self is resolved with the traced process identity (CLONE_THREAD uses the
+tracked thread-group PID), never the analyzer's PID. This correction is applied
+even WITHOUT allowances. Proc magic aliases are rejected in exact file catalogs.
+--allow-runtime-proc authorizes only maps, mountinfo, cgroup, readlink of exe,
+readlink of self, and task/OWN-TID/comm. The target process must be traced in the
+same action execution family; the thread must belong to that tracked process.
+Unrelated processes, unknown TIDs, environ, fd directories, directory enumeration
+and other /proc leaves remain denied. Every use records its leaf rule, processId
+and actionFamily; no /proc tree exemption exists.
+
+--allow-case-sensitivity-probe applies ONLY to the initial successful
+O_CREAT|O_EXCL open of CASESENSITIVETEST[0-9a-f]{32}, followed by same-family
+successful unlink of that exact path. It observes a newly created object, not
+pre-existing input bytes. Later opens, arbitrary scratch names, missing exclusive
+creation or missing unlink receive NO allowance. Every candidate and applied
+rule is reported, without a /tmp prefix exemption.
+
+MSBuild Framework/FileUtilities.cs computes this private case fact with a
+DeleteOnClose scratch file; the action invocation has no explicit filesystem
+case-sensitivity fact/setter. Linux OS identity does not prove a mount's casing.
+Do not silently replace this probe with an OS assumption. To keep the probe in
+an isolated working area, set TMPDIR and select it while constructing the graph:
+  TMPDIR=/absolute/isolated/work ... build ... -p:MSBuildActionEnvironment=TMPDIR
+The action host otherwise clears unselected environment, including TMPDIR.
+
+Admissions and attribution
+--------------------------
+Action identity is --invocation DESCRIPTOR or --materialize-tree DESCRIPTOR ROOT
+in a successful execve/execveat argv, matched against the Ninja rule command.
+Children and compiler processes inherit their parent's action; later matching
+action execs acquire their own identity. Controller/Ninja/shell-before-action
+events are counted separately, not silently assigned to an action. Fork, vfork,
+clone, clone3, chdir, fchdir and CLONE_FS cwd sharing are tracked. -yy fd path
+annotations resolve dirfd-relative operations and directory enumerations; a
+missing/ambiguous annotation is unresolved, never an implicit allowance.
+
+Content admissions:
+  contentInput: exact explicit + implicit Ninja content paths and the descriptor.
+  selfOutput: exact Ninja/DeclaredOutputs paths, separately counted.
+  selfOutputTree: dynamically named descendants of DeclaredOutputTrees roots.
+  generatedTreeInput: dynamically named descendants only when a Ninja CONTENT
+    input names a root registered in a producer's DeclaredOutputTrees.
+  runtime/platform: exact catalog path + canonical target pairs, with catalog
+    provenance and each use included in the report.
+  runtimeDirectory/platformDirectory: separate fixed-name directory rules.
+  runtimeProc: one explicitly enabled, validated action-local proc leaf.
+  caseSensitivityProbe: initial exclusive-created/unlinked named scratch open.
+
+DeclaredInputs are reported but do not grant permission missing from the Ninja
+content edge. Order-only (||) prerequisites NEVER grant content admission.
+Directories do not implicitly admit child file opens. Dynamic generated trees
+are the explicit exception: their membership is execution-defined, not checked
+against an archive/receipt member inventory. A materializer's receipt and tree
+are self-outputs. Dyndep files and archives must appear on the content edge to
+be content inputs. This auditor does not modify/load Ninja dyndeps into the graph.
+Both logical and canonical paths must match policy; canonical aliases of exact
+declared files are allowed, never arbitrary siblings. Tree accesses must remain
+inside the canonical tree, including when a member is a symlink.
+
+Supported observation profile and limitations
+--------------------------------------------
+Successful open/openat/openat2 reads (including O_RDWR), execve/execveat, readlink/
+readlinkat and getdents64 enumeration are content observations. Even an empty
+directory enumeration counts. O_WRONLY opens are writes, not reads; O_CREAT alone
+does NOT make an open write-only. O_PATH opens are metadata probes.
+O_DIRECTORY opens are directoryHandle observations, separate from getdents64.
+stat/lstat/access/statfs/xattr queries and their supported *at variants are
+metadata probes; unsuccessful opens/queries are negative probes. --strict-probes
+makes undeclared metadata/negative probes fail as well. Without it these remain
+fully reported. Directory metadata is admitted only by a matching valid exact
+directory rule, never by file membership. Write syscalls are ignored
+for read admission; this is NOT a write-footprint auditor.
+
+Per-PID unfinished/resumed pairs are reconstructed at entry timestamps. Missing
+pairs, process exit markers, child logs, unknown traced syscalls, truncated C
+strings/argv and unresolved paths make analysis fail. Unsupported Ninja includes,
+variables, arbitrary command forms and non-action rules (except emitted cleanup/
+phony rules) are rejected. Cleanup execution is not an audited action profile.
+The parser targets genbuild's emitted Ninja subset, not arbitrary Ninja projects.
+
+NOT covered: inherited/pre-opened descriptors, reads/mmap without a traced path
+open, kernel-internal interpreter/loader reads, directory data exposed by other
+syscalls, io_uring, network, environment inputs, write correctness or unexecuted
+actions. The trace expression intentionally does not capture read/mmap bytes.
+An executable script's implicit shebang interpreter is not independently observed.
+Successful open is a conservative content-read candidate, not proof bytes were
+consumed. Canonical fallback for operations without returned fd annotations uses
+the analysis-time filesystem EXCEPT known /proc process aliases, which use trace
+identity. Path replacement, symlink races or mount namespace
+changes are not reconstructed. Unknown namespace-related traced calls fail, but
+the trace profile cannot detect every namespace mutation. All events are loaded/
+sorted in memory; budget memory/storage for large runtime traces. Prefer an
+isolated product smoke first, then a fresh full action execution.
+
+JSON report, schemaVersion 1
+----------------------------
+Top-level keys:
+  graph, graphSha256, strictProbes, ok, commandExitCode (capture analysis only);
+  actions: observed action objects with id/mode/invocation/taskType/taskAssembly,
+    workingDirectory, contentInputs, declaredInputs, outputs, trees, orderOnly,
+    pids, counts by admission and dynamicTrees [logicalRoot, canonicalRoot, kind];
+  undeclaredReads: unadmitted successful content-open/exec/readlink/enumeration;
+  metadataProbes, negativeProbes: all such observations, admitted or not;
+  runtimeAllowanceUsage, platformAllowanceUsage: each used allowance;
+  directoryHandleOpens: handle opens, even when no directory data was read;
+  directoryAllowanceUsage, directoryCatalogMismatches: fixed-membership evidence;
+  runtimeProcAllowanceUsage, runtimeScratchAllowanceUsage: opt-in rule uses;
+  selfCreatedProbes: exclusive-created case-probe candidates and unlink evidence;
+  allowanceRules: complete runtime/platform exact catalog rules, even if unused;
+  unresolved, incompleteness: raw event/error context where available;
+  controller: {events: count, pids: [...]};
+  limitations: explicit analysis qualifications.
+
+Observation keys: action, pid, timestamp, syscall, path, canonicalPath, kind,
+admission (null if undeclared), result, processId, actionFamily. File/directory
+uses have catalog; process/scratch uses name their explicit rule.
+Admission counts include probes; self-output reads remain separately categorized.
+Action counts avoid retaining all successfully declared content observations.
+
+Exit codes: analyze 0 = no observed violations/incompleteness in this profile;
+1 = violations, strict undeclared probes or incomplete/failed capture;
+2 = CLI, filesystem, catalog, graph or trace-loading error. Input errors print to
+stderr; those fatal setup errors do not promise a JSON report. Neither 0 nor a
+complete report is a sandbox/strict hermeticity guarantee.
+
+Focused tests (no strace/.NET/products required):
+  PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover \
+    -s genbuild/tests -p test_audit.py -v
+Set GENBUILD_AUDIT_STRACE=/absolute/path/to/strace to additionally run the tiny
+native shell/cat integration fixture, including fixed directory membership.
+
+Optional source-level task-resolver regression (no app rebuild/restaging):
+  GENBUILD_AUDIT_STRACE=/absolute/strace \
+  GENBUILD_AUDIT_DOTNET=/absolute/external-dotnet/dotnet \
+  GENBUILD_AUDIT_APP=/absolute/frozen-app/genbuild.dll \
+  GENBUILD_AUDIT_RUNTIME=/absolute/external-dotnet/shared/Microsoft.NETCore.App/VERSION \
+    PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover \
+      -s genbuild/tests -p test_audit.py -v
+It compiles TaskAssemblyLoadContext.cs into an isolated fixture using the frozen
+app's compiler and references. It verifies DLL-over-EXE adjacency, deps-selected
+asset precedence, default-host fallback, produced task assemblies, shared task
+contract identities, engine rejection, invalid manifests, and no task-directory
+getdents. It does not update the frozen app.
+
+Task-host resolver seam
+-----------------------
+TaskAssemblyLoadContext constructs AssemblyDependencyResolver only when the
+component-adjacent .deps.json exists. An existing manifest retains normal runtime
+dependency precedence/errors. Without one, exact adjacent AssemblyName.dll then
+AssemblyName.exe are probed, followed by normal host fallback. Shared ITask and
+TaskItem assembly identities and the Microsoft.Build engine rejection remain.
+This avoids hostpolicy's missing-deps ambient directory enumeration. Manifestless
+dependencies must use their exact assembly-name filename casing; arbitrary
+filename aliases/mis-cased neighbors require an explicit deps manifest rather
+than discovery. This is a deliberate restricted-host contract, not a general
+replacement for runtime assembly discovery.

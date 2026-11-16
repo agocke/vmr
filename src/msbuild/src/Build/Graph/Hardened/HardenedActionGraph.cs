@@ -431,7 +431,7 @@ internal sealed class HardenedActionGraph
 
         for (int i = 0; i < _actions.Count; i++)
         {
-            foreach (string input in _actions[i].Inputs)
+            foreach (string input in _actions[i].ContentInputs(producers))
             {
                 if (producers.TryGetValue(input, out int producer))
                 {
@@ -455,7 +455,6 @@ internal sealed class HardenedActionGraph
         ninja.Append("msbuild_construction_host_os = ").Append(_hostOS).Append('\n');
         ninja.Append("msbuild_construction_host_architecture = ").Append(_hostArchitecture.ToString().ToLowerInvariant()).Append('\n');
         ninja.Append("msbuild_construction_host_runtime_identifier = ").Append(_hostRuntimeIdentifier).Append("\n\n");
-        List<string> previousOutputs = [];
         List<string> allOutputs = [];
         List<string> treeManifests = [];
         List<(string Path, byte[] Contents)> manifests = [];
@@ -482,7 +481,7 @@ internal sealed class HardenedActionGraph
             ninja.Append("build");
             AppendPaths(ninja, action.Outputs);
             ninja.Append(": ").Append(rule);
-            AppendPaths(ninja, action.Inputs);
+            AppendPaths(ninja, action.ContentInputs(producers));
             ninja.Append(" | ").Append(EscapePath(manifest));
             HashSet<string> tools = new(FileUtilities.PathComparer);
             if (native)
@@ -503,14 +502,7 @@ internal sealed class HardenedActionGraph
             List<string> sortedTools = [.. tools];
             sortedTools.Sort(StringComparer.Ordinal);
             AppendPaths(ninja, sortedTools);
-            if (previousOutputs.Count != 0)
-            {
-                ninja.Append(" ||");
-                AppendPaths(ninja, previousOutputs);
-            }
-
             ninja.Append("\n\n");
-            previousOutputs = [.. action.Outputs];
             foreach (TreeOutput tree in action.Trees)
             {
                 treeManifests.Add(manifest);
@@ -525,7 +517,6 @@ internal sealed class HardenedActionGraph
                 ninja.Append(" |");
                 AppendPaths(ninja, [tree.Dyndep, manifest, .. sortedTools]);
                 ninja.Append("\n  dyndep = ").Append(EscapePath(tree.Dyndep)).Append("\n\n");
-                previousOutputs.Add(tree.Receipt);
                 allOutputs.Add(tree.Receipt);
             }
             allOutputs.AddRange(action.Outputs);
@@ -743,6 +734,21 @@ internal sealed class HardenedActionGraph
     private sealed record ActionInvocation(byte[] Contents, string[] Inputs, string[] Outputs, string Assembly, string TaskType, TreeOutput[] Trees,
         HashSet<string> RequiredProducers)
     {
+        internal IEnumerable<string> ContentInputs(IReadOnlyDictionary<string, int> producers)
+        {
+            foreach (string input in Inputs)
+            {
+                yield return input;
+            }
+
+            string manifest = Path.ChangeExtension(Assembly, ".deps.json");
+            if (producers.ContainsKey(manifest) &&
+                !Array.Exists(Inputs, input => FileUtilities.PathsEqual(input, manifest)))
+            {
+                yield return manifest;
+            }
+        }
+
         internal IEnumerable<string> OwnedPaths()
         {
             foreach (string output in Outputs)

@@ -1632,12 +1632,67 @@ temporarily avoid this compiler defect without disabling assertions or escape
 checks in the Debug validation. Normal Release compiler builds omit Debug.Assert
 calls; the source workaround remains in place.
 
-The complete 5,321-action libraries graph now succeeds through resumed execution
-with an experimental copied Ninja graph containing 417 conservative adjacent-action
-fork/join diamonds. The final resume completes 1,514 actions in 440 seconds, and
-repeated Ninja has no work. The original emitted graph and protected shared cache
-hashes remain unchanged. This verifies whole-partition libraries execution, not
-a clean performance comparison, runtime tests or the entire runtime build.
+The blanket previous-action order-only chain has been removed. The complete
+emitted libraries graph now succeeds from fresh private products with
+`ninja -j4`, without resume or editing the graph: 5,320 task actions, 7,208
+declared file outputs and one generated-source tree materializer. Ninja's log
+accounts for all task actions, including 500 compiler invocations, with four
+actions and four compilers overlapping. Repeated Ninja reports no work.
+The independent-closure regression checks selective branch execution, parallel
+completion and edit isolation. Real file/tool/tree dependencies remain; the
+successful run alone does not establish read isolation or complete declarations.
+Protected original products/caches remain unchanged. Runtime tests and the
+entire runtime build are not covered by this managed-libraries profile.
+
+An initial controlled Release comparison keeps compiler bytes and
+`UseSharedCompilation=false` identical, uses four execution slots, private
+products and warm package/OS caches. Ordinary acquisition/Build take
+57.5/900.0 seconds; prototype acquisition/construction/Ninja take
+73.4/509.3/539.6 seconds (957.6 versus 1,122.3 seconds total).
+Fresh no-op Build costs 49.5 versus 482.6 seconds; the latter includes
+482.3 seconds of reconstruction, not just the 0.3-second reused-graph Ninja
+no-op. A restored comment-only Immutable source edit costs 70.8 versus
+501.7 seconds, including 486.5 seconds of prototype reconstruction and
+15.3 seconds of execution. Both modes run 500 cold compilers, zero no-op
+compilers and five edited compilers; Ninja executes 44 edited actions.
+Construction currently dominates the comparison, so these results do not
+establish an end-to-end speed improvement.
+
+These are single shared-machine observations, not a compiler-server/default-SDK
+baseline or cold-network/cache experiment. Published inventories match all
+3,229 paths and all non-DLL/PDB bytes. Four cryptography DLL copies differ in
+raw IL, but comparison normalizing metadata tokens and file-local path checksums
+matches all 7,458 method signatures, instructions, locals and exception regions.
+Identity/debug/metadata differences remain; this is not exhaustive semantic or
+byte equivalence.
+Timings use the pre-audit-correction action host and
+exclude tracing; the subsequent resolver fix requires separate final-host
+measurement before making final-performance claims.
+
+The Linux strace auditor now checks per-action content edges, exact runtime/OS
+catalogs and optional narrowly accounted runtime/scratch policies; metadata
+and failed probes remain separately visible. A rebuilt-host pilot passes after
+avoiding manifestless task-directory enumeration. The real libraries run was
+then stopped at 657 of 5,321 families with 1,427 undeclared observations,
+85 unresolved events and three incompleteness records. This is **not** a
+whole-graph audit pass. The identified generated-task manifest and compiler-child
+environment defects are corrected: graph publication adds a content edge to
+each task assembly's exact adjacent `.deps.json` when it has a known producer,
+without requiring the file to exist, and rejects forward/cyclic producers.
+Compiler children clear their environment, then retain only task-context
+`SystemRoot`, `TMPDIR`, `TMP`, `TEMP` and `DOTNET_EnableDiagnostics`.
+Private response/translation scratch and additional exact platform files still
+require reviewed contracts and a complete follow-up trace. No blanket
+task/source/home/tmp allowances or serial ordering chain were added; dependency
+completeness is not yet established.
+
+Cold selective-execution, manifest-edit and forward-producer regressions pass,
+as do compiler-environment cases and C#/VB smokes. Fresh runtime construction
+adds 115 missing manifest content edges, retains 114 existing ones and preserves
+all other Ninja dependency sets across 5,320 actions after explicit path and
+invocation normalization. A cold compiler pilot traces the selected
+temp/diagnostics environment through the actual compiler launch and repeats
+with no work. This is bounded validation, not a new whole-libraries audit.
 
 The isolated Release libraries profile sets `EnableNgenOptimization=false`
 because no legacy IBC data is supplied, matching that aspect of the earlier

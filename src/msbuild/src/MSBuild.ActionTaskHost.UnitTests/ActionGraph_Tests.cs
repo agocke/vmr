@@ -22,6 +22,133 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
 {
     private readonly ITestOutputHelper _output = output;
 
+    [UnixOnlyFact]
+    public void IndependentActionsBuildOnlyTheirRequestedDependencyClosure()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        XDocument contents = XDocument.Load(project);
+        XElement target = contents.Root!.Element("Target")!;
+        target.ReplaceNodes(
+            new XElement("GraphTransformTask",
+                new XAttribute("File", "left.txt"), new XAttribute("Source", "left.input"),
+                new XAttribute("DeclaredInputs", "left.input"), new XAttribute("DeclaredOutputs", "left.txt")),
+            new XElement("GraphTransformTask",
+                new XAttribute("File", "right.txt"), new XAttribute("Source", "right.input"),
+                new XAttribute("DeclaredInputs", "right.input"), new XAttribute("DeclaredOutputs", "right.txt")),
+            new XElement("GraphTransformTask",
+                new XAttribute("File", "left-copy.txt"), new XAttribute("Source", "left.txt"),
+                new XAttribute("DeclaredInputs", "left.txt"), new XAttribute("DeclaredOutputs", "left-copy.txt")),
+            new XElement("GraphTransformTask",
+                new XAttribute("File", "right-copy.txt"), new XAttribute("Source", "right.txt"),
+                new XAttribute("DeclaredInputs", "right.txt"), new XAttribute("DeclaredOutputs", "right-copy.txt")));
+        File.WriteAllText(project, contents.ToString());
+        File.WriteAllText(Path.Combine(directory, "left.input"), "left");
+        File.WriteAllText(Path.Combine(directory, "right.input"), "right");
+        string graph = Path.Combine(directory, "build.ninja");
+        string leftCopy = Path.Combine(directory, "left-copy.txt");
+        string rightCopy = Path.Combine(directory, "right-copy.txt");
+
+        Generate(project, graph).ShouldBeTrue();
+
+        RunnerUtilities.RunProcessAndGetOutput("ninja", $"-f \"{graph}\" -j4 \"{leftCopy}\"",
+            out bool success, outputHelper: _output);
+        success.ShouldBeTrue();
+        File.ReadAllText(leftCopy).ShouldBe("left|consumed|consumed");
+        File.Exists(Path.Combine(directory, "right.txt")).ShouldBeFalse();
+        File.Exists(rightCopy).ShouldBeFalse();
+
+        RunnerUtilities.RunProcessAndGetOutput("ninja", $"-f \"{graph}\" -j4",
+            out success, outputHelper: _output);
+        success.ShouldBeTrue();
+        File.ReadAllText(rightCopy).ShouldBe("right|consumed|consumed");
+        DateTime rightWrite = File.GetLastWriteTimeUtc(rightCopy);
+        string input = Path.Combine(directory, "left.input");
+        File.WriteAllText(input, "changed");
+        File.SetLastWriteTimeUtc(input, File.GetLastWriteTimeUtc(leftCopy).AddSeconds(2));
+
+        RunnerUtilities.RunProcessAndGetOutput("ninja", $"-f \"{graph}\" -j4",
+            out success, outputHelper: _output);
+        success.ShouldBeTrue();
+        File.ReadAllText(leftCopy).ShouldBe("changed|consumed|consumed");
+        File.GetLastWriteTimeUtc(rightCopy).ShouldBe(rightWrite);
+    }
+
+    [UnixOnlyTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ProducedTaskDependencyManifestIsAContentDependency(bool forwardProducer)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string assembly = typeof(ManifestProbeTask).Assembly.Location;
+        string futureAssembly = Path.Combine(directory, "future", Path.GetFileName(assembly));
+        string futureManifest = Path.ChangeExtension(futureAssembly, ".deps.json");
+        string sourceManifest = Path.Combine(directory, "input.deps.json");
+        File.Copy(Path.ChangeExtension(assembly, ".deps.json"), sourceManifest);
+        string result = Path.Combine(directory, "result.json");
+        XElement manifestProducer = new("CopyFiles",
+            new XAttribute("SourceFiles", sourceManifest), new XAttribute("DestinationFiles", futureManifest),
+            new XAttribute("DeclaredInputs", sourceManifest), new XAttribute("DeclaredOutputs", futureManifest));
+        XElement target = new("Target", new XAttribute("Name", "Build"),
+            new XElement("CopyFiles",
+                new XAttribute("SourceFiles", assembly), new XAttribute("DestinationFiles", futureAssembly),
+                new XAttribute("DeclaredInputs", assembly), new XAttribute("DeclaredOutputs", futureAssembly)));
+        if (!forwardProducer)
+        {
+            target.Add(manifestProducer);
+        }
+        target.Add(new XElement(nameof(ManifestProbeTask),
+            new XAttribute("File", result), new XAttribute("Value", "generated manifest"),
+            new XAttribute("RequiredItems", ""), new XAttribute("DeclaredInputs", ""),
+            new XAttribute("DeclaredOutputs", result)));
+        if (forwardProducer)
+        {
+            target.Add(manifestProducer);
+        }
+        string project = Path.Combine(directory, "generated-task.proj");
+        File.WriteAllText(project, new XElement("Project",
+            new XElement("UsingTask", new XAttribute("TaskName", typeof(Microsoft.Build.Tasks.CopyFiles).FullName!),
+                new XAttribute("AssemblyFile", typeof(Microsoft.Build.Tasks.CopyFiles).Assembly.Location)),
+            new XElement("UsingTask", new XAttribute("TaskName", typeof(ManifestProbeTask).FullName!),
+                new XAttribute("AssemblyFile", futureAssembly)),
+            target).ToString());
+        string graph = Path.Combine(directory, "build.ninja");
+
+        Generate(project, graph).ShouldBe(!forwardProducer);
+
+        File.Exists(futureManifest).ShouldBeFalse();
+        File.Exists(futureAssembly).ShouldBeFalse();
+        if (forwardProducer)
+        {
+            File.Exists(graph).ShouldBeFalse();
+            Directory.Exists(graph + ".actions").ShouldBeFalse();
+            return;
+        }
+
+        string consumer = Directory.GetFiles(graph + ".actions", "2-*.json").ShouldHaveSingleItem();
+        string edge = File.ReadLines(graph).Single(line => line.Contains(": action_2", StringComparison.Ordinal));
+        edge.Split(" |", StringSplitOptions.None)[0].ShouldContain(
+            futureManifest.Replace("$", "$$").Replace(" ", "$ ").Replace(":", "$:"));
+        string log = RunnerUtilities.RunProcessAndGetOutput("ninja", $"-f \"{graph}\" -j4 \"{result}\"",
+            out bool succeeded, outputHelper: _output);
+        succeeded.ShouldBeTrue();
+        File.ReadAllBytes(futureManifest).ShouldBe(File.ReadAllBytes(sourceManifest));
+        using (JsonDocument contents = JsonDocument.Parse(File.ReadAllText(result)))
+        {
+            contents.RootElement.GetProperty("value").GetString().ShouldBe("generated manifest");
+        }
+
+        File.SetLastWriteTimeUtc(result, File.GetLastWriteTimeUtc(futureManifest).AddSeconds(-2));
+        File.AppendAllText(sourceManifest, "\n");
+        log = RunnerUtilities.RunProcessAndGetOutput("ninja", $"-f \"{graph}\" -j4 \"{result}\"",
+            out succeeded, outputHelper: _output);
+        succeeded.ShouldBeTrue();
+        log.ShouldContain(consumer);
+        File.ReadAllBytes(futureManifest).ShouldBe(File.ReadAllBytes(sourceManifest));
+    }
+
     [UnixOnlyTheory]
     [InlineData("assigned")]
     [InlineData("unassigned")]

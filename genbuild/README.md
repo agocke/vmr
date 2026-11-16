@@ -152,6 +152,57 @@ and
 This changes the integration authoring, not a permission to prebuild compiler
 or runtime products. Do not patch shared cached package contents.
 
+## Linux read audit
+
+`audit.py` observes action-host families with `strace` and checks successful
+file opens, executable/readlink accesses and directory enumeration against
+each action's content inputs. Order-only dependencies are not read permissions.
+Run it on fresh isolated outputs; an up-to-date Ninja run does not exercise the
+actions:
+
+```sh
+python3 -B genbuild/audit.py trace --strace /absolute/path/to/strace \
+  --graph /absolute/path/to/build.ninja --cwd /absolute/path/to/project \
+  --output /absolute/path/to/new-capture -- \
+  ninja -f /absolute/path/to/build.ninja -j4
+python3 -B genbuild/audit.py analyze --capture /absolute/path/to/new-capture \
+  --runtime-catalog /absolute/path/to/runtime-files.json \
+  --platform-catalog /absolute/path/to/platform-files.json \
+  --report /absolute/path/to/report.json
+```
+
+Runtime/OS exceptions require reviewed exact-file catalogs. Optional directory
+catalogs enumerate exact permitted names, not directory-prefix access.
+Process-local runtime and exclusive-created/deleted case-sensitivity-probe
+policies are separate opt-ins with recorded uses. See
+[`audit-help.txt`](audit-help.txt) for schemas, policies and limitations.
+Unresolved or incomplete traces fail the audit. Metadata and failed probes are
+reported separately; `--strict-probes` rejects their undeclared cases too.
+This is post-execution observation, not sandbox enforcement or a complete
+hermeticity proof; inherited handles, non-file inputs and filesystem races
+remain limitations.
+
+The first libraries audit is **not clean**. After a successful rebuilt-host
+two-action pilot, the full run was stopped at 657 of 5,321 action families.
+It found 1,427 undeclared observations, 85 unresolved events and three
+incompleteness records; none were waived. Two identified defects are corrected:
+graph publication binds each task assembly's adjacent `.deps.json` to its known
+producer, even on a cold graph, and compiler children preserve explicitly
+selected task-context `SystemRoot`, `TMPDIR`, `TMP`, `TEMP` and
+`DOTNET_EnableDiagnostics` after clearing their environment. The manifest is a
+content dependency with the usual forward/cycle rejection, not an ordering
+chain or directory scan. Other observations include runtime/platform files
+and private response/translation scratch that still need explicit policy or
+provenance, not blanket directory permissions. These fixes do not establish a
+clean whole-libraries audit; a complete trace remains required.
+
+Focused regressions and C#/VB smokes pass. A fresh cold 5,320-action runtime
+graph adds 115 `ILLink.Tasks.deps.json` content edges and preserves the 114
+already-explicit edges; all other Ninja dependency sets match after path and
+invocation normalization. A fresh compiler pilot confirms the actual `csc`
+child receives only the selected temp/diagnostics controls and repeats as a
+Ninja no-op. No full libraries trace was rerun for these fixes.
+
 ## Smoke checks
 
 Install Ninja and build the app first. Then run from the VMR root, replacing
@@ -674,12 +725,47 @@ Up-to-date Restore refreshes negative facts and republishes deleted files withou
 child Restore or capture. Configured preparation and discovery traversal have
 also been removed; normal NuGet acquisition traversal remains.
 
-The 5,321-action libraries graph now completes through resumed execution using
-an experimental copied Ninja graph with 417 conservative adjacent-action
-fork/join diamonds. The final resume completes 1,514 actions in 440 seconds;
-repeated Ninja has no work. The original emitted graph and protected shared
-caches remain unchanged. This verifies libraries graph execution, not a clean
-performance comparison, runtime tests or the entire runtime build.
+The emitter no longer adds a blanket previous-action order-only dependency.
+A fresh private libraries profile completes the untouched emitted graph with
+`ninja -j4`, without resume or hand-edited fork/join diamonds: 5,320 task actions,
+7,208 declared file outputs and one generated-source tree. Ninja's log records
+four overlapping actions and four overlapping compiler invocations; all 500
+compiler actions execute. Repeated Ninja reports no work. A focused regression
+also checks that requesting one independent branch does not build the other,
+and editing its input leaves the other branch unchanged. This validates the
+observed parallel execution, not filesystem isolation, runtime tests or the
+entire runtime build.
+
+An initial matched Release comparison uses private product roots, warm package
+and OS caches, the same source-built C#/VB compilers, shared compilation off,
+and four execution slots in each mode. These are single shared-host runs, not
+statistically controlled speed claims or a developer-default compiler-server
+baseline. Seconds below exclude toolset assembly and validation bookkeeping:
+
+| Timed work | Ordinary MSBuild | Prototype |
+| --- | ---: | ---: |
+| Acquisition | 57.5 | 73.4 |
+| Cold Build (including graph construction) | 900.0 | 1,048.8 |
+| Acquisition + cold Build | 957.6 | 1,122.3 |
+| No-op Build, reconstructing the graph | 49.5 | 482.6 |
+| One-file comment edit and Build | 70.8 | 501.7 |
+
+Prototype cold construction takes 509.3 seconds and Ninja execution 539.6;
+reusing an existing graph makes the Ninja-only no-op 0.3 seconds. Reconstruction
+alone takes 482.3 seconds for no-op and 486.5 for the edit, followed by 15.3
+seconds of edited execution. Both modes execute 500 cold compiler commands,
+zero no-op compilers and five edited compilers; the edited Ninja closure has
+44 actions. The source edit is restored byte-for-byte. The construction cost,
+not acquisition, currently erases the parallel-execution benefit; graph reuse
+must not be presented as the cost of a fresh end-to-end no-op Build.
+
+Published path inventories match (3,229 paths each); all non-DLL/PDB files
+match bytes. Four cryptography DLL copies have differing raw IL; normalizing
+metadata tokens and file-local path checksums makes all 7,458 method signatures,
+instructions, locals and exception regions match. This is not exhaustive
+semantic or byte equivalence: debug/identity and metadata differences remain.
+The timings precede the audit-driven action-host resolver correction; do not infer
+final-host performance from them. Instrumented read-audit time is separate.
 
 The isolated Release libraries profile uses `EnableNgenOptimization=false`,
 matching the earlier Debug profile's lack of legacy IBC data. This does not

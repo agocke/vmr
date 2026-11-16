@@ -123,20 +123,19 @@ public sealed class CompileManaged : ToolTask
         var info = base.GetProcessStartInfo(pathToTool, commandLineCommands, responseFileSwitch);
         info.WorkingDirectory = TaskEnvironment.ProjectDirectory.Value;
 #if NETFRAMEWORK
-        var systemRoot = info.EnvironmentVariables["SystemRoot"];
-        info.EnvironmentVariables.Clear();
-        if (systemRoot != null)
-        {
-            info.EnvironmentVariables["SystemRoot"] = systemRoot;
-        }
+        var environment = info.EnvironmentVariables;
 #else
-        info.Environment.TryGetValue("SystemRoot", out var systemRoot);
-        info.Environment.Clear();
-        if (systemRoot != null)
-        {
-            info.Environment["SystemRoot"] = systemRoot;
-        }
+        var environment = info.Environment;
 #endif
+        environment.Clear();
+        foreach (var name in new[] { "SystemRoot", "TMPDIR", "TMP", "TEMP", "DOTNET_EnableDiagnostics" })
+        {
+            var value = TaskEnvironment.GetEnvironmentVariable(name);
+            if (value != null)
+            {
+                environment[name] = value;
+            }
+        }
         return info;
     }
 }

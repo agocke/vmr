@@ -105,8 +105,12 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
   directory discovery.
   Declare analyzer/generator dependencies, configs and additional files and
   trust their nominal compiler-input-only contract; enforcement is deferred
-  without per-plugin gates. `CompileManaged` controls the child environment and
-  uses ToolTask cancellation/private response-file scratch, never server state
+  without per-plugin gates. `CompileManaged` clears the child environment, then
+  forwards only `SystemRoot`, `TMPDIR`, `TMP`, `TEMP` and
+  `DOTNET_EnableDiagnostics` from `TaskEnvironment`; action execution receives
+  only explicitly selected `MSBuildActionEnvironment` values, not ambient
+  startup hooks or compiler/runtime-injection settings. It uses ToolTask
+  cancellation/private response-file scratch, never server state
   or a task-local cache. Shared `CompilerInvocation` composes footprint validation
   and path mappings without another compiler inheritance layer. VB requires an
   explicit runtime path, `None`/`Embed`, or `NoVBRuntimeReference`; implicit runtime
