@@ -82,23 +82,22 @@ does not yet replace every existing JSON consumer.
 
 ### Configured framework discovery
 
-The SDK profile captures inputs for the existing
-`GetTargetFrameworksWithPlatformForSingleTargetFramework` requests reached during
-Restore-time project-reference discovery, including frameworks not selected for
-compilation. Those requests preserve ordinary property overrides and removals;
-they do not enumerate additional configurations or recursively request compilation
-of their project references. Selected compilation references retain their
-separate recursive capture path.
+Restore collects resource bindings and machine observations during the existing
+NuGet per-framework acquisition visits. Successful acquisition publishes native
+framework/package facts and required source-control and Common cache/platform
+imports. It does not negotiate a separate configured compilation closure or run
+nested child Restore, fresh capture or framework-discovery preparation requests.
+Outer cross-targeting Restore is acquisition-only.
 
-Each reached configuration receives ordinary Restore and a fresh capture
-evaluation with restored imports. Metadata requests do not inherit the capture
-evaluation marker, so a subsequent selected-framework capture cannot reuse an
-evaluation created before that project's Restore.
-Nested Restore requests do not inherit the capture selector, so discovery and
-selected-framework preparation can reuse the same ordinary Restore configuration.
+Fresh Build imports acquired facts and restored package authoring before
+`GetTargetFrameworksWithPlatformForSingleTargetFramework` and configured
+project-reference selection run. Reference property overrides and removals stay
+in ordinary Build negotiation. Package-only authoring cannot introduce
+acquisition requirements retroactively; declare those requirements before
+acquisition rather than adding another project traversal.
 
-Hardened evaluation requires the explicitly named framework, NuGet, compiler,
-and enabled source-control imports for every reached inner build. Missing
+Hardened evaluation requires the explicitly named framework, NuGet,
+and enabled source-control/Common imports for every reached inner build. Missing
 discovered inputs fail their imports without publishing a partial graph.
 Do not make those imports optional to conceal an incomplete capture closure,
 or add a metadata-only evaluation mode. Capturing a framework's facts does not
@@ -487,10 +486,9 @@ directories of the final analyzers, including analyzers added by package targets
 The same selection handles the packaged SDK analyzer catalog without filesystem
 discovery. Loose and generated analyzer companions require explicit
 `AnalyzerDependency` authoring; project-dependent inputs stay in authoring rather
-than being duplicated into compiler snapshots. Framework-pack analyzer-directory
-capture remains in those snapshots pending the separate framework migration.
-This removes compiler-owned configured resolution but does not remove the
-additional configured preparation traversal.
+than being duplicated into compiler snapshots. Framework-pack member catalogs
+also come from acquisition; empty C#/VB manifest obligations and the separate
+configured preparation traversal are removed.
 
 Roslyn and SDK analyzer-package generators publish deterministic inventories of
 their emitted global configs in package authoring. Hardened targets select from
@@ -985,12 +983,12 @@ installed misses separately from package fallback hits. Reject incompatible
 machine context, folder precedence or same-root explicit catalogs rather than
 quietly merging them; separate scopes can use separate outputs. Resources may be
 shared without equating their acquisition request or configured Build identities.
-Platform display-name observations remain a separate narrow preparation producer
-with a locator to the shared pack manifest, imported before its resource facts.
-This split does not yet remove configured preparation traversal.
+Platform display-name observations are a separate native acquisition catalog.
+An unconfigured locator finds the shared pack manifest before its resource facts
+are imported. There is no additional configured preparation traversal.
 
-Existing child Restore/capture hooks must be adapted to this result/intent
-contract, including the fresh-import regression. Package-only hooks invisible
+Child Restore/capture hooks are not replayed; producers must use this result/intent
+contract, as the acquisition-only fresh-import regression does. Package-only hooks invisible
 to the Restore evaluation cannot be invoked magically after acquisition:
 acquired package inventories cover package-local inputs, and other external
 requirements need an explicit acquisition-side declaration. The legacy profile

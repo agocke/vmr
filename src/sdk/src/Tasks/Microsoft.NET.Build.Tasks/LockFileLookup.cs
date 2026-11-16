@@ -13,11 +13,16 @@ namespace Microsoft.NET.Build.Tasks
     {
         private readonly Dictionary<KeyValuePair<string, NuGetVersion>, LockFileLibrary> _packages;
         private readonly Dictionary<string, LockFileLibrary> _projects;
+        private readonly Dictionary<string, LockFileLibrary> _projectsByPath;
+        private readonly string _projectDirectory;
 
-        public LockFileLookup(LockFile lockFile)
+        public LockFileLookup(LockFile lockFile, string projectDirectory = null)
         {
             _packages = new Dictionary<KeyValuePair<string, NuGetVersion>, LockFileLibrary>(PackageCacheKeyComparer.Instance);
             _projects = new Dictionary<string, LockFileLibrary>(StringComparer.OrdinalIgnoreCase);
+            _projectsByPath = new Dictionary<string, LockFileLibrary>(
+                Path.DirectorySeparatorChar == '\\' ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            _projectDirectory = projectDirectory ?? Path.GetDirectoryName(lockFile.PackageSpec?.RestoreMetadata?.ProjectPath);
 
             foreach (var library in lockFile.Libraries)
             {
@@ -30,6 +35,11 @@ namespace Microsoft.NET.Build.Tasks
                 if (libraryType == LibraryType.Project)
                 {
                     _projects[library.Name] = library;
+                    string projectPath = NormalizeProjectPath(library.MSBuildProject);
+                    if (projectPath != null)
+                    {
+                        _projectsByPath[projectPath] = library;
+                    }
                 }
             }
         }
@@ -56,6 +66,27 @@ namespace Microsoft.NET.Build.Tasks
             return null;
         }
 
+        public LockFileLibrary GetProjectByPath(string projectPath)
+        {
+            string fullPath = NormalizeProjectPath(projectPath);
+            return fullPath != null && _projectsByPath.TryGetValue(fullPath, out var project) ? project : null;
+        }
+
+        private string NormalizeProjectPath(string projectPath)
+        {
+            if (string.IsNullOrEmpty(projectPath))
+            {
+                return null;
+            }
+
+            if (Path.IsPathRooted(projectPath))
+            {
+                return Path.GetFullPath(projectPath);
+            }
+
+            return _projectDirectory == null ? null : Path.GetFullPath(Path.Combine(_projectDirectory, projectPath));
+        }
+
         public bool TryGetLibrary(LockFileTargetLibrary targetLibrary, out LockFileLibrary library)
         {
             var libraryType = LibraryType.Parse(targetLibrary.Type);
@@ -75,6 +106,7 @@ namespace Microsoft.NET.Build.Tasks
         {
             _packages.Clear();
             _projects.Clear();
+            _projectsByPath.Clear();
         }
 
         private class PackageCacheKeyComparer : IEqualityComparer<KeyValuePair<string, NuGetVersion>>

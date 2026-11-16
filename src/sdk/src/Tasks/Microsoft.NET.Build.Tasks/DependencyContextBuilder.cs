@@ -655,24 +655,14 @@ namespace Microsoft.NET.Build.Tasks
 
             if (library.Type == "project" && !(referenceProjectInfo is UnreferencedProjectInfo))
             {
-                RuntimeFile runtimeFile;
-                if (_runtimeFileResolver != null)
-                {
-                    runtimeFile = CreateRuntimeFile(referenceProjectInfo.OutputName,
-                        referenceProjectInfo.RuntimeAssemblyPath, referenceProjectInfo.RuntimeAssemblyDestinationSubPath);
-                }
-                else
-                {
-                    var fileName = Path.GetFileNameWithoutExtension(library.Path);
-                    (AbsolutePath Path, string DestinationSubPath) assembly = userRuntimeAssemblies is not null
-                        ? userRuntimeAssemblies.FirstOrDefault(p => Path.GetFileNameWithoutExtension(p.Path).Equals(fileName))
-                        : default;
-                    string mainProjectDirectory = Path.GetDirectoryName(_mainProjectInfo.ProjectPath);
-                    string libraryPath = !string.IsNullOrWhiteSpace(library.Path) ? Path.Combine(mainProjectDirectory, library.Path) : null;
-                    runtimeFile = !string.IsNullOrWhiteSpace(assembly.Path) && File.Exists(assembly.Path) ? CreateRuntimeFile(referenceProjectInfo.OutputName, assembly.Path, assembly.DestinationSubPath) :
-                                      libraryPath != null && File.Exists(libraryPath) ? CreateRuntimeFile(referenceProjectInfo.OutputName, libraryPath) :
-                                      new RuntimeFile(referenceProjectInfo.OutputName, string.Empty, string.Empty);
-                }
+                StringComparer pathComparer = Path.DirectorySeparatorChar == '\\' ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+                (AbsolutePath Path, string DestinationSubPath) assembly = userRuntimeAssemblies is not null
+                    ? userRuntimeAssemblies.FirstOrDefault(p => pathComparer.Equals(p.Path.Value, referenceProjectInfo.RuntimeAssemblyPath))
+                    : default;
+                string destinationSubPath = string.IsNullOrEmpty(assembly.Path)
+                    ? referenceProjectInfo.RuntimeAssemblyDestinationSubPath : assembly.DestinationSubPath;
+                RuntimeFile runtimeFile = CreateRuntimeFile(referenceProjectInfo.OutputName,
+                    referenceProjectInfo.RuntimeAssemblyPath, destinationSubPath);
                 runtimeAssemblyGroups.Add(new RuntimeAssetGroup(string.Empty, [runtimeFile]));
 
                 resourceAssemblies.AddRange(referenceProjectInfo.ResourceAssemblies

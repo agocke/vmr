@@ -85,59 +85,110 @@ namespace Microsoft.NET.Build.Tasks.UnitTests
         }
 
         [TestMethod]
-        [DataRow(true)]
-        [DataRow(false)]
-        public void DeclaredProjectReferencesUseExplicitOutputsInsteadOfProjectNamesOrExistenceFallback(bool versions)
+        [DataRow(true, true)]
+        [DataRow(true, false)]
+        [DataRow(false, true)]
+        [DataRow(false, false)]
+        public void ProjectReferencesUseSourceIdentityAndExplicitOutputs(bool versions, bool declared)
         {
             string directory = CreateTestProjectDirectory();
             string assets = CreateAssetsFile(directory, "assets.json");
             var json = JObject.Parse(File.ReadAllText(assets));
-            json["targets"]["net8.0"]["Logical.Project/2.0.0"] = new JObject { ["type"] = "project" };
-            json["libraries"]["Logical.Project/2.0.0"] = new JObject
+            json["targets"]["net8.0"]["Package.Identity/2.0.0"] = new JObject { ["type"] = "project" };
+            json["libraries"]["Package.Identity/2.0.0"] = new JObject
             {
                 ["type"] = "project",
                 ["path"] = "Logical.Project.csproj",
                 ["msbuildProject"] = "Logical.Project.csproj"
             };
-            ((JArray)json["projectFileDependencyGroups"]["net8.0"]).Add("Logical.Project >= 2.0.0");
+            ((JArray)json["projectFileDependencyGroups"]["net8.0"]).Add("Package.Identity >= 2.0.0");
             File.WriteAllText(assets, json.ToString());
+            File.WriteAllText(Path.Combine(directory, "Logical.Project.csproj"), "<Project />");
             string assemblyPath = Path.Combine(directory, "Different.Assembly.dll");
             if (versions)
             {
                 EmitAssembly(assemblyPath, new Version(3, 4, 5, 6), "7.8.9.10");
             }
 
-            var task = CreateDeclaredTask(directory);
+            GenerateDepsFile task = declared ? CreateDeclaredTask(directory) : CreateMinimalTask("TestApp.csproj", "result.deps.json", directory);
+            task.TaskEnvironment = TaskEnvironmentHelper.CreateForTest(directory);
+            task.AssetsFilePath = "assets.json";
+            task.RuntimeFrameworks = [new TaskItem("Microsoft.NETCore.App")];
+            task.IncludeProjectsNotInAssetsFile = true;
             task.IncludeRuntimeFileVersions = versions;
             task.ReferencePaths = task.UserRuntimeAssemblies =
             [
-                new MockTaskItem(assemblyPath, new Dictionary<string, string>
+                new MockTaskItem("Different.Assembly.dll", new Dictionary<string, string>
                 {
                     ["ReferenceSourceTarget"] = "ProjectReference",
-                    ["MSBuildSourceProjectFile"] = Path.Combine(directory, "Logical.Project.csproj"),
+                    ["MSBuildSourceProjectFile"] = Path.Combine(directory, "nested", "..", "Logical.Project.csproj"),
                     ["DestinationSubDirectory"] = "plugins/"
                 })
             ];
-            task.DeclaredInputs = versions
-                ? [new TaskItem("assets.json"), new TaskItem(assemblyPath)]
-                : [new TaskItem("assets.json")];
+            task.UserRuntimeAssemblies = [new MockTaskItem("Different.Assembly.dll", new Dictionary<string, string>
+            {
+                ["DestinationSubDirectory"] = "published/"
+            })];
+            if (task is WriteDepsFile writer)
+            {
+                writer.DeclaredInputs = versions
+                    ? [new TaskItem("assets.json"), new TaskItem(assemblyPath)]
+                    : [new TaskItem("assets.json")];
+            }
 
             task.Execute().Should().BeTrue();
 
             var result = JObject.Parse(File.ReadAllText(Path.Combine(directory, "result.deps.json")));
-            var file = result["targets"][".NETCoreApp,Version=v8.0"]["Logical.Project/2.0.0"]["runtime"]["Different.Assembly.dll"];
-            file["localPath"].Value<string>().Should().Be("plugins/Different.Assembly.dll");
+            var target = (JObject)result["targets"][".NETCoreApp,Version=v8.0"];
+            target.Properties().Select(property => property.Name).Should().BeEquivalentTo(new[] { "TestApp/1.0.0.0", "Package.Identity/2.0.0" });
+            var file = target["Package.Identity/2.0.0"]["runtime"]["Different.Assembly.dll"];
+            file["localPath"].Value<string>().Should().Be("published/Different.Assembly.dll");
             if (versions)
             {
                 file["assemblyVersion"].Value<string>().Should().Be("3.4.5.6");
                 file["fileVersion"].Value<string>().Should().Be("7.8.9.10");
-                File.Delete(assemblyPath);
-                Action execute = () => task.Execute();
-                execute.Should().Throw<FileNotFoundException>();
+                if (declared)
+                {
+                    File.Delete(assemblyPath);
+                    Action execute = () => task.Execute();
+                    execute.Should().Throw<FileNotFoundException>();
+                }
             }
             else
             {
                 ((JObject)file).Properties().Select(property => property.Name).Should().Equal("localPath");
+            }
+        }
+
+        [TestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void ProjectsAbsentFromAssetsAreNotConfusedWithAnotherProjectsName(bool includeExtraProjects)
+        {
+            string directory = CreateTestProjectDirectory();
+            var lockFile = new NuGet.ProjectModel.LockFile();
+            lockFile.Libraries.Add(new NuGet.ProjectModel.LockFileLibrary
+            {
+                Name = "Shared.Name",
+                Type = "project",
+                MSBuildProject = "other/Shared.Name.csproj"
+            });
+            var reference = new MockTaskItem("Shared.Name.dll", new Dictionary<string, string>
+            {
+                ["ReferenceSourceTarget"] = "ProjectReference",
+                ["MSBuildSourceProjectFile"] = Path.Combine(directory, "Shared.Name.csproj")
+            });
+
+            var references = ReferenceInfo.CreateDirectReferenceInfos(
+                [reference], [], new LockFileLookup(lockFile, directory), _ => true, includeExtraProjects).ToArray();
+
+            if (includeExtraProjects)
+            {
+                references.Should().ContainSingle().Which.FileName.Should().Be("Shared.Name.dll");
+            }
+            else
+            {
+                references.Should().BeEmpty();
             }
         }
 

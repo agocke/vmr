@@ -38,7 +38,7 @@ preparation. Explicit `AnalyzerDependency` authoring covers loose/generated file
 and package-adjacent files absent from the acquired inventory.
 Both primary and satellite `CompileManaged` calls consume `_CompilerToolInput`
 directly from the packaged Build catalog, not Restore snapshots.
-SDK preparation does not register compiler manifest capture; C# and VB consume
+SDK acquisition does not register compiler manifest capture; C# and VB consume
 the packaged catalog and acquired inventories directly.
 
 Existing per-framework acquisition visits declare finite pack requests and lookup,
@@ -66,8 +66,10 @@ metadata-query/validation time in direct hardened mode, not during evaluation.
 Acquisition also publishes the unconfigured `frameworkpackinputs/$(MSBuildProjectFile).g.props`
 locator. Import it before the shared facts so alternate Build entry points find the
 original acquisition scope. No configured framework/platform writer is registered
-in direct mode. Other preparation producers and the configured walk remain;
-do not add reference traversal or new selection passes just to collect resource facts.
+in direct mode. The configured preparation closure and framework-discovery
+capture are removed. Source-control and Common cache/platform observations use
+existing acquisition visits; do not add reference traversal, child Restore or
+new configured selection passes just to collect resource facts.
 ApiCompat default-suppression facts are also acquisition outputs; no direct
 preparation registration depends on the removed framework hook.
 Native pack format 2 compiles FrameworkList attributes, platform rows, package override
@@ -82,6 +84,15 @@ unconfigured project import manifests. `RuntimeGraphResource` items declare
 additional graphs before acquisition; cold package targets cannot register later
 through configured capture. Arcade's FromInputs selectors rebuild the model from
 items without JSON parsing or filesystem fallback.
+
+## Dependency manifests
+
+[`GenerateDepsFile`](Microsoft.NET.Build.Tasks/GenerateDepsFile.cs) and
+[`WriteDepsFile`](Microsoft.NET.Build.Tasks/WriteDepsFile.cs) identify assets-backed
+project references by normalized source-project path, not project, assembly or
+package display names. Both use the explicit runtime assembly binding and its
+`UserRuntimeAssemblies` destination metadata. Runtime version reads stay in execution;
+the declared writer requires the actual DLL input, never a project-file fallback.
 
 ## Declared ApiCompat reference inputs
 

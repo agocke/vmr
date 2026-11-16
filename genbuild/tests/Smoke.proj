@@ -263,13 +263,13 @@
     <WriteLinesToFile File="%(_ArcadeInputsCase.Root)runtime.json" Overwrite="true"
                       Lines="{&quot;runtimes&quot;:{&quot;linux&quot;:{&quot;#import&quot;:[&quot;unix&quot;]},&quot;unix&quot;:{&quot;#import&quot;:[&quot;any&quot;]},&quot;any&quot;:{}},&quot;transport&quot;:&quot;%24(ArcadeInputPoison)%253B%3B100%25done&quot;}" />
     <Copy SourceFiles="%(_ArcadeInputsCase.Root)runtime.json" DestinationFiles="%(_ArcadeInputsCase.Root)extra-runtime.json" />
-    <Exec Command="$(_App) restore &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; -t:Restore %(_ArcadeInputsCase.Arguments) -p:MSBuildRestoreGraphInputs=false -p:_MSBuildPreparingGraphInputs=true -bl:&quot;%(_ArcadeInputsCase.Root)no-restore-flag.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; -t:Restore %(_ArcadeInputsCase.Arguments) -p:MSBuildRestoreGraphInputs=false -bl:&quot;%(_ArcadeInputsCase.Root)no-restore-flag.binlog&quot;" />
     <Error Condition="Exists('%(_ArcadeInputsCase.Root)%(_ArcadeInputsCase.Inputs)')"
            Text="Arcade inputs must not be captured without MSBuildRestoreGraphInputs." />
-    <Exec Command="$(_App) restore &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; -t:Restore %(_ArcadeInputsCase.Arguments) -p:DeclareAdditionalRuntimeGraph=true -p:MSBuildRestoreGraphInputs=true -p:_MSBuildPreparingGraphInputs=false -bl:&quot;%(_ArcadeInputsCase.Root)no-preparation-flag.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; -t:Restore %(_ArcadeInputsCase.Arguments) -p:DeclareAdditionalRuntimeGraph=true -p:MSBuildRestoreGraphInputs=true -bl:&quot;%(_ArcadeInputsCase.Root)acquisition.binlog&quot;" />
     <Error Condition="!Exists('%(_ArcadeInputsCase.Root)%(_ArcadeInputsCase.Inputs)')"
            Text="Runtime-graph facts must be available without configured preparation." />
-    <Exec Command="$(_App) restore &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; -t:Ordinary %(_ArcadeInputsCase.Arguments) -p:DeclareAdditionalRuntimeGraph=true -p:_MSBuildPreparingGraphInputs=true -p:ResultFile=&quot;%(_ArcadeInputsCase.Root)ordinary.txt&quot; -bl:&quot;%(_ArcadeInputsCase.Root)ordinary.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;%(_ArcadeInputsCase.Root)ArcadeTargetFrameworkInputs.proj&quot; -t:Ordinary %(_ArcadeInputsCase.Arguments) -p:DeclareAdditionalRuntimeGraph=true -p:ResultFile=&quot;%(_ArcadeInputsCase.Root)ordinary.txt&quot; -bl:&quot;%(_ArcadeInputsCase.Root)ordinary.binlog&quot;" />
     <Error Condition="!Exists('%(_ArcadeInputsCase.Root)%(_ArcadeInputsCase.Inputs)') or !Exists('%(_ArcadeInputsCase.Root)ordinary.txt')"
            Text="Ordinary Arcade negotiation must preserve acquisition facts and provide the metadata oracle." />
     <Move SourceFiles="%(_ArcadeInputsCase.Root)runtime.json" DestinationFiles="%(_ArcadeInputsCase.Root)runtime.saved.json" />
@@ -287,7 +287,7 @@
            Text="Acquisition must retain all explicitly declared runtime graphs without reading either JSON during Build." />
 
     <Move SourceFiles="$(_ArcadeInputsBaselineRoot)runtime.saved.json" DestinationFiles="$(_ArcadeInputsBaselineRoot)runtime.json" />
-    <Exec Command="$(_App) restore &quot;$(_ArcadeInputsBaselineRoot)ArcadeTargetFrameworkInputs.proj&quot; -t:Ordinary $(_ArcadeInputsBaselineArguments) -p:TestCase=incompatible -p:_MSBuildPreparingGraphInputs=true -p:ResultFile=&quot;$(_ArcadeInputsBaselineRoot)ordinary-incompatible.txt&quot; -bl:&quot;$(_ArcadeInputsBaselineRoot)ordinary-incompatible.binlog&quot;"
+    <Exec Command="$(_App) restore &quot;$(_ArcadeInputsBaselineRoot)ArcadeTargetFrameworkInputs.proj&quot; -t:Ordinary $(_ArcadeInputsBaselineArguments) -p:TestCase=incompatible -p:ResultFile=&quot;$(_ArcadeInputsBaselineRoot)ordinary-incompatible.txt&quot; -bl:&quot;$(_ArcadeInputsBaselineRoot)ordinary-incompatible.binlog&quot;"
           IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
       <Output TaskParameter="ExitCode" PropertyName="_ArcadeInputsOrdinaryIncompatibleExit" />
       <Output TaskParameter="ConsoleOutput" ItemName="_ArcadeInputsOrdinaryIncompatibleOutput" />
@@ -516,21 +516,15 @@
       <_ConfiguredSnapshot Include="$(_ConfiguredRoot)Parent/obj/frameworkpackinputs/Parent.csproj.g.props;$(_ConfiguredRoot)Child/obj/frameworkpackinputs/Child.csproj.g.props" />
       <_ConfiguredSnapshot Include="$(_ConfiguredRoot)Parent/obj/nugetinputs/Parent.csproj.g.props;$(_ConfiguredRoot)Child/obj/nugetinputs/Child.csproj.g.props" />
     </ItemGroup>
-    <Error Condition="!Exists('%(_ConfiguredSnapshot.Identity)')" Text="Missing configured preparation snapshot: %(_ConfiguredSnapshot.Identity)" />
+    <Error Condition="!Exists('%(_ConfiguredSnapshot.Identity)')" Text="Missing acquisition facts: %(_ConfiguredSnapshot.Identity)" />
     <Error Condition="Exists('$(_ConfiguredRoot)Parent/bin') or Exists('$(_ConfiguredRoot)Child/bin')"
-           Text="Preparation must not build products." />
+           Text="Acquisition must not build products." />
     <Error Condition="Exists('$(_ConfiguredRoot)Parent/obj/cscinputs') or Exists('$(_ConfiguredRoot)Child/obj/cscinputs')"
            Text="Configured acquisition must not publish empty compiler manifests; explicit dependencies belong in graph construction." />
-    <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:Configuration=Debug -bl:&quot;$(_ConfiguredRoot)outer-build-rejected.binlog&quot;"
-          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
-      <Output TaskParameter="ExitCode" PropertyName="_ConfiguredOuterExit" />
-      <Output TaskParameter="ConsoleOutput" ItemName="_ConfiguredOuterOutput" />
-    </Exec>
-    <PropertyGroup>
-      <_ConfiguredOuterLog>@(_ConfiguredOuterOutput)</_ConfiguredOuterLog>
-    </PropertyGroup>
-    <Error Condition="'$(_ConfiguredOuterExit)' == '0' or !$(_ConfiguredOuterLog.Contains('NETSDK1247')) or Exists('$(_ConfiguredRoot)Parent/obj/frameworkreferences') or Exists('$(_ConfiguredRoot)Parent/obj/genbuild/build.ninja')"
-           Text="Outer preparation must require a selected framework and publish neither outer snapshots nor a graph." />
+    <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:Configuration=Debug -bl:&quot;$(_ConfiguredRoot)outer-restore.binlog&quot;" />
+    <Error Condition="Exists('$(_ConfiguredRoot)Parent/obj/frameworkreferences') or Exists('$(_ConfiguredRoot)Parent/obj/genbuild/build.ninja') or
+                      Exists('$(_ConfiguredRoot)Parent/bin') or Exists('$(_ConfiguredRoot)Child/bin')"
+           Text="Outer acquisition must succeed without configured selection, snapshots or product execution." />
     <Exec Command="$(_App) restore &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:TargetFramework=net11.0 -p:Configuration=Debug -p:ForcePreparationBuild=true -bl:&quot;$(_ConfiguredRoot)product-build-rejected.binlog&quot;"
           IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true">
       <Output TaskParameter="ExitCode" PropertyName="_ConfiguredProductBuildExit" />
@@ -539,8 +533,8 @@
     <PropertyGroup>
       <_ConfiguredProductBuildLog>@(_ConfiguredProductBuildOutput)</_ConfiguredProductBuildLog>
     </PropertyGroup>
-    <Error Condition="'$(_ConfiguredProductBuildExit)' == '0' or !$(_ConfiguredProductBuildLog.Contains('Graph-input preparation cannot build project outputs')) or Exists('$(_ConfiguredRoot)Parent/bin') or Exists('$(_ConfiguredRoot)Child/bin')"
-           Text="Preparation must explicitly reject attempts to prebuild product or tool outputs." />
+    <Error Condition="'$(_ConfiguredProductBuildExit)' == '0' or !$(_ConfiguredProductBuildLog.Contains('Graph-input acquisition cannot build project outputs')) or Exists('$(_ConfiguredRoot)Parent/bin') or Exists('$(_ConfiguredRoot)Child/bin')"
+           Text="Acquisition must explicitly reject attempts to prebuild product or tool outputs." />
     <Exec Command="$(_App) build &quot;$(_ConfiguredRoot)Parent/Parent.csproj&quot; $(_ConfiguredArguments) -p:TargetFramework=net11.0 -p:Configuration=Debug -p:MSBuildEmitActionGraph=&quot;$(_ConfiguredRoot)build.ninja&quot; -bl:&quot;$(_ConfiguredRoot)build.binlog&quot;" />
     <Error Condition="!$([System.IO.File]::ReadAllText('$(_ConfiguredRoot)build.ninja').Contains('Parent/Debug.inputs')) or
                       !$([System.IO.File]::ReadAllText('$(_ConfiguredRoot)build.ninja').Contains('Child/Release.inputs')) or
@@ -553,7 +547,7 @@
       <Output TaskParameter="ConsoleOutput" PropertyName="_ConfiguredProgramOutput" />
     </Exec>
     <Error Condition="'$(_ConfiguredProgramOutput)' != 'Hello from a project reference.' or !Exists('$(_ConfiguredRoot)Child/bin/Release/net10.0/Child.dll')"
-           Text="Configured preparation must support independent compilation with the negotiated child." />
+           Text="Acquisition facts must support independent compilation with the negotiated child." />
   </Target>
   <Target Name="TestDiscoveryPreparation">
     <PropertyGroup>
@@ -744,8 +738,8 @@
     <GetFileHash Files="@(_RuntimeLayoutStaleProduct)">
       <Output TaskParameter="Items" ItemName="_RuntimeLayoutStaleProductBefore" />
     </GetFileHash>
-    <Exec Command="$(_App) restore &quot;%(_RuntimeLayoutRun.Root)RuntimeLibraryLayout.proj&quot; %(_RuntimeLayoutRun.Arguments) -p:_MSBuildPreparingGraphInputs=true -bl:&quot;%(_RuntimeLayoutRun.Root)restore.binlog&quot;" />
-    <!-- Each ordinary oracle retains its live graph; hardened queries/publication must replay preparation. -->
+    <Exec Command="$(_App) restore &quot;%(_RuntimeLayoutRun.Root)RuntimeLibraryLayout.proj&quot; %(_RuntimeLayoutRun.Arguments) -bl:&quot;%(_RuntimeLayoutRun.Root)restore.binlog&quot;" />
+    <!-- Each ordinary oracle retains its live graph; hardened queries/publication use acquired facts. -->
     <Move SourceFiles="%(_RuntimeLayoutRun.Root)runtime.json" DestinationFiles="%(_RuntimeLayoutRun.Root)runtime.saved.json"
           Condition="'%(_RuntimeLayoutRun.Mode)' == 'action'" />
     <Exec Command="$(_App) restore &quot;%(_RuntimeLayoutOrdinaryRun.Root)RuntimeLibraryLayout.proj&quot; -t:Query %(_RuntimeLayoutOrdinaryRun.Arguments) -bl:&quot;%(_RuntimeLayoutOrdinaryRun.Root)query.binlog&quot;" />
@@ -897,7 +891,7 @@
     <Copy SourceFiles="$(_TestHostFixtures)Excluded.proj" DestinationFiles="%(_TestHostRun.Root)Ignored.proj" />
     <WriteLinesToFile File="%(_TestHostRun.Root)runtime.json" Overwrite="true"
                       Lines="{&quot;runtimes&quot;:{&quot;linux&quot;:{&quot;#import&quot;:[&quot;unix&quot;]},&quot;unix&quot;:{&quot;#import&quot;:[&quot;any&quot;]},&quot;any&quot;:{}}}" />
-    <Exec Command="$(_App) restore &quot;%(_TestHostPreparedRun.Root)%(_TestHostPreparedRun.Entry).proj&quot; %(_TestHostPreparedRun.Arguments) -p:_MSBuildPreparingGraphInputs=true -bl:&quot;%(_TestHostPreparedRun.Root)restore.binlog&quot;" />
+    <Exec Command="$(_App) restore &quot;%(_TestHostPreparedRun.Root)%(_TestHostPreparedRun.Entry).proj&quot; %(_TestHostPreparedRun.Arguments) -bl:&quot;%(_TestHostPreparedRun.Root)restore.binlog&quot;" />
     <Error Condition="Exists('%(_TestHostPreparedRun.Root)products') or Exists('%(_TestHostPreparedRun.Root)layout')"
            Text="Restore must capture configured framework inputs without producing or staging anything." />
     <Move SourceFiles="%(_TestHostPreparedRun.Root)runtime.json" DestinationFiles="%(_TestHostPreparedRun.Root)runtime.saved.json"
@@ -2143,6 +2137,7 @@
     <Error Condition="'@(_SdkProjectReferenceProgramOutput)' != 'Hello from a project reference.'"
            Text="The independently built SDK executable must load and call its renamed project-reference implementation." />
     <Copy SourceFiles="$(_ProjectReferenceRoot)App/bin/Debug/net11.0/App.deps.json" DestinationFiles="$(_ProjectReferenceRoot)independent.deps.json" />
+    <Delete Files="$(_ProjectReferenceRoot)App/bin/Debug/net11.0/App.deps.json" />
     <Exec Command="$(_App) restore &quot;$(_ProjectReferenceRoot)App/App.csproj&quot; -t:Build $(_ProjectReferenceArguments) -p:MSBuildRestoreGraphInputs=false -p:UseSharedCompilation=false -bl:&quot;$(_ProjectReferenceRoot)sdk-ordinary.binlog&quot;" />
     <GetFileHash Files="$(_ProjectReferenceRoot)independent.deps.json;$(_ProjectReferenceRoot)App/bin/Debug/net11.0/App.deps.json">
       <Output TaskParameter="Items" ItemName="_SdkProjectReferenceDepsHash" />

@@ -79,7 +79,7 @@ namespace Microsoft.NET.Build.Tasks
                 string projectFilePath = referencePath.GetMetadata(MetadataKeys.MSBuildSourceProjectFile);
                 if (!string.IsNullOrEmpty(projectFilePath))
                 {
-                    projectName = Path.GetFileNameWithoutExtension(projectFilePath);
+                    return lockFileLookup.GetProjectByPath(projectFilePath) != null;
                 }
                 else
                 {

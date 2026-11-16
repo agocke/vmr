@@ -262,8 +262,9 @@ nonempty accessor cases still generate and compile source. This does not rely on
 incremental target skipping.
 A configured fixture retains parent/child multi-targeting declarations, prepares
 multiple parent frameworks/configurations, and independently builds a Debug/net11
-parent with its negotiated Release/net10 child. Outer preparation and attempts
-to prebuild tools/products fail explicitly.
+parent with its negotiated Release/net10 child. Outer Restore acquires resources
+without configured selection; attempts to prebuild tools/products during
+acquisition fail explicitly.
 A framework-basics fixture builds a package-backed `netstandard2.0` library for a
 net11 executable and a net10 library using both Core and ASP.NET targeting packs.
 It preserves ordinary package-authored references, checks stale framework inputs,
@@ -317,7 +318,7 @@ ordinary Restore, including versions pinned in `global.json`. The driver
 disables that resolver during hardened Build, which now replays captured SDK
 bindings rather than searching package caches or downloading SDKs.
 
-Framework-reference preparation accepts a selected target framework per configured
+Framework-reference selection runs in fresh Build for each configured
 project, including zero, one or multiple `FrameworkReference` items, package/project
 references, explicit assembly paths and retained `TargetFrameworks`.
 Normal SDK authoring decomposes selected targeting packs into reference/analyzer
@@ -341,9 +342,11 @@ SDK display-name overrides, including platform aliases. A zero-I/O task selects 
 current platform's display name before framework metadata queries/validation, with
 the ordinary identifier/version fallback when no override exists. This late SDK
 fixup is target-time in hardened mode; ordinary evaluation is unchanged. The separate
-Common platform-SDK location/presence contract and other preparation hooks remain.
+Common platform-SDK location/presence facts are published during existing
+per-framework acquisition visits, separately from this display-name catalog.
 Changing the framework-reference identity set requires a fresh Restore.
-Outer cross-targeting and RID preparation remain unsupported.
+Outer cross-targeting Restore is acquisition-only; this does not broaden the
+bounded hardened Build's RID support.
 The real `System.Collections.Immutable` trial targeting runtime's `net10.0`
 minimum now gets past the multi-targeting guard. Runtime's
 `FilterImplicitAssemblyReferences` now runs before final assembly-reference
@@ -386,12 +389,13 @@ WebAssembly tool versions or enable wasmtime provisioning.
 `eng/RuntimeIdentifier.props` now evaluates unchanged against captured host-RID
 context. Runtime's generator-directory classification now uses `NormalizePath`
 anchored at `MSBuildProjectDirectory`, preserving ordinary classifications.
-Restore-time capture includes the configured framework-metadata requests reached
-by ordinary project-reference negotiation, not just the configurations selected
-for compilation. Each reached configuration receives ordinary Restore followed
-by fresh local capture, without recursively requesting its compilation references.
-Nested Restore requests remove the capture selector, allowing discovery and
-selected-framework preparation to share the same ordinary Restore configuration.
+Restore publishes resource facts from the per-framework visits NuGet already
+makes for acquisition. There is no post-Restore configured preparation closure,
+nested child Restore/fresh capture, recursive `PrepareProjectReferences` walk,
+or framework-discovery capture. Fresh Build imports acquired facts and newly
+restored package authoring, then negotiates project-reference frameworks and
+selects the configured closure. Acquisition requirements must be visible before
+package-only Build authoring is imported; no replacement traversal is added.
 Acquired framework, NuGet, Common cache/platform, and enabled source-control imports
 remain required during hardened evaluation; missing facts fail rather than
 being hidden by optional imports. There is no metadata-only mode or discovery
@@ -404,9 +408,9 @@ and hardened Build return identical metadata, including the package's values
 for every framework. Up-to-date acquisition republishes deleted native facts.
 Missing NuGet, framework, source-control, unmanaged-cache or .NET Framework
 platform-SDK facts fail their required imports without publishing a partial graph.
-Independent execution compiles only the negotiated dependency. This proves the
-acquisition/Build boundary for this fixture; the general configured preparation
-traversal described above remains until its separate cutover.
+Independent execution compiles only the negotiated dependency. A separate
+configured fixture preserves additional/removed reference properties and
+configuration-specific compiler inputs while accepting outer acquisition.
 The legacy framework-installation lookup is disabled by default in hardened SDK
 evaluation, including .NET Framework metadata probes.
 An isolated hardened metadata probe of runtime's actual reference project
@@ -667,7 +671,8 @@ root acquisition, from SDK-visible bindings independent of package imports and
 configured validation settings. Fresh Build shares one unconfigured fact file
 across frameworks and selects the references and suppression inputs normally.
 Up-to-date Restore refreshes negative facts and republishes deleted files without
-child Restore or capture. The remaining preparation traversal is not yet removed.
+child Restore or capture. Configured preparation and discovery traversal have
+also been removed; normal NuGet acquisition traversal remains.
 
 The 5,321-action libraries graph now completes through resumed execution using
 an experimental copied Ninja graph with 417 conservative adjacent-action
@@ -701,7 +706,8 @@ fail explicitly. Framework/package conflicts use graph-time prepared policy;
 package/package compile, analyzer and runtime duplicates remain outside the
 bounded package-selection profile. Construction never falls back to inspecting
 assemblies.
-Outer cross-targeting and RID preparation remain unsupported. Dependency/runtime-config
+Outer cross-targeting Restore does not perform configured selection; RID support
+remains bounded. Dependency/runtime-config
 actions still read declared assets JSON during execution; migrating those
 consumers to facts remains required by the eventual design.
 See [prepared SDK package selection](../src/msbuild/documentation/specs/proposed/hardened-static-graph-implementation.md#prepared-sdk-package-selection)
@@ -837,8 +843,9 @@ Construction is currently in-process, single-node and single-threaded, even when
 `MSBuild` call requests `BuildInParallel`. Unavailable project lists and custom
 tasks merely named `MSBuild` remain unsupported.
 
-SDK Restore prepares framework and compiler inputs for the project-reference
-closure without compiling referenced assemblies. `AssignProjectConfiguration`
+SDK Restore acquires framework/package resources and publishes native facts
+without a separate configured project-reference walk or referenced assemblies.
+`AssignProjectConfiguration`
 and the target-framework XML formatters run as audited zero-I/O construction
 tasks over supplied metadata. Child `GetTargetFrameworks` returns match ordinary
 execution, including sequential metadata assignments and item-definition defaults.

@@ -73,7 +73,8 @@ namespace Microsoft.NET.Build.Tasks
         public static Dictionary<string, SingleProjectInfo> CreateProjectReferenceInfos(
             IEnumerable<ITaskItem> referencePaths,
             IEnumerable<ITaskItem> referenceSatellitePaths,
-            Func<ITaskItem, bool> isRuntimeAssembly)
+            Func<ITaskItem, bool> isRuntimeAssembly,
+            Func<string, string> getFullPath = null)
         {
             Dictionary<string, SingleProjectInfo> projectReferences = new(StringComparer.OrdinalIgnoreCase);
 
@@ -89,6 +90,7 @@ namespace Microsoft.NET.Build.Tasks
                     throw new BuildErrorException(Strings.MissingItemMetadata, MetadataKeys.MSBuildSourceProjectFile, "ReferencePath", projectReferencePath.ItemSpec);
                 }
 
+                sourceProjectFile = getFullPath?.Invoke(sourceProjectFile) ?? sourceProjectFile;
                 string outputName = Path.GetFileName(projectReferencePath.ItemSpec);
                 string destinationSubDirectory = projectReferencePath.GetMetadata(MetadataKeys.DestinationSubDirectory);
                 string name = Path.GetFileNameWithoutExtension(outputName);
@@ -99,7 +101,7 @@ namespace Microsoft.NET.Build.Tasks
                     sourceProjectFile,
                     new SingleProjectInfo(sourceProjectFile, name, version, outputName, dependencyReferences: null, resourceAssemblies: null)
                     {
-                        RuntimeAssemblyPath = projectReferencePath.ItemSpec,
+                        RuntimeAssemblyPath = getFullPath?.Invoke(projectReferencePath.ItemSpec) ?? projectReferencePath.ItemSpec,
                         RuntimeAssemblyDestinationSubPath = string.IsNullOrEmpty(destinationSubDirectory) ? null : Path.Combine(destinationSubDirectory, outputName)
                     });
             }
@@ -109,12 +111,12 @@ namespace Microsoft.NET.Build.Tasks
             foreach (ITaskItem projectReferenceSatellitePath in projectReferenceSatellitePaths)
             {
                 string sourceProjectFile = projectReferenceSatellitePath.GetMetadata(MetadataKeys.MSBuildSourceProjectFile);
-
                 if (string.IsNullOrEmpty(sourceProjectFile))
                 {
                     throw new BuildErrorException(Strings.MissingItemMetadata, MetadataKeys.MSBuildSourceProjectFile, "ReferenceSatellitePath", projectReferenceSatellitePath.ItemSpec);
                 }
 
+                sourceProjectFile = getFullPath?.Invoke(sourceProjectFile) ?? sourceProjectFile;
                 SingleProjectInfo referenceProjectInfo;
                 if (projectReferences.TryGetValue(sourceProjectFile, out referenceProjectInfo))
                 {

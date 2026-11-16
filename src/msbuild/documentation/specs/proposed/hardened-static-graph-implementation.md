@@ -7,6 +7,11 @@ Checked items describe implemented, exercised behavior. Unchecked items are
 outstanding work. Use the [conversion cookbook](hardened-static-graph-migration.md)
 for task/target adaptation patterns.
 
+Per-migration validation paragraphs retain their historical preparation counts
+and limitations. The configured traversal is now removed as described under
+[acquisition-only traversal cutover](#acquisition-only-traversal-cutover); those earlier
+counts do not describe the current acquisition path.
+
 ## Current foundation
 
 - [x] Emit a concrete Ninja graph without executing its file-producing tasks.
@@ -34,11 +39,15 @@ fresh hardened Build -> build.ninja + concrete invocation manifests
 Ninja -> standalone task hosts -> product files
 ```
 
-Restore is deliberately unrestricted, trusted preparation. With
-`MSBuildRestoreGraphInputs=true`, it restores packages and captures discovery
-results, framework references, repository metadata, and compiler/analyzer inputs.
-It does not prebuild the selected product to discover its outputs. Restore and
-Build must use the same configuration, framework selection, and intermediate paths.
+Restore is deliberately unrestricted, trusted acquisition. With
+`MSBuildRestoreGraphInputs=true`, normal NuGet per-framework visits declare
+resource bindings and collect repository and Common cache/platform observations.
+After successful acquisition, shared translators publish native resource facts.
+Restore does not select a separate configured Build closure, invoke child
+Restore/fresh capture, or prebuild products. Fresh Build imports those facts and
+restored package authoring, negotiates references and selects configured inputs.
+Acquisition must cover the required resource and machine-observation contexts;
+it need not repeat the configured graph's project requests.
 
 Fresh hardened Build evaluates projects and constructs the requested target
 closure. Engine-managed project/import reads and permitted source globs remain
@@ -560,33 +569,54 @@ projects; choosing the older framework does not make those dependencies optional
 - [ ] Verify real-library output/ordinary compatibility.
 - [ ] Add focused library behavior checks with their genuine test prerequisites.
 
-Configured preparation is exercised by the
+### Acquisition-only traversal cutover
+
+Configured acquisition and Build selection are exercised by the
 [packaged fixture](../../../../../genbuild/tests/ConfiguredPreparation.csproj):
 a Debug/net11 parent selects its Release/net10 child while retaining both projects'
-`TargetFrameworks`. Separate Debug/net10 and Release/net11 preparations preserve
-framework, NuGet and compiler snapshots. The resulting parent/child graph
+`TargetFrameworks`. Separate Debug/net10 and Release/net11 acquisitions preserve
+shared framework/NuGet facts and configuration-specific authoring. The resulting parent/child graph
 compiles independently and starts without prebuilt project binaries.
-Outer preparation still fails, and metadata-only outer evaluations used for
-framework negotiation do not import inner-build snapshots.
+Outer cross-targeting Restore succeeds without configured selection or snapshots.
+The acquisition guard still rejects `PrepareForBuild`/`CoreCompile`.
+The fixture checks the selected child's framework, configuration and
+additional/removed reference properties during fresh Build, not during capture.
 
-Each selected configuration gets an ordinary Restore without an inherited global
-`TargetFramework`, followed by a distinct capture evaluation that imports the
-newly restored package targets. Capture explicitly clears `MSBuildIsRestoring`;
-otherwise Common suppresses NuGet-generated props/targets and their capture hooks.
-The preparation marker and product/tool build guard remain enabled. Local snapshot capture precedes
-`PrepareProjectReferences`; its negotiated items, including additional/removed
-global-property metadata, drive recursive child preparation. This avoids treating
-NuGet's path-only restore closure as the configured Build closure.
-Framework metadata requests reached during that negotiation also receive ordinary
-Restore and fresh local capture, without recursively selecting their compilation
-references. Metadata requests drop the capture marker so later selected-framework
-capture cannot reuse their pre-Restore evaluations. Capture coverage includes
-discovery, not just compilation requests.
-SDK snapshots distinguish `Configuration/Platform/TargetFramework`; other
-input-affecting global properties require separate intermediate paths.
-Framework preparation now captures raw acquired resources; graph construction selects
-the used runtime frameworks. Standard preparation rejects `PrepareForBuild`/`CoreCompile`
-instead of prebuilding products or tools.
+The configured preparation closure, nested Restore/capture submissions,
+recursive `PrepareProjectReferences` preparation and framework-discovery capture
+are removed. Ordinary NuGet acquisition traversal remains, preserving effective
+request properties and per-framework resource bindings. Source-control and
+Common cache/platform producers keep their existing acquisition entry points.
+Fresh Build performs framework metadata and reference negotiation against
+required facts, without optional-import fallback or replacement preparation walk.
+Common/source-control observations still distinguish
+`Configuration/Platform/TargetFramework`; acquisition must cover those contexts.
+Shared framework/package resources do not require per-configuration snapshots.
+
+The isolated runtime-library acquisition now records 741 evaluations and 6,742
+project requests, down from 4,898 and 69,562. There is one root `Restore`, with
+zero `PrepareProjectReferences`, `GetTargetFrameworks`, configured preparation,
+capture or framework-discovery capture executions during acquisition. Normal
+NuGet per-framework visits decrease from 1,934 to 645; the four shared resource
+processors still execute once each. These are structural counts, not matched
+elapsed-time measurements.
+Fresh graph construction preserves all 5,320 action/output signatures, 500 compiler
+commands, 55 ApiCompat input sets, 27,257 Ninja nodes and 277,035 dependency/order-only
+edges and rule commands after known revision and private-path normalization.
+Both graphs are acyclic, with no missing external inputs; no runtime-library
+product actions execute.
+
+Project-reference dependency-manifest parity now passes with genuine ordinary
+`GenerateBuildDependencyFile` regeneration. Previously the ordinary oracle
+could skip its writer and compare Ninja's output with itself. The smoke deletes
+only that generated manifest before ordinary Build, retaining the byte comparison.
+The shared SDK correction identifies assets-backed projects by normalized source
+path rather than project/assembly/package names and uses the explicitly bound
+runtime DLL and destination for both writers. This removes spurious `.Reference`
+entries and prevents ordinary version lookup from reading a `.csproj` fallback.
+All 27 focused deps cases and the project-reference, framework and runtime-reference
+smokes pass. Version reads remain execution-time operations on declared DLL inputs;
+no discovery or replacement preparation traversal is introduced.
 
 The real `System.Collections.Immutable` probe passes the retained-multi-targeting
 guard and the live-tool prebuild dependency; its minimum-framework closure now
@@ -786,8 +816,8 @@ for this fixture. The cache and platform facts here cover absent registration
 state and the current host's platform lookup, not every possible configured
 property change. Package authoring that introduces new acquisition requirements
 must expose them during acquisition rather than register retroactively.
-The general configured preparation/discovery traversal remains pending its
-separate cutover; this fixture no longer depends on it.
+The general configured preparation/discovery traversal is now removed as well;
+normal NuGet acquisition remains.
 An isolated hardened `GetTargetFrameworks` request against the actual runtime
 reference project also returns all four advertised frameworks (`net11.0`,
 `net10.0`, `netstandard2.0`, and `net462`) through an independently executed

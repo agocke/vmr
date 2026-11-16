@@ -128,11 +128,14 @@ After building the whole repo, to use the just-built MSBuild to build things use
 
 ### Hardened Action-Graph Prototype
 
-Restore is currently an unrestricted preparation stage, not hardened graph construction.
-Run ordinary Restore with `-p:MSBuildRestoreGraphInputs=true` to capture discovery, framework-reference,
-SourceLink, and cache imports and initialize Roslyn's analyzer semaphore,
+Restore is an unrestricted acquisition stage, not hardened graph construction.
+Run ordinary Restore with `-p:MSBuildRestoreGraphInputs=true` to publish native acquired-resource,
+SourceLink, and Common cache/platform facts and initialize Roslyn's analyzer semaphore,
 then use a fresh `--hardened-graph` Build evaluation with the same configuration and intermediate paths.
-Preparation uses the Restore flag, not `MSBuildHardenedGraph`; snapshot replay and graph restrictions remain hardened-only.
+Normal NuGet visits supply acquisition bindings; no configured preparation/reference
+walk, child Restore/fresh capture or framework-discovery capture remains.
+Fresh Build imports restored package authoring and performs configured selection.
+Acquisition uses the Restore flag, not `MSBuildHardenedGraph`; fact imports and graph restrictions remain hardened-only.
 Do not add discovery fallbacks to hardened Build or assume Restore itself must emit an action graph.
 Hardened reference searches must use explicit files, pinned/restored packs, or fully qualified search roots,
 not assembly-folder configuration, registry, GAC, or prior-output fallbacks. Cached installation getters

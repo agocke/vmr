@@ -14,14 +14,14 @@
                       AdditionalProperties="Configuration=Release;PreparationMarker=child"
                       GlobalPropertiesToRemove="ParentOnlyProperty" />
   </ItemGroup>
-  <Target Name="CheckPreparedChildConfiguration"
-          BeforeTargets="_CaptureNuGetInputs"
-          Condition="'$(_MSBuildPreparingGraphInputs)' == 'true' and '$(MSBuildProjectName)' == 'Child'">
+  <Target Name="CheckSelectedChildConfiguration"
+          BeforeTargets="CoreCompile"
+          Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(MSBuildProjectName)' == 'Child'">
     <Error Condition="'$(TargetFramework)' != 'net10.0' or '$(Configuration)' != 'Release' or '$(PreparationMarker)' != 'child' or '$(ParentOnlyProperty)' != ''"
-           Text="Preparation must preserve negotiated child frameworks and project-reference global-property metadata." />
+           Text="Build must preserve negotiated child frameworks and project-reference global-property metadata." />
   </Target>
-  <Target Name="AttemptProductBuildInPreparation"
-          BeforeTargets="_CaptureNuGetInputs"
+  <Target Name="AttemptProductBuildInAcquisition"
+          BeforeTargets="_GenerateProjectRestoreGraphPerFramework"
           Condition="'$(ForcePreparationBuild)' == 'true'">
     <CallTarget Targets="PrepareForBuild" />
   </Target>

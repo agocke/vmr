@@ -70,8 +70,7 @@ Copyright (c) .NET Foundation. All rights reserved.
           AfterTargets="Restore"
           DependsOnTargets="_InvalidateUnsupportedFrameworkReferenceFetchManifest;_ReportUnsupportedFrameworkReferenceFetchManifestProfile;$(_FrameworkReferenceFetchDependsOn)"
           Condition="'$(_FrameworkPackDirectInputs)' != 'true' and '$(MSBuildHardenedGraph)' != 'true' and
-                     (('$(MSBuildRestoreGraphInputs)' == 'true' and '$(_MSBuildPreparingGraphInputs)' == 'true') or
-                      ('$(MSBuildRestoreGraphInputs)' != 'true' and '$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'))">
+                     '$(MSBuildRestoreGraphInputs)' != 'true' and '$(EnableFrameworkReferenceFetchManifest)' == 'true' and '$(MSBuildIsRestoring)' == 'true'">
     <!-- Project-declared references stay in authoring and use path-only resolution during hardened Build. -->
     <ItemGroup Condition="'$(MSBuildRestoreGraphInputs)' != 'true'">
       <_FrameworkReferenceFetchManifestCompileReference Include="@(Reference)"

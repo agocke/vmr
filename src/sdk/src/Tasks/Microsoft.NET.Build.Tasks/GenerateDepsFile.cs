@@ -170,7 +170,7 @@ namespace Microsoft.NET.Build.Tasks
                     RuntimeFrameworks,
                     IsSelfContained);
 
-                lockFileLookup = new LockFileLookup(lockFile);
+                lockFileLookup = new LockFileLookup(lockFile, Path.GetDirectoryName(projectPath));
             }
 
             CompilationOptions compilationOptions = CompilationOptionsConverter.ConvertFrom(CompilerOptions);
@@ -203,7 +203,7 @@ namespace Microsoft.NET.Build.Tasks
 
             Dictionary<string, SingleProjectInfo> referenceProjects =
                 SingleProjectInfo.CreateProjectReferenceInfos(ReferencePaths, ReferenceSatellitePaths,
-                    isUserRuntimeAssembly);
+                    isUserRuntimeAssembly, path => Path.GetFullPath(TaskEnvironment.GetAbsolutePath(path).Value));
 
             bool ShouldIncludeRuntimeAsset(ITaskItem item)
             {
@@ -268,7 +268,7 @@ namespace Microsoft.NET.Build.Tasks
             {
                 string destinationSubDir = i.GetMetadata(MetadataKeys.DestinationSubDirectory);
                 string destinationSubPath = string.IsNullOrEmpty(destinationSubDir) ? null : Path.Combine(destinationSubDir, Path.GetFileName(i.ItemSpec));
-                return (TaskEnvironment.GetAbsolutePath(i.ItemSpec), destinationSubPath);
+                return (new AbsolutePath(Path.GetFullPath(TaskEnvironment.GetAbsolutePath(i.ItemSpec).Value)), destinationSubPath);
             }).ToArray();
             return builder.Build(userRuntimeAssemblies);
         }
