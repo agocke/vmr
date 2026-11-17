@@ -18,6 +18,96 @@ internal sealed class CompilerInvocation(ManagedCompiler compiler, ITaskItem[] s
     public ITaskItem[] Outputs { get; private set; } = Array.Empty<ITaskItem>();
     public ITaskItem[] OutputTrees { get; private set; } = Array.Empty<ITaskItem>();
     public ITaskItem[] PathMappings { get; private set; } = Array.Empty<ITaskItem>();
+    public ITaskItem[] ArgumentPaths { get; private set; } = Array.Empty<ITaskItem>();
+
+    public string FormatSandboxArguments(string originalArguments, Func<string> format)
+    {
+        const string prefix = "/__MSBuildSandbox Path/operand ";
+        if (Path.DirectorySeparatorChar != '/' || (OutputTrees.Length > 0 && compiler is not Csc) || originalArguments.Contains(prefix))
+        {
+            compiler.Log.LogErrorFromResources("FormatCsc.UnsupportedParameter", "UseSandbox (VB generated trees or reserved argument paths)");
+            return "";
+        }
+
+        var saved = compiler._store.ToArray();
+        var bindings = new List<ITaskItem>();
+        string bind(string path, string role)
+        {
+            var token = prefix + bindings.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + "__";
+            var item = new TaskItem(EscapeItem(compiler.TaskEnvironment.GetAbsolutePath(path).Value));
+            item.SetMetadata("Token", token);
+            item.SetMetadata("Role", role);
+            bindings.Add(item);
+            return token;
+        }
+
+        void map(string name, string role)
+        {
+            object? rewrite(object? value)
+            {
+                if (value is ITaskItem item)
+                {
+                    var result = new TaskItem(item);
+                    result.ItemSpec = EscapeItem(bind(item.ItemSpec, role));
+                    return result;
+                }
+                if (value is ITaskItem[] items)
+                {
+                    return items.Select(item => (ITaskItem)rewrite(item)!).ToArray();
+                }
+                if (value is string[] paths)
+                {
+                    return paths.Select(path => bind(path, role)).ToArray();
+                }
+                return value is string { Length: > 0 } path ? bind(path, role) : value;
+            }
+
+            if (compiler._store.TryGetValue(name, out var value))
+            {
+                compiler._store[name] = rewrite(value);
+            }
+        }
+
+        try
+        {
+            foreach (var name in new[] { "Sources", "References", "Analyzers", "AnalyzerConfigFiles", "AdditionalFiles", "EmbeddedFiles",
+                "Resources", "LinkResources", "AddModules", "SourceLink", "KeyFile", "Win32Icon", "Win32Manifest", "Win32Resource" })
+            {
+                map(name, "Input");
+            }
+            foreach (var name in new[] { "OutputAssembly", "OutputRefAssembly", "DocumentationFile", "PdbFile" })
+            {
+                map(name, "Output");
+            }
+            if (compiler is Vbc vbc && !string.IsNullOrEmpty(vbc.VBRuntime) &&
+                (Path.IsPathRooted(vbc.VBRuntime) || vbc.VBRuntime.IndexOfAny(new[] { '/', '\\' }) >= 0))
+            {
+                map("VBRuntime", "Input");
+            }
+            compiler.PathMap = null;
+            var template = format();
+            ArgumentPaths = bindings.Where(item => template.Contains("\"" + item.GetMetadata("Token") + "\"")).ToArray();
+            var remaining = template;
+            foreach (var item in ArgumentPaths)
+            {
+                remaining = remaining.Replace("\"" + item.GetMetadata("Token") + "\"", "");
+            }
+            if (remaining.Contains(prefix))
+            {
+                compiler.Log.LogErrorFromResources("FormatCsc.UnsupportedParameter", "UseSandbox argument quoting");
+                return "";
+            }
+            return template;
+        }
+        finally
+        {
+            compiler._store.Clear();
+            foreach (var pair in saved)
+            {
+                compiler._store.Add(pair.Key, pair.Value);
+            }
+        }
+    }
 
     public void NormalizeParameters()
     {

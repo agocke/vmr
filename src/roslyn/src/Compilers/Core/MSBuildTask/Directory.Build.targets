@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project>
+  <PropertyGroup>
+    <GenBuildMSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' == ''">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../../../../msbuild/artifacts/bin/Microsoft.Build.Utilities/$(Configuration)/netstandard2.0/Microsoft.Build.Utilities.Core.dll'))</GenBuildMSBuildUtilitiesAssembly>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="Runtime" />
     <PackageReference Include="Microsoft.Build.Tasks.Core" ExcludeAssets="Runtime" />
@@ -8,6 +11,13 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'" />
     <CompilerVersionTargetsFile Include="$(IntermediateOutputPath)Microsoft.Managed.Core.CurrentVersions.targets" />
   </ItemGroup>
+  <Target Name="UseGenBuildMSBuildUtilities" BeforeTargets="ResolveAssemblyReferences" DependsOnTargets="ResolvePackageAssets">
+    <Error Condition="!Exists('$(GenBuildMSBuildUtilitiesAssembly)')" Text="Build the source MSBuild Utilities netstandard2.0 component first, or set GenBuildMSBuildUtilitiesAssembly to a reference containing SandboxedToolTask." />
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Build.Utilities.Core'" />
+      <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(GenBuildMSBuildUtilitiesAssembly)" Private="false" />
+    </ItemGroup>
+  </Target>
   <Target Name="GenerateCompilerVersionTargets" BeforeTargets="AssignTargetPaths" DependsOnTargets="GenerateCompilerVersionTargetsFile">
     <ItemGroup>
       <Content Include="@(CompilerVersionTargetsFile)">

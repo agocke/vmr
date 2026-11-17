@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+from unittest import mock
 import uuid
 
 
@@ -104,6 +105,239 @@ class AuditTests(unittest.TestCase):
         members = ", ".join("{d_ino=1, d_off=1, d_reclen=24, d_type=DT_REG, d_name=" + quote(n) + "}"
                             for n in names)
         return f"getdents64({fd}<{directory}>, [{members}], 32768) = {len(names) * 32}"
+
+    def response_fixture(self, flags="O_WRONLY|O_CREAT", initialize=True):
+        temporary = self.root / "captured temporary"
+        path = temporary / "MSBuildTemp fixture" / "compiler response.rsp"
+        self.descriptor["environment"] = {"TMPDIR": str(temporary)}
+        self.write_graph()
+        host = [
+            self.exec(), f"mkdir({quote(path.parent)}, 0700) = 0",
+            self.open(path, flags=flags, result=f"10<{path}>"),
+            f"ftruncate(10<{path}>, 0) = 0" if initialize else "getpid() = 100",
+            f"close(10<{path}>) = 0", "clone(child_stack=NULL, flags=SIGCHLD) = 101",
+            "wait4(101, NULL, 0, NULL) = 101", "getpid() = 100", "getpid() = 100",
+            f"unlink({quote(path)}) = 0", "+++ exited with 0 +++",
+        ]
+        child = [
+            f"execve({quote(self.host)}, [{quote(self.host)}, {quote(self.app)}, {quote('@' + str(path))}], []) = 0",
+            self.open(path, result=f"11<{path}>"),
+            f"close(11<{path}>) = 0", "+++ exited with 0 +++",
+        ]
+        return path, host, child
+
+    def response_report(self, host, child, **kwargs):
+        self.log(host)
+        self.log(child, pid=101, start=1.0055)
+        return self.analyze(allow_response_file_scratch=True, response_file_profile=True, **kwargs)
+
+    def test_response_scratch_requires_opt_in_and_records_fd_initialization(self):
+        path, host, child = self.response_fixture()
+        report = self.response_report(host, child)
+        self.assertTrue(report["ok"], report)
+        self.assertEqual(1, len(report["responseFileScratchAllowanceUsage"]))
+        evidence = report["responseFileScratchCandidates"][0]
+        self.assertTrue(evidence["eligible"], evidence)
+        self.assertEqual("ftruncate(fd,0)", evidence["initialization"])
+        self.assertEqual([101], evidence["readerProcessIds"])
+        self.assertEqual(str(path.parent), evidence["privateDirectory"])
+        self.assertEqual(1, report["actions"][0]["counts"]["responseFileScratch"])
+        disabled = self.analyze(response_file_profile=True)
+        self.assertFalse(disabled["ok"])
+        self.assertTrue(disabled["responseFileScratchCandidates"][0]["eligible"])
+        self.assertEqual([], disabled["responseFileScratchAllowanceUsage"])
+        self.assertEqual([str(path)], [e["path"] for e in disabled["undeclaredReads"]])
+
+    def test_response_scratch_exclusive_and_truncating_opens_initialize_without_ftruncate(self):
+        for flag in ("O_EXCL", "O_TRUNC"):
+            with self.subTest(flag=flag):
+                path, host, child = self.response_fixture("O_WRONLY|O_CREAT|" + flag, initialize=False)
+                report = self.response_report(host, child)
+                self.assertTrue(report["ok"], report)
+                self.assertEqual(flag, report["responseFileScratchCandidates"][0]["initialization"])
+
+    def test_response_scratch_supports_dirfd_paths_relative_response_argv_and_ftruncate64(self):
+        path, host, child = self.response_fixture()
+        host[1] = f"mkdirat(13<{path.parent.parent}>, {quote(path.parent.name)}, 0700) = 0"
+        host[2] = self.open(path.name, flags="O_WRONLY|O_CREAT", base=f"14<{path.parent}>",
+                            result=f"10<{path}>")
+        host[3] = host[3].replace("ftruncate(", "ftruncate64(")
+        child[0] = child[0].replace(quote("@" + str(path)), quote("@" + os.path.relpath(path, self.root)))
+        child[1] = self.open(path.name, base=f"14<{path.parent}>", result=f"11<{path}>")
+        report = self.response_report(host, child)
+        self.assertTrue(report["ok"], report)
+        self.assertEqual(1, len(report["responseFileScratchAllowanceUsage"]))
+
+    def test_response_scratch_rejects_missing_or_unsound_initialization(self):
+        for change in ("no-reset", "nonzero", "failed-reset", "wrong-fd", "read-write", "no-create"):
+            with self.subTest(change=change):
+                path, host, child = self.response_fixture()
+                if change == "no-reset":
+                    host[3] = "getpid() = 100"
+                elif change == "nonzero":
+                    host[3] = host[3].replace(", 0)", ", 1)")
+                elif change == "failed-reset":
+                    host[3] = host[3].replace("= 0", "= -1 EIO (Input/output error)")
+                elif change == "wrong-fd":
+                    host[3] = host[3].replace("10<", "9<")
+                elif change == "read-write":
+                    host[2] = host[2].replace("O_WRONLY", "O_RDWR")
+                else:
+                    host[2] = host[2].replace("|O_CREAT", "")
+                report = self.response_report(host, child)
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["responseFileScratchAllowanceUsage"])
+
+    def test_response_scratch_rejects_weak_ownership_and_incomplete_lifecycles(self):
+        for change in ("nonprivate", "preexisting-dir", "missing-writer-close", "missing-reader-close",
+                       "missing-unlink", "failed-unlink", "different-family", "missing-argument",
+                       "truncated-child", "unknown-call", "failed-action", "unannotated-close"):
+            with self.subTest(change=change):
+                path, host, child = self.response_fixture()
+                if change == "nonprivate":
+                    host[1] = host[1].replace("0700", "0777")
+                elif change == "preexisting-dir":
+                    host[1] = host[1].replace("= 0", "= -1 EEXIST (File exists)")
+                elif change == "missing-writer-close":
+                    host[4] = "getpid() = 100"
+                elif change == "missing-reader-close":
+                    child[2] = "getpid() = 101"
+                elif change == "missing-unlink":
+                    host[9] = "getpid() = 100"
+                elif change == "failed-unlink":
+                    host[9] = host[9].replace("= 0", "= -1 EACCES (Permission denied)")
+                elif change == "different-family":
+                    child[0] = self.exec()
+                elif change == "missing-argument":
+                    child[0] = child[0].replace(quote("@" + str(path)), quote("not-a-response-file"))
+                elif change == "truncated-child":
+                    child.pop()
+                elif change == "unknown-call":
+                    host[7] = "unknown_operation() = 0"
+                elif change == "failed-action":
+                    host[-1] = "+++ exited with 1 +++"
+                else:
+                    host[4] = "close(10) = 0"
+                report = self.response_report(host, child)
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["responseFileScratchAllowanceUsage"])
+
+    def test_response_scratch_rejects_conflicting_mutations_duplication_and_early_reads(self):
+        for change in ("rename", "hardlink", "symlink", "chmod", "fd-chmod", "duplicate-fd", "fd-range",
+                       "early-read", "early-unlink", "second-writer", "late-truncate"):
+            with self.subTest(change=change):
+                path, host, child = self.response_fixture()
+                if change == "rename":
+                    host[7] = f"rename({quote(path)}, {quote(path.with_suffix('.other'))}) = 0"
+                elif change == "hardlink":
+                    host[7] = f"link({quote(self.source)}, {quote(path)}) = 0"
+                elif change == "symlink":
+                    host[7] = f"symlink({quote(self.source)}, {quote(path)}) = 0"
+                elif change == "chmod":
+                    host[7] = f"chmod({quote(path.parent)}, 0777) = 0"
+                elif change == "fd-chmod":
+                    host[7] = f"fchmod(15<{path.parent}>, 0777) = 0"
+                elif change == "duplicate-fd":
+                    host[7] = f"dup(11<{path}>) = 12<{path}>"
+                elif change == "fd-range":
+                    child[2] = "close_range(3, ~0U, 0) = 0"
+                elif change == "early-read":
+                    host[3] = self.open(path, result=f"12<{path}>")
+                elif change == "early-unlink":
+                    host[3], host[9] = host[9], host[3]
+                elif change == "second-writer":
+                    host[7] = self.open(path, flags="O_WRONLY|O_TRUNC", result=f"12<{path}>")
+                else:
+                    host[3], host[7] = host[7], host[3]
+                report = self.response_report(host, child)
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["responseFileScratchAllowanceUsage"])
+
+    def test_response_scratch_allows_sequential_child_reopens_but_not_unfinished_overlap(self):
+        path, host, child = self.response_fixture()
+        host[9:9] = ["getpid() = 100", "getpid() = 100"]
+        child[3:3] = [self.open(path, result=f"11<{path}>"), f"close(11<{path}>) = 0"]
+        report = self.response_report(host, child)
+        self.assertTrue(report["ok"], report)
+        self.assertEqual(2, len(report["responseFileScratchAllowanceUsage"]))
+        path, host, child = self.response_fixture()
+        host[2] = host[2].split(") = ")[0] + " <unfinished ...>"
+        host[3] = f"<... openat resumed>) = 10<{path}>"
+        host[4] = "getpid() = 100"
+        host[7] = f"ftruncate(10<{path}>, 0) = 0"
+        host[8] = f"close(10<{path}>) = 0"
+        report = self.response_report(host, child)
+        self.assertFalse(report["ok"], report)
+        self.assertEqual([], report["unresolved"])
+        self.assertEqual([], report["responseFileScratchAllowanceUsage"])
+
+    def test_response_scratch_does_not_admit_symlink_spelling_or_other_private_reads(self):
+        path, host, child = self.response_fixture()
+        link = self.root / "response alias"
+        link.symlink_to(path)
+        child[1] = self.open(link, result=f"11<{path}>")
+        report = self.response_report(host, child)
+        self.assertFalse(report["ok"], report)
+        self.assertEqual([], report["responseFileScratchAllowanceUsage"])
+        path, host, child = self.response_fixture()
+        secret = path.parent / "ordinary-source.rsp"
+        host[7] = self.open(secret, result=f"12<{secret}>")
+        report = self.response_report(host, child)
+        self.assertFalse(report["ok"], report)
+        self.assertEqual([str(secret)], [e["path"] for e in report["undeclaredReads"]])
+        self.assertEqual(1, len(report["responseFileScratchAllowanceUsage"]))
+
+    def test_response_scratch_is_not_a_source_or_declared_output_allowance(self):
+        original = {name: list(self.descriptor["parameters"][name]["items"])
+                    for name in ("DeclaredInputs", "DeclaredOutputs")}
+        for declared in ("DeclaredInputs", "DeclaredOutputs"):
+            with self.subTest(declared=declared):
+                for name, entries in original.items():
+                    self.descriptor["parameters"][name]["items"] = list(entries)
+                path, host, child = self.response_fixture()
+                self.descriptor["parameters"][declared]["items"].append({"itemSpec": str(path), "metadata": {}})
+                self.write_graph()
+                report = self.response_report(host, child)
+                self.assertEqual([], report["responseFileScratchAllowanceUsage"])
+                self.assertFalse(report["responseFileScratchCandidates"][0]["eligible"])
+                if declared == "DeclaredOutputs":
+                    self.assertEqual(1, report["actions"][0]["counts"]["selfOutput"])
+                else:
+                    self.assertFalse(report["ok"])
+        for name, entries in original.items():
+            self.descriptor["parameters"][name]["items"] = list(entries)
+        path, host, child = self.response_fixture()
+        self.descriptor["parameters"]["DeclaredOutputs"]["items"].append(
+            {"itemSpec": str(path.parent), "metadata": {}})
+        self.write_graph()
+        report = self.response_report(host, child)
+        self.assertFalse(report["ok"], report)
+        self.assertEqual([], report["responseFileScratchAllowanceUsage"])
+
+    def test_response_scratch_requires_profile_and_successful_unchanged_capture(self):
+        path, host, child = self.response_fixture()
+        self.response_report(host, child)
+        for kwargs in ({"response_file_profile": False}, {"capture_complete": False}):
+            options = {"allow_response_file_scratch": True, "response_file_profile": True, **kwargs}
+            report = self.analyze(**options)
+            self.assertFalse(report["ok"], report)
+            self.assertEqual([], report["responseFileScratchAllowanceUsage"])
+        manifest = {"graph": str(self.graph), "cwd": str(self.root),
+                    "files": {str(self.graph): audit.digest(self.graph)}, "complete": True,
+                    "responseFileTraceProfile": 1, "commandExitCode": 1}
+        audit.write_json(self.root / "capture.json", manifest)
+        result = self.root / "report.json"
+        self.assertEqual(1, audit.main(["analyze", "--capture", str(self.root),
+                                      "--allow-response-file-scratch", "--report", str(result)]))
+        self.assertEqual([], json.loads(result.read_text())["responseFileScratchAllowanceUsage"])
+        manifest["commandExitCode"] = 0
+        audit.write_json(self.root / "capture.json", manifest)
+        self.graph.write_text(self.graph.read_text() + "# changed\n")
+        self.assertEqual(1, audit.main(["analyze", "--capture", str(self.root),
+                                      "--allow-response-file-scratch", "--report", str(result)]))
+        changed = json.loads(result.read_text())
+        self.assertEqual([], changed["responseFileScratchAllowanceUsage"])
+        self.assertTrue(any(e["reason"] == "Capture input changed" for e in changed["incompleteness"]))
 
     def test_ordinary_undeclared_content_read_fails_but_controller_read_is_separate(self):
         secret = self.file("ordinary-secret.txt")
@@ -415,6 +649,8 @@ class AuditTests(unittest.TestCase):
         self.assertFalse(report["ok"])
         self.assertEqual(str(secret), report["undeclaredReads"][0]["path"])
         self.assertEqual("1.001000", report["undeclaredReads"][0]["timestamp"])
+        events, _ = audit.read_events(self.prefix)
+        self.assertEqual("1.002000", next(e for e in events if e["syscall"] == "openat")["completedTimestamp"])
 
     def test_incomplete_or_unmatched_trace_is_not_silently_dropped(self):
         for line in ('openat(AT_FDCWD, "a", O_RDONLY <unfinished ...>',
@@ -557,6 +793,117 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(7, manifest["commandExitCode"])
         self.assertTrue(manifest["complete"])
         self.assertEqual(["unexecuted tool", "arg with spaces"], manifest["argv"])
+
+    def seccomp_tracer(self, mode):
+        tracer = self.root / ("strace-" + mode)
+        actual = "\n".join([
+            "1.000000 " + self.exec(),
+            "1.001000 " + self.open(self.source),
+            "1.002000 +++ exited with 0 +++", "",
+        ])
+        tracer.write_text(
+            "#!" + sys.executable + "\n"
+            "import json, pathlib, sys\n"
+            f"mode = {mode!r}\n"
+            f"actual = {actual!r}\n"
+            f"record = pathlib.Path({str(self.root / ('argv-' + mode + '.jsonl'))!r})\n"
+            "with record.open('a') as f: f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            "prefix = pathlib.Path(sys.argv[sys.argv.index('-o') + 1])\n"
+            "if '-d' in sys.argv:\n"
+            " executable = sys.argv[sys.argv.index('--') + 1]\n"
+            " text = '1.000000 execve(' + json.dumps(executable) + ', [], []) = 0\\n'\n"
+            " text += '1.001000 +++ exited with 0 +++\\n'\n"
+            " pathlib.Path(str(prefix) + '.700').write_text(text)\n"
+            " print(sys.argv[0] + ': seccomp filter ' + ('disabled' if mode == 'disabled' else 'enabled'), file=sys.stderr)\n"
+            " if mode != 'no-event':\n"
+            "  pid = 701 if mode == 'wrong-pid' else 700\n"
+            "  print(sys.argv[0] + ': [wait(0x07057f) = ' + str(pid) + '] WIFSTOPPED,EVENT_SECCOMP (7)', file=sys.stderr)\n"
+            " sys.exit(1 if mode == 'probe-error' else 0)\n"
+            "pathlib.Path(str(prefix) + '.100').write_text(actual)\n"
+            "if mode == 'actual-fallback': print(sys.argv[0] + ': seccomp filter is requested but unavailable', file=sys.stderr)\n"
+            "if mode == 'actual-error': print(sys.argv[0] + ': ptrace: unexpected failure', file=sys.stderr)\n"
+            "if mode == 'child-stderr': print('compiler: seccomp feature disabled in this target', file=sys.stderr)\n")
+        tracer.chmod(0o700)
+        return tracer
+
+    def seccomp_cli(self, tracer, capture):
+        with contextlib.redirect_stderr(io.StringIO()):
+            return audit.main(["trace", "--seccomp-bpf", "--response-file-provenance",
+                               "--strace", str(tracer), "--graph", str(self.graph),
+                               "--cwd", str(self.root), "--output", str(capture),
+                               "--", "unexecuted tool"])
+
+    def test_seccomp_opt_in_preserves_selection_and_records_live_verification(self):
+        tracer = self.seccomp_tracer("ok")
+        capture = self.root / "capture"
+        self.assertEqual(0, self.seccomp_cli(tracer, capture))
+        manifest = json.loads((capture / "capture.json").read_text())
+        self.assertTrue(manifest["seccompBpf"]["verified"])
+        self.assertTrue(manifest["complete"])
+        self.assertEqual(1, manifest["seccompBpf"]["preflight"]["liveSeccompStops"])
+        calls = [json.loads(line) for line in (self.root / "argv-ok.jsonl").read_text().splitlines()]
+        expected = "trace=%file,%process,getdents64," + audit.RESPONSE_TRACE
+        self.assertEqual([expected, expected], [c[c.index("-e") + 1] for c in calls])
+        self.assertTrue(all("--seccomp-bpf" in c for c in calls))
+        self.assertIn("-d", calls[0])
+        self.assertNotIn("-d", calls[1])
+        self.assertIn(str(capture / "strace-stderr.log"), manifest["files"])
+        self.assertIn(str(capture / "seccomp-preflight/trace.700"), manifest["files"])
+
+    def test_seccomp_probe_rejects_disabled_missing_wrong_pid_and_failed_activation(self):
+        for mode in ("disabled", "no-event", "wrong-pid", "probe-error"):
+            with self.subTest(mode=mode):
+                capture = self.root / mode
+                self.assertEqual(2, self.seccomp_cli(self.seccomp_tracer(mode), capture))
+                manifest = json.loads((capture / "capture.json").read_text())
+                self.assertFalse(manifest["complete"])
+                self.assertFalse(manifest["seccompBpf"]["verified"])
+                self.assertFalse((capture / "trace.100").exists())
+
+    def test_seccomp_probe_timeout_never_starts_workload(self):
+        tracer = self.seccomp_tracer("timeout")
+        capture = self.root / "capture"
+        with mock.patch.object(audit.subprocess, "run",
+                               side_effect=subprocess.TimeoutExpired(["strace"], 15)), \
+                mock.patch.object(audit.subprocess, "Popen") as process:
+            self.assertEqual(2, self.seccomp_cli(tracer, capture))
+        process.assert_not_called()
+        self.assertFalse(json.loads((capture / "capture.json").read_text())["complete"])
+
+    def test_seccomp_actual_fallback_or_error_fails_even_with_zero_exit(self):
+        for mode in ("actual-fallback", "actual-error"):
+            with self.subTest(mode=mode):
+                capture = self.root / mode
+                self.assertEqual(2, self.seccomp_cli(self.seccomp_tracer(mode), capture))
+                manifest = json.loads((capture / "capture.json").read_text())
+                self.assertEqual(0, manifest["commandExitCode"])
+                self.assertFalse(manifest["complete"])
+                self.assertTrue(manifest["seccompBpf"]["rejectedDiagnostics"])
+                self.assertTrue((capture / "strace-stderr.log").read_text())
+
+    def test_seccomp_preserves_nontracer_task_diagnostics(self):
+        capture = self.root / "capture"
+        self.assertEqual(0, self.seccomp_cli(self.seccomp_tracer("child-stderr"), capture))
+        self.assertEqual("compiler: seccomp feature disabled in this target\n",
+                         (capture / "strace-stderr.log").read_text())
+
+    def test_seccomp_analysis_rejects_unverified_policy_and_changed_probe_evidence(self):
+        capture = self.root / "capture"
+        self.assertEqual(0, self.seccomp_cli(self.seccomp_tracer("ok"), capture))
+        report = self.root / "report.json"
+        argv = ["analyze", "--capture", str(capture), "--report", str(report)]
+        self.assertEqual(0, audit.main(argv))
+        manifest_path = capture / "capture.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["seccompBpf"]["verified"] = False
+        audit.write_json(manifest_path, manifest)
+        self.assertEqual(1, audit.main(argv))
+        self.assertIn("Seccomp capture verification failed",
+                      [e["reason"] for e in json.loads(report.read_text())["incompleteness"]])
+        manifest["seccompBpf"]["verified"] = True
+        audit.write_json(manifest_path, manifest)
+        (capture / "seccomp-preflight/diagnostics.log").write_text("changed")
+        self.assertEqual(1, audit.main(argv))
 
     def test_unsupported_ninja_variables_and_includes_fail(self):
         for text in ("include other.ninja\n", "rule a\n  command = $tool --invocation foo\n",

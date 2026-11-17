@@ -188,6 +188,7 @@
       <_HardenedCscTree Remove="@(_HardenedCscTree)" />
     </ItemGroup>
     <FormatCsc Condition="'$(MSBuildHardenedGraph)' == 'true' and '%(_CoreCompileResourceInputs.WithCulture)' != 'true'"
+         UseSandbox="$(MSBuildSandboxToolTasks)"
          DeclaredInputs="" DeclaredOutputs=""
          CompilerToolExe="$(CscToolExe)"
          CompilerToolPath="$(CscToolPath)"
@@ -272,6 +273,8 @@
          Win32Resource="$(Win32Resource)"
          SourceLink="$(SourceLink)">
       <Output TaskParameter="CompilerArguments" PropertyName="_HardenedCscArguments" />
+      <Output TaskParameter="SandboxArguments" PropertyName="_HardenedCscSandboxArguments" />
+      <Output TaskParameter="ArgumentPaths" ItemName="_HardenedCscArgumentPath" />
       <Output TaskParameter="CompilerInputs" ItemName="_HardenedCscInput" />
       <Output TaskParameter="CompilerOutputs" ItemName="_HardenedCscOutput" />
       <Output TaskParameter="CompilerOutputTrees" ItemName="_HardenedCscTree" />
@@ -285,6 +288,9 @@
     </ResolveCompilerDependencies>
 
     <CompileManaged Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                UseSandbox="$(MSBuildSandboxToolTasks)"
+                SandboxArguments="$(_HardenedCscSandboxArguments)"
+                ArgumentPaths="@(_HardenedCscArgumentPath)"
                 DotNetHost="$(DOTNET_HOST_PATH)"
                 CompilerAssembly="$([MSBuild]::NormalizePath('$(_BuildTasksDirectory)', 'bincore/csc.dll'))"
                 CompilerArguments="$(_HardenedCscArguments)"

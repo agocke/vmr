@@ -17,11 +17,20 @@ namespace Microsoft.Build.Framework;
 /// Invocation constraints are described with <see cref="MSBuildDeclaredIORequiresUnsetAttribute"/>.
 /// Temporary files whose useful lifetime is contained within one invocation and which do not remain after
 /// successful execution are implementation details rather than declared outputs.
-/// The action executor prepares parent directories of declared output files before execution.
+/// The action executor prepares parent directories of declared output files in the execution layout.
 /// These directories are structural prerequisites, not separately owned output artifacts.
 /// MSBuild detects this attribute by its namespace and name only, ignoring the defining assembly.
 /// This allows task authors to define a compatible attribute alongside tasks that target older versions
 /// of Microsoft.Build.Framework. Compatible definitions must also specify <c>Inherited = false</c>.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-public sealed class MSBuildDeclaredIOTaskAttribute : Attribute;
+public sealed class MSBuildDeclaredIOTaskAttribute : Attribute
+{
+    /// <summary>
+    /// Gets or sets the staged file-access contract version. Version 1 uses
+    /// <see cref="TaskEnvironment.GetInputPath"/> and <see cref="TaskEnvironment.GetOutputPath"/>
+    /// at file-access boundaries during Execute, preserving logical task parameters and content.
+    /// Zero denotes an unmigrated task that standalone staged hosts must reject.
+    /// </summary>
+    public int SandboxVersion { get; set; }
+}

@@ -150,6 +150,7 @@
       <Output TaskParameter="CommandLineArgs" ItemName="VbcCommandLineArgs" />
     </Vbc>
     <FormatVbc Condition="'$(MSBuildHardenedGraph)' == 'true' and '%(_CoreCompileResourceInputs.WithCulture)' != 'true'"
+         UseSandbox="$(MSBuildSandboxToolTasks)"
          DeclaredInputs="" DeclaredOutputs=""
          CompilerToolExe="$(VbcToolExe)"
          CompilerToolPath="$(VbcToolPath)"
@@ -240,6 +241,8 @@
          VBRuntime="$(VBRuntime)"
          SourceLink="$(SourceLink)">
       <Output TaskParameter="CompilerArguments" PropertyName="_HardenedVbcArguments" />
+      <Output TaskParameter="SandboxArguments" PropertyName="_HardenedVbcSandboxArguments" />
+      <Output TaskParameter="ArgumentPaths" ItemName="_HardenedVbcArgumentPath" />
       <Output TaskParameter="CompilerInputs" ItemName="_HardenedVbcInput" />
       <Output TaskParameter="CompilerOutputs" ItemName="_HardenedVbcOutput" />
       <Output TaskParameter="CompilerOutputTrees" ItemName="_HardenedVbcTree" />
@@ -253,6 +256,9 @@
     </ResolveCompilerDependencies>
 
     <CompileManaged Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                    UseSandbox="$(MSBuildSandboxToolTasks)"
+                    SandboxArguments="$(_HardenedVbcSandboxArguments)"
+                    ArgumentPaths="@(_HardenedVbcArgumentPath)"
                     DotNetHost="$(DOTNET_HOST_PATH)"
                     CompilerAssembly="$([MSBuild]::NormalizePath('$(_BuildTasksDirectory)', 'bincore/vbc.dll'))"
                     CompilerArguments="$(_HardenedVbcArguments)"

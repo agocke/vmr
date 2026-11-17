@@ -69,7 +69,7 @@ internal abstract class Document
         EnsureContent();
         string tempPath = Path.Combine(path.Directory.FullName, Path.GetRandomFileName());
 
-        using (FileStream stream = File.Open(tempPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+        using (FileStream stream = File.Open(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
         {
             Save(stream);
         }

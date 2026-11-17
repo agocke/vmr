@@ -115,6 +115,7 @@
     <CallTarget Targets="TestRuntimeILLinkInputs" />
     <CallTarget Targets="TestXlfLocalization" />
     <CallTarget Targets="TestSatelliteSource" />
+    <CallTarget Targets="TestSandboxedSatelliteSource" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
     <CallTarget Targets="TestCompilerGeneratedFiles" />
     <CallTarget Targets="TestNativeTaskHost" />
     <CallTarget Targets="TestApiCompat" />
@@ -146,6 +147,8 @@
     <CallTarget Targets="TestArcadeRepositoryInfo" />
     <CallTarget Targets="TestRoslynAnalyzerConfig" />
     <CallTarget Targets="TestCsc" />
+    <CallTarget Targets="TestSandboxedCompilers" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+    <CallTarget Targets="TestSandboxedCompilerGeneratedFiles" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
     <CallTarget Targets="TestCopyOutputs" />
     <CallTarget Targets="TestSourceCopies" />
     <CallTarget Targets="TestCleanup" />
@@ -1351,6 +1354,10 @@
     <Error Condition="'$(_ExplicitProgramOutput)' != 'Hello from a project reference.'"
            Text="Independent compilation must preserve explicit reference aliases and use the declared producer." />
   </Target>
+  <Target Name="TestSandboxedSatelliteSource">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="TestSatelliteSource"
+             Properties="Configuration=$(Configuration);GenBuildApp=$(GenBuildApp);GenBuildTestHost=$(GenBuildTestHost);GenBuildTestSandboxedSatellites=true" />
+  </Target>
   <Target Name="TestSatelliteSource">
     <PropertyGroup>
       <_SatelliteRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'satellites'))</_SatelliteRoot>
@@ -1359,6 +1366,7 @@
       <_SatelliteHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_SatelliteHostOS>
       <_SatelliteHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_SatelliteHostOS>
       <_SatelliteArguments>-p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:MSBuildGraphRepositoryRoot=&quot;$(_SatelliteRoot)&quot; -p:MSBuildGraphHostOS=$(_SatelliteHostOS)</_SatelliteArguments>
+      <_SatelliteArguments Condition="'$(GenBuildTestSandboxedSatellites)' == 'true'">$(_SatelliteArguments) -p:MSBuildSandboxToolTasks=true</_SatelliteArguments>
     </PropertyGroup>
     <ItemGroup>
       <_SatelliteDirectory Include="$(_SatelliteRoot)action/;$(_SatelliteRoot)ordinary/" />
@@ -1382,6 +1390,8 @@
                       !Exists('$(_SatelliteRoot)action/obj/Debug/net11.0/fr/SatelliteFixture.resources.cs')"
            Text="A selected satellite must execute its parent and generated-source producers." />
     <Exec WorkingDirectory="$(_SatelliteRoot)action" Command="ninja -f build.ninja" />
+    <Exec Condition="'$(GenBuildTestSandboxedSatellites)' == 'true'"
+          Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_SatelliteRoot)action/bin/Debug/net11.0/SatelliteFixture.dll&quot; staged-graph &quot;$(_SatelliteRoot)action/build.ninja&quot;" />
     <Exec Command="$(_App) restore &quot;$(_SatelliteRoot)ordinary/SatelliteSource.csproj&quot; $(_SatelliteArguments) -p:MSBuildRestoreGraphInputs=false -t:Build" />
     <GetFileHash Files="$(_SatelliteRoot)action/obj/Debug/net11.0/%(_SatelliteCulture.Identity)/SatelliteFixture.resources.cs">
       <Output TaskParameter="Items" ItemName="_SatelliteSourceHash" />
@@ -3681,6 +3691,52 @@
     <Error Condition="@(_VbcInvalidExit->AnyHaveMetadataValue('Identity', '0')) or Exists('$(_VbcRoot)%(_VbcInvalid.Identity)/project/obj/genbuild/build.ninja') or Exists('$(_VbcRoot)%(_VbcInvalid.Identity)/project/obj/Generated.vb')"
            Text="Unsupported VB discovery and nondeterministic options must reject construction without partial graphs or products." />
   </Target>
+  <Target Name="TestSandboxedCompilers" DependsOnTargets="TestCsc;TestVbc">
+    <ItemGroup>
+      <_SandboxedCompiler Include="csc/short/project/Csc.proj" Case="short" />
+      <_SandboxedCompiler Include="csc/signed/project/Csc.proj" Case="signed" />
+      <_SandboxedCompiler Include="vbc/short/project/Vbc.proj" Case="short" />
+      <_SandboxedCompiler Include="vbc/explicit-runtime/project/Vbc.proj" Case="explicit-runtime" />
+      <_SandboxedArtifact Include="@(_SandboxedCompiler->'$(_TestDirectory)%(RelativeDir)obj/Hello.dll');
+                                  @(_SandboxedCompiler->'$(_TestDirectory)%(RelativeDir)obj/Hello.pdb');
+                                  @(_SandboxedCompiler->'$(_TestDirectory)%(RelativeDir)obj/ref/Hello.dll');
+                                  $(_TestDirectory)vbc/short/project/obj/Hello.xml;
+                                  $(_TestDirectory)vbc/explicit-runtime/project/obj/Hello.xml" />
+    </ItemGroup>
+    <GetFileHash Files="@(_SandboxedArtifact)">
+      <Output TaskParameter="Items" ItemName="_SandboxedBaselineHash" />
+    </GetFileHash>
+    <Exec WorkingDirectory="$(_TestDirectory)%(_SandboxedCompiler.RelativeDir)" Command="ninja -f obj/genbuild/build.ninja -t clean" />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)%(_SandboxedCompiler.Identity)&quot; -p:TestCase=%(_SandboxedCompiler.Case) -p:MSBuildSandboxToolTasks=true" />
+    <Error Condition="Exists('$(_TestDirectory)%(_SandboxedCompiler.RelativeDir)obj/Hello.dll')"
+           Text="Staged compiler graph construction must not produce an assembly." />
+    <Exec WorkingDirectory="$(_TestDirectory)%(_SandboxedCompiler.RelativeDir)" Command="ninja -f obj/genbuild/build.ninja -j4" />
+    <GetFileHash Files="@(_SandboxedArtifact)">
+      <Output TaskParameter="Items" ItemName="_SandboxedResultHash" />
+    </GetFileHash>
+    <Error Condition="'@(_SandboxedBaselineHash->'%(FileHash)')' != '@(_SandboxedResultHash->'%(FileHash)')'"
+           Text="Staged C# and VB compilation must preserve assembly, PDB, reference assembly and documentation bytes." />
+    <Copy SourceFiles="$(_AppDirectory)/genbuild.runtimeconfig.json"
+          DestinationFiles="$(_TestDirectory)%(_SandboxedCompiler.RelativeDir)obj/Hello.runtimeconfig.json" />
+    <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_TestDirectory)%(_SandboxedCompiler.RelativeDir)obj/Hello.dll&quot;" />
+    <Exec WorkingDirectory="$(_TestDirectory)csc/short/project" Command="ninja -f obj/genbuild/build.ninja"
+          ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_SandboxedNoWork" />
+    </Exec>
+    <Error Condition="!@(_SandboxedNoWork->AnyHaveMetadataValue('Identity', 'ninja: no work to do.'))"
+           Text="Unchanged staged compiler actions must have no Ninja work." />
+    <Exec Command="$(_App) build &quot;$(_TestDirectory)csc/short/project/Csc.proj&quot; -p:TestCase=compiler-error -p:MSBuildSandboxToolTasks=true" />
+    <Exec WorkingDirectory="$(_TestDirectory)csc/short/project" Command="ninja -f obj/genbuild/build.ninja"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_SandboxedFailureExitCode" />
+    </Exec>
+    <Error Condition="'$(_SandboxedFailureExitCode)' == '0'" Text="Staged compiler errors must propagate." />
+    <GetFileHash Files="@(_SandboxedArtifact)">
+      <Output TaskParameter="Items" ItemName="_SandboxedFailureHash" />
+    </GetFileHash>
+    <Error Condition="'@(_SandboxedBaselineHash->'%(FileHash)')' != '@(_SandboxedFailureHash->'%(FileHash)')'"
+           Text="Failed staged compilation must preserve previously published outputs." />
+  </Target>
   <Target Name="TestCsc">
     <MakeDir Directories="$(_TestDirectory)csc" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)HelloWorld.csproj" DestinationFolder="$(_TestDirectory)csc" />
@@ -4903,6 +4959,10 @@
     <Exec Command="&quot;$(GenBuildTestHost)&quot; &quot;$(_NativeRoot)Verifier.dll&quot; &quot;$(GenBuildTestHost)&quot; &quot;$(GenBuildApp)&quot; &quot;$(_AppDirectory)/toolset/native-action-host/MSBuild.ActionTaskHost&quot; &quot;$(_NativeRoot)&quot;" />
   </Target>
 
+  <Target Name="TestSandboxedCompilerGeneratedFiles">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="TestCompilerGeneratedFiles"
+             Properties="Configuration=$(Configuration);GenBuildApp=$(GenBuildApp);GenBuildTestHost=$(GenBuildTestHost);GenBuildTestSandboxedCompilerGeneratedFiles=true" />
+  </Target>
   <Target Name="TestCompilerGeneratedFiles">
     <PropertyGroup>
       <_GeneratedRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'compiler-generated-files'))</_GeneratedRoot>
@@ -4920,6 +4980,7 @@
       <_GeneratedHostOS Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_GeneratedHostOS>
       <_GeneratedHostOS Condition="$([MSBuild]::IsOSPlatform('FreeBSD'))">freebsd</_GeneratedHostOS>
       <_GeneratedArguments>-p:CSharpCoreTargetsPath=&quot;$(_AppDirectory)/toolset/Roslyn/Microsoft.CSharp.Core.targets&quot; -p:MSBuildGraphRepositoryRoot=&quot;$(_GeneratedRoot)&quot; -p:MSBuildGraphHostOS=$(_GeneratedHostOS)</_GeneratedArguments>
+      <_GeneratedArguments Condition="'$(GenBuildTestSandboxedCompilerGeneratedFiles)' == 'true'">$(_GeneratedArguments) -p:MSBuildSandboxToolTasks=true</_GeneratedArguments>
     </PropertyGroup>
     <ItemGroup>
       <_GeneratedDirectory Include="$(_GeneratedAction);$(_GeneratedRoot)ordinary/" />

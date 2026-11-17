@@ -15,7 +15,7 @@ namespace Microsoft.Build.Tasks
     /// <summary>
     /// Appends a list of items to a file. One item per line with carriage returns in-between.
     /// </summary>
-    [MSBuildDeclaredIOTask]
+    [MSBuildDeclaredIOTask(SandboxVersion = 1)]
     [MSBuildMultiThreadableTask]
     public class WriteLinesToFile : TaskExtension, IIncrementalTask, IMultiThreadableTask
     {
@@ -103,7 +103,12 @@ namespace Microsoft.Build.Tasks
             }
 
             ArgumentException.ThrowIfNullOrEmpty(File.ItemSpec);
-            AbsolutePath filePath = FileUtilities.NormalizePath(TaskEnvironment.GetAbsolutePath(File.ItemSpec));
+            if (TaskEnvironment.HasFilePathResolvers && (!Overwrite || FailIfNotIncremental))
+            {
+                throw new InvalidOperationException("Staged WriteLinesToFile requires Overwrite=true and FailIfNotIncremental=false; previous output contents are not inputs.");
+            }
+
+            AbsolutePath filePath = FileUtilities.NormalizePath(TaskEnvironment.GetOutputPath(File.ItemSpec));
             string contentsAsString = string.Empty;
 
             if (Lines != null && Lines.Length > 0)

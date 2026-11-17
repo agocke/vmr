@@ -48,6 +48,43 @@ the runtime catalog root; never catalog a workspace or home directory wholesale.
 Catalog output inside its root and reports overwriting capture/graph/catalog
 inputs are rejected.
 
+Selected-stop capture (separate trace opt-in)
+---------------------------------------------
+Add trace --seccomp-bpf to retain EXACTLY the same syscall selection while asking
+strace to stop only for selected syscalls. This is not a read allowance, parser
+exception or sandbox. Default trace behavior is unchanged.
+
+The option first runs a bounded (15-second) same-filter Python startup probe with
+-d. It requires successful exec/exit, parseable complete logs, an enabled-filter
+message AND live EVENT_SECCOMP stops attributed to that probe's actual PID.
+Capability-test events alone, disabled/unavailable/oversized filters, warnings,
+failed startup or a changed tracer do not establish activation. Probe diagnostics
+over 4 MiB are rejected and retained, never silently truncated.
+
+The actual workload runs WITHOUT -d. Its stderr is preserved in strace-stderr.log
+and forwarded normally. Any strace-prefixed diagnostic other than ordinary
+"Process PID attached", including any seccomp fallback warning, rejects verification
+even if the command exits zero. Installation failures are fatal in strace's
+source; this check also rejects startup fallback and other observed tracer
+errors. Non-strace task diagnostics do not themselves invalidate capture.
+
+capture.json records seccompBpf: requested/verified, selection, tracer SHA256,
+probe argv/PIDs/live stops, actual argv, rejected diagnostics and limitations.
+Probe logs and actual stderr are added to the hashed capture inputs. Analyze
+rejects an unverified policy or changed evidence, disabling response-file
+admissions as for any other incomplete capture. Preserve seccomp-preflight/
+alongside the main logs. No production per-stop debug stream is generated.
+
+This contract follows strace v7.3's filter_seccomp.c and strace.c; use a trusted
+tracer. Unsupported tracer/kernel combinations fail the probe, not silently
+downgrade. --seccomp-bpf requires launch plus follow-forks; do not combine attach,
+detach-on-exec or syscall-limit modes. Unknown raw events still fail analysis.
+Other higher-priority seccomp filters can suppress notifications, including
+USER_NOTIF-mediated execution. This profile does NOT monitor installation of
+competing filters, nor guarantee observation of adversarial tracees. The startup
+probe is evidence of activation, not proof against later unreported kernel/tool
+bugs. Original incomplete traces cannot be repaired by enabling this option.
+
 Exact allowance catalogs
 ------------------------
 The catalog subcommand explicitly snapshots regular files under the chosen root
@@ -97,6 +134,12 @@ in the files array are rejected, not expanded into subtree permissions. Catalog 
 trusted policy inputs; review them. No source, workspace, home, /proc, /sys,
 /dev, locale, or loader prefix exemptions are built in.
 Unexpected runtime probes must be explicitly cataloged or remain undeclared.
+Reviewed OS/runtime files (for example exact OpenSSL DSOs/config, localtime or
+NSS/account lookup files) remain machine-specific execution-image assumptions,
+separate from product input completeness. They do NOT establish portable
+hermeticity or safe content caching. Document per-file reasons and canonical
+identities in a separate catalog; do not admit config includes, modules, home
+files or directories merely because a reviewed runtime resource references them.
 
 Process-local and self-created runtime observations (explicit opt-in)
 --------------------------------------------------------------------
@@ -125,6 +168,55 @@ an isolated working area, set TMPDIR and select it while constructing the graph:
   TMPDIR=/absolute/isolated/work ... build ... -p:MSBuildActionEnvironment=TMPDIR
 The action host otherwise clears unselected environment, including TMPDIR.
 
+Private response-file provenance (separate opt-in)
+-------------------------------------------------
+ToolTask can open a response file with O_WRONLY|O_CREAT and then reset it with
+ftruncate(fd,0), rather than using O_TRUNC. The default %file trace DOES NOT
+observe ftruncate. Do not infer initialization from O_CREAT or managed API intent.
+For NEW captures add --response-file-provenance to the trace command. It adds:
+  ftruncate,ftruncate64,close,close_range,dup,dup2,dup3,fcntl,fchmod,fchown
+These capture fd lifecycle/permission operations, not read/write payload bytes.
+Capture records responseFileTraceProfile=1; old captures cannot prove this rule.
+Then explicitly add --allow-response-file-scratch to analyze.
+
+This rule grants only successful child O_RDONLY opens of the exact .rsp object
+with ALL these observed conditions:
+  * Its immediate directory was newly mkdir'ed with requested mode exactly 0700,
+    by the action-host process, directly inside an absolute TMPDIR/TMP/TEMP
+    explicitly captured in THAT action descriptor. Existing directories and
+    broad temp-root permissions never qualify.
+  * Exactly one same-host O_WRONLY|O_CREAT open, with returned -yy canonical path
+    equal to its logical spelling (no symlink aliases), is initialized by
+    O_EXCL, O_TRUNC, or one successful same-fd ftruncate/ftruncate64(fd,0).
+    Open-or-create alone, nonzero/failed resets and read-write creators fail.
+  * Initialization and writer close finish before a successful declared-content
+    executable child exec whose argv names @EXACT_RESPONSE_PATH. Only that child
+    process/thread group may read it; each read fd closes before host unlink.
+  * The same action-host process successfully unlinks the exact file; its entire
+    traced family exits successfully. No cross-family accesses, extra writers,
+    fd duplication/range ambiguity, path/ancestor permission/ownership changes,
+    links/renames, unresolved calls or incomplete captures may conflict.
+  * The file is not a declared/content input, measured output or generated tree.
+    Such paths retain ordinary input/self-output semantics, never scratch status.
+
+The rule uses syscall completion timestamps as well as entry ordering. Sequential
+child reopens are supported; arbitrary fd transfers/aliases are not. It does NOT
+admit sibling files, directory enumeration, metadata/negative probes, arbitrary
+.rsp files, all files under TMPDIR, or TranslateSource/product scratch. A rejected
+candidate stays undeclared and includes explicit rejection reasons.
+responseFileScratchCandidates records provenance, initialization, lifecycle and
+rejections. responseFileScratchAllowanceUsage records each actually admitted read,
+separate from measured self-output and runtime/case-probe allowances.
+
+This is observational provenance, not a protected scratch sandbox. Untraced
+same-user processes, filesystem/mount races, pre-existing inherited fds and
+unobserved fd transfers/writes remain limitations; no payload content is verified.
+For simplicity any unresolved/incomplete event anywhere in the capture disables
+these admissions. Failed commands or changed captured graph/sidecars do too.
+Use a private working root and a minimal non-secret outer environment: strace -v
+expands exec environments into raw logs. Preserve all raw captures and use a
+restrictive caller umask (for example 077); no trace sampling/truncation is safe.
+
 Admissions and attribution
 --------------------------
 Action identity is --invocation DESCRIPTOR or --materialize-tree DESCRIPTOR ROOT
@@ -147,6 +239,7 @@ Content admissions:
   runtimeDirectory/platformDirectory: separate fixed-name directory rules.
   runtimeProc: one explicitly enabled, validated action-local proc leaf.
   caseSensitivityProbe: initial exclusive-created/unlinked named scratch open.
+  responseFileScratch: separately proven private host-to-child transient .rsp.
 
 DeclaredInputs are reported but do not grant permission missing from the Ninja
 content edge. Order-only (||) prerequisites NEVER grant content admission.
@@ -170,8 +263,9 @@ stat/lstat/access/statfs/xattr queries and their supported *at variants are
 metadata probes; unsuccessful opens/queries are negative probes. --strict-probes
 makes undeclared metadata/negative probes fail as well. Without it these remain
 fully reported. Directory metadata is admitted only by a matching valid exact
-directory rule, never by file membership. Write syscalls are ignored
-for read admission; this is NOT a write-footprint auditor.
+directory rule, never by file membership. Write syscalls normally do not grant
+read admission; the optional response-file profile uses a narrowly proved
+initialization/deletion lifecycle. This is NOT a write-footprint auditor.
 
 Per-PID unfinished/resumed pairs are reconstructed at entry timestamps. Missing
 pairs, process exit markers, child logs, unknown traced syscalls, truncated C
@@ -200,7 +294,8 @@ Top-level keys:
   graph, graphSha256, strictProbes, ok, commandExitCode (capture analysis only);
   actions: observed action objects with id/mode/invocation/taskType/taskAssembly,
     workingDirectory, contentInputs, declaredInputs, outputs, trees, orderOnly,
-    pids, counts by admission and dynamicTrees [logicalRoot, canonicalRoot, kind];
+    pids, counts by admission, scratchRoots (selected absolute temp variables),
+    dynamicTrees [logicalRoot, canonicalRoot, kind];
   undeclaredReads: unadmitted successful content-open/exec/readlink/enumeration;
   metadataProbes, negativeProbes: all such observations, admitted or not;
   runtimeAllowanceUsage, platformAllowanceUsage: each used allowance;
@@ -208,6 +303,8 @@ Top-level keys:
   directoryAllowanceUsage, directoryCatalogMismatches: fixed-membership evidence;
   runtimeProcAllowanceUsage, runtimeScratchAllowanceUsage: opt-in rule uses;
   selfCreatedProbes: exclusive-created case-probe candidates and unlink evidence;
+  responseFileScratchCandidates, responseFileScratchAllowanceUsage:
+    optional response-file lifecycle proofs/rejections and admitted child reads;
   allowanceRules: complete runtime/platform exact catalog rules, even if unused;
   unresolved, incompleteness: raw event/error context where available;
   controller: {events: count, pids: [...]};

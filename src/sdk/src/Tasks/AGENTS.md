@@ -38,6 +38,9 @@ preparation. Explicit `AnalyzerDependency` authoring covers loose/generated file
 and package-adjacent files absent from the acquired inventory.
 Both primary and satellite `CompileManaged` calls consume `_CompilerToolInput`
 directly from the packaged Build catalog, not Restore snapshots.
+Satellite formatting/execution also forwards `MSBuildSandboxToolTasks` and its
+typed argument bindings, so opting into staging covers satellites as well as
+primary compilations.
 SDK acquisition does not register compiler manifest capture; C# and VB consume
 the packaged catalog and acquired inventories directly.
 

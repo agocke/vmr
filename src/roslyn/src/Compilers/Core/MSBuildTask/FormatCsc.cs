@@ -21,9 +21,16 @@ public sealed class FormatCsc : Csc
     public bool DeterministicSourcePaths { get; set; }
     public string? CompilerToolExe { get; set; }
     public string? CompilerToolPath { get; set; }
+    public bool UseSandbox { get; set; }
 
     [Output]
     public string CompilerArguments { get; private set; } = "";
+
+    [Output]
+    public string SandboxArguments { get; private set; } = "";
+
+    [Output]
+    public ITaskItem[] ArgumentPaths { get; private set; } = Array.Empty<ITaskItem>();
 
     [Output]
     public ITaskItem[] CompilerInputs { get; private set; } = Array.Empty<ITaskItem>();
@@ -53,6 +60,13 @@ public sealed class FormatCsc : Csc
         CompilerOutputs = invocation.Outputs;
         CompilerOutputTrees = invocation.OutputTrees;
         PathMappings = invocation.PathMappings;
+        SandboxArguments = "";
+        ArgumentPaths = Array.Empty<ITaskItem>();
+        if (UseSandbox)
+        {
+            SandboxArguments = invocation.FormatSandboxArguments(CompilerArguments, GenerateResponseFileContents);
+            ArgumentPaths = invocation.ArgumentPaths;
+        }
         return !Log.HasLoggedErrors;
     }
 

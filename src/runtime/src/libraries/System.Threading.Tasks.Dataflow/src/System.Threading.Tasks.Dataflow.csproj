@@ -72,6 +72,7 @@ System.Threading.Tasks.Dataflow.WriteOnceBlock&lt;T&gt;</PackageDescription>
 
   <ItemGroup>
     <None Include="XmlDocs\CommonXmlDocComments.xml" />
+    <CustomAdditionalCompileInputs Include="XmlDocs\CommonXmlDocComments.xml" />
     <Content Include="XmlDocs\System.Threading.Tasks.Dataflow.xml" Pack="false" />
   </ItemGroup>
 

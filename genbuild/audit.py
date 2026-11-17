@@ -122,6 +122,9 @@ def load_graph(path, cwd):
         flag, descriptor_path, tree = identity
         descriptor_path = absolute(descriptor_path, cwd)
         descriptor = json.loads(Path(descriptor_path).read_text())
+        environment = descriptor.get("environment") or {}
+        if not isinstance(environment, dict):
+            raise AuditError("Expected a captured environment dictionary")
         work = absolute(descriptor["workingDirectory"], cwd)
         output_paths = [absolute(p, cwd) for p in outputs]
         output_paths += [absolute(i["itemSpec"], work) for i in items(descriptor, "DeclaredOutputs")]
@@ -146,6 +149,10 @@ def load_graph(path, cwd):
             "declaredInputs": [absolute(i["itemSpec"], work) for i in items(descriptor, "DeclaredInputs")],
             "outputs": sorted(set(output_paths)), "trees": trees,
             "orderOnly": [absolute(p, cwd) for p in order],
+            "scratchRoots": sorted({os.path.normpath(value)
+                                    for name, value in environment.items()
+                                    if name in ("TMPDIR", "TMP", "TEMP") and
+                                    isinstance(value, str) and os.path.isabs(value)}),
         }
     if not actions:
         raise AuditError("No supported actions found")
@@ -264,6 +271,7 @@ def read_events(prefix):
                 errors.append({**location, "reason": "Missing -ttt timestamp", "raw": line})
                 continue
             stamp, body = match.groups()
+            completed = stamp
             if body.startswith("+++"):
                 ended = True
                 if body.startswith(("+++ exited with ", "+++ killed by ")):
@@ -297,7 +305,7 @@ def read_events(prefix):
                 errors.append({**location, "reason": str(error), "raw": body})
                 continue
             events.append({**location, "timestamp": stamp, "syscall": syscall[1],
-                           "args": args, "result": syscall[3]})
+                           "completedTimestamp": completed, "args": args, "result": syscall[3]})
         if not ended:
             errors.append({"pid": pid, "file": path, "reason": "Missing process exit marker"})
         if pending is not None:
@@ -466,10 +474,260 @@ WRITES = {"rename", "renameat", "renameat2", "unlink", "unlinkat", "mkdir", "mkd
           "setxattr", "lsetxattr", "removexattr", "lremovexattr"}
 PROCESS = {"fork", "vfork", "clone", "clone3"}
 IGNORED = {"wait4", "waitid", "exit", "exit_group", "kill", "tgkill", "getpid", "getppid"}
+FD_LIFECYCLE = {"ftruncate", "ftruncate64", "close", "close_range", "dup", "dup2", "dup3", "fcntl",
+                "fchmod", "fchown"}
+RESPONSE_TRACE = "ftruncate,ftruncate64,close,close_range,dup,dup2,dup3,fcntl,fchmod,fchown"
+
+
+class ResponseScratch:
+    """Prove a single private, initialized writer/child-reader/unlink lifecycle."""
+
+    def __init__(self, actions, policies):
+        self.actions, self.policies = actions, policies
+        self.roots = {root for action in actions.values() for root in action["scratchRoots"]}
+        self.files, self.directories, self.mutations, self.execs = {}, {}, [], []
+        self.known_fds, self.root_exits, self.failed_families = {}, set(), set()
+
+    def relevant(self, path):
+        return any(within(path, root) or within(root, path) for root in self.roots)
+
+    def record(self, event, state, path, operation, **details):
+        logical = os.path.normpath(path)
+        return {"operation": operation, "path": logical,
+                "canonicalPath": traced_canonical(path, state, event["pid"]),
+                "pid": event["pid"], "processId": state["tgid"], "family": state["family"],
+                "action": self.actions[state["action"]]["id"] if state["action"] else None,
+                "traceFile": event["file"], "traceLine": event["line"], "result": event["result"],
+                "timestamp": event["timestamp"], "completed": event.get("completedTimestamp", event["timestamp"]),
+                "success": not event["result"].startswith(("-", "?")), **details}
+
+    def observe(self, event, state):
+        call, args, result = event["syscall"], event["args"], event["result"]
+        success = not result.startswith(("-", "?"))
+        if call == "@exit":
+            family = state["family"]
+            if family:
+                if result != "+++ exited with 0 +++":
+                    self.failed_families.add(family)
+                if event["pid"] == int(family.split("@", 1)[0]):
+                    self.root_exits.add(family)
+            return
+        if call in ("execve", "execveat") and success and state["action"]:
+            offset = 0 if call == "execve" else 1
+            argv = [c_string(a) for a in split_args(args[offset + 1][1:-1]) if a]
+            executable = resolve_path(args[offset], args[0] if offset else None, state["cwd"][0])
+            declared = self.policies[state["action"]].admit(
+                os.path.normpath(executable), traced_canonical(executable, state, event["pid"]), "exec")
+            for argument in argv:
+                if argument.startswith("@") and len(argument) > 1:
+                    path = absolute(argument[1:], state["cwd"][0])
+                    self.execs.append(self.record(event, state, path, "exec",
+                                                  executable=os.path.normpath(executable),
+                                                  declared=declared == "contentInput"))
+            return
+        if call in ("open", "openat", "openat2"):
+            offset = 0 if call == "open" else 1
+            path = resolve_path(args[offset], args[0] if offset else None, state["cwd"][0])
+            if not path.endswith(".rsp") and ".rsp" not in result:
+                return
+            item = self.record(event, state, path, "open", flags=args[offset + 1])
+            if success:
+                fd = int(re.match(r"\d+", result)[0])
+                annotation = re.match(r"\d+<.*>", result)
+                annotated = fd_path(annotation[0]) if annotation else None
+                item.update(fd=fd, canonicalPath=annotated, annotated=annotated is not None)
+            identity = item["canonicalPath"] if success and item["canonicalPath"] else item["path"]
+            if not identity.endswith(".rsp") or not self.relevant(identity):
+                return
+            if success:
+                self.known_fds[(state["tgid"], fd)] = identity
+            self.files.setdefault(identity, []).append(item)
+            return
+        if call in FD_LIFECYCLE:
+            if call in ("fchmod", "fchown"):
+                path = fd_path(args[0])
+                if path is None:
+                    raise AuditError("Fd permission/ownership change lacks -yy annotation")
+                if self.relevant(path):
+                    self.mutations.append(self.record(event, state, path, call))
+                return
+            if call == "close_range":
+                # Ranges are uncommon in this profile. Do not invent per-file close evidence.
+                for (process, fd), path in list(self.known_fds.items()):
+                    if process == state["tgid"]:
+                        self.files[path].append(self.record(event, state, path, "unsupported-fd-range"))
+                return
+            if call == "fcntl" and "F_DUPFD" not in args[1]:
+                return
+            for argument in args[:2] if call in ("dup2", "dup3") else args[:1]:
+                match = re.match(r"(\d+)(?:<.*>)?$", argument)
+                if not match:
+                    continue
+                fd = int(match[1])
+                path = self.known_fds.get((state["tgid"], fd))
+                if path is None and ".rsp" not in argument:
+                    continue
+                annotated = fd_path(argument)
+                if path is None:
+                    path = annotated
+                if path is None or not path.endswith(".rsp") or not self.relevant(path):
+                    continue
+                item = self.record(event, state, path, call, fd=fd,
+                                   canonicalPath=annotated, annotated=annotated is not None)
+                if call.startswith("ftruncate"):
+                    item["length"] = args[1]
+                self.files.setdefault(path, []).append(item)
+                if call == "close" and success:
+                    self.known_fds.pop((state["tgid"], fd), None)
+            return
+        paths = []
+        if call in ("mkdir", "mkdirat"):
+            offset = int(call == "mkdirat")
+            path = resolve_path(args[offset], args[0] if offset else None, state["cwd"][0])
+            if success and self.relevant(os.path.normpath(path)):
+                item = self.record(event, state, path, "mkdir", mode=args[offset + 1])
+                self.directories.setdefault(item["path"], []).append(item)
+            return
+        if call in ("rename", "link"):
+            paths = [(args[0], None), (args[1], None)]
+        elif call in ("renameat", "renameat2", "linkat"):
+            paths = [(args[1], args[0]), (args[3], args[2])]
+        elif call == "symlink":
+            paths = [(args[1], None)]
+        elif call == "symlinkat":
+            paths = [(args[2], args[1])]
+        elif call in ("unlinkat", "fchmodat", "fchmodat2", "fchownat", "utimensat", "futimesat"):
+            paths = [(args[1], args[0])]
+        elif call in WRITES:
+            paths = [(args[0], None)]
+        for raw, base in paths:
+            path = resolve_path(raw, base, state["cwd"][0])
+            if self.relevant(os.path.normpath(path)):
+                self.mutations.append(self.record(event, state, path, call))
+
+    def finish(self, report, enabled, profile, complete):
+        observations = {(e["pid"], e["timestamp"], e["path"]): e for e in report["undeclaredReads"]
+                        if e["kind"] == "open"}
+        counts = {a["id"]: a["counts"] for a in report["actions"]}
+        protected = {p for a in self.actions.values()
+                     for p in a["contentInputs"] + a["declaredInputs"] + a["outputs"]}
+        protected |= {os.path.realpath(p) for p in protected}
+        trees = [t["root"] for a in self.actions.values() for t in a["trees"]]
+        trees += [os.path.realpath(root) for root in trees]
+        admitted = set()
+        for path, records in self.files.items():
+            opens = [r for r in records if r["operation"] == "open"]
+            if not opens:
+                continue
+            writers = [r for r in opens if "O_WRONLY" in r["flags"]]
+            readers = [r for r in opens if "O_WRONLY" not in r["flags"]]
+            if not readers:
+                continue
+            reasons = []
+            if not profile:
+                reasons.append("Capture lacks the response-file fd-lifecycle profile")
+            if not complete or report["incompleteness"] or report["unresolved"]:
+                reasons.append("Capture has incomplete, unresolved, failed or changed inputs")
+            if (path in protected or any(str(parent) in protected for parent in Path(path).parents)
+                    or any(within(path, root) for root in trees)):
+                reasons.append("Path is a declared input/output or generated tree, not private transient scratch")
+            if len(writers) != 1:
+                reasons.append("Expected exactly one write-only open")
+            writer = writers[0] if len(writers) == 1 else opens[0]
+            family, owner = writer["family"], writer["processId"]
+            if (not family or owner != int(family.split("@", 1)[0]) or
+                    family not in self.root_exits or family in self.failed_families):
+                reasons.append("Writer is not a successfully completed action-host process")
+            if any(not r["success"] or r["family"] != family or r["path"] != path or
+                   r["canonicalPath"] != path for r in records):
+                reasons.append("Failed, cross-family, unannotated or symlinked file lifecycle")
+            if any(r["operation"] not in ("open", "close", "ftruncate", "ftruncate64") for r in records):
+                reasons.append("Unsupported fd duplication/range lifecycle")
+            directory = os.path.dirname(path)
+            creations = self.directories.get(directory, [])
+            action = next((a for a in self.actions.values() if a["id"] == writer["action"]), None)
+            if (len(creations) != 1 or not action or os.path.dirname(directory) not in action["scratchRoots"]
+                    or creations[0]["family"] != family or creations[0]["processId"] != owner
+                    or creations[0]["canonicalPath"] != directory or creations[0]["mode"] != "0700"
+                    or creations[0]["completed"] >= writer["timestamp"]):
+                reasons.append("Missing fresh same-host 0700 directory directly inside captured TMPDIR/TMP/TEMP")
+            flags = writer["flags"]
+            initialization = ("O_EXCL" if "O_EXCL" in flags else "O_TRUNC" if "O_TRUNC" in flags else None)
+            truncations = [r for r in records if r["operation"] in ("ftruncate", "ftruncate64")]
+            if truncations:
+                if (len(truncations) != 1 or truncations[0]["length"] != "0"
+                        or truncations[0]["processId"] != owner
+                        or truncations[0].get("fd") != writer.get("fd")
+                        or writer["completed"] >= truncations[0]["timestamp"]):
+                    reasons.append("Truncation is not a single successful same-writer fd reset to zero")
+                else:
+                    initialization = initialization or "ftruncate(fd,0)"
+            if not initialization or "O_CREAT" not in flags:
+                reasons.append("No exclusive/truncating initialization; O_CREAT alone is insufficient")
+            closes = [r for r in records if r["operation"] == "close"]
+            writer_closes = [r for r in closes if r["processId"] == owner and r.get("fd") == writer.get("fd")]
+            if len(writer_closes) != 1:
+                reasons.append("Missing unique writer close")
+            closed = writer_closes[0]["completed"] if len(writer_closes) == 1 else writer["timestamp"]
+            if len(writer_closes) == 1 and writer["completed"] >= writer_closes[0]["timestamp"]:
+                reasons.append("Writer open did not finish before writer close")
+            if truncations and truncations[-1]["completed"] >= (
+                    writer_closes[0]["timestamp"] if len(writer_closes) == 1 else closed):
+                reasons.append("Initialization did not finish before writer close")
+            unlinks = [r for r in self.mutations if r["path"] == path and r["operation"] in ("unlink", "unlinkat")]
+            if (len(unlinks) != 1 or not unlinks[0]["success"] or unlinks[0]["family"] != family
+                    or unlinks[0]["processId"] != owner or unlinks[0]["canonicalPath"] != path):
+                reasons.append("Missing unique successful same-host unlink")
+            deleted = unlinks[0]["timestamp"] if len(unlinks) == 1 else closed
+            start = creations[0]["timestamp"] if len(creations) == 1 else writer["timestamp"]
+            for mutation in self.mutations:
+                if not mutation["success"] or mutation in unlinks:
+                    continue
+                if (mutation["path"] == path or
+                        (within(path, mutation["path"]) and start <= mutation["timestamp"] <= deleted)):
+                    reasons.append("Conflicting path/ancestor mutation: " + mutation["operation"])
+            read_entries = []
+            for reader in readers:
+                executions = [e for e in self.execs if e["path"] == path and e["family"] == family
+                              and e["processId"] == reader["processId"] and e["declared"]
+                              and closed < e["timestamp"] and e["completed"] < reader["timestamp"]]
+                reopened = min((r["timestamp"] for r in opens
+                                if r["processId"] == reader["processId"] and r.get("fd") == reader.get("fd")
+                                and r["timestamp"] > reader["timestamp"]), default=deleted)
+                reader_closes = [r for r in closes if r["processId"] == reader["processId"]
+                                 and r.get("fd") == reader.get("fd")
+                                 and reader["completed"] < r["timestamp"] and r["completed"] < min(deleted, reopened)]
+                if (reader["processId"] == owner or "O_RDONLY" not in reader["flags"]
+                        or any(flag in reader["flags"] for flag in ("O_CREAT", "O_TRUNC", "O_PATH", "O_DIRECTORY"))
+                        or not executions or len(reader_closes) != 1):
+                    reasons.append("Read lacks closed-writer -> declared child exec @path -> read/close -> unlink ordering")
+                entry = observations.get((reader["pid"], reader["timestamp"], path))
+                if entry:
+                    read_entries.append(entry)
+            evidence = {"path": path, "action": writer["action"], "actionFamily": family,
+                        "privateDirectory": directory, "initialization": initialization,
+                        "directoryCreation": creations[0] if len(creations) == 1 else None,
+                        "unlink": unlinks[0] if len(unlinks) == 1 else None,
+                        "childExecutions": [e for e in self.execs if e["path"] == path and e["family"] == family],
+                        "writerProcessId": owner, "readerProcessIds": sorted({r["processId"] for r in readers}),
+                        "writerClosed": closed, "unlinked": unlinks[0]["completed"] if len(unlinks) == 1 else None,
+                        "allowanceEnabled": enabled, "eligible": not reasons,
+                        "rejections": sorted(set(reasons)), "lifecycle": records}
+            report["responseFileScratchCandidates"].append(evidence)
+            if enabled and not reasons:
+                for entry in read_entries:
+                    entry.update(admission="responseFileScratch", rule="--allow-response-file-scratch",
+                                 privateDirectory=directory, initialization=initialization)
+                    counts[entry["action"]]["undeclared"] -= 1
+                    counts[entry["action"]]["responseFileScratch"] = counts[entry["action"]].get("responseFileScratch", 0) + 1
+                    admitted.add(id(entry))
+                    report["responseFileScratchAllowanceUsage"].append(entry)
+        report["undeclaredReads"] = [e for e in report["undeclaredReads"] if id(e) not in admitted]
 
 
 def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), strict=False,
-            allow_runtime_proc=False, allow_case_sensitivity_probe=False):
+            allow_runtime_proc=False, allow_case_sensitivity_probe=False,
+            allow_response_file_scratch=False, response_file_profile=False, capture_complete=True):
     actions = load_graph(graph, cwd)
     events, incomplete = read_events(prefix)
     runtime = exact_catalog(runtime_catalogs)
@@ -486,6 +744,7 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
         "negativeProbes": [], "runtimeAllowanceUsage": [], "platformAllowanceUsage": [],
         "directoryHandleOpens": [], "directoryAllowanceUsage": [], "runtimeProcAllowanceUsage": [],
         "selfCreatedProbes": [], "runtimeScratchAllowanceUsage": [],
+        "responseFileScratchCandidates": [], "responseFileScratchAllowanceUsage": [],
         "directoryCatalogMismatches": runtime_mismatches + platform_mismatches,
         "allowanceRules": {
             "runtime": [{"path": p, "canonicalPath": real, "catalog": source}
@@ -499,6 +758,10 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
             "caseSensitivityProbe": {"enabled": allow_case_sensitivity_probe,
                                     "basename": "CASESENSITIVETEST[0-9a-f]{32}",
                                     "requires": "successful O_CREAT|O_EXCL followed by same-family unlink"},
+            "responseFileScratch": {"enabled": allow_response_file_scratch,
+                                    "traceProfile": response_file_profile,
+                                    "requires": "fresh private 0700 directory; initialized write-only host fd; "
+                                    "writer close; declared child exec @file/read/close; host unlink; complete trace"},
         },
         "unresolved": [], "incompleteness": incomplete, "controller": {"events": 0, "pids": []},
         "limitations": [
@@ -513,6 +776,7 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
         ],
     }
     states, seen, controller, enumerations, scratch = {}, {}, set(), [], []
+    responses = ResponseScratch(actions, policies) if allow_response_file_scratch or response_file_profile else None
     children = set()
     for event in events:
         if event["syscall"] in PROCESS and not event["result"].startswith("-"):
@@ -601,6 +865,8 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
             unresolved(event, "Missing fork/clone inheritance")
             continue
         if call == "@exit":
+            if responses:
+                responses.observe(event, state)
             state["alive"] = False
             continue
         success = not result.startswith(("-", "?"))
@@ -734,8 +1000,10 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
                 for other in states.values():
                     if other is state or (call == "exit_group" and other["tgid"] == state["tgid"]):
                         other["alive"] = False
-            elif call not in WRITES | IGNORED:
+            elif call not in WRITES | IGNORED | FD_LIFECYCLE:
                 raise AuditError("Unsupported traced syscall: " + call)
+            if responses:
+                responses.observe(event, state)
         except (AuditError, IndexError, ValueError, TypeError) as error:
             unresolved(event, str(error))
         if state["action"] is None:
@@ -790,6 +1058,8 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
             report["runtimeAllowanceUsage"].append(entry)
     if not seen:
         report["incompleteness"].append({"reason": "No action process observed"})
+    if responses:
+        responses.finish(report, allow_response_file_scratch, response_file_profile, capture_complete)
     undeclared_probes = any(e["admission"] is None
                             for bucket in ("negativeProbes", "metadataProbes", "directoryHandleOpens")
                             for e in report[bucket])
@@ -801,6 +1071,104 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
 
 def write_json(path, data):
     Path(path).write_text(json.dumps(data, indent=2, ensure_ascii=True) + "\n")
+
+
+SECCOMP_FAILURE = re.compile(
+    r"seccomp.*(?:disabled|unavailable|not enabled|not supported|cannot|overflow|oversiz|fail)",
+    re.IGNORECASE)
+
+
+def seccomp_probe(tracer, expression, output, policy):
+    """Verify live stops from this probe, not just strace's capability test."""
+    directory = output / "seccomp-preflight"
+    directory.mkdir()
+    executable = os.path.realpath(sys.executable)
+    argv = [tracer, "-ff", "-ttt", "-yy", "-v", "-s", "65535", "-d", "--seccomp-bpf",
+            "-e", "trace=" + expression, "-o", str(directory / "trace"),
+            "--", executable, "-I", "-S", "-B", "-c", "pass"]
+    evidence = policy["preflight"] = {"argv": argv, "verified": False}
+    try:
+        with (directory / "diagnostics.log").open("wb") as stream:
+            result = subprocess.run(argv, stdout=subprocess.DEVNULL, stderr=stream,
+                                    cwd=output, timeout=15)
+    except subprocess.TimeoutExpired as error:
+        raise AuditError("Seccomp activation probe exceeded 15 seconds") from error
+    evidence["exitCode"] = result.returncode
+    if (directory / "diagnostics.log").stat().st_size > 4 * 1024 * 1024:
+        raise AuditError("Seccomp activation probe exceeded its diagnostic budget; evidence retained")
+    diagnostics = (directory / "diagnostics.log").read_text(errors="replace")
+    events, errors = read_events(directory / "trace")
+    roots = {e["pid"] for e in events if e["syscall"] == "execve"
+             and e["args"] and c_string(e["args"][0]) == executable and e["result"] == "0"}
+    exits = {e["pid"] for e in events if e["syscall"] == "@exit"
+             and e["result"] == "+++ exited with 0 +++"}
+    live = [line for line in diagnostics.splitlines()
+            if any(re.search(r"\[wait\([^]]*\)\s*=\s*" + str(pid)
+                             + r"\].*EVENT_SECCOMP", line) for pid in roots)]
+    prefixes = sorted({line[:-len(": seccomp filter enabled")]
+                       for line in diagnostics.splitlines()
+                       if line.endswith(": seccomp filter enabled")})
+    evidence.update(rootProcessIds=sorted(roots), liveSeccompStops=len(live),
+                    parseErrors=errors, filterEnabled=bool(prefixes), diagnosticPrefixes=prefixes,
+                    rejectedDiagnostics=[line for line in diagnostics.splitlines()
+                                         if SECCOMP_FAILURE.search(line)])
+    if (result.returncode or errors or len(roots) != 1 or not roots <= exits or not live
+            or not evidence["filterEnabled"] or evidence["rejectedDiagnostics"]):
+        raise AuditError("Seccomp activation not established; see seccomp-preflight evidence")
+    evidence["verified"] = True
+
+
+def seccomp_trace(tracer, argv, cwd, output, manifest, expression):
+    policy = manifest["seccompBpf"] = {
+        "requested": True, "verified": False, "selection": expression,
+        "tracerSha256": digest(tracer),
+        "sourceContract": "strace v7.3 src/filter_seccomp.c:571-604,679-724; "
+                          "src/strace.c:2988-3011,3152-3158",
+        "limitations": [
+            "Selected-syscall observation, not sandbox enforcement.",
+            "Higher-priority competing seccomp filters can suppress notifications; "
+            "this profile does not monitor filter changes.",
+            "A startup probe is not a proof against later kernel/tracer failures; "
+            "actual diagnostics, command failure and incomplete raw events remain failures.",
+        ],
+    }
+    write_json(output / "capture.json", manifest)
+    try:
+        seccomp_probe(tracer, expression, output, policy)
+        if digest(tracer) != policy["tracerSha256"]:
+            raise AuditError("Tracer changed during seccomp activation probe")
+        command = [argv[0], "--seccomp-bpf", *argv[1:]]
+        policy["argv"] = command
+        policy["rejectedDiagnostics"] = []
+        names = {tracer, os.path.realpath(tracer), os.path.basename(tracer), "strace"}
+        names.update(policy["preflight"]["diagnosticPrefixes"])
+        with (output / "strace-stderr.log").open("wb") as stream:
+            with subprocess.Popen(command, cwd=cwd, stderr=subprocess.PIPE) as process:
+                for raw in process.stderr:
+                    stream.write(raw)
+                    line = raw.decode(errors="backslashreplace")
+                    sys.stderr.write(line)
+                    owned = next((line[len(name) + 2:].strip() for name in names
+                                  if line.startswith(name + ": ")), None)
+                    if owned is not None and not re.fullmatch(r"Process \d+ attached", owned):
+                        policy["rejectedDiagnostics"].append(line.rstrip())
+                code = process.wait()
+        manifest["commandExitCode"] = code
+        if policy["rejectedDiagnostics"]:
+            raise AuditError("Actual strace diagnostics prevent seccomp capture verification")
+        if digest(tracer) != policy["tracerSha256"]:
+            raise AuditError("Tracer changed during seccomp capture")
+        policy["verified"] = code == 0
+        manifest["complete"] = code == 0
+        return code if code >= 0 else 128 - code
+    except (AuditError, OSError) as error:
+        policy["failure"] = str(error)
+        raise
+    finally:
+        evidence = list((output / "seccomp-preflight").glob("*"))
+        evidence.append(output / "strace-stderr.log")
+        manifest["files"].update({str(p): digest(p) for p in evidence if p.is_file()})
+        write_json(output / "capture.json", manifest)
 
 
 def main(argv=None):
@@ -815,6 +1183,10 @@ def main(argv=None):
     trace.add_argument("--graph", required=True)
     trace.add_argument("--cwd", default=os.getcwd())
     trace.add_argument("--output", required=True, help="New capture directory (must not exist)")
+    trace.add_argument("--response-file-provenance", action="store_true",
+                       help="Also capture fd truncation/close/duplication for transient response-file proofs")
+    trace.add_argument("--seccomp-bpf", action="store_true",
+                       help="Require a verified same-filter seccomp probe and reject actual tracer diagnostics")
     trace.add_argument("argv", nargs=argparse.REMAINDER)
     analyze_parser = commands.add_parser("analyze", help="Analyze a capture without executing products")
     analyze_parser.add_argument("--capture", required=True)
@@ -823,6 +1195,7 @@ def main(argv=None):
     analyze_parser.add_argument("--strict-probes", action="store_true")
     analyze_parser.add_argument("--allow-runtime-proc", action="store_true")
     analyze_parser.add_argument("--allow-case-sensitivity-probe", action="store_true")
+    analyze_parser.add_argument("--allow-response-file-scratch", action="store_true")
     analyze_parser.add_argument("--report", required=True)
     args = parser.parse_args(argv)
     try:
@@ -859,10 +1232,18 @@ def main(argv=None):
             files = {graph} | {a["invocation"] for a in actions.values()}
             manifest = {"schemaVersion": 1, "cwd": cwd, "graph": graph, "argv": command,
                         "files": {p: digest(p) for p in sorted(files)}, "complete": False}
+            if args.response_file_provenance:
+                manifest["responseFileTraceProfile"] = 1
             write_json(output / "capture.json", manifest)
-            code = subprocess.call([args.strace, "-ff", "-ttt", "-yy", "-v", "-s", "65535",
-                                    "-e", "trace=%file,%process,getdents64",
-                                    "-o", str(output / "trace"), "--", *command], cwd=cwd)
+            expression = "%file,%process,getdents64"
+            if args.response_file_provenance:
+                expression += "," + RESPONSE_TRACE
+            tracer_argv = [args.strace, "-ff", "-ttt", "-yy", "-v", "-s", "65535",
+                           "-e", "trace=" + expression,
+                           "-o", str(output / "trace"), "--", *command]
+            if args.seccomp_bpf:
+                return seccomp_trace(args.strace, tracer_argv, cwd, output, manifest, expression)
+            code = subprocess.call(tracer_argv, cwd=cwd)
             manifest.update(complete=True, commandExitCode=code)
             write_json(output / "capture.json", manifest)
             return code if code >= 0 else 128 - code
@@ -873,14 +1254,31 @@ def main(argv=None):
         protected += args.runtime_catalog + args.platform_catalog
         if os.path.realpath(args.report) in {os.path.realpath(p) for p in protected}:
             raise AuditError("Report output would overwrite a capture/graph/catalog input")
+        changed = [path for path, expected in manifest["files"].items()
+                   if not Path(path).is_file() or digest(path) != expected]
+        policy = manifest.get("seccompBpf")
+        seccomp_ok = policy is None or (
+            isinstance(policy, dict) and policy.get("requested") is True
+            and policy.get("verified") is True
+            and isinstance(policy.get("preflight"), dict)
+            and policy.get("preflight", {}).get("verified") is True
+            and not policy.get("rejectedDiagnostics"))
+        complete = bool(manifest.get("complete") and manifest.get("commandExitCode") == 0
+                        and not changed and seccomp_ok)
         report = analyze(manifest["graph"], manifest["cwd"], capture / "trace",
                          args.runtime_catalog, args.platform_catalog, args.strict_probes,
-                         args.allow_runtime_proc, args.allow_case_sensitivity_probe)
-        for path, expected in manifest["files"].items():
-            if not Path(path).is_file() or digest(path) != expected:
-                report["incompleteness"].append({"reason": "Capture input changed", "path": path})
-                report["ok"] = False
+                         args.allow_runtime_proc, args.allow_case_sensitivity_probe,
+                         args.allow_response_file_scratch, manifest.get("responseFileTraceProfile") == 1,
+                         complete)
+        for path in changed:
+            report["incompleteness"].append({"reason": "Capture input changed", "path": path})
+            report["ok"] = False
         report["commandExitCode"] = manifest.get("commandExitCode")
+        if policy is not None:
+            report["capturePolicy"] = {"seccompBpf": policy}
+        if not seccomp_ok:
+            report["incompleteness"].append({"reason": "Seccomp capture verification failed"})
+            report["ok"] = False
         if not manifest.get("complete") or manifest.get("commandExitCode") != 0:
             report["incompleteness"].append({"reason": "Capture interrupted or command failed"})
             report["ok"] = False

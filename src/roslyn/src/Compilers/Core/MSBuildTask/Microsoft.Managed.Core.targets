@@ -4,6 +4,7 @@
   <PropertyGroup>
     <Deterministic Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(Deterministic)' == ''">true</Deterministic>
     <DeterministicSourcePaths Condition="'$(MSBuildHardenedGraph)' == 'true' and '$(DeterministicSourcePaths)' == ''">true</DeterministicSourcePaths>
+    <MSBuildSandboxToolTasks Condition="'$(MSBuildSandboxToolTasks)' == ''">false</MSBuildSandboxToolTasks>
     <_BuildTasksDirectory>$(MSBuildThisFileDirectory)</_BuildTasksDirectory>
     <_BuildTasksDirectory Condition="Exists('$(RoslynTargetsPath)')">$(RoslynTargetsPath)\</_BuildTasksDirectory>
     <_BuildTasksAssemblyName>Microsoft.Build.Tasks.CodeAnalysis</_BuildTasksAssemblyName>

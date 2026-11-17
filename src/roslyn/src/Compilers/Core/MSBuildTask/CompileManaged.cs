@@ -18,15 +18,15 @@ namespace Microsoft.CodeAnalysis.BuildTasks;
 /// </summary>
 [MSBuildDeclaredIOTask]
 [MSBuildMultiThreadableTask]
-public sealed class CompileManaged : ToolTask
+public sealed class CompileManaged : SandboxedToolTask
 {
     public CompileManaged() : base(ErrorString.ResourceManager)
     {
     }
 
-    public ITaskItem[] DeclaredInputs { get; set; } = Array.Empty<ITaskItem>();
-    public ITaskItem[] DeclaredOutputs { get; set; } = Array.Empty<ITaskItem>();
     public ITaskItem[] DeclaredOutputTrees { get; set; } = Array.Empty<ITaskItem>();
+    public string SandboxArguments { get; set; } = "";
+    public ITaskItem[] ArgumentPaths { get; set; } = Array.Empty<ITaskItem>();
 
     [Required]
     public string DotNetHost { get; set; } = "";
@@ -41,9 +41,14 @@ public sealed class CompileManaged : ToolTask
     public ITaskItem[] PathMappings { get; set; } = Array.Empty<ITaskItem>();
 
     protected override string ToolName => Path.GetFileName(DotNetHost);
-    protected override string GenerateFullPathToTool() => DotNetHost;
+    protected override string GenerateFullPathToTool() => MapInputPath(DotNetHost);
     protected override Encoding StandardOutputEncoding => Encoding.UTF8;
     protected override Encoding StandardErrorEncoding => Encoding.UTF8;
+
+    protected override ITaskItem[] GetToolOutputs()
+        => DeclaredOutputTrees.Length == 1
+            ? DeclaredOutputs.Where(output => output.ItemSpec != DeclaredOutputTrees[0].GetMetadata("DyndepFile")).ToArray()
+            : base.GetToolOutputs();
 
     protected override bool ValidateParameters()
     {
@@ -86,6 +91,13 @@ public sealed class CompileManaged : ToolTask
             Log.LogErrorFromResources("CompileCsc.ExplicitToolInputs");
             return false;
         }
+        if (UseSandbox && (string.IsNullOrEmpty(SandboxArguments) || ArgumentPaths.Length == 0 ||
+            ArgumentPaths.Any(item => item.GetMetadata("Role") is not ("Input" or "Output") ||
+                !SandboxArguments.Contains("\"" + item.GetMetadata("Token") + "\""))))
+        {
+            Log.LogErrorFromResources("CompileCsc.ExplicitToolInputs");
+            return false;
+        }
 
         return base.ValidateParameters();
     }
@@ -96,7 +108,7 @@ public sealed class CompileManaged : ToolTask
         commandLine.AppendSwitch("exec");
         commandLine.AppendSwitch("--roll-forward");
         commandLine.AppendSwitch("Major");
-        commandLine.AppendFileNameIfNotNull(CompilerAssembly);
+        commandLine.AppendFileNameIfNotNull(MapInputPath(CompilerAssembly));
         // This must be on the direct command line, not inside the temporary response file.
         commandLine.AppendSwitch("/noconfig");
         return commandLine.ToString();
@@ -107,13 +119,32 @@ public sealed class CompileManaged : ToolTask
         var commandLine = new CommandLineBuilder();
         commandLine.AppendSwitch("/deterministic+");
         var pathMap = string.Join(",", PathMappings.Select(root =>
-            Escape(root.ItemSpec) + "=" + Escape(root.GetMetadata("MappedPath"))));
+            Escape(MapDirectory(root.ItemSpec).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar) +
+            "=" + Escape(root.GetMetadata("MappedPath"))));
+        if (IsSandboxed && DeclaredOutputTrees.Length == 1)
+        {
+            // Archive mode retains logical generated-source paths; only physical archive writes move.
+            pathMap += "," + string.Join(",", PathMappings.Select(root =>
+                Escape(root.ItemSpec) + "=" + Escape(root.GetMetadata("MappedPath"))));
+        }
         commandLine.AppendSwitchIfNotNull("/pathmap:", pathMap);
         if (DeclaredOutputTrees.Length == 1)
         {
-            commandLine.AppendSwitchIfNotNull("/generatedfilesarchive:", DeclaredOutputTrees[0].GetMetadata("ArchiveFile"));
+            commandLine.AppendSwitchIfNotNull("/generatedfilesarchive:", MapOutputPath(DeclaredOutputTrees[0].GetMetadata("ArchiveFile")));
         }
-        return CompilerArguments + "\n" + commandLine;
+        var arguments = CompilerArguments;
+        if (IsSandboxed)
+        {
+            arguments = SandboxArguments;
+            foreach (var item in ArgumentPaths)
+            {
+                var path = item.GetMetadata("Role") == "Input" ? MapInputPath(item.ItemSpec) : MapOutputPath(item.ItemSpec);
+                var quoted = new CommandLineBuilder();
+                quoted.AppendFileNameIfNotNull(path);
+                arguments = arguments.Replace("\"" + item.GetMetadata("Token") + "\"", quoted.ToString());
+            }
+        }
+        return arguments + "\n" + commandLine;
     }
 
     private static string Escape(string path) => path.Replace(",", ",,").Replace("=", "==");
@@ -121,7 +152,7 @@ public sealed class CompileManaged : ToolTask
     protected override ProcessStartInfo GetProcessStartInfo(string pathToTool, string commandLineCommands, string responseFileSwitch)
     {
         var info = base.GetProcessStartInfo(pathToTool, commandLineCommands, responseFileSwitch);
-        info.WorkingDirectory = TaskEnvironment.ProjectDirectory.Value;
+        info.WorkingDirectory = MapDirectory(TaskEnvironment.ProjectDirectory.Value);
 #if NETFRAMEWORK
         var environment = info.EnvironmentVariables;
 #else
@@ -134,6 +165,13 @@ public sealed class CompileManaged : ToolTask
             if (value != null)
             {
                 environment[name] = value;
+            }
+        }
+        if (IsSandboxed)
+        {
+            foreach (var name in new[] { "TMPDIR", "TMP", "TEMP" })
+            {
+                environment[name] = SandboxTemporaryDirectory;
             }
         }
         return info;

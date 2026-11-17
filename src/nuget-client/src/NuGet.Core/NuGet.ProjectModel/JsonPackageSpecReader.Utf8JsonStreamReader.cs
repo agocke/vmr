@@ -773,7 +773,7 @@ namespace NuGet.ProjectModel
             WarningProperties warningProperties = null;
             RestoreAuditProperties auditProperties = null;
             bool useMacros = MSBuildStringUtility.IsTrue(environmentVariableReader.GetEnvironmentVariable(MacroStringsUtility.NUGET_ENABLE_EXPERIMENTAL_MACROS));
-            var userSettingsDirectory = NuGetEnvironment.GetFolderPath(NuGetFolderPath.UserSettingsDirectory);
+            var userSettingsDirectory = useMacros ? NuGetEnvironment.GetFolderPath(NuGetFolderPath.UserSettingsDirectory) : null;
             bool usingMicrosoftNetSdk = true;
             NuGetVersion sdkAnalysisLevel = null;
             bool useLegacyDependencyResolver = false;

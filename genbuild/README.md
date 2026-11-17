@@ -25,6 +25,11 @@ SDK, templates, workloads, or a runtime.
 
 `genbuild.proj` is the complete build entry point. `genbuild.csproj` only compiles
 the CLI; building that project alone does not assemble its toolset.
+The compiler tasks now reference source-built MSBuild Utilities for
+`SandboxedToolTask`. The component pipeline builds its `netstandard2.0`
+compile-time assembly first and ships the modern implementation. Building the
+Roslyn task project separately requires that component first, or an explicit
+`GenBuildMSBuildUtilitiesAssembly` path; the cached Utilities package is insufficient.
 
 After the initial component build, reassemble without rebuilding components:
 
@@ -37,6 +42,8 @@ toolset selection. Use `-p:Configuration=Debug` for debugging. Smoke fixtures
 still exercise their intentional Debug/Release configuration cases. If necessary,
 `GenBuildDotNetHost` and `GenBuildBootstrapSdk` select explicit build-time
 paths to `dotnet` and its SDK directory, respectively.
+After Utilities changes, rebuild both MSBuild and the action-host component
+before skipping component builds: each ships its own Utilities copy.
 
 For performance measurements, use Release for both the toolchain and the target
 projects, with matching `-p:Configuration=Release` in Restore and Build. Prepare
@@ -152,6 +159,95 @@ and
 This changes the integration authoring, not a permission to prebuild compiler
 or runtime products. Do not patch shared cached package contents.
 
+## Action-host staged file access
+
+The action host stages every admitted action by default, using the same
+declared-file staging helper as `SandboxedToolTask`. Tasks retain their logical
+parameters, item identities, metadata and `TaskEnvironment.GetAbsolutePath`
+results. At actual file-access boundaries, task implementations use
+`TaskEnvironment.GetInputPath` or `GetOutputPath`; the host checks the existing
+declarations and supplies physical execution-root paths. Ordinary MSBuild
+execution resolves these APIs to the original absolute paths.
+
+The first migration covers `CopyFiles` and `WriteLinesToFile`, including the
+native host's shared execution path. It requires
+`MSBuildDeclaredIOTask(SandboxVersion = 1)` and `IMultiThreadableTask`; the managed
+host rejects unmigrated contracts before constructing tasks, without an
+unstaged fallback. Staged `WriteLinesToFile` requires `Overwrite=true` and
+`FailIfNotIncremental=false`: an old output is not an implicit input. Path-shaped
+line contents remain unchanged. The host owns private cwd/temp, validates
+outputs before publication, and cleans staging on success and failure.
+
+**Migration is incomplete.** Compiler adapters, generated-tree finalization and
+the other runtime task types are not yet admitted by this newer host. The full
+managed-libraries results below use the frozen, earlier compiler-only toolset,
+not universal host staging. Do not replace its host with this one and expect
+the full profile to execute. Symlink staging is not filesystem/network
+confinement or read-only input enforcement.
+
+## Opt-in staged compiler execution
+
+In the earlier compiler-only toolset, Linux with modern .NET supports
+`-p:MSBuildSandboxToolTasks=true` on `genbuild build` to stage C#/VB compilation.
+That option defaults off; ordinary `Csc`/`Vbc` tasks remain unchanged. The newer
+action-host migration above is separate. Neither adds Restore discovery.
+
+`Microsoft.Build.Utilities.SandboxedToolTask` creates a private execution root,
+symlinks only declared input files while preserving directory layout, and
+provides `MapInputPath`, `MapOutputPath` and `MapDirectory` to tool authors.
+`CompileManaged` uses a response template regenerated from typed formatter
+properties and explicit path bindings, not replacements of original path
+strings in opaque arguments or file contents. It maps the host/compiler,
+working directory and deterministic path maps, and uses private response-file
+and temporary-file scratch. All tool-produced declared outputs must validate as
+regular files before publication. Each file is published atomically; the output
+set is not a transaction if publication itself fails.
+
+This is **staging, not OS confinement**. Absolute-path escapes, writes through
+input symlinks, network access and ambient runtime/loader reads remain possible.
+Do not treat input symlinks as read-only, infer hermeticity, or use this as a
+security boundary. Analyzer configs are staged as ordinary declared input files:
+their command-line paths are mapped, but their contents are neither inspected nor
+rewritten. Relative configs retain the staged directory hierarchy. Config
+producers that depend on raw absolute paths must adapt their authoring; staging
+does not repair per-file selectors or path-valued settings. C# generated-source
+trees use the existing declared-root archive/materializer protocol: stage the
+physical archive, retain logical generated-source paths, and let the action host
+write dyndep before materialization. No tree members are discovered during graph
+construction. VB generated-source archives remain unsupported. Other
+platforms/runtimes reject opt-in staging rather than falling back silently.
+
+`Smoke.proj -t:TestSandboxedCompilers` exercises staged C#, public signing, VB,
+explicit VB runtime inputs, DLL/PDB/reference/XML byte parity, consumer execution,
+no-work reuse and failed-compilation output preservation. The Utilities tests
+cover staging, cancellation and publication failures.
+`TestSandboxedCompilerGeneratedFiles` runs the generated-source encoding,
+logical-path, recovery, ownership, empty-tree and failure checks in staged mode.
+`TestSandboxedSatelliteSource` covers SDK satellite formatting and execution with
+the same staging option and typed argument bindings, and rejects silent fallback.
+Private full managed-libraries validation completes all 5,321 Ninja steps at
+`-j4`, with all 500 compilers staged (including 143 satellites and CoreLib's
+generated-source tree), followed by a no-work repeat. Isolated Linux compiler
+traces verify mapped executable/source paths; the complete runtime-libraries
+read audit below predates staging and does not validate this new execution mode.
+
+An eight-job comparison with the frozen compiler-only toolset produced:
+
+| Mode | Restore | Graph generation | Build/execution | Total |
+|---|---:|---:|---:|---:|
+| Ordinary MSBuild `-m:8` | 64.1s | Included in Build | 806.0s | 870.1s |
+| Prototype, Ninja `-j8` | 77.9s | 591.1s | 325.8s | 994.8s |
+
+These are single sequential shared-host, cold-product/warm-package-cache
+observations, not a statistical benchmark or developer-default compiler-server
+comparison. Both modes use matching compiler binaries, no compiler server and
+no node reuse. Ordinary Build uses all eight node IDs; the prototype reaches
+eight concurrent actions/compilers, but hardened graph generation still forces
+one construction node. All 500 compiler output identities match. Published
+inventories match at 3,229 paths, with every non-DLL/PDB file byte-identical;
+1,761 DLL/PDB paths differ. The execution-only number excludes the prototype's
+dominant graph-generation cost.
+
 ## Linux read audit
 
 `audit.py` observes action-host families with `strace` and checks successful
@@ -174,7 +270,10 @@ python3 -B genbuild/audit.py analyze --capture /absolute/path/to/new-capture \
 Runtime/OS exceptions require reviewed exact-file catalogs. Optional directory
 catalogs enumerate exact permitted names, not directory-prefix access.
 Process-local runtime and exclusive-created/deleted case-sensitivity-probe
-policies are separate opt-ins with recorded uses. See
+policies are separate opt-ins with recorded uses. Private compiler response
+files have a separate same-family lifecycle policy: capture with
+`--response-file-provenance`, then analyze with `--allow-response-file-scratch`.
+This is not permission to read pre-existing temporary files. See
 [`audit-help.txt`](audit-help.txt) for schemas, policies and limitations.
 Unresolved or incomplete traces fail the audit. Metadata and failed probes are
 reported separately; `--strict-probes` rejects their undeclared cases too.
@@ -191,17 +290,59 @@ producer, even on a cold graph, and compiler children preserve explicitly
 selected task-context `SystemRoot`, `TMPDIR`, `TMP`, `TEMP` and
 `DOTNET_EnableDiagnostics` after clearing their environment. The manifest is a
 content dependency with the usual forward/cycle rejection, not an ordering
-chain or directory scan. Other observations include runtime/platform files
-and private response/translation scratch that still need explicit policy or
-provenance, not blanket directory permissions. These fixes do not establish a
-clean whole-libraries audit; a complete trace remains required.
+chain or directory scan. XLIFF translation now creates its neighboring
+serialization temporary file exclusively and write-only, rather than opening
+it read/write. Fresh/replacement tests and actual-task traces preserve output
+bytes and atomic publication without exempting neighboring directories.
+An actual compiler pilot passes the opt-in response-file provenance check;
+runtime/platform reads use exact reviewed contracts, not blanket directory
+permissions.
+Platform exceptions describe a particular execution runtime/OS image, not
+machine-independent task inputs or a portable caching guarantee. These fixes
+do not establish a clean whole-libraries audit.
 
 Focused regressions and C#/VB smokes pass. A fresh cold 5,320-action runtime
 graph adds 115 `ILLink.Tasks.deps.json` content edges and preserves the 114
 already-explicit edges; all other Ninja dependency sets match after path and
 invocation normalization. A fresh compiler pilot confirms the actual `csc`
 child receives only the selected temp/diagnostics controls and repeats as a
-Ninja no-op. No full libraries trace was rerun for these fixes.
+Ninja no-op.
+
+A subsequent trace completed all 5,321 execution steps successfully, but analysis
+still failed closed: 716 account-lookup observations, 614 private response-file
+reads and one missing Dataflow XML-documentation input. There were zero unresolved
+events and four incomplete syscall records. The incomplete capture prevented
+admission of all 614 response-file candidates; none were waived.
+
+NuGet now avoids resolving the user-settings directory when experimental macros
+are disabled. Actual old/new `WriteDepsFile` and `WriteRuntimeConfig` traces
+remove both `/etc/passwd` and `/etc/nsswitch.conf` reads while preserving output
+bytes; the native reader tests pass, including macro-enabled behavior.
+Dataflow explicitly declares `XmlDocs/CommonXmlDocComments.xml` through
+`CustomAdditionalCompileInputs`, also correcting ordinary incremental inputs.
+A fresh cold graph preserves all 5,320 action descriptors after explicit path
+normalization and that single declared-input addition, with exactly one new
+Ninja content edge. The actual Dataflow compiler passes its read audit; removing
+only that declaration and edge makes the negative control report exactly the
+XML read. No Restore scan, account-file exemption or ordering chain was added.
+
+Threaded-exit probes reproduce unknown syscall records with both strace 6.8 and
+7.3, so upgrading the tracer alone is insufficient. The opt-in trace flag
+`--seccomp-bpf` retains the same syscall selection while avoiding stops for
+unselected calls. It requires a bounded live-activation probe, preserves hashed
+diagnostics and rejects observed tracer errors or fallback. A 120-trial exit
+probe and actual compiler pilots pass without ignoring unknown events; competing
+seccomp filters and other observer limitations still apply.
+
+The complete follow-up audit now passes all 5,321 execution steps at `-j4`:
+zero undeclared successful content reads, unresolved events, incomplete records
+or directory-catalog mismatches. All 614 private response-file reads satisfy the
+opt-in provenance policy. The frozen app, protected originals and input canonical
+paths remain unchanged; no automatic allowances were added. Traced execution
+takes 15 minutes 9 seconds and analysis 28 minutes 43 seconds, not an untraced
+build-performance measurement. Metadata and failed probes remain reported but
+are not rejected in this non-strict profile; this is not sandbox enforcement
+or universal hermeticity.
 
 ## Smoke checks
 

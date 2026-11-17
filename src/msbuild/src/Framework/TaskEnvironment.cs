@@ -14,6 +14,9 @@ namespace Microsoft.Build.Framework
     public sealed class TaskEnvironment
     {
         private readonly ITaskEnvironmentDriver _driver;
+        private Func<string, string>? _inputPath;
+        private Func<string, string>? _outputPath;
+        private string? _executionDirectory;
 
         /// <summary>
         /// Initializes a new instance of the TaskEnvironment class.
@@ -80,6 +83,35 @@ namespace Microsoft.Build.Framework
         public AbsolutePath GetAbsolutePath(string path) => _driver.GetAbsolutePath(path);
 
         /// <summary>
+        /// Resolves an input file for reading. Standalone action hosts validate its declaration and
+        /// return its staged path; ordinary execution returns its logical absolute path.
+        /// </summary>
+        public AbsolutePath GetInputPath(string path)
+        {
+            AbsolutePath logical = GetAbsolutePath(path);
+            return _inputPath is null ? logical : new AbsolutePath(_inputPath(logical.Value));
+        }
+
+        /// <summary>
+        /// Resolves an output file for writing. Standalone action hosts validate its declaration and
+        /// return its staged path; ordinary execution returns its logical absolute path.
+        /// </summary>
+        public AbsolutePath GetOutputPath(string path)
+        {
+            AbsolutePath logical = GetAbsolutePath(path);
+            return _outputPath is null ? logical : new AbsolutePath(_outputPath(logical.Value));
+        }
+
+        internal bool HasFilePathResolvers => _executionDirectory is not null;
+
+        internal void SetFilePathResolvers(Func<string, string>? inputPath, Func<string, string>? outputPath, string? executionDirectory)
+        {
+            _inputPath = inputPath;
+            _outputPath = outputPath;
+            _executionDirectory = executionDirectory;
+        }
+
+        /// <summary>
         /// Gets the value of an environment variable.
         /// </summary>
         /// <param name="name">The name of the environment variable.</param>
@@ -110,7 +142,16 @@ namespace Microsoft.Build.Framework
         /// Creates a new ProcessStartInfo configured for the current task execution environment.
         /// </summary>
         /// <returns>A ProcessStartInfo object configured for the current task execution environment.</returns>
-        public ProcessStartInfo GetProcessStartInfo() => _driver.GetProcessStartInfo();
+        public ProcessStartInfo GetProcessStartInfo()
+        {
+            ProcessStartInfo info = _driver.GetProcessStartInfo();
+            if (_executionDirectory is not null)
+            {
+                info.WorkingDirectory = _executionDirectory;
+            }
+
+            return info;
+        }
 
         /// <summary>
         /// Disposes the underlying driver, cleaning up any thread-local state.

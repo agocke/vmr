@@ -45,7 +45,7 @@ internal static class Program
             try
             {
                 Dictionary<string, object> bound = BuiltInParameterBinder.Bind(task, invocation);
-                return ActionExecution.Execute(task, engine, ActionExecution.ValidateFootprint(task.GetType(), bound), invocation) ? 0 : 1;
+                return ActionExecution.Execute(task, engine, ActionExecution.ValidateFootprint(task.GetType(), bound), invocation, bound) ? 0 : 1;
             }
             finally
             {

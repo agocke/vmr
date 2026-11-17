@@ -13,7 +13,7 @@ namespace Microsoft.Build.Tasks;
 /// <summary>
 /// Copies file contents between explicit, disjoint input and output paths.
 /// </summary>
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildMultiThreadableTask]
 public sealed class CopyFiles : TaskExtension, IMultiThreadableTask
 {
@@ -54,8 +54,8 @@ public sealed class CopyFiles : TaskExtension, IMultiThreadableTask
         {
             try
             {
-                using FileStream source = File.OpenRead(sources[i]);
-                using FileStream destination = File.Create(destinations[i]);
+                using FileStream source = File.OpenRead(TaskEnvironment.GetInputPath(sources[i]));
+                using FileStream destination = File.Create(TaskEnvironment.GetOutputPath(destinations[i]));
                 source.CopyTo(destination);
             }
             catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))

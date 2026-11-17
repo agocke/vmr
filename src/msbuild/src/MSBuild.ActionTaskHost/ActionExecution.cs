@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
+using Microsoft.Build.Utilities;
 
 namespace Microsoft.Build.ActionTaskHost;
 
@@ -44,55 +45,101 @@ internal static class ActionExecution
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
     }
 
-    internal static ActionBuildEngine Initialize(ITask task, TaskInvocation invocation)
+    internal static ActionBuildEngine Initialize(ITask task, TaskInvocation invocation, TaskEnvironment? environment = null)
     {
         ActionBuildEngine engine = new(invocation);
         task.BuildEngine = engine;
         if (task is IMultiThreadableTask multiThreadableTask)
         {
-            multiThreadableTask.TaskEnvironment = TaskEnvironment.Fallback;
+            multiThreadableTask.TaskEnvironment = environment
+                ?? TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(invocation.WorkingDirectory, invocation.Environment);
         }
 
         return engine;
     }
 
     internal static bool Execute(ITask task, ActionBuildEngine engine, IReadOnlyList<string> outputs,
-        TaskInvocation invocation, Action? publish = null)
+        TaskInvocation invocation, Dictionary<string, object> parameters, Action? publish = null)
     {
-        foreach (string output in outputs)
+        if (task is not IMultiThreadableTask isolatedTask)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+            throw new NotSupportedException(HostResources.Format("UnsupportedSandboxContract", invocation.TaskType));
         }
 
-        bool succeeded = task.Execute();
-        if (!succeeded || engine.HasLoggedErrors)
+        TaskEnvironment environment = isolatedTask.TaskEnvironment;
+        FileStagingContext staging = new(environment);
+        string previousDirectory = Environment.CurrentDirectory;
+        string[] temporaryVariables = ["TMPDIR", "TMP", "TEMP"];
+        string?[] previousTemporaryValues = new string?[temporaryVariables.Length];
+        for (int i = 0; i < temporaryVariables.Length; i++)
         {
-            if (!engine.HasLoggedErrors)
+            previousTemporaryValues[i] = environment.GetEnvironmentVariable(temporaryVariables[i]);
+        }
+
+        try
+        {
+            staging.Prepare((ITaskItem[])parameters["DeclaredInputs"], (ITaskItem[])parameters["DeclaredOutputs"]);
+            environment.SetFilePathResolvers(path => staging.MapFile(path, input: true),
+                path => staging.MapFile(path, input: false), staging.WorkingDirectory);
+            Directory.SetCurrentDirectory(staging.WorkingDirectory);
+            foreach (string variable in temporaryVariables)
             {
-                Console.Error.WriteLine(HostResources.Format("TaskFailed", invocation.TaskType));
+                environment.SetEnvironmentVariable(variable, staging.Scratch);
+                Environment.SetEnvironmentVariable(variable, staging.Scratch);
             }
 
-            return false;
-        }
+            bool succeeded = task.Execute();
+            if (!succeeded || engine.HasLoggedErrors)
+            {
+                if (!engine.HasLoggedErrors)
+                {
+                    Console.Error.WriteLine(HostResources.Format("TaskFailed", invocation.TaskType));
+                }
 
-        publish?.Invoke();
-        foreach (string output in outputs)
+                return false;
+            }
+
+            staging.Publish();
+            Directory.SetCurrentDirectory(previousDirectory);
+            publish?.Invoke();
+            foreach (string output in outputs)
+            {
+                RequireRegularFile(output);
+            }
+
+            return true;
+        }
+        finally
         {
-            RequireRegularFile(output);
-        }
+            environment.SetFilePathResolvers(null, null, null);
+            Directory.SetCurrentDirectory(previousDirectory);
+            for (int i = 0; i < temporaryVariables.Length; i++)
+            {
+                environment.SetEnvironmentVariable(temporaryVariables[i], previousTemporaryValues[i]);
+                Environment.SetEnvironmentVariable(temporaryVariables[i], previousTemporaryValues[i]);
+            }
 
-        return true;
+            staging.Cleanup();
+        }
     }
 
     internal static void ValidateTaskAttributes(Type type)
     {
         bool declaredIO = false;
+        bool stagedIO = false;
         foreach (CustomAttributeData attribute in type.GetCustomAttributesData())
         {
             string? name = attribute.AttributeType.FullName;
             if (name == typeof(MSBuildDeclaredIOTaskAttribute).FullName)
             {
                 declaredIO = true;
+                foreach (CustomAttributeNamedArgument argument in attribute.NamedArguments)
+                {
+                    if (argument.MemberName == nameof(MSBuildDeclaredIOTaskAttribute.SandboxVersion))
+                    {
+                        stagedIO = argument.TypedValue.Value is 1;
+                    }
+                }
             }
 
             if (name is "Microsoft.Build.Framework.LoadInSeparateAppDomainAttribute" or "Microsoft.Build.Framework.RunInSTAAttribute")
@@ -104,6 +151,11 @@ internal static class ActionExecution
         if (!declaredIO)
         {
             throw new InvalidDataException(HostResources.Format("MissingContract", type.FullName));
+        }
+
+        if (!stagedIO || !typeof(IMultiThreadableTask).IsAssignableFrom(type))
+        {
+            throw new NotSupportedException(HostResources.Format("UnsupportedSandboxContract", type.FullName));
         }
     }
 

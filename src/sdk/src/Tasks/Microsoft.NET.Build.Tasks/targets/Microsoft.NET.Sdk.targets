@@ -1307,8 +1307,10 @@ Copyright (c) .NET Foundation. All rights reserved.
       <_HardenedSatelliteCscInput Remove="@(_HardenedSatelliteCscInput)" />
       <_HardenedSatelliteCscOutput Remove="@(_HardenedSatelliteCscOutput)" />
       <_HardenedSatelliteCscPathMapping Remove="@(_HardenedSatelliteCscPathMapping)" />
+      <_HardenedSatelliteCscArgumentPath Remove="@(_HardenedSatelliteCscArgumentPath)" />
     </ItemGroup>
     <FormatCsc Condition="'$(MSBuildHardenedGraph)' == 'true'"
+               UseSandbox="$(MSBuildSandboxToolTasks)"
                DeclaredInputs="" DeclaredOutputs=""
                SourceRoots="@(SourceRoot)"
                DeterministicSourcePaths="$(DeterministicSourcePaths)"
@@ -1335,11 +1337,16 @@ Copyright (c) .NET Foundation. All rights reserved.
                WarningsNotAsErrors="$(WarningsNotAsErrors)"
                TargetType="Library">
       <Output TaskParameter="CompilerArguments" PropertyName="_HardenedSatelliteCscArguments" />
+      <Output TaskParameter="SandboxArguments" PropertyName="_HardenedSatelliteCscSandboxArguments" />
+      <Output TaskParameter="ArgumentPaths" ItemName="_HardenedSatelliteCscArgumentPath" />
       <Output TaskParameter="CompilerInputs" ItemName="_HardenedSatelliteCscInput" />
       <Output TaskParameter="CompilerOutputs" ItemName="_HardenedSatelliteCscOutput" />
       <Output TaskParameter="PathMappings" ItemName="_HardenedSatelliteCscPathMapping" />
     </FormatCsc>
     <CompileManaged Condition="'$(MSBuildHardenedGraph)' == 'true'"
+                UseSandbox="$(MSBuildSandboxToolTasks)"
+                SandboxArguments="$(_HardenedSatelliteCscSandboxArguments)"
+                ArgumentPaths="@(_HardenedSatelliteCscArgumentPath)"
                 DotNetHost="$(DOTNET_HOST_PATH)"
                 CompilerAssembly="$([MSBuild]::NormalizePath('$(_BuildTasksDirectory)', 'bincore/csc.dll'))"
                 CompilerArguments="$(_HardenedSatelliteCscArguments)"

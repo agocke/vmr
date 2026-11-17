@@ -122,6 +122,11 @@
         <target state="new">The parameter type "{0}" is not supported by the standalone host.</target>
         <note>{0} is a .NET type name.</note>
       </trans-unit>
+      <trans-unit id="UnsupportedSandboxContract">
+        <source>The task "{0}" does not support this host's staged file-access contract. Migrate to SandboxVersion=1 and IMultiThreadableTask using TaskEnvironment.GetInputPath/GetOutputPath. Generated output trees require a separate host-finalization contract.</source>
+        <target state="new">The task "{0}" does not support this host's staged file-access contract. Migrate to SandboxVersion=1 and IMultiThreadableTask using TaskEnvironment.GetInputPath/GetOutputPath. Generated output trees require a separate host-finalization contract.</target>
+        <note>{0} is a task type. Do not translate API names or SandboxVersion=1.</note>
+      </trans-unit>
       <trans-unit id="UnsupportedTaskHosting">
         <source>The task "{0}" requires "{1}", which is not supported by the standalone host.</source>
         <target state="new">The task "{0}" requires "{1}", which is not supported by the standalone host.</target>

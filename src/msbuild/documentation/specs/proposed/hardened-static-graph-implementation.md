@@ -167,6 +167,10 @@ dotnet msbuild ../../genbuild/genbuild.proj -m:1 -nr:false -bl:{}
 `GenBuildBootstrapSdk` and `GenBuildDotNetHost` select explicit build-time paths.
 `GenBuildSkipComponentBuild=true` reassembles already-built components; the default
 builds them from this VMR. The old composite-SDK script is not the entry point.
+Roslyn's compiler tasks reference source-built Utilities, not the cached package:
+the component pipeline builds its `netstandard2.0` assembly first and ships the
+modern implementation containing `SandboxedToolTask`. Separate compiler-task
+builds can override `GenBuildMSBuildUtilitiesAssembly` explicitly.
 
 An optional NativeAOT action host accelerates `CopyFiles` and `WriteLinesToFile`:
 
@@ -426,6 +430,71 @@ Native PDBs, arbitrary response files, general directory inputs/outputs,
 rulesets, SARIF, app-config, machine signing, and execution-mode overrides remain
 outside the initial profile. Inputs use explicit paths, not SDK/LIB/default
 response-file searches. Plugin I/O enforcement is deferred like other task I/O.
+
+### Opt-in staged tool execution
+
+- [x] Add `SandboxedToolTask : ToolTask`, default off, with exact declared-input
+  symlinks, private cwd/scratch, typed path mappers and validated file publication.
+- [x] Integrate C#/VB formatters and `CompileManaged` through
+  `MSBuildSandboxToolTasks=true`, preserving ordinary arguments and deterministic
+  logical paths without rewriting opaque option values or configuration contents.
+
+The initial backend supports Linux on modern .NET. It preserves absolute
+directory hierarchy and filenames beneath the execution root, not directory
+symlinks or Restore snapshots. All tool-produced outputs validate before publication;
+individual files publish atomically, not as one transactional output set. Cancellation,
+compiler errors and validation failures do not publish partial tool output.
+Analyzer configs are opaque declared file inputs: map their command-line paths,
+preserve the directory hierarchy, and do not parse or rewrite their contents.
+Config producers must adapt any raw absolute-path selectors or settings to their
+execution context. Staged C# compiler-owned trees reuse the declared-root
+archive/materializer protocol: map archive writes into staging, retain logical
+generated-source paths and their stable aliases, and leave dyndep generation to
+the host after successful tool publication. `GetToolOutputs` selects tool-owned
+files without removing host-finalized outputs from the declared graph footprint.
+VB generated-source archives remain unsupported. Ordinary compiler execution
+remains the default.
+
+Staging does not enforce filesystem/network isolation or protect input symlink
+targets from writes. Absolute-path escapes and runtime/loader reads remain
+possible; OS enforcement is still deferred. Utilities lifecycle tests and
+`TestSandboxedCompilers` cover the reusable base and real C#/VB publication,
+signing, resource/runtime inputs, output bytes, consumers and failure retention.
+`TestSandboxedCompilerGeneratedFiles` applies the existing generated-source
+encoding, logical-path, recovery, ownership, empty-tree and failure checks to
+staged execution. `TestSandboxedSatelliteSource` checks primary and satellite
+staging bindings, producer ordering, ordinary source-byte parity and incremental
+resource consumers, including rejection of silent unstaged fallback.
+A private managed-libraries rebuild completes all 5,321 Ninja steps at `-j4`,
+with all 500 compilers staged, including 143 satellites and CoreLib's generated
+tree; a repeat reports no work. Bounded compiler traces confirm mapped paths,
+not a complete staged-mode read audit or OS confinement. See
+[staged execution usage](../../../../../genbuild/README.md#opt-in-staged-compiler-execution).
+
+### Action-host staging migration
+
+The compiler-only results above use a frozen toolset predating this cutover.
+The newer host stages all admitted actions through a shared `FileStagingContext`,
+including the native fast path; it does not infer path semantics from task
+strings or metadata. `TaskEnvironment.GetAbsolutePath` remains logical.
+`GetInputPath`/`GetOutputPath` resolve physical paths at I/O boundaries and check
+the existing declared footprint. Ordinary execution retains identity resolution.
+
+- [x] Share staging/publication/cleanup with the opt-in tool adapter.
+- [x] Add explicit task-environment input/output path resolution.
+- [x] Migrate `CopyFiles` and overwrite-only staged `WriteLinesToFile`.
+- [x] Reject unmigrated contracts at host admission rather than execute unstaged.
+- [ ] Migrate compiler typed bindings and host-owned generated-tree finalization.
+- [ ] Migrate the remaining runtime task implementations and repeat full-profile
+  execution/read validation with a new toolset.
+
+The initial host contract requires `SandboxVersion=1` on the declared-I/O marker
+and `IMultiThreadableTask`, not `ToolTask` inheritance. Staged line writing rejects
+append and prior-output incremental checking; old output bytes are not inputs.
+Opaque contents and logical identities are not rewritten. Unsupported contracts
+and generated trees currently fail explicitly, so the newer host is not yet a
+replacement for the frozen full-libraries toolset. This remains Linux symlink
+staging, not OS confinement or a portable-cache proof.
 
 ### Compiler-owned generated-source trees
 
@@ -1681,10 +1750,15 @@ each task assembly's exact adjacent `.deps.json` when it has a known producer,
 without requiring the file to exist, and rejects forward/cyclic producers.
 Compiler children clear their environment, then retain only task-context
 `SystemRoot`, `TMPDIR`, `TMP`, `TEMP` and `DOTNET_EnableDiagnostics`.
-Private response/translation scratch and additional exact platform files still
-require reviewed contracts and a complete follow-up trace. No blanket
-task/source/home/tmp allowances or serial ordering chain were added; dependency
-completeness is not yet established.
+XLIFF serialization now creates its neighboring temporary file exclusively
+and write-only; fresh/replacement tests and actual-task traces retain output
+bytes and atomic publication without directory exemptions. An opt-in
+same-family response-file provenance policy passes an actual compiler pilot;
+it does not permit reading pre-existing temporary files. Exact platform files
+require reviewed execution-image contracts. Such exceptions are not a
+machine-independence or portable-caching proof. No blanket task/source/home/tmp
+allowances or serial ordering chain were added; dependency completeness is not
+yet established.
 
 Cold selective-execution, manifest-edit and forward-producer regressions pass,
 as do compiler-environment cases and C#/VB smokes. Fresh runtime construction
@@ -1693,6 +1767,41 @@ all other Ninja dependency sets across 5,320 actions after explicit path and
 invocation normalization. A cold compiler pilot traces the selected
 temp/diagnostics environment through the actual compiler launch and repeats
 with no work. This is bounded validation, not a new whole-libraries audit.
+
+A subsequent complete trace executes all 5,321 steps successfully, but analysis
+fails closed with 1,331 undeclared observations: 716 account-file lookups, 614
+private response-file reads and one Dataflow XML include. There are zero unresolved
+events and four incomplete syscall records; the incomplete capture disables all
+response-file candidate admissions.
+
+The NuGet reader now resolves its user-settings directory only when experimental
+macros are enabled. Actual manifest-task old/new traces eliminate the account
+lookups without changing output bytes, and native reader tests retain enabled-macro
+behavior. Dataflow declares `XmlDocs/CommonXmlDocComments.xml` as an explicit
+additional compiler input rather than discovering XML includes during Restore.
+Fresh construction preserves every action descriptor after explicit path
+normalization and that one added input; the Ninja graph gains exactly its content
+edge. An actual Dataflow compiler audit passes, while removing only that input
+and edge reports exactly the XML read. Neither correction adds a new acquisition
+observation or an account-file allowance.
+
+Bounded threaded-exit probes produce unknown syscall records on both strace 6.8
+and 7.3; a tracer upgrade alone does not repair the old incomplete capture.
+The new opt-in `trace --seccomp-bpf` preserves the selected syscalls, requires
+live startup activation evidence and rejects observed fallback/tracer errors.
+It eliminates unknown records in the 120-trial same-filter probe, and actual
+compiler positive/negative pilots retain response-file provenance checks.
+Competing seccomp filters remain an explicit limitation, not a sandbox guarantee.
+The complete follow-up audit passes all 5,321 execution steps at `-j4`, with zero
+undeclared successful content reads, unresolved events, incomplete records or
+directory-catalog mismatches. All 614 response-file reads meet the explicit
+provenance policy; no incomplete records are waived or automatic allowances added.
+Frozen app bytes, protected originals and input canonical paths remain unchanged.
+Traced execution takes 908.5 seconds and analysis 1,722.9 seconds; these are not
+untraced build timings. Metadata and failed probes remain separately reported,
+not rejected in this non-strict profile. This validates the observed managed
+libraries workload under the reviewed execution-image assumptions, not sandbox
+enforcement, arbitrary inputs or portable hermeticity.
 
 The isolated Release libraries profile sets `EnableNgenOptimization=false`
 because no legacy IBC data is supplied, matching that aspect of the earlier

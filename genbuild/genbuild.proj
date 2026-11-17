@@ -21,6 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Component Include="$(GenBuildRoot)src/msbuild/src/Utilities/Microsoft.Build.Utilities.csproj" Tfm="netstandard2.0" />
     <Component Include="$(GenBuildRoot)src/msbuild/src/MSBuild/MSBuild.csproj;$(GenBuildRoot)src/msbuild/src/MSBuild.ActionTaskHost/MSBuild.ActionTaskHost.csproj;$(GenBuildRoot)src/sdk/src/Tasks/Microsoft.NET.Build.Tasks/Microsoft.NET.Build.Tasks.csproj" Tfm="net11.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/TargetFramework.csproj" Tfm="net11.0" />
     <Component Include="$(MSBuildThisFileDirectory)arcade/sdk/ArcadeSdk.csproj" Tfm="net11.0" />

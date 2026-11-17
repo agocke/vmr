@@ -82,16 +82,22 @@ internal static class Program
         }
 
         ActionExecution.ValidateTaskAttributes(taskType);
+        TaskEnvironment environment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(invocation.WorkingDirectory, invocation.Environment);
         ConstructorInfo? constructor = taskType.GetConstructor([typeof(TaskEnvironment)]);
         ITask task = (ITask)(constructor is not null
-            ? constructor.Invoke([TaskEnvironment.Fallback])
+            ? constructor.Invoke([environment])
             : Activator.CreateInstance(taskType)!);
-        ActionBuildEngine engine = ActionExecution.Initialize(task, invocation);
+        ActionBuildEngine engine = ActionExecution.Initialize(task, invocation, environment);
         try
         {
             Dictionary<string, object> parameters = TaskParameterBinder.Bind(task, invocation.Parameters, invocation.Version == 2);
             IReadOnlyList<string> outputs = ActionExecution.ValidateFootprint(taskType, parameters);
             GeneratedSourceTree[] trees = GeneratedSourceTree.Read(taskType, parameters);
+            if (trees.Length != 0)
+            {
+                throw new NotSupportedException(HostResources.Format("UnsupportedSandboxContract", taskType.FullName));
+            }
+
             if (materializeRoot is not null)
             {
                 GeneratedSourceTree? selected = Array.Find(trees, tree => FileUtilities.PathsEqual(tree.Root, materializeRoot));
@@ -104,7 +110,7 @@ internal static class Program
                 return true;
             }
 
-            return ActionExecution.Execute(task, engine, outputs, invocation, () =>
+            return ActionExecution.Execute(task, engine, outputs, invocation, parameters, () =>
             {
                 foreach (GeneratedSourceTree tree in trees)
                 {

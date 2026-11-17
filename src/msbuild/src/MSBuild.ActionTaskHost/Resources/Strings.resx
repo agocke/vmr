@@ -100,6 +100,10 @@
     <value>The task "{0}" requires "{1}", which is not supported by the standalone host.</value>
     <comment>{0} is a task type; {1} is a task-hosting attribute type.</comment>
   </data>
+  <data name="UnsupportedSandboxContract" xml:space="preserve">
+    <value>The task "{0}" does not support this host's staged file-access contract. Migrate to SandboxVersion=1 and IMultiThreadableTask using TaskEnvironment.GetInputPath/GetOutputPath. Generated output trees require a separate host-finalization contract.</value>
+    <comment>{0} is a task type. Do not translate API names or SandboxVersion=1.</comment>
+  </data>
   <data name="UnsupportedVersion" xml:space="preserve">
     <value>The invocation version "{0}" is unsupported. Write a version 1 invocation file.</value>
     <comment>{0} is the invocation format version.</comment>

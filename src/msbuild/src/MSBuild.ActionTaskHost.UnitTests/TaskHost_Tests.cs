@@ -21,7 +21,7 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
 {
     private readonly ITestOutputHelper _output = output;
 
-    [Fact]
+    [LinuxOnlyFact]
     public void ExecutesWriteLinesToFileFromInvocationFile()
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
@@ -30,7 +30,7 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         string manifest = WriteInvocation(directory, typeof(WriteLinesToFile), new()
         {
             ["File"] = destination,
-            ["Lines"] = new[] { "first;line", "literal%3Bvalue", "last\\line" },
+            ["Lines"] = new[] { "first;line", "literal%3Bvalue", "last\\line", destination },
             ["Overwrite"] = "yes",
             ["DeclaredInputs"] = Array.Empty<string>(),
             ["DeclaredOutputs"] = new[] { destination },
@@ -39,10 +39,120 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         bool succeeded = Run(manifest, out _);
 
         succeeded.ShouldBeTrue();
-        File.ReadAllLines(destination).ShouldBe(["first;line", "literal%3Bvalue", "last\\line"]);
+        File.ReadAllLines(destination).ShouldBe(["first;line", "literal%3Bvalue", "last\\line", destination]);
     }
 
-    [Theory]
+    [LinuxOnlyFact]
+    public void StagesInProcessReadsAndWritesWithoutChangingLogicalValues()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string input = env.CreateFile(Path.Combine(directory, "input %3B.txt"), "declared contents").Path;
+        string destination = Path.Combine(directory, "probe.json");
+        Dictionary<string, object?> parameters = ProbeParameters();
+        parameters["InputFile"] = input;
+        parameters["Value"] = input;
+        parameters["Items"] = new[] { new { itemSpec = Path.GetFileName(input), metadata = new { Tag = destination } } };
+        parameters["CaptureFullPath"] = true;
+        parameters["DeclaredInputs"] = new[] { input };
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), parameters, new() { ["TMPDIR"] = directory });
+
+        Run(manifest, out _).ShouldBeTrue();
+
+        using JsonDocument result = JsonDocument.Parse(File.ReadAllText(destination));
+        JsonElement root = result.RootElement;
+        root.GetProperty("inputContents").GetString().ShouldBe("declared contents");
+        root.GetProperty("value").GetString().ShouldBe(input);
+        root.GetProperty("logicalInput").GetString().ShouldBe(input);
+        root.GetProperty("projectDirectory").GetString().ShouldBe(directory);
+        root.GetProperty("items")[0].GetProperty("itemSpec").GetString().ShouldBe(Path.GetFileName(input));
+        root.GetProperty("items")[0].GetProperty("tag").GetString().ShouldBe(destination);
+        root.GetProperty("items")[0].GetProperty("fullPath").GetString().ShouldBe(input);
+        string physicalInput = root.GetProperty("inputPath").GetString()!;
+        string physicalOutput = root.GetProperty("outputPath").GetString()!;
+        physicalInput.ShouldEndWith("/execroot/root" + input);
+        physicalOutput.ShouldEndWith("/execroot/root" + destination);
+        root.GetProperty("workingDirectory").GetString().ShouldBe(Path.GetDirectoryName(physicalOutput));
+        Directory.Exists(physicalOutput[..physicalOutput.IndexOf("/execroot/", StringComparison.Ordinal)]).ShouldBeFalse();
+        File.ReadAllText(input).ShouldBe("declared contents");
+    }
+
+    [LinuxOnlyFact]
+    public void ExecutesCopyFilesWithDeclaredPathResolution()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string input = env.CreateFile(Path.Combine(directory, "source.txt"), "copied contents").Path;
+        string destination = Path.Combine(directory, "nested", "copy.txt");
+        string manifest = WriteInvocation(directory, typeof(CopyFiles), new()
+        {
+            ["SourceFiles"] = new[] { input },
+            ["DestinationFiles"] = new[] { destination },
+            ["DeclaredInputs"] = new[] { input },
+            ["DeclaredOutputs"] = new[] { destination },
+        }, new() { ["TMPDIR"] = directory });
+
+        Run(manifest, out _).ShouldBeTrue();
+
+        File.ReadAllText(destination).ShouldBe("copied contents");
+        File.ReadAllText(input).ShouldBe("copied contents");
+        Directory.GetDirectories(directory, "msbuild-stage-*").ShouldBeEmpty();
+    }
+
+    [LinuxOnlyTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RejectsUndeclaredFileResolutionWithoutPublishing(bool input)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string existing = env.CreateFile(Path.Combine(directory, "probe.json"), "previous output").Path;
+        env.CreateFile(Path.Combine(directory, "undeclared.txt"), "must not consume");
+        Dictionary<string, object?> parameters = ProbeParameters();
+        parameters[input ? "InputFile" : "File"] = "undeclared.txt";
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), parameters, new() { ["TMPDIR"] = directory });
+
+        Run(manifest, out string log).ShouldBeFalse();
+
+        log.ShouldContain("not a declared " + (input ? "input" : "output"));
+        File.ReadAllText(existing).ShouldBe("previous output");
+        File.ReadAllText(Path.Combine(directory, "undeclared.txt")).ShouldBe("must not consume");
+        Directory.GetDirectories(directory, "msbuild-stage-*").ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void OrdinaryFileResolutionRetainsProjectRelativeIO()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string input = env.CreateFile(Path.Combine(directory, "source.txt"), "ordinary contents").Path;
+        TaskEnvironment environment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(directory, new Dictionary<string, string>());
+        using (FileStream source = File.OpenRead(environment.GetInputPath("source.txt")))
+        using (FileStream destination = File.Create(environment.GetOutputPath("destination.txt")))
+        {
+            source.CopyTo(destination);
+        }
+
+        File.ReadAllText(Path.Combine(directory, "destination.txt")).ShouldBe("ordinary contents");
+        environment.GetAbsolutePath("source.txt").Value.ShouldBe(input);
+        Directory.GetDirectories(directory, "msbuild-stage-*").ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void RejectsUnmigratedContractBeforeConstructingTask()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string manifest = WriteInvocation(directory, typeof(UnmigratedTask), ProbeParameters());
+
+        Run(manifest, out string log).ShouldBeFalse();
+
+        log.ShouldContain("SandboxVersion=1");
+        log.ShouldNotContain("unmigrated-constructor-executed");
+        File.Exists(Path.Combine(directory, "probe.json")).ShouldBeFalse();
+    }
+
+    [LinuxOnlyTheory]
     [InlineData(false)]
     [InlineData(true)]
     public void PreparesDeclaredOutputParentsBeforeExecutingTask(bool absolute)
@@ -83,7 +193,7 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         Directory.Exists(Path.Combine(directory, "must-not-create")).ShouldBeFalse();
     }
 
-    [Fact]
+    [LinuxOnlyFact]
     public void OutputParentFileCollisionDoesNotRemoveTheFile()
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
@@ -101,7 +211,7 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         File.ReadAllText(collision).ShouldBe("keep-existing-file");
     }
 
-    [Fact]
+    [LinuxOnlyFact]
     public void PreservesTypedValuesItemsMetadataAndExplicitEnvironmentWithoutEngine()
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
@@ -139,14 +249,15 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         root.GetProperty("items")[0].GetProperty("itemSpec").GetString().ShouldBe("one%3B;$(literal)\\value");
         root.GetProperty("items")[0].GetProperty("tag").GetString().ShouldBe("tag%25;value");
         root.GetProperty("items")[1].GetProperty("itemSpec").GetString().ShouldBe("two");
-        root.GetProperty("workingDirectory").GetString().ShouldBe(directory);
+        root.GetProperty("projectDirectory").GetString().ShouldBe(directory);
+        root.GetProperty("workingDirectory").GetString().ShouldEndWith("/execroot/root" + directory);
         root.GetProperty("explicitEnvironment").GetString().ShouldBe("present");
         root.GetProperty("ambientEnvironment").ValueKind.ShouldBe(JsonValueKind.Null);
         root.GetProperty("engineLoaded").GetBoolean().ShouldBeFalse();
         root.GetProperty("processId").GetInt32().ShouldNotBe(Environment.ProcessId);
     }
 
-    [Fact]
+    [LinuxOnlyFact]
     public void BindsCapturedParametersUsingActualPropertyTypesWithoutReevaluation()
     {
         using TestEnvironment env = TestEnvironment.Create(_output);
@@ -181,7 +292,7 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         root.GetProperty("engineLoaded").GetBoolean().ShouldBeFalse();
     }
 
-    [Theory]
+    [LinuxOnlyTheory]
     [InlineData(1, false)]
     [InlineData(2, false)]
     [InlineData(2, true)]
@@ -233,7 +344,7 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         File.Exists(Path.Combine(directory, "probe.json")).ShouldBeFalse();
     }
 
-    [Theory]
+    [LinuxOnlyTheory]
     [InlineData("Fail")]
     [InlineData("LogError")]
     [InlineData("Throw")]
@@ -246,11 +357,13 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         Dictionary<string, object?> parameters = ProbeParameters();
         parameters[failure] = failure != "ProduceOutput";
         string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), parameters);
+        string destination = Path.Combine(directory, "probe.json");
+        File.WriteAllText(destination, "previous output");
 
         Run(manifest, out string log).ShouldBeFalse();
 
         log.ShouldNotBeNullOrWhiteSpace();
-        File.Exists(Path.Combine(directory, "probe.json")).ShouldBe(failure is "Fail" or "LogError");
+        File.ReadAllText(destination).ShouldBe("previous output");
         if (failure == "NestedBuild")
         {
             log.ShouldContain("BuildProjectFile");
@@ -455,13 +568,19 @@ public enum ProbeMode
     Second,
 }
 
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildDeclaredIORequiresUnset(nameof(Forbidden))]
-public sealed class ManifestProbeTask : Utilities.Task
+public sealed class ManifestProbeTask : Utilities.Task, IMultiThreadableTask
 {
     public ManifestProbeTask()
     {
     }
+
+    public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+
+    public string InputFile { get; set; } = string.Empty;
+
+    public bool CaptureFullPath { get; set; }
 
     [Required]
     public ITaskItem? File { get; set; }
@@ -516,19 +635,29 @@ public sealed class ManifestProbeTask : Utilities.Task
 
         if (ProduceOutput)
         {
-            System.IO.File.WriteAllText(File.ItemSpec, JsonSerializer.Serialize(new
+            System.IO.File.WriteAllText(TaskEnvironment.GetOutputPath(File.ItemSpec), JsonSerializer.Serialize(new
             {
                 value = Value,
                 values = Values,
                 enabled = Enabled,
                 count = Count,
                 mode = Mode.ToString(),
-                items = Items.Select(item => new { itemSpec = item.ItemSpec, tag = item.GetMetadata("Tag") }).ToArray(),
+                items = Items.Select(item => new
+                {
+                    itemSpec = item.ItemSpec,
+                    tag = item.GetMetadata("Tag"),
+                    fullPath = CaptureFullPath ? item.GetMetadata("FullPath") : null,
+                }).ToArray(),
                 optionalItem = OptionalItem.ItemSpec,
                 requiredItems = RequiredItems.Select(item => item.ItemSpec).ToArray(),
                 declaredInputs = DeclaredInputs.Select(item => item.ItemSpec).ToArray(),
                 declaredOutputs = DeclaredOutputs.Select(item => item.ItemSpec).ToArray(),
+                projectDirectory = TaskEnvironment.ProjectDirectory.Value,
                 workingDirectory = Environment.CurrentDirectory,
+                outputPath = TaskEnvironment.GetOutputPath(File.ItemSpec).Value,
+                logicalInput = InputFile.Length == 0 ? null : TaskEnvironment.GetAbsolutePath(InputFile).Value,
+                inputPath = InputFile.Length == 0 ? null : TaskEnvironment.GetInputPath(InputFile).Value,
+                inputContents = InputFile.Length == 0 ? null : System.IO.File.ReadAllText(TaskEnvironment.GetInputPath(InputFile)),
                 explicitEnvironment = Environment.GetEnvironmentVariable("ACTION_HOST_EXPLICIT"),
                 ambientEnvironment = Environment.GetEnvironmentVariable("ACTION_HOST_AMBIENT"),
                 engineLoaded = AppDomain.CurrentDomain.GetAssemblies().Any(assembly => assembly.GetName().Name == "Microsoft.Build"),
@@ -543,4 +672,12 @@ public sealed class ManifestProbeTask : Utilities.Task
 
         return !Fail;
     }
+}
+
+[MSBuildDeclaredIOTask]
+public sealed class UnmigratedTask : Utilities.Task
+{
+    public UnmigratedTask() => throw new InvalidOperationException("unmigrated-constructor-executed");
+
+    public override bool Execute() => throw new InvalidOperationException("unmigrated-task-executed");
 }

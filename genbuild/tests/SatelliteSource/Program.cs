@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Resources;
+using System.Text.Json;
 
 [assembly: AssemblyCompany("Company \"quote\" \\ value")]
 [assembly: AssemblyCopyright("Copyright (c) satellite fixture")]
@@ -17,6 +18,12 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
+        if (args[0] == "staged-graph")
+        {
+            CheckStagedGraph(args[1]);
+            return;
+        }
+
         Assembly parent = typeof(Program).Assembly;
         ResourceManager resources = new("SatelliteFixture.Strings", parent);
         foreach (string culture in new[] { "fr", "de" })
@@ -57,5 +64,36 @@ internal static class Program
         }
 
         Console.WriteLine("Satellite identities, attributes and translated resources verified: " + args[0]);
+    }
+
+    private static void CheckStagedGraph(string graph)
+    {
+        int compilers = 0;
+        foreach (string file in Directory.GetFiles(graph + ".actions", "*.json"))
+        {
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(file));
+            JsonElement invocation = document.RootElement;
+            if (invocation.GetProperty("taskType").GetString() != "Microsoft.CodeAnalysis.BuildTasks.CompileManaged")
+            {
+                continue;
+            }
+
+            compilers++;
+            JsonElement parameters = invocation.GetProperty("parameters");
+            if (!parameters.TryGetProperty("UseSandbox", out JsonElement enabled) ||
+                !string.Equals(enabled.GetProperty("scalar").GetString(), "true", StringComparison.OrdinalIgnoreCase) ||
+                !parameters.TryGetProperty("ArgumentPaths", out JsonElement paths) ||
+                paths.GetProperty("items").GetArrayLength() == 0 ||
+                !parameters.TryGetProperty("SandboxArguments", out JsonElement arguments) ||
+                !arguments.GetProperty("scalar").GetString().Contains("/__MSBuildSandbox Path/operand ", StringComparison.Ordinal))
+            {
+                throw new Exception("Primary and satellite compilers must all carry staging and typed argument bindings.");
+            }
+        }
+
+        if (compilers != 3)
+        {
+            throw new Exception("Expected one primary and two satellite compiler actions.");
+        }
     }
 }
