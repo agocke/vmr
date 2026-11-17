@@ -3,7 +3,10 @@
 
 using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Xml.Linq;
+using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using Xunit;
 
@@ -11,6 +14,74 @@ namespace ILLink.Tasks.Tests
 {
     public class CreateRuntimeRootDescriptorFileTests
     {
+        [Fact]
+        public void TestCreateRuntimeRootDescriptorFileUsesStagedPaths()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "illink-staged-root-" + Guid.NewGuid());
+            string logicalDirectory = Path.Combine(root, "logical");
+            string stagedInputDirectory = Path.Combine(root, "staged-input");
+            string stagedOutputDirectory = Path.Combine(root, "staged-output");
+            Directory.CreateDirectory(logicalDirectory);
+            Directory.CreateDirectory(stagedInputDirectory);
+            Directory.CreateDirectory(stagedOutputDirectory);
+
+            try
+            {
+                string[] inputNames = { "namespace.h", "corelib.h", "cortypeinfo.h", "rexcep.h", "combined.xml" };
+                foreach (string inputName in inputNames)
+                {
+                    string logicalPath = Path.Combine(logicalDirectory, inputName);
+                    if (inputName == "combined.xml")
+                        new XDocument(new XElement("linker")).Save(logicalPath);
+                    else
+                        File.WriteAllText(logicalPath, string.Empty);
+                    File.Copy(logicalPath, Path.Combine(stagedInputDirectory, inputName));
+                }
+
+                string logicalOutput = Path.Combine(logicalDirectory, "output.xml");
+                string stagedOutput = Path.Combine(stagedOutputDirectory, "output.xml");
+                var task = new CreateRuntimeRootILLinkDescriptorFile
+                {
+                    NamespaceFilePath = new TaskItem(Path.Combine(logicalDirectory, inputNames[0])),
+                    MscorlibFilePath = new TaskItem(Path.Combine(logicalDirectory, inputNames[1])),
+                    CortypeFilePath = new TaskItem(Path.Combine(logicalDirectory, inputNames[2])),
+                    RexcepFilePath = new TaskItem(Path.Combine(logicalDirectory, inputNames[3])),
+                    ILLinkTrimXmlFilePath = new TaskItem(Path.Combine(logicalDirectory, inputNames[4])),
+                    DefineConstants = Array.Empty<ITaskItem>(),
+                    RuntimeRootDescriptorFilePath = new TaskItem(logicalOutput),
+                    DeclaredInputs = inputNames.Select(name => (ITaskItem)new TaskItem(Path.Combine(logicalDirectory, name))).ToArray(),
+                    DeclaredOutputs = new ITaskItem[] { new TaskItem(logicalOutput) },
+                    TaskEnvironment = CreateMappedEnvironment(
+                        root,
+                        path => Path.Combine(stagedInputDirectory, Path.GetFileName(path)),
+                        path => Path.Combine(stagedOutputDirectory, Path.GetFileName(path)))
+                };
+
+                Assert.True(task.Execute());
+                Assert.True(File.Exists(stagedOutput));
+                Assert.False(File.Exists(logicalOutput));
+                Assert.Equal("linker", XDocument.Load(stagedOutput).Root.Name.LocalName);
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        private static TaskEnvironment CreateMappedEnvironment(
+            string projectDirectory,
+            Func<string, string> inputPath,
+            Func<string, string> outputPath)
+        {
+            TaskEnvironment environment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(projectDirectory);
+            MethodInfo setFilePathResolvers = typeof(TaskEnvironment).GetMethod(
+                "SetFilePathResolvers",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(setFilePathResolvers);
+            setFilePathResolvers.Invoke(environment, new object[] { inputPath, outputPath, projectDirectory, null });
+            return environment;
+        }
+
         [Fact]
         public void TestCoreLibClassGen()
         {

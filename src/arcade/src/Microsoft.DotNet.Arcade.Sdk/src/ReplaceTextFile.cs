@@ -11,9 +11,12 @@ using Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Arcade.Sdk;
 
-[MSBuildDeclaredIOTask]
-public sealed class ReplaceTextFile : Task
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
+public sealed class ReplaceTextFile : Task, IMultiThreadableTask
 {
+    /// <summary>Injected by MSBuild so paths resolve against the project directory in multithreaded builds.</summary>
+    public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+
     [Required]
     public ITaskItem InputFile { get; set; } = null!;
 
@@ -29,7 +32,18 @@ public sealed class ReplaceTextFile : Task
 
     public override bool Execute()
     {
-        string contents = File.ReadAllText(InputFile.ItemSpec);
+        AbsolutePath inputPath = TaskEnvironment.GetInputPath(InputFile.ItemSpec);
+        AbsolutePath outputPath = TaskEnvironment.GetOutputPath(OutputFile.ItemSpec);
+        string logicalInputPath = TaskEnvironment.GetAbsolutePath(InputFile.ItemSpec).GetCanonicalForm();
+        string logicalOutputPath = TaskEnvironment.GetAbsolutePath(OutputFile.ItemSpec).GetCanonicalForm();
+        if (TaskEnvironment.IsSandboxed
+            && string.Equals(logicalInputPath, logicalOutputPath, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+        {
+            Log.LogError("Sandboxed file replacement requires distinct input and output paths.");
+            return false;
+        }
+
+        string contents = File.ReadAllText(inputPath);
         foreach (ITaskItem replacement in Replacements)
         {
             contents = contents.Replace(replacement.ItemSpec, replacement.GetMetadata("Value"));
@@ -37,8 +51,7 @@ public sealed class ReplaceTextFile : Task
 
         // Preserve the legacy WriteLinesToFile conversion, including whitespace and path separators.
         contents = new TaskItem(contents.Trim().Replace("%", "%25")).ItemSpec;
-        string outputPath = Path.GetFullPath(OutputFile.ItemSpec);
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        Directory.CreateDirectory(TaskEnvironment.GetExecutionDirectory(Path.GetDirectoryName(logicalOutputPath)!));
         File.WriteAllText(outputPath, contents.Length == 0 ? "" : contents + Environment.NewLine, new UTF8Encoding(false, true));
         return true;
     }

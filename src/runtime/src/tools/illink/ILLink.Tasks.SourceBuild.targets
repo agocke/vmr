@@ -1,0 +1,42 @@
+<Project>
+  <PropertyGroup>
+    <GenBuildMSBuildFrameworkAssembly
+      Condition="'$(GenBuildMSBuildFrameworkAssembly)' == '' and '$(GenBuildMSBuildUtilitiesAssembly)' != ''">$([System.IO.Path]::Combine($([System.IO.Path]::GetDirectoryName('$(GenBuildMSBuildUtilitiesAssembly)')), 'Microsoft.Build.Framework.dll'))</GenBuildMSBuildFrameworkAssembly>
+    <GenBuildMSBuildFrameworkAssembly
+      Condition="'$(GenBuildMSBuildFrameworkAssembly)' == ''">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../../../msbuild/artifacts/bin/Microsoft.Build.Framework/$(Configuration)/netstandard2.0/Microsoft.Build.Framework.dll'))</GenBuildMSBuildFrameworkAssembly>
+    <GenBuildMSBuildUtilitiesAssembly
+      Condition="'$(GenBuildMSBuildUtilitiesAssembly)' == ''">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../../../msbuild/artifacts/bin/Microsoft.Build.Utilities/$(Configuration)/netstandard2.0/Microsoft.Build.Utilities.Core.dll'))</GenBuildMSBuildUtilitiesAssembly>
+    <DefineConstants Condition="'$(GenBuildMSBuildFrameworkAssembly)' != ''">$(DefineConstants);ILINK_USE_SOURCE_MSBUILD_FRAMEWORK</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'ILLink.Tasks.Tests'">
+    <PackageReference Update="Microsoft.Build.Framework" ExcludeAssets="Runtime" />
+    <PackageReference Update="Microsoft.Build.Utilities.Core" ExcludeAssets="Runtime" />
+  </ItemGroup>
+
+  <Target Name="ValidateILLinkGenBuildMSBuildAssemblies"
+          BeforeTargets="UseILLinkGenBuildMSBuildFramework"
+          Condition="'$(MSBuildHardenedGraph)' != 'true'">
+    <Error Condition="!Exists('$(GenBuildMSBuildFrameworkAssembly)')"
+           Text="Build the source MSBuild Framework component first, or set GenBuildMSBuildFrameworkAssembly to a reference containing the staged file-access APIs." />
+    <Error Condition="!Exists('$(GenBuildMSBuildUtilitiesAssembly)')"
+           Text="Build the source MSBuild Utilities component first, or set GenBuildMSBuildUtilitiesAssembly to a reference containing the TaskEnvironment-aware ToolTask." />
+  </Target>
+
+  <Target Name="UseILLinkGenBuildMSBuildFramework"
+          BeforeTargets="ResolveAssemblyReferences"
+          DependsOnTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Build.Framework'" />
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Build.Utilities.Core'" />
+      <Reference Include="$(GenBuildMSBuildFrameworkAssembly)">
+        <Private Condition="'$(IsTestProject)' == 'true'">true</Private>
+        <Private Condition="'$(IsTestProject)' != 'true'">false</Private>
+      </Reference>
+      <Reference Include="$(GenBuildMSBuildUtilitiesAssembly)">
+        <Private Condition="'$(IsTestProject)' == 'true'">true</Private>
+        <Private Condition="'$(IsTestProject)' != 'true'">false</Private>
+      </Reference>
+    </ItemGroup>
+  </Target>
+</Project>

@@ -175,8 +175,19 @@ ftruncate(fd,0), rather than using O_TRUNC. The default %file trace DOES NOT
 observe ftruncate. Do not infer initialization from O_CREAT or managed API intent.
 For NEW captures add --response-file-provenance to the trace command. It adds:
   ftruncate,ftruncate64,close,close_range,dup,dup2,dup3,fcntl,fchmod,fchown
-These capture fd lifecycle/permission operations, not read/write payload bytes.
-Capture records responseFileTraceProfile=1; old captures cannot prove this rule.
+The current version also captures pipe/pipe2, socket/socketpair/accept,
+eventfd/epoll/inotify/signalfd/timerfd, pidfd_open and memfd allocations, plus
+potential descriptor import/opaque transitions that are rejected on successful
+use unless explicitly supported (see FD_TRACE in audit.py). It does not capture
+read/write payload bytes or add any content/resource allowance.
+
+Version 2 replaces -ttt with --absolute-timestamps=unix,ns and adds
+--syscall-times=ns (-T with nanosecond precision). Capture records
+responseFileTraceProfile=2, fdLifetimeTraceProfile=2 and the exact syscall
+selection. Both seccomp startup and workload use those same timing/filter flags.
+Missing durations, inadequate timestamp precision and changed selections fail.
+Version-1 captures retain their old conservative behavior; missing timing or
+allocation evidence is never synthesized to make an earlier failed run pass.
 Then explicitly add --allow-response-file-scratch to analyze.
 
 This rule grants only successful child O_RDONLY opens of the exact .rsp object
@@ -216,6 +227,110 @@ these admissions. Failed commands or changed captured graph/sidecars do too.
 Use a private working root and a minimal non-secret outer environment: strace -v
 expands exec environments into raw logs. Preserve all raw captures and use a
 restrictive caller umask (for example 077); no trace sampling/truncation is safe.
+
+Common action-host file staging (opt-in)
+---------------------------------------
+Capture with --response-file-provenance (the unchanged full fd-lifecycle
+selection), then add --allow-host-staging when analyzing. If compiler response
+files are present, also retain --allow-response-file-scratch. --seccomp-bpf
+remains an independent capture opt-in; its verification requirements are unchanged.
+No graph rewrite, staging-root catalog, or source-directory snapshot is needed.
+
+The supported common FileStagingContext contract requires exactly one successful
+same-host mkdir(...,0700) of msbuild-stage-<32 lowercase hexadecimal digits>,
+directly under the effective captured absolute TMPDIR, TMP, or TEMP (in that
+priority order). Ambient/default, relative, symlinked-parent and shared/preexisting
+roots are not supported. Materializer actions do not require a staging root.
+Every declared input must have one host-created absolute file symlink at
+ROOT/execroot/root/ABSOLUTE_LOGICAL_PATH, pointing to that exact DeclaredInputs
+spelling AND admitted by the original Ninja content edge/generated-tree contract.
+Canonical identity alone, an order-only edge, an implicit tool file not declared
+as an input alias, or a filename resembling a staging path is insufficient.
+
+The auditor reconstructs mkdir, exact aliases, file creation, fd identity,
+supported fd controls, internal regular-file renames and deletion in trace time.
+Staging may already have been removed when analysis runs. Input alias recreation,
+write-capable alias opens, hardlinks, imports/exports, directory/alias renames,
+ancestor replacement, dot-dot staging paths, ownership/root-permission changes,
+unproven deleted fds and unsupported mutations reject the proof. Original input
+symlinks/targets must still be stable; untraced actors/mount races are not modeled.
+
+A scratch/output read needs an individually recorded new regular-file object in
+this proven initially empty namespace, with completed parent creation and matching
+-yy fd identity. A first writable O_CREAT open can establish a NEW object only
+when the complete namespace ledger proves that name absent; this is NOT a generic
+O_CREAT allowance. Existing/unobserved objects remain rejected even with O_TRUNC.
+Internal file renames preserve object generations. Zero/nonnegative fd truncation
+of these new files and ordinary file permission modes are supported, not new
+external data sources. Deleted fd annotations are accepted only for an already
+bound object with observed unlink/replacement history, not by stripping suffixes.
+Write-only publication siblings outside staging receive no new read permission.
+
+Each directory enumeration must have its own captured directory fd, exact
+trace-born membership and EOF. Cleanup may remove already enumerated entries;
+unseen removals, additions during enumeration, extra/missing names and partial
+enumerations reject the proof. This inventory comes from explicit aliases and
+observed new objects, NEVER discovery of a source/task directory. Existing
+runtime/platform directory catalogs are unchanged.
+
+Response files remain under the stricter separate writer-close -> declared child
+exec @file -> child read/close -> host unlink rule. Only a successfully proven
+ROOT/scratch may additionally serve as that family's effective temporary parent;
+an RSP may also be created directly in an individually proven fresh directory,
+including ROOT/scratch or a mapped task working directory such as illink-work.
+Its 0777 mkdir request is accepted ONLY beneath the verified immutable exclusive
+0700 staging root, with the exact captured directory birth/object matched to the
+complete namespace proof. Shared/preexisting or symlinked directories and imported
+files cannot qualify; this is not a generated execroot-file prefix allowance.
+No arbitrary 0777 temporary directory is admitted. An executable staging
+alias counts as declared only after its complete host-staging input-alias proof
+passes (exact DeclaredInputs AND Ninja content edge), with that proof recorded
+on the child execution. Exclusive/truncating initialization, writer/reader close,
+@argument, same-family ownership, unlink and capture-completeness requirements
+remain unchanged. General staging scratch cannot override a rejected RSP read.
+
+Concurrent descriptor reuse (version-2 captures)
+-----------------------------------------------
+Shared CLONE_FILES tables use individually versioned descriptor generations,
+not the last object printed for an fd number in syscall-entry order. Successful
+allocations become usable only after their observed completion. A close consumes
+the already completed live generation at entry; an overlapping ordinary
+allocation cannot replace that live fd and may complete after that close frees
+the number. This inference uses observed allocation/close transitions and kernel
+fd-table constraints, NOT a path annotation alone. Exact -yy object identity,
+input-alias declarations/content edges, directory inventories and cleanup
+requirements are still separately checked.
+
+Use before allocation completion, close/use overlap, competing atomic target
+replacement, overlapping same-thread intervals/timing discontinuities, ambiguous
+fd-table copies/exec, imports, unsupported successful
+fcntl/ioctl transitions and close_range fail closed. Conservative supported
+ioctl queries are TCGETS, TCGETS2, TIOCGWINSZ, FIONREAD and FIONBIO; they grant no
+file access. Atomic replacement of a private fd is currently unsupported.
+Ordinary dup/fcntl duplication propagates only a proven source generation.
+Relative private dirfd accesses additionally require that exact directory's
+captured generation. fdLifetimeProof reports verification/allocation/reuse
+counts; version-2 content-open/directory observations record generation IDs
+and completion timestamps. Any lifetime ambiguity disables staging/RSP proofs.
+
+This is a supported observational Linux syscall subset, not a general kernel
+execution-order oracle. Inherited descriptors, untraced actors, transfers through
+unsupported mechanisms and new kernel APIs are not made trustworthy by -T.
+No arbitrary ordering is invented for genuinely ambiguous generations. Earlier
+captures without these timing/allocation transitions must remain rejected when
+their lifecycle cannot be established.
+
+Admission categories are hostStagingInputAlias, hostStagingOutput,
+hostStagingScratch, hostStagingDirectory and hostStagingProbe. Each admitted use
+records stagingRoot/objectId. hostStagingCandidates records roots, object
+generations/history, exact enumeration evidence, cleanup and rejection reasons;
+hostStagingAllowanceUsage records actual admissions; hostStagingViolations records
+missing/multiple roots. Root rejection makes analysis fail, including when no
+otherwise-undeclared content read remains. Any incomplete/unresolved capture,
+changed captured inputs, missing lifecycle profile or failed family prevents
+staging admissions. These are observational proofs, NOT OS confinement, payload
+validation or a general write-footprint audit; inherited/unobserved fd transfers
+and higher-priority competing seccomp filters remain limitations.
 
 Admissions and attribution
 --------------------------
@@ -282,8 +397,9 @@ An executable script's implicit shebang interpreter is not independently observe
 Successful open is a conservative content-read candidate, not proof bytes were
 consumed. Canonical fallback for operations without returned fd annotations uses
 the analysis-time filesystem EXCEPT known /proc process aliases, which use trace
-identity. Path replacement, symlink races or mount namespace
-changes are not reconstructed. Unknown namespace-related traced calls fail, but
+identity, and the explicitly proven common-host staging namespace above. Other
+path replacement, symlink races or mount namespace changes are not reconstructed.
+Unknown namespace-related traced calls fail, but
 the trace profile cannot detect every namespace mutation. All events are loaded/
 sorted in memory; budget memory/storage for large runtime traces. Prefer an
 isolated product smoke first, then a fresh full action execution.
@@ -293,7 +409,8 @@ JSON report, schemaVersion 1
 Top-level keys:
   graph, graphSha256, strictProbes, ok, commandExitCode (capture analysis only);
   actions: observed action objects with id/mode/invocation/taskType/taskAssembly,
-    workingDirectory, contentInputs, declaredInputs, outputs, trees, orderOnly,
+    workingDirectory, contentInputs, declaredInputs, declaredOutputs, outputs, trees, orderOnly,
+    stagingTempParent (first captured TMPDIR/TMP/TEMP, not an allowance),
     pids, counts by admission, scratchRoots (selected absolute temp variables),
     dynamicTrees [logicalRoot, canonicalRoot, kind];
   undeclaredReads: unadmitted successful content-open/exec/readlink/enumeration;
@@ -305,6 +422,8 @@ Top-level keys:
   selfCreatedProbes: exclusive-created case-probe candidates and unlink evidence;
   responseFileScratchCandidates, responseFileScratchAllowanceUsage:
     optional response-file lifecycle proofs/rejections and admitted child reads;
+  hostStagingCandidates, hostStagingAllowanceUsage, hostStagingViolations:
+    present with --allow-host-staging; private namespace proofs/uses/rejections;
   allowanceRules: complete runtime/platform exact catalog rules, even if unused;
   unresolved, incompleteness: raw event/error context where available;
   controller: {events: count, pids: [...]};
@@ -327,6 +446,10 @@ Focused tests (no strace/.NET/products required):
     -s genbuild/tests -p test_audit.py -v
 Set GENBUILD_AUDIT_STRACE=/absolute/path/to/strace to additionally run the tiny
 native shell/cat integration fixture, including fixed directory membership.
+It also runs a no-build common-host staging fixture when existing perl/ldd are
+available: exact declared child reads after alias/root removal, generated-output
+reads, and negative controls for an ordinary undeclared read and a hardlink import.
+Its exact interpreter ELF/entropy catalog is unit-only, not a product allowance.
 
 Optional source-level task-resolver regression (no app rebuild/restaging):
   GENBUILD_AUDIT_STRACE=/absolute/strace \

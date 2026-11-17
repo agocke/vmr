@@ -808,7 +808,8 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         }
 
         string escapedAssembly = futureAssembly.Replace("$", "$$").Replace(" ", "$ ").Replace(":", "$:");
-        string[] edges = File.ReadAllLines(graph).Where(line => line.StartsWith("build ", StringComparison.Ordinal)).ToArray();
+        string[] edges = File.ReadAllLines(graph).Where(line => line.StartsWith("build ", StringComparison.Ordinal) &&
+            line.Contains(": action_", StringComparison.Ordinal)).ToArray();
         edges.Length.ShouldBe(2);
         edges[0].ShouldStartWith($"build {escapedAssembly}: action_0");
         // The generated assembly must be a real input/tool dependency, not just an order-only edge.
@@ -2777,7 +2778,7 @@ public sealed class MSBuild : Utilities.Task
     }
 }
 
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 public sealed class GraphParameterTask : Utilities.Task, IMultiThreadableTask
 {
     public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
@@ -2791,12 +2792,12 @@ public sealed class GraphParameterTask : Utilities.Task, IMultiThreadableTask
 
     public override bool Execute()
     {
-        System.IO.File.WriteAllText(TaskEnvironment.GetAbsolutePath(File).Value, $"{NullText ?? "<null>"}|{DefaultText}");
+        System.IO.File.WriteAllText(TaskEnvironment.GetOutputPath(File).Value, $"{NullText ?? "<null>"}|{DefaultText}");
         return true;
     }
 }
 
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 public sealed class GraphCSharpCompileTask : Utilities.Task, IMultiThreadableTask
 {
     public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
@@ -2854,26 +2855,26 @@ public sealed class GraphCSharpCompileTask : Utilities.Task, IMultiThreadableTas
         }
 
         ProcessStartInfo start = TaskEnvironment.GetProcessStartInfo();
-        start.FileName = Absolute(DotNetHost);
+        start.FileName = TaskEnvironment.GetInputPath(DotNetHost).Value;
         start.UseShellExecute = false;
         start.RedirectStandardOutput = true;
         start.RedirectStandardError = true;
-        start.ArgumentList.Add(Absolute(CompilerAssembly));
+        start.ArgumentList.Add(TaskEnvironment.GetInputPath(CompilerAssembly).Value);
         start.ArgumentList.Add("-nologo");
         start.ArgumentList.Add("-noconfig");
         start.ArgumentList.Add("-nostdlib+");
         start.ArgumentList.Add("-target:exe");
         start.ArgumentList.Add("-deterministic+");
         start.ArgumentList.Add("-debug-");
-        start.ArgumentList.Add("-out:" + Absolute(OutputAssembly));
+        start.ArgumentList.Add("-out:" + TaskEnvironment.GetOutputPath(OutputAssembly).Value);
         foreach (ITaskItem reference in References)
         {
-            start.ArgumentList.Add("-reference:" + Absolute(reference.ItemSpec));
+            start.ArgumentList.Add("-reference:" + TaskEnvironment.GetInputPath(reference.ItemSpec).Value);
         }
 
         foreach (ITaskItem source in Sources)
         {
-            start.ArgumentList.Add(Absolute(source.ItemSpec));
+            start.ArgumentList.Add(TaskEnvironment.GetInputPath(source.ItemSpec).Value);
         }
 
         using Process process = new() { StartInfo = start };
@@ -2901,7 +2902,7 @@ public sealed class GraphCSharpCompileTask : Utilities.Task, IMultiThreadableTas
     }
 }
 
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 public sealed class GraphValueTask : Utilities.Task, IMultiThreadableTask
 {
     public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
@@ -2921,9 +2922,10 @@ public sealed class GraphValueTask : Utilities.Task, IMultiThreadableTask
     }
 }
 
-[MSBuildDeclaredIOTask]
-public sealed class GraphTransformTask : Utilities.Task
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
+public sealed class GraphTransformTask : Utilities.Task, IMultiThreadableTask
 {
+    public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
     public ITaskItem[] DeclaredInputs { get; set; } = [];
     public ITaskItem[] DeclaredOutputs { get; set; } = [];
     public ITaskItem[] Text { get; set; } = [];
@@ -2950,8 +2952,8 @@ public sealed class GraphTransformTask : Utilities.Task
 
         string text = Source.Length == 0
             ? Text[0].ItemSpec + "|" + Text[0].GetMetadata("Tag")
-            : System.IO.File.ReadAllText(Source) + "|consumed";
-        System.IO.File.WriteAllText(File, text);
+            : System.IO.File.ReadAllText(TaskEnvironment.GetInputPath(Source).Value) + "|consumed";
+        System.IO.File.WriteAllText(TaskEnvironment.GetOutputPath(File).Value, text);
         return true;
     }
 }

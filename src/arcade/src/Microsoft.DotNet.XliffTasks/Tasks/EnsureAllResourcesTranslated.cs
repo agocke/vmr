@@ -20,6 +20,12 @@ public sealed class EnsureAllResourcesTranslated : XlfTask
 
     protected override void ExecuteCore()
     {
+        if (TaskEnvironment.IsSandboxed)
+        {
+            Log.LogError("EnsureAllResourcesTranslated is not declared for sandboxed file access.");
+            return;
+        }
+
         foreach (ITaskItem item in Sources)
         {
             string sourceDocumentPath = item.GetMetadataOrDefault(MetadataKey.SourceDocumentPath, item.ItemSpec);

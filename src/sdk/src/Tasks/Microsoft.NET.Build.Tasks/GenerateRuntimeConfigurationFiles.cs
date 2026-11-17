@@ -97,7 +97,7 @@ namespace Microsoft.NET.Build.Tasks
 
             LockFile lockFile = AssetsFilePath == null
                 ? null
-                : new LockFileCache(this).GetLockFile(TaskEnvironment.GetAbsolutePath(AssetsFilePath));
+                : new LockFileCache(this).GetLockFile(TaskEnvironment.GetInputPath(AssetsFilePath));
             foreach (var configuration in CreateConfigurations(lockFile))
             {
                 WriteConfiguration(configuration.Path, configuration.Content, Environment.NewLine);
@@ -454,7 +454,7 @@ namespace Microsoft.NET.Build.Tasks
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
 
-            using (FileStream stream = File.Create(TaskEnvironment.GetAbsolutePath(path)))
+            using (FileStream stream = File.Create(TaskEnvironment.GetOutputPath(path)))
             using (Utf8JsonWriter writer = new(stream, options))
             {
                 content.WriteTo(writer);

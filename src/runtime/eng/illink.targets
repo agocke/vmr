@@ -274,13 +274,15 @@
           Outputs="$(ILLinkTrimAssemblyPath);$(_ILLinkTrimOutputSymbols)">
     <PropertyGroup>
       <!-- default action for assemblies with IsTrimmable attribute -->
-      <ILLinkArgs>$(ILLinkArgs) --trim-mode skip</ILLinkArgs>
+      <_ILLinkTaskArgs>$(ILLinkArgs) --trim-mode skip</_ILLinkTaskArgs>
       <!-- default action for assemblies without IsTrimmable attribute -->
-      <ILLinkArgs>$(ILLinkArgs) --action skip</ILLinkArgs>
+      <_ILLinkTaskArgs>$(_ILLinkTaskArgs) --action skip</_ILLinkTaskArgs>
       <!-- trim the target assembly -->
-      <ILLinkArgs>$(ILLinkArgs) --action link $(TargetName)</ILLinkArgs>
-      <ILLinkArgs Condition="'$(ILLinkRewritePDBs)' == 'true' and '$(_DebugSymbolsProduced)' == 'true'">$(ILLinkArgs) -b true</ILLinkArgs>
-      <ILLinkArgs Condition="'$(ILLinkRewritePDBs)' == 'true' and '$(_DebugSymbolsProduced)' == 'true' and '$(DeterministicSourcePaths)' == 'true'">$(ILLinkArgs) --preserve-symbol-paths</ILLinkArgs>
+      <_ILLinkTaskArgs>$(_ILLinkTaskArgs) --action link $(TargetName)</_ILLinkTaskArgs>
+      <_ILLinkTaskArgs Condition="'$(ILLinkRewritePDBs)' == 'true' and '$(_DebugSymbolsProduced)' == 'true'">$(_ILLinkTaskArgs) -b true</_ILLinkTaskArgs>
+      <_ILLinkTaskArgs Condition="'$(ILLinkRewritePDBs)' == 'true' and '$(_DebugSymbolsProduced)' == 'true' and '$(DeterministicSourcePaths)' == 'true'">$(_ILLinkTaskArgs) --preserve-symbol-paths</_ILLinkTaskArgs>
+      <!-- Keep the raw path arguments for ResolveILLinkInputs' existing input edges. -->
+      <ILLinkArgs>$(_ILLinkTaskArgs)</ILLinkArgs>
       <!-- pass the non-embedded descriptors xml file on the command line -->
       <ILLinkArgs Condition="'@(ILLinkDescriptorsLibraryBuildXml)' != ''">$(ILLinkArgs) -x "@(ILLinkDescriptorsLibraryBuildXml->'%(FullPath)', '" -x "')"</ILLinkArgs>
       <ILLinkArgs Condition="'$(ILLinkSubstitutionsLibraryBuildXml)' != ''">$(ILLinkArgs) --substitutions "$(ILLinkSubstitutionsLibraryBuildXml)"</ILLinkArgs>
@@ -293,8 +295,8 @@
            IL2035: Unresolved assembly A in DynamicDependencyAttribute on B
       -->
       <LinkerNoWarn>$(LinkerNoWarn);IL2008;IL2009;IL2121;IL2025;IL2035</LinkerNoWarn>
-      <ILLinkArgs>$(ILLinkArgs) --nowarn $(LinkerNoWarn)</ILLinkArgs>
-      <ILLinkArgs Condition="'$(ILLinkDisableIPConstProp)' == 'true'">$(ILLinkArgs) --disable-opt ipconstprop</ILLinkArgs>
+      <_ILLinkTaskArgs>$(_ILLinkTaskArgs) --nowarn $(LinkerNoWarn)</_ILLinkTaskArgs>
+      <_ILLinkTaskArgs Condition="'$(ILLinkDisableIPConstProp)' == 'true'">$(_ILLinkTaskArgs) --disable-opt ipconstprop</_ILLinkTaskArgs>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(MSBuildHardenedGraph)' != 'true'">
@@ -328,6 +330,7 @@
 
     <PropertyGroup>
       <ILLinkArgs Condition="'$(MSBuildHardenedGraph)' != 'true' and @(_DependencyDirectories->Count()) > 0">$(ILLinkArgs) -d @(_DependencyDirectories->'"%(Identity)"', ' -d ')</ILLinkArgs>
+      <_ILLinkTaskArgs Condition="'$(MSBuildHardenedGraph)' != 'true' and @(_DependencyDirectories->Count()) > 0">$(_ILLinkTaskArgs) -d @(_DependencyDirectories->'"%(Identity)"', ' -d ')</_ILLinkTaskArgs>
       <_ILLinkToolPath Condition="'$(ILLinkPath)' != ''">$(ILLinkPath)</_ILLinkToolPath>
       <_ILLinkToolPath Condition="'$(_ILLinkToolPath)' == '' and '$(ILLinkTasksAssembly)' != ''">$([System.IO.Path]::Combine($([System.IO.Path]::GetDirectoryName('$(ILLinkTasksAssembly)')), 'illink.dll'))</_ILLinkToolPath>
     </PropertyGroup>
@@ -344,16 +347,22 @@
 
     <ILLink AssemblyPaths="$(ILLinkTrimInputPath)$(TargetName)$(TargetExt)"
             RootAssemblyNames="@(ILLinkTrimInputAssembly)"
+            RootDescriptorFiles="@(ILLinkDescriptorsLibraryBuildXml)"
+            LinkAttributesFiles="@(ILLinkSuppressionsLibraryBuildXml)"
+            SubstitutionsFiles="$(ILLinkSubstitutionsLibraryBuildXml)"
             OutputDirectory="$(ILLinkTrimOutputPath)"
-            ExtraArgs="$(ILLinkArgs)"
+            ExtraArgs="$(_ILLinkTaskArgs)"
             ToolExe="$(_DotNetHostFileName)"
             ToolPath="$(_DotNetHostDirectory)"
             Condition="'$(MSBuildHardenedGraph)' != 'true'" />
     <ILLink AssemblyPaths="$(ILLinkTrimInputAssembly)"
             ReferenceAssemblyPaths="@(_ILLinkReferenceAssembly)"
             RootAssemblyNames="@(ILLinkTrimInputAssembly)"
+            RootDescriptorFiles="@(ILLinkDescriptorsLibraryBuildXml)"
+            LinkAttributesFiles="@(ILLinkSuppressionsLibraryBuildXml)"
+            SubstitutionsFiles="$(ILLinkSubstitutionsLibraryBuildXml)"
             OutputDirectory="$(ILLinkTrimOutputPath)"
-            ExtraArgs="$(ILLinkArgs)"
+            ExtraArgs="$(_ILLinkTaskArgs)"
             ILLinkPath="$(_ILLinkToolPath)"
             DotNetHostPath="$(MSBuildActionDotNetHost)"
             DeclaredInputs="@(_ILLinkDeclaredInput)"

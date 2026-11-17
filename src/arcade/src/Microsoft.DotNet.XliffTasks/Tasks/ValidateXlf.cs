@@ -6,7 +6,7 @@ using Microsoft.Build.Framework;
 
 namespace XliffTasks.Tasks;
 
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildMultiThreadableTask]
 public sealed class ValidateXlf : XlfTask
 {
@@ -22,8 +22,9 @@ public sealed class ValidateXlf : XlfTask
     protected override void ExecuteCore()
     {
         UpdateXlf.UpdateSources(Sources, Languages, allowModification: false, TaskEnvironment);
-        string stamp = TaskEnvironment.GetAbsolutePath(ValidationStamp);
-        Directory.CreateDirectory(Path.GetDirectoryName(stamp));
+        string stamp = TaskEnvironment.GetOutputPath(ValidationStamp);
+        Directory.CreateDirectory(TaskEnvironment.GetExecutionDirectory(
+            Path.GetDirectoryName(TaskEnvironment.GetAbsolutePath(ValidationStamp))));
         File.WriteAllText(stamp, "XLF validation succeeded.\n");
     }
 }

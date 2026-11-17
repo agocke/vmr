@@ -22,7 +22,7 @@ namespace Microsoft.NET.Build.Tasks
 
         protected override void ExecuteCore()
         {
-            AbsolutePath templatePath = TaskEnvironment.GetAbsolutePath(PathToTemplateFile);
+            AbsolutePath templatePath = TaskEnvironment.GetInputPath(PathToTemplateFile);
             var fileVersionInfo = FileVersionInfo.GetVersionInfo(templatePath);
             Version assemblyVersion = FileUtilities.TryGetAssemblyVersion(templatePath);
 

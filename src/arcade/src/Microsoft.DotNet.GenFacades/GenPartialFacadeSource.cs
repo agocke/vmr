@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Microsoft.DotNet.GenFacades;
 
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 public class GenPartialFacadeSource : RoslynBuildTask
 {
     [Required]
@@ -40,9 +40,19 @@ public class GenPartialFacadeSource : RoslynBuildTask
         bool result = true;
         try
         {
-            if (!ValidateDeclaredFiles(
-                new[] { ReferenceAssembly }.Concat((ReferencePaths ?? []).Concat(CompileFiles ?? []).Select(item => item.ItemSpec)),
-                new[] { OutputSourcePath }))
+            string[] inputPaths = new[] { ReferenceAssembly }
+                .Concat((ReferencePaths ?? []).Concat(CompileFiles ?? []).Select(item => item.ItemSpec))
+                .ToArray();
+            if (TaskEnvironment.IsSandboxed
+                && inputPaths.Any(input => PathComparer.Equals(
+                    TaskEnvironment.GetAbsolutePath(input).GetCanonicalForm().Value,
+                    TaskEnvironment.GetAbsolutePath(OutputSourcePath).GetCanonicalForm().Value)))
+            {
+                Log.LogError("Sandboxed facade generation requires a separate output source path.");
+                return false;
+            }
+
+            if (!ValidateDeclaredFiles(inputPaths, new[] { OutputSourcePath }))
             {
                 return false;
             }
@@ -58,7 +68,8 @@ public class GenPartialFacadeSource : RoslynBuildTask
                 IgnoreMissingTypes,
                 IgnoreMissingTypesList,
                 OmitTypes,
-                SeedTypePreferences);
+                SeedTypePreferences,
+                TaskEnvironment);
         }
         catch (Exception e)
         {
@@ -67,4 +78,7 @@ public class GenPartialFacadeSource : RoslynBuildTask
 
         return result && !Log.HasLoggedErrors;
     }
+
+    private static StringComparer PathComparer =>
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 }

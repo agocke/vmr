@@ -8,7 +8,7 @@ using Task = Microsoft.Build.Utilities.Task;
 
 namespace Microsoft.NET.Build.Tasks;
 
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildMultiThreadableTask]
 public sealed class GenerateSatelliteAssemblySource : Task, IMultiThreadableTask
 {
@@ -55,7 +55,7 @@ public sealed class GenerateSatelliteAssemblySource : Task, IMultiThreadableTask
             BuildEngine = BuildEngine,
             AssemblyAttributes = attributes.ToArray(),
             Language = "C#",
-            OutputFile = new TaskItem(TaskEnvironment.GetAbsolutePath(OutputFile).Value)
+            OutputFile = new TaskItem(TaskEnvironment.GetOutputPath(OutputFile).Value)
         };
 
         return writer.Execute();

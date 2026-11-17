@@ -11,9 +11,11 @@ namespace ILLink.Tasks
     /// <summary>
     /// Combines multiple ILLink xml files into a single xml file.
     /// </summary>
-    [MSBuildDeclaredIOTask]
-    public class CombineLinkerXmlFiles : Task
+    [MSBuildDeclaredIOTask(SandboxVersion = 1)]
+    public class CombineLinkerXmlFiles : Task, IMultiThreadableTask
     {
+        public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+
         /// <summary>
         /// The individual ILLink xml files that will be combined into one.
         /// </summary>
@@ -35,7 +37,10 @@ namespace ILLink.Tasks
             var combined = new XElement("linker");
             foreach (var linkerXmlFile in LinkerXmlFiles)
             {
-                XDocument subFile = XDocument.Load(linkerXmlFile.ItemSpec);
+                string path = TaskEnvironment.IsSandboxed
+                    ? TaskEnvironment.GetInputPath(linkerXmlFile.ItemSpec).Value
+                    : linkerXmlFile.ItemSpec;
+                XDocument subFile = XDocument.Load(path);
 
                 foreach (var element in subFile.Root.Elements())
                 {
@@ -51,7 +56,10 @@ namespace ILLink.Tasks
                 OmitXmlDeclaration = true
             };
 
-            using (XmlWriter xw = XmlWriter.Create(CombinedLinkerXmlFile, xws))
+            string outputPath = TaskEnvironment.IsSandboxed
+                ? TaskEnvironment.GetOutputPath(CombinedLinkerXmlFile).Value
+                : CombinedLinkerXmlFile;
+            using (XmlWriter xw = XmlWriter.Create(outputPath, xws))
             {
                 xdoc.Save(xw);
             }

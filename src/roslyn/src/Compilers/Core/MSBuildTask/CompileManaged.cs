@@ -16,7 +16,7 @@ namespace Microsoft.CodeAnalysis.BuildTasks;
 /// <summary>
 /// Executes a prepared managed compiler invocation with an explicit compiler and runtime host.
 /// </summary>
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildMultiThreadableTask]
 public sealed class CompileManaged : SandboxedToolTask
 {
@@ -91,7 +91,7 @@ public sealed class CompileManaged : SandboxedToolTask
             Log.LogErrorFromResources("CompileCsc.ExplicitToolInputs");
             return false;
         }
-        if (UseSandbox && (string.IsNullOrEmpty(SandboxArguments) || ArgumentPaths.Length == 0 ||
+        if ((UseSandbox || IsSandboxed) && (string.IsNullOrEmpty(SandboxArguments) || ArgumentPaths.Length == 0 ||
             ArgumentPaths.Any(item => item.GetMetadata("Role") is not ("Input" or "Output") ||
                 !SandboxArguments.Contains("\"" + item.GetMetadata("Token") + "\""))))
         {

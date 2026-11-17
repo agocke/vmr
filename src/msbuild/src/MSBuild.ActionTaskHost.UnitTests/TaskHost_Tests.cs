@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Resources;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Build.Framework;
@@ -96,6 +97,147 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
 
         File.ReadAllText(destination).ShouldBe("copied contents");
         File.ReadAllText(input).ShouldBe("copied contents");
+        Directory.GetDirectories(directory, "msbuild-stage-*").ShouldBeEmpty();
+    }
+
+    [LinuxOnlyTheory]
+    [InlineData("resources")]
+    [InlineData("attributes")]
+    [InlineData("xslt")]
+    public void StagesCoreFileTasksWithoutRewritingContents(string kind)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string source = env.CreateFile(Path.Combine(directory, "source.xml"),
+            "<root><data name=\"Message\"><value>hello</value></data></root>").Path;
+        string destination = Path.Combine(directory, "result." + (kind == "resources" ? "resources" : "txt"));
+        Type type;
+        Dictionary<string, object?> parameters = new()
+        {
+            ["DeclaredInputs"] = Array.Empty<string>(),
+            ["DeclaredOutputs"] = new[] { destination },
+        };
+        if (kind == "resources")
+        {
+            string resx = env.CreateFile(Path.Combine(directory, "source.resx"), File.ReadAllText(source)).Path;
+            type = typeof(CompileResources);
+            parameters["SourceFile"] = resx;
+            parameters["OutputFile"] = destination;
+            parameters["DeclaredInputs"] = new[] { resx };
+        }
+        else if (kind == "attributes")
+        {
+            type = typeof(WriteCodeFragment);
+            parameters["Language"] = "C#";
+            parameters["OutputFile"] = destination;
+            parameters["AssemblyAttributes"] = new[]
+            {
+                new { itemSpec = "System.Reflection.AssemblyMetadataAttribute", metadata = new { _Parameter1 = "logical", _Parameter2 = source } },
+            };
+        }
+        else
+        {
+            string stylesheet = env.CreateFile(Path.Combine(directory, "style.xsl"),
+                "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">" +
+                "<xsl:param name=\"logical\"/><xsl:output method=\"text\"/>" +
+                "<xsl:template match=\"/\"><xsl:value-of select=\"$logical\"/></xsl:template></xsl:stylesheet>").Path;
+            type = typeof(XslTransformation);
+            parameters["XmlInputPaths"] = new[] { source };
+            parameters["XslInputPath"] = stylesheet;
+            parameters["OutputPaths"] = new[] { destination };
+            parameters["Parameters"] = "<Parameter Name=\"logical\" Value=\"" + source + "\"/>";
+            parameters["ProhibitDtd"] = true;
+            parameters["DeclaredInputs"] = new[] { source, stylesheet };
+        }
+
+        string manifest = WriteInvocation(directory, type, parameters, new() { ["TMPDIR"] = directory });
+        Run(manifest, out string log).ShouldBeTrue(log);
+
+        if (kind == "resources")
+        {
+            using ResourceReader reader = new(destination);
+            IDictionaryEnumerator entries = reader.GetEnumerator();
+            entries.MoveNext().ShouldBeTrue();
+            entries.Key.ShouldBe("Message");
+            entries.Value.ShouldBe("hello");
+            entries.MoveNext().ShouldBeFalse();
+        }
+        else
+        {
+            string text = File.ReadAllText(destination);
+            System.Text.RegularExpressions.Regex.Replace(text, "\"\\s*\\+\\s*\"", string.Empty).ShouldContain(source);
+            File.ReadAllText(destination).ShouldNotContain("msbuild-stage-");
+        }
+
+        Directory.GetDirectories(directory, "msbuild-stage-*").ShouldBeEmpty();
+    }
+
+    [LinuxOnlyTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ToolTasksUseHostStagingWithoutNesting(bool useSandbox)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string script = env.CreateFile(Path.Combine(directory, "probe.sh"),
+            "IFS= read -r line < \"$2\"\nprintf '%s\\n%s\\n%s\\n' \"$line\" \"$PWD\" \"$TMPDIR\" > \"$1\"\n").Path;
+        string destination = Path.Combine(directory, "result.txt");
+        string manifest = WriteInvocation(directory, typeof(HostedToolProbe), new()
+        {
+            ["Script"] = script,
+            ["Destination"] = destination,
+            ["UseSandbox"] = useSandbox,
+            ["DeclaredInputs"] = new[] { "/bin/sh", script },
+            ["DeclaredOutputs"] = new[] { destination },
+        }, new() { ["TMPDIR"] = directory });
+
+        Run(manifest, out string log).ShouldBeTrue(log);
+
+        string[] lines = File.ReadAllLines(destination);
+        lines[0].ShouldBe("literal response contents");
+        lines[1].ShouldEndWith("/execroot/root" + directory);
+        lines[2].ShouldEndWith("/scratch");
+        lines[2].Split("msbuild-stage-").Length.ShouldBe(2);
+        Directory.GetDirectories(directory, "msbuild-stage-*").ShouldBeEmpty();
+    }
+
+    [LinuxOnlyTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FinalizesGeneratedDyndepBeforePublishingAnyOutput(bool malformed)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string root = Path.Combine(directory, "generated");
+        string archive = env.CreateFile(root + ".tree.zip", "previous archive").Path;
+        string dyndep = env.CreateFile(root + ".tree.dd", "previous dyndep").Path;
+        string manifest = WriteInvocation(directory, typeof(Microsoft.CodeAnalysis.BuildTasks.CompileManaged), new()
+        {
+            ["Malformed"] = malformed,
+            ["DeclaredInputs"] = Array.Empty<string>(),
+            ["DeclaredOutputs"] = new[] { archive, dyndep },
+            ["DeclaredOutputTrees"] = new[]
+            {
+                new { itemSpec = root, metadata = new { ArchiveFile = archive, DyndepFile = dyndep, ReceiptFile = root + ".tree.json" } },
+            },
+        }, new() { ["TMPDIR"] = directory });
+
+        Run(manifest, out _).ShouldBe(!malformed);
+
+        if (malformed)
+        {
+            File.ReadAllText(archive).ShouldBe("previous archive");
+            File.ReadAllText(dyndep).ShouldBe("previous dyndep");
+        }
+        else
+        {
+            using var zip = System.IO.Compression.ZipFile.OpenRead(archive);
+            zip.Entries.Single().FullName.ShouldBe("nested/Generated.cs");
+            File.ReadAllText(dyndep).ShouldContain(root + "/nested/Generated.cs");
+            File.ReadAllText(dyndep).ShouldNotContain("msbuild-stage-");
+        }
+
+        Directory.Exists(root).ShouldBeFalse();
         Directory.GetDirectories(directory, "msbuild-stage-*").ShouldBeEmpty();
     }
 
@@ -680,4 +822,28 @@ public sealed class UnmigratedTask : Utilities.Task
     public UnmigratedTask() => throw new InvalidOperationException("unmigrated-constructor-executed");
 
     public override bool Execute() => throw new InvalidOperationException("unmigrated-task-executed");
+}
+
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
+public sealed class HostedToolProbe : Utilities.SandboxedToolTask
+{
+    [Required]
+    public string Script { get; set; } = string.Empty;
+
+    [Required]
+    public string Destination { get; set; } = string.Empty;
+
+    protected override string ToolName => "sh";
+    protected override string GenerateFullPathToTool() => MapInputPath("/bin/sh");
+    protected override System.Text.Encoding ResponseFileEncoding => new System.Text.UTF8Encoding(false);
+    protected override string GenerateResponseFileCommands() => "literal response contents\n";
+    protected override string GetResponseFileSwitch(string responseFilePath) => "\"" + responseFilePath + "\"";
+
+    protected override string GenerateCommandLineCommands()
+    {
+        Utilities.CommandLineBuilder command = new();
+        command.AppendFileNameIfNotNull(MapInputPath(Script));
+        command.AppendFileNameIfNotNull(MapOutputPath(Destination));
+        return command.ToString();
+    }
 }

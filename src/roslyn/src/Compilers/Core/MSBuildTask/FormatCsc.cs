@@ -62,7 +62,7 @@ public sealed class FormatCsc : Csc
         PathMappings = invocation.PathMappings;
         SandboxArguments = "";
         ArgumentPaths = Array.Empty<ITaskItem>();
-        if (UseSandbox)
+        if (UseSandbox || System.IO.Path.DirectorySeparatorChar == '/')
         {
             SandboxArguments = invocation.FormatSandboxArguments(CompilerArguments, GenerateResponseFileContents);
             ArgumentPaths = invocation.ArgumentPaths;

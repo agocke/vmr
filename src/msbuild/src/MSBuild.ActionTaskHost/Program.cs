@@ -93,10 +93,6 @@ internal static class Program
             Dictionary<string, object> parameters = TaskParameterBinder.Bind(task, invocation.Parameters, invocation.Version == 2);
             IReadOnlyList<string> outputs = ActionExecution.ValidateFootprint(taskType, parameters);
             GeneratedSourceTree[] trees = GeneratedSourceTree.Read(taskType, parameters);
-            if (trees.Length != 0)
-            {
-                throw new NotSupportedException(HostResources.Format("UnsupportedSandboxContract", taskType.FullName));
-            }
 
             if (materializeRoot is not null)
             {
@@ -114,7 +110,7 @@ internal static class Program
             {
                 foreach (GeneratedSourceTree tree in trees)
                 {
-                    tree.WriteDyndep();
+                    tree.WriteDyndep(environment);
                 }
             });
         }

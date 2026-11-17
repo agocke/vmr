@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.GenFacades;
 /// <summary>
 /// The class generates an NotSupportedAssembly from the reference sources.
 /// </summary>
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 public class NotSupportedAssemblyGenerator : RoslynBuildTask
 {
     [Required]
@@ -56,9 +56,9 @@ public class NotSupportedAssemblyGenerator : RoslynBuildTask
     private void GenerateNotSupportedAssemblyFiles(IEnumerable<ITaskItem> sourceFiles)
     {
         string[] apiExclusions = null;
-        if (!string.IsNullOrEmpty(ApiExclusionListPath) && File.Exists(ApiExclusionListPath))
+        if (!string.IsNullOrEmpty(ApiExclusionListPath) && File.Exists(TaskEnvironment.GetInputPath(ApiExclusionListPath)))
         {
-            apiExclusions = File.ReadAllLines(ApiExclusionListPath);
+            apiExclusions = File.ReadAllLines(TaskEnvironment.GetInputPath(ApiExclusionListPath));
         }
 
         foreach (ITaskItem item in sourceFiles)
@@ -66,17 +66,33 @@ public class NotSupportedAssemblyGenerator : RoslynBuildTask
             string sourceFile = item.ItemSpec;
             string outputPath = item.GetMetadata("OutputPath");
 
-            if (!File.Exists(sourceFile))
+            if (!File.Exists(TaskEnvironment.GetInputPath(sourceFile)))
             {
                 Log.LogError($"File {sourceFile} was not found.");
                 continue;
             }
 
-            GenerateNotSupportedAssemblyForSourceFile(sourceFile, outputPath, apiExclusions);
+            string logicalOutputPath = TaskEnvironment.GetAbsolutePath(outputPath).GetCanonicalForm().Value;
+            if (TaskEnvironment.IsSandboxed
+                && PathComparer.Equals(
+                    TaskEnvironment.GetAbsolutePath(sourceFile).GetCanonicalForm().Value,
+                    logicalOutputPath))
+            {
+                Log.LogError($"Sandboxed source generation requires a separate output path for '{sourceFile}'.");
+                continue;
+            }
+
+            GenerateNotSupportedAssemblyForSourceFile(
+                TaskEnvironment.GetInputPath(sourceFile),
+                TaskEnvironment.GetOutputPath(outputPath),
+                apiExclusions);
         }
     }
 
-    private void GenerateNotSupportedAssemblyForSourceFile(string sourceFile, string outputPath, string[] apiExclusions)
+    private void GenerateNotSupportedAssemblyForSourceFile(
+        string sourceFile,
+        string outputPath,
+        string[] apiExclusions)
     {
         SyntaxTree syntaxTree;
 
@@ -101,6 +117,9 @@ public class NotSupportedAssemblyGenerator : RoslynBuildTask
         string text = root.GetText().ToString();
         File.WriteAllText(outputPath, text);
     }
+
+    private static StringComparer PathComparer =>
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 }
 
 internal class NotSupportedAssemblyRewriter : CSharpSyntaxRewriter

@@ -276,7 +276,7 @@ namespace Microsoft.NET.Build.Tasks
         protected void WriteDependencyContext(DependencyContext dependencyContext, AbsolutePath depsFilePath)
         {
             var writer = new DependencyContextWriter();
-            using (var fileStream = File.Create(depsFilePath))
+            using (var fileStream = File.Create(TaskEnvironment.GetOutputPath(depsFilePath.Value)))
             {
                 writer.Write(dependencyContext, fileStream);
             }

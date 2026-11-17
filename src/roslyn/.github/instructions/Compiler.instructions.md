@@ -115,24 +115,30 @@ Compiler tasks are in `src/Compilers/Core/MSBuildTask/`:
   and path mappings without another compiler inheritance layer. VB requires an
   explicit runtime path, `None`/`Embed`, or `NoVBRuntimeReference`; implicit runtime
   and SDK-directory searches are rejected. Keep ordinary Csc/Vbc behavior unchanged.
-- `MSBuildSandboxToolTasks=true` opts `CompileManaged` into source Utilities'
-  `SandboxedToolTask` on modern .NET/Linux. Formatters regenerate response
-  templates from typed properties with explicit input/output bindings; never
-  replace original path strings in opaque switches, resource names or file
-  contents. Map executable/compiler paths, cwd and stable path maps, with private
+- On modern .NET/Linux, the action host stages every admitted `CompileManaged`
+  action, independently of `MSBuildSandboxToolTasks`. Source Utilities'
+  `SandboxedToolTask` reuses that context without nesting staging; its standalone
+  opt-in mode remains available. Formatters always regenerate response
+  templates on the supported execution platform from typed properties with
+  explicit input/output bindings; never replace original path strings in opaque
+  switches, resource names or file contents. Map executable/compiler paths, cwd
+  and stable path maps, with private
   response/temp scratch and validated file publication. Analyzer configs are
   ordinary opaque input files: map their command-line paths without inspecting
   or rewriting contents. Config producers must adapt raw-path dependencies.
   Staged C# generated trees reuse archive/materializer publication: map only the
   physical archive output, retain `/generatedfilesout` as a logical namespace,
   and map generated logical paths as well as staged source paths to stable
-  aliases. The host writes dyndep after task success; exclude that sidecar from
+  aliases. The host writes dyndep after task success, before publishing any
+  declared output; exclude that sidecar from
   `GetToolOutputs`, not from the declared graph footprint. VB archive mode is
   unsupported. Symlink staging is not filesystem/network confinement or
   read-only input enforcement. Compiler-task builds require source Utilities'
-  `netstandard2.0` assembly first (`GenBuildMSBuildUtilitiesAssembly` overrides
-  its path); genbuild's component pipeline supplies it. The standalone app ships
-  the modern implementation rather than the compile-time compatibility binary.
+  `netstandard2.0` assembly and source Framework contract first
+  (`GenBuildMSBuildUtilitiesAssembly` and `GenBuildMSBuildFrameworkAssembly`
+  override their paths); genbuild's component pipeline supplies them. The
+  standalone app ships the modern implementation rather than the compile-time
+  compatibility binary.
 - Hardened `EmitCompilerGeneratedFiles` declares one compiler-owned output tree.
   The source-built C# compiler's archive mode redirects physical writes only;
   preserve `/generatedfilesout` logical paths, analyzer-config matching and PDB

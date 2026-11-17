@@ -1,4 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <PropertyGroup>
+    <TargetFramework Condition="'$(TargetFramework)' == ''">net11.0</TargetFramework>
+    <BaseOutputPath Condition="'$(GenBuildArcadeArtifactsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(GenBuildArcadeArtifactsDirectory)', 'genfacades', 'bin'))</BaseOutputPath>
+    <BaseIntermediateOutputPath Condition="'$(GenBuildArcadeArtifactsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(GenBuildArcadeArtifactsDirectory)', 'genfacades', 'obj'))</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
   <PropertyGroup>
     <AssemblyName>Microsoft.DotNet.GenFacades</AssemblyName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
@@ -12,11 +19,15 @@
     <_GenFacadesSource>$(MSBuildThisFileDirectory)../../../src/arcade/src/Microsoft.DotNet.GenFacades/</_GenFacadesSource>
     <_Engine>$(MSBuildThisFileDirectory)../../../src/msbuild/artifacts/bin/MSBuild/$(Configuration)/net11.0/</_Engine>
     <_Compiler>$(MSBuildThisFileDirectory)../../../src/roslyn/artifacts/bin/csc/$(Configuration)/net10.0/</_Compiler>
+    <_MSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' == ''">$(_Engine)Microsoft.Build.Utilities.Core.dll</_MSBuildUtilitiesAssembly>
+    <_MSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' != ''">$(GenBuildMSBuildUtilitiesAssembly)</_MSBuildUtilitiesAssembly>
+    <_MSBuildFrameworkAssembly Condition="'$(GenBuildMSBuildFrameworkAssembly)' != ''">$(GenBuildMSBuildFrameworkAssembly)</_MSBuildFrameworkAssembly>
+    <_MSBuildFrameworkAssembly Condition="'$(GenBuildMSBuildFrameworkAssembly)' == ''">$([System.IO.Path]::GetDirectoryName('$(_MSBuildUtilitiesAssembly)'))/Microsoft.Build.Framework.dll</_MSBuildFrameworkAssembly>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(_GenFacadesSource)*.cs" Exclude="$(_GenFacadesSource)MSBuildDeclaredIOTaskAttribute.cs" />
-    <Reference Include="Microsoft.Build.Framework" HintPath="$(_Engine)Microsoft.Build.Framework.dll" Private="false" />
-    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(_Engine)Microsoft.Build.Utilities.Core.dll" Private="false" />
+    <Reference Include="Microsoft.Build.Framework" HintPath="$(_MSBuildFrameworkAssembly)" Private="false" />
+    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(_MSBuildUtilitiesAssembly)" Private="false" />
     <Reference Include="Microsoft.CodeAnalysis" HintPath="$(_Compiler)Microsoft.CodeAnalysis.dll" Private="false" />
     <Reference Include="Microsoft.CodeAnalysis.CSharp" HintPath="$(_Compiler)Microsoft.CodeAnalysis.CSharp.dll" Private="false" />
     <None Include="$(_GenFacadesSource)build/**/*" Pack="true" PackagePath="build/%(RecursiveDir)%(Filename)%(Extension)" />
@@ -26,4 +37,5 @@
       <TfmSpecificPackageFile Include="$(TargetDir)**/*" PackagePath="tools/net/%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
   </Target>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

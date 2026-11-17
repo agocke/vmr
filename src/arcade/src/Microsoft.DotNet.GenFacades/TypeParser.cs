@@ -4,6 +4,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.Build.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +14,8 @@ namespace Microsoft.DotNet.GenFacades;
 
 internal class TypeParser
 {
-    public static HashSet<string> GetAllPublicTypes(IEnumerable<string> files, IEnumerable<string> constants, string langVersion)
+    public static HashSet<string> GetAllPublicTypes(
+        IEnumerable<string> files, IEnumerable<string> constants, string langVersion, TaskEnvironment taskEnvironment)
     {
         HashSet<string> types = new HashSet<string>();
 
@@ -23,7 +25,7 @@ internal class TypeParser
             throw new ArgumentException($"Invalid C# language version value '{langVersion}'", nameof(langVersion));
         }
 
-        var syntaxTreeCollection = GetSourceTrees(files, constants, languageVersion);
+        var syntaxTreeCollection = GetSourceTrees(files, constants, languageVersion, taskEnvironment);
 
         foreach (var tree in syntaxTreeCollection)
         {
@@ -130,7 +132,11 @@ internal class TypeParser
         return namespaceSyntax.Name.ToFullString().Trim();
     }
 
-    private static IEnumerable<SyntaxTree> GetSourceTrees(IEnumerable<string> sourceFiles, IEnumerable<string> constants, LanguageVersion languageVersion)
+    private static IEnumerable<SyntaxTree> GetSourceTrees(
+        IEnumerable<string> sourceFiles,
+        IEnumerable<string> constants,
+        LanguageVersion languageVersion,
+        TaskEnvironment taskEnvironment)
     {
         CSharpParseOptions options = new CSharpParseOptions(languageVersion: languageVersion, preprocessorSymbols: constants);
         List<SyntaxTree> result = new List<SyntaxTree>();
@@ -140,11 +146,12 @@ internal class TypeParser
             {
                 continue;
             }
-            if (!File.Exists(sourceFile))
+            AbsolutePath inputPath = taskEnvironment.GetInputPath(sourceFile);
+            if (!File.Exists(inputPath))
             {
                 throw new FileNotFoundException($"File {sourceFile} was not found.");
             }
-            SyntaxTree tree = CSharpSyntaxTree.ParseText(File.ReadAllText(sourceFile), options);
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(File.ReadAllText(inputPath), options);
             result.Add(tree);
         }
         return result;

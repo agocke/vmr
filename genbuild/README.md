@@ -25,11 +25,12 @@ SDK, templates, workloads, or a runtime.
 
 `genbuild.proj` is the complete build entry point. `genbuild.csproj` only compiles
 the CLI; building that project alone does not assemble its toolset.
-The compiler tasks now reference source-built MSBuild Utilities for
-`SandboxedToolTask`. The component pipeline builds its `netstandard2.0`
-compile-time assembly first and ships the modern implementation. Building the
-Roslyn task project separately requires that component first, or an explicit
-`GenBuildMSBuildUtilitiesAssembly` path; the cached Utilities package is insufficient.
+The compiler tasks reference source-built MSBuild Framework and Utilities for
+the task environment and `SandboxedToolTask`. The component pipeline builds
+their `netstandard2.0` compile-time contracts first and ships the modern
+implementations. Building the Roslyn task project separately requires those
+components first, or explicit `GenBuildMSBuildFrameworkAssembly` and
+`GenBuildMSBuildUtilitiesAssembly` paths; cached packages are insufficient.
 
 After the initial component build, reassemble without rebuilding components:
 
@@ -44,6 +45,16 @@ still exercise their intentional Debug/Release configuration cases. If necessary
 paths to `dotnet` and its SDK directory, respectively.
 After Utilities changes, rebuild both MSBuild and the action-host component
 before skipping component builds: each ships its own Utilities copy.
+
+For isolated builds, `GenBuildOutputDirectory` selects the assembled app;
+`GenBuildAppArtifactsDirectory` routes CLI/toolset intermediates and their NuGet
+project outputs, and `GenBuildNativeHostArtifactsDirectory` routes native-host
+intermediates. The `GenBuildMSBuildArtifactsDirectory`,
+`GenBuildRoslynArtifactsDirectory`, `GenBuildSdkArtifactsDirectory`,
+`GenBuildSourceLinkArtifactsDirectory` and `GenBuildArcadeArtifactsDirectory`
+properties select component build and assembly roots. Standalone Arcade's
+NuGet project references use `GenBuildArcadeNuGetArtifactsDirectory`.
+Changing only the final app directory does not isolate component builds.
 
 For performance measurements, use Release for both the toolchain and the target
 projects, with matching `-p:Configuration=Release` in Restore and Build. Prepare
@@ -169,21 +180,39 @@ results. At actual file-access boundaries, task implementations use
 declarations and supplies physical execution-root paths. Ordinary MSBuild
 execution resolves these APIs to the original absolute paths.
 
-The first migration covers `CopyFiles` and `WriteLinesToFile`, including the
-native host's shared execution path. It requires
+The common contract requires
 `MSBuildDeclaredIOTask(SandboxVersion = 1)` and `IMultiThreadableTask`; the managed
 host rejects unmigrated contracts before constructing tasks, without an
-unstaged fallback. Staged `WriteLinesToFile` requires `Overwrite=true` and
+unstaged fallback. Zero-I/O construction selectors still need their explicit
+DeclaredIO markers; they are not execution-host actions and do not require the
+staging version. Staged `WriteLinesToFile` requires `Overwrite=true` and
 `FailIfNotIncremental=false`: an old output is not an implicit input. Path-shaped
 line contents remain unchanged. The host owns private cwd/temp, validates
 outputs before publication, and cleans staging on success and failure.
 
-**Migration is incomplete.** Compiler adapters, generated-tree finalization and
-the other runtime task types are not yet admitted by this newer host. The full
-managed-libraries results below use the frozen, earlier compiler-only toolset,
-not universal host staging. Do not replace its host with this one and expect
-the full profile to execute. Symlink staging is not filesystem/network
-confinement or read-only input enforcement.
+Compiler tools reuse this host context rather than nesting another sandbox.
+On the supported Linux execution platform, formatters emit typed argument
+bindings even without `MSBuildSandboxToolTasks=true`. Structural directory
+operands use `TaskEnvironment.GetExecutionDirectory`; this does not stage a
+directory tree or authorize member discovery. The host finalizes compiler
+archive/dyndep outputs inside staging before publishing any declared file.
+Generated-source materialization remains separately ownership checked.
+
+**The full staged successful-content-read audit passes.** A fresh cold
+managed-libraries build completes all 5,321 execution steps at eight jobs across
+24 task types, including 500 compilers without compiler staging opt-in. The
+complete trace has zero undeclared successful content reads, unresolved events,
+incomplete records, directory-catalog mismatches or staging violations; all
+614 response-file reads have lifecycle proofs. Outputs and tree ownership
+validate, the no-work check passes, and frozen inputs/products remain unchanged.
+The auditor uses duration-backed shared-file-descriptor lifetimes; the earlier
+capture lacking that evidence remains rejected, not waived. Metadata and
+negative probes remain reported but are not strict admission failures. Runtime
+and platform access uses the explicitly reviewed execution-image contract.
+The earlier measurements below use the frozen compiler-only toolset, not
+universal host staging.
+Symlink staging is not filesystem/network confinement or read-only input
+enforcement.
 
 ## Opt-in staged compiler execution
 

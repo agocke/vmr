@@ -1,5 +1,26 @@
 <Project>
 
+  <Target Name="UseGenBuildMSBuildFramework"
+          BeforeTargets="ResolveAssemblyReferences"
+          DependsOnTargets="ResolvePackageAssets"
+          Condition="'$(GenBuildMSBuildFrameworkAssembly)' != ''
+                     and ('$(MSBuildProjectName)' == 'Microsoft.NET.Build.Tasks'
+                          or '$(MSBuildProjectName)' == 'Microsoft.DotNet.ApiCompat.Task'
+                          or '$(MSBuildProjectName)' == 'Microsoft.NET.Build.Tasks.Tests'
+                          or '$(MSBuildProjectName)' == 'Microsoft.DotNet.ApiCompat.Tests')">
+    <Error Condition="!Exists('$(GenBuildMSBuildFrameworkAssembly)')"
+           Text="GenBuildMSBuildFrameworkAssembly does not exist: $(GenBuildMSBuildFrameworkAssembly)" />
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Build.Framework'" />
+      <Reference Include="Microsoft.Build.Framework" HintPath="$(GenBuildMSBuildFrameworkAssembly)">
+        <Private Condition="'$(IsTestProject)' == 'true'">true</Private>
+        <Private Condition="'$(IsTestProject)' != 'true'">false</Private>
+      </Reference>
+      <!-- The source Framework provides this attribute; keep the local clone for package-only builds. -->
+      <Compile Remove="@(Compile)" Condition="'%(Compile.Filename)' == 'MSBuildDeclaredIOTaskAttribute'" />
+    </ItemGroup>
+  </Target>
+
   <!-- Apply the MSBuild thread-safe task analyzer to projects that set IsMSBuildTaskProject=true. -->
   <Import Project="eng\MSBuildTaskAuthoringAnalyzer.props" />
 

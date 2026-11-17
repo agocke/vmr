@@ -14,7 +14,7 @@ using Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Arcade.Sdk;
 
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildMultiThreadableTask]
 public sealed class GenerateResxSource : Task, IMultiThreadableTask
 {
@@ -86,6 +86,15 @@ public sealed class GenerateResxSource : Task, IMultiThreadableTask
     }
     public override bool Execute()
     {
+        if (TaskEnvironment.IsSandboxed
+            && PathComparer.Equals(
+                TaskEnvironment.GetAbsolutePath(ResourceFile).GetCanonicalForm().Value,
+                TaskEnvironment.GetAbsolutePath(OutputPath).GetCanonicalForm().Value))
+        {
+            Log.LogError("Sandboxed resource generation requires distinct input and output paths.");
+            return false;
+        }
+
         string namespaceName;
         string className;
 
@@ -118,7 +127,7 @@ public sealed class GenerateResxSource : Task, IMultiThreadableTask
         string memberIndent = classIndent + "    ";
 
         var strings = new StringBuilder();
-        foreach (var node in XDocument.Load(TaskEnvironment.GetAbsolutePath(ResourceFile)).Descendants("data"))
+        foreach (var node in XDocument.Load(TaskEnvironment.GetInputPath(ResourceFile)).Descendants("data"))
         {
             string name = node.Attribute("name")?.Value;
             if (name == null)
@@ -376,9 +385,12 @@ Imports System.Reflection
                 throw new InvalidOperationException();
         }
 
-        File.WriteAllText(TaskEnvironment.GetAbsolutePath(OutputPath), result);
+        File.WriteAllText(TaskEnvironment.GetOutputPath(OutputPath), result);
         return true;
     }
+
+    private static StringComparer PathComparer =>
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     internal static string GetIdentifierFromResourceName(string name)
     {

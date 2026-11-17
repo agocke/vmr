@@ -9,4 +9,6 @@
     <ProjectReference Include="..\..\src\linker\Mono.Linker.csproj" SkipUseReferenceAssembly="true" />
   </ItemGroup>
 
+  <Import Project="..\..\ILLink.Tasks.SourceBuild.targets" />
+
 </Project>

@@ -9,4 +9,8 @@
     <UseAppHost>false</UseAppHost>
     <SelfContained>false</SelfContained>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(GenBuildAppArtifactsDirectory)' != ''">
+    <BaseIntermediateOutputPath>$(GenBuildAppArtifactsDirectory)obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(GenBuildAppArtifactsDirectory)bin/$(MSBuildProjectName)/</BaseOutputPath>
+  </PropertyGroup>
 </Project>

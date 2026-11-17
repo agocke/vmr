@@ -101,9 +101,9 @@ internal sealed class GeneratedSourceTree
         return trees;
     }
 
-    internal void WriteDyndep()
+    internal void WriteDyndep(TaskEnvironment? environment = null)
     {
-        using ZipArchive archive = ZipFile.OpenRead(Archive);
+        using ZipArchive archive = ZipFile.OpenRead(environment is null ? Archive : environment.GetOutputPath(Archive).Value);
         string[] files = Entries(archive).Keys.OrderBy(name => name, StringComparer.Ordinal).ToArray();
         StringBuilder text = new("ninja_dyndep_version = 1\nbuild ");
         text.Append(Escape(Receipt)).Append(" | ").Append(Escape(Root));
@@ -113,7 +113,7 @@ internal sealed class GeneratedSourceTree
         }
 
         text.Append(": dyndep\n");
-        WriteAtomic(Dyndep, Encoding.UTF8.GetBytes(text.ToString()));
+        WriteAtomic(environment is null ? Dyndep : environment.GetOutputPath(Dyndep).Value, Encoding.UTF8.GetBytes(text.ToString()));
     }
 
     internal void Materialize()

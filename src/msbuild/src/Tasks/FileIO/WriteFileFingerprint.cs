@@ -15,7 +15,7 @@ namespace Microsoft.Build.Tasks
     /// <summary>
     /// Writes a deterministic fingerprint of a set of files without exposing a task output.
     /// </summary>
-    [MSBuildDeclaredIOTask]
+    [MSBuildDeclaredIOTask(SandboxVersion = 1)]
     [MSBuildMultiThreadableTask]
     public sealed class WriteFileFingerprint : TaskExtension, ICancelableTask, IMultiThreadableTask
     {
@@ -72,7 +72,8 @@ namespace Microsoft.Build.Tasks
                 foreach (string filePath in filePaths)
                 {
                     currentFile = filePath;
-                    if (!FileUtilities.FileExistsNoThrow(filePath))
+                    AbsolutePath physicalPath = TaskEnvironment.GetInputPath(filePath);
+                    if (!FileUtilities.FileExistsNoThrow(physicalPath))
                     {
                         Log.LogErrorWithCodeFromResources("FileHash.FileNotFound", filePath);
                         return false;
@@ -80,7 +81,7 @@ namespace Microsoft.Build.Tasks
 
                     byte[] fileHash = GetFileHash.ComputeHash(
                         SHA256.Create,
-                        new AbsolutePath(filePath),
+                        physicalPath,
                         _cancellationTokenSource.Token);
                     fingerprintInputs
                         .Append(filePath.Length)

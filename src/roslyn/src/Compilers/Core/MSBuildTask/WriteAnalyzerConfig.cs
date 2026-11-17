@@ -15,7 +15,7 @@ namespace Microsoft.CodeAnalysis.BuildTasks;
 /// Writes exact analyzer configuration text as UTF-8 without a BOM.
 /// Does not read or compare a previous output.
 /// </summary>
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildMultiThreadableTask]
 public sealed class WriteAnalyzerConfig : Task, IMultiThreadableTask
 {
@@ -34,7 +34,7 @@ public sealed class WriteAnalyzerConfig : Task, IMultiThreadableTask
     {
         try
         {
-            var path = TaskEnvironment.GetAbsolutePath(FileName.ItemSpec);
+            var path = TaskEnvironment.GetOutputPath(FileName.ItemSpec);
             var encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
             TaskEnvironment.FileWriteAllText(path, ConfigFileContents, encoding);
             return true;

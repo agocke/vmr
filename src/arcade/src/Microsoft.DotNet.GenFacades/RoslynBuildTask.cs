@@ -12,8 +12,11 @@ using System.Runtime.Loader;
 
 namespace Microsoft.DotNet.Build.Tasks;
 
-public abstract partial class RoslynBuildTask : Task
+public abstract partial class RoslynBuildTask : Task, IMultiThreadableTask
 {
+    /// <summary>Injected by MSBuild so paths resolve against the project directory in multithreaded builds.</summary>
+    public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+
     [Required]
     public string RoslynAssembliesPath { get; set; }
 
@@ -45,20 +48,23 @@ public abstract partial class RoslynBuildTask : Task
         }
 
         StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        var expectedInputs = new HashSet<string>(inputs.Select(Path.GetFullPath), comparer)
+        var expectedInputs = new HashSet<string>(
+            inputs.Select(path => TaskEnvironment.GetAbsolutePath(path).GetCanonicalForm().Value), comparer)
         {
-            Path.GetFullPath(Path.Combine(RoslynAssembliesPath, "Microsoft.CodeAnalysis.dll")),
-            Path.GetFullPath(Path.Combine(RoslynAssembliesPath, "Microsoft.CodeAnalysis.CSharp.dll")),
+            TaskEnvironment.GetAbsolutePath(Path.Combine(RoslynAssembliesPath, "Microsoft.CodeAnalysis.dll")).GetCanonicalForm().Value,
+            TaskEnvironment.GetAbsolutePath(Path.Combine(RoslynAssembliesPath, "Microsoft.CodeAnalysis.CSharp.dll")).GetCanonicalForm().Value,
         };
-        var expectedOutputs = new HashSet<string>(outputs.Select(Path.GetFullPath), comparer);
-        if (DeclaredInputs is null || !expectedInputs.SetEquals(DeclaredInputs.Select(item => Path.GetFullPath(item.ItemSpec))))
+        var expectedOutputs = new HashSet<string>(
+            outputs.Select(path => TaskEnvironment.GetAbsolutePath(path).GetCanonicalForm().Value), comparer);
+        if (DeclaredInputs is null
+            || !expectedInputs.SetEquals(DeclaredInputs.Select(item => TaskEnvironment.GetAbsolutePath(item.ItemSpec).GetCanonicalForm().Value)))
         {
             Log.LogError("DeclaredInputs must contain exactly the source inputs and both Roslyn assemblies.");
             return false;
         }
 
         if (DeclaredOutputs is null || DeclaredOutputs.Length != expectedOutputs.Count
-            || !expectedOutputs.SetEquals(DeclaredOutputs.Select(item => Path.GetFullPath(item.ItemSpec))))
+            || !expectedOutputs.SetEquals(DeclaredOutputs.Select(item => TaskEnvironment.GetAbsolutePath(item.ItemSpec).GetCanonicalForm().Value)))
         {
             Log.LogError("DeclaredOutputs must contain exactly the generated source paths.");
             return false;
@@ -66,7 +72,7 @@ public abstract partial class RoslynBuildTask : Task
 
         foreach (string output in expectedOutputs)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(output));
+            Directory.CreateDirectory(TaskEnvironment.GetExecutionDirectory(Path.GetDirectoryName(output)));
         }
 
         return true;
@@ -83,7 +89,9 @@ public abstract partial class RoslynBuildTask : Task
         const string codeAnalysisCsharpName = "Microsoft.CodeAnalysis.CSharp";
         if (name.Name == codeAnalysisName || name.Name == codeAnalysisCsharpName)
         {
-            Assembly asm = loadFromPath(Path.Combine(RoslynAssembliesPath!, $"{name.Name}.dll"));
+            string assemblyPath = TaskEnvironment.GetInputPath(
+                Path.Combine(RoslynAssembliesPath!, $"{name.Name}.dll"));
+            Assembly asm = loadFromPath(assemblyPath);
             Version resolvedVersion = asm.GetName().Version;
             if (resolvedVersion < name.Version)
             {
@@ -93,8 +101,8 @@ public abstract partial class RoslynBuildTask : Task
             // Being extra defensive but we want to avoid that we accidentally load two different versions of either
             // of the roslyn assemblies from a different location, so let's load them both on the first request.
             Assembly _ = name.Name == codeAnalysisName ?
-                loadFromPath(Path.Combine(RoslynAssembliesPath!, $"{codeAnalysisCsharpName}.dll")) :
-                loadFromPath(Path.Combine(RoslynAssembliesPath!, $"{codeAnalysisName}.dll"));
+                loadFromPath(TaskEnvironment.GetInputPath(Path.Combine(RoslynAssembliesPath!, $"{codeAnalysisCsharpName}.dll"))) :
+                loadFromPath(TaskEnvironment.GetInputPath(Path.Combine(RoslynAssembliesPath!, $"{codeAnalysisName}.dll")));
 
             return asm;
         }

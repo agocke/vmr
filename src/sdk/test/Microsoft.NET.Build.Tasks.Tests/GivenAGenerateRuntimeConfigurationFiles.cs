@@ -116,6 +116,42 @@ namespace Microsoft.NET.Build.Tasks.UnitTests
         }
 
         [TestMethod]
+        public void DeclaredWriterUsesStagedFilesAndPreservesJsonPathLiterals()
+        {
+            string executionDirectory = Path.Combine(_directory, "execution");
+            string stagedAssets = Path.Combine(executionDirectory, "inputs", "assets.json");
+            string stagedTemplate = Path.Combine(executionDirectory, "inputs", "template.json");
+            string stagedOutput = Path.Combine(executionDirectory, "outputs", "app.runtimeconfig.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(stagedAssets)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(stagedOutput)!);
+            File.Move(Path.Combine(_directory, "assets.json"), stagedAssets);
+            File.WriteAllText(stagedTemplate, """{"configProperties":{"path":"relative/../literal/path"}}""");
+
+            string logicalAssets = Path.Combine(_directory, "assets.json");
+            string logicalTemplate = Path.Combine(_directory, "template.json");
+            string logicalOutput = Path.Combine(_directory, "app.runtimeconfig.json");
+            var inputPaths = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [logicalAssets] = stagedAssets,
+                [logicalTemplate] = stagedTemplate
+            };
+            var task = CreateTask();
+            task.TaskEnvironment = TaskEnvironmentHelper.CreateForStagedTest(
+                _directory,
+                executionDirectory,
+                path => inputPaths[path],
+                path => path == logicalOutput ? stagedOutput : throw new InvalidOperationException(path));
+            task.UserRuntimeConfig = "template.json";
+            task.DeclaredInputs = [new TaskItem("assets.json"), new TaskItem("template.json")];
+
+            task.Execute().Should().BeTrue();
+
+            JsonNode.Parse(File.ReadAllText(stagedOutput))!["runtimeOptions"]!["configProperties"]!["path"]!.GetValue<string>()
+                .Should().Be("relative/../literal/path");
+            File.Exists(logicalOutput).Should().BeFalse();
+        }
+
+        [TestMethod]
         public void DeclaredWriterReadsNewAssetsContentsAtUnchangedTimestamp()
         {
             string path = Path.Combine(_directory, "assets.json");

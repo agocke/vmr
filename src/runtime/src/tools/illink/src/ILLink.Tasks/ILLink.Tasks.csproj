@@ -82,4 +82,6 @@
     </ProjectReference>
   </ItemGroup>
 
+  <Import Project="..\..\ILLink.Tasks.SourceBuild.targets" />
+
 </Project>

@@ -27,13 +27,50 @@ public class GenPartialFacadeSourceGenerator
         string[] ignoreMissingTypesList = null,
         string[] OmitTypes = null,
         ITaskItem[] seedTypePreferencesList = null)
+        => ExecuteCore(
+            seeds, contractAssembly, compileFiles, defineConstants, langVersion, outputSourcePath, logger,
+            ignoreMissingTypes, ignoreMissingTypesList, OmitTypes, seedTypePreferencesList, TaskEnvironment.Fallback);
+
+    internal static bool Execute(
+        string[] seeds,
+        string contractAssembly,
+        string[] compileFiles,
+        string defineConstants,
+        string langVersion,
+        string outputSourcePath,
+        TaskLoggingHelper logger,
+        bool ignoreMissingTypes,
+        string[] ignoreMissingTypesList,
+        string[] OmitTypes,
+        ITaskItem[] seedTypePreferencesList,
+        TaskEnvironment taskEnvironment)
+        => ExecuteCore(
+            seeds, contractAssembly, compileFiles, defineConstants, langVersion, outputSourcePath, logger,
+            ignoreMissingTypes, ignoreMissingTypesList, OmitTypes, seedTypePreferencesList, taskEnvironment);
+
+    private static bool ExecuteCore(
+        string[] seeds,
+        string contractAssembly,
+        string[] compileFiles,
+        string defineConstants,
+        string langVersion,
+        string outputSourcePath,
+        TaskLoggingHelper logger,
+        bool ignoreMissingTypes,
+        string[] ignoreMissingTypesList,
+        string[] OmitTypes,
+        ITaskItem[] seedTypePreferencesList,
+        TaskEnvironment taskEnvironment)
     {
         Dictionary<string, string> seedTypePreferences = ParseSeedTypePreferences(seedTypePreferencesList, logger);
 
-        IEnumerable<string> referenceTypes = GetPublicVisibleTypes(contractAssembly, includeTypeForwards: true);
+        IEnumerable<string> referenceTypes = GetPublicVisibleTypes(contractAssembly, taskEnvironment, includeTypeForwards: true);
 
         // Normalizing and Removing Relative Segments from the seed paths.
-        string[] distinctSeeds = seeds.Select(seed => Path.GetFullPath(seed)).Distinct().ToArray();
+        string[] distinctSeeds = seeds
+            .Select(seed => taskEnvironment.GetAbsolutePath(seed).GetCanonicalForm().Value)
+            .Distinct()
+            .ToArray();
         string[] seedNames = distinctSeeds.Select(seed => Path.GetFileName(seed)).ToArray();
 
         if (distinctSeeds.Count() != seedNames.Distinct(StringComparer.InvariantCultureIgnoreCase).Count())
@@ -46,12 +83,13 @@ public class GenPartialFacadeSourceGenerator
             return false;
         }
 
-        IReadOnlyDictionary<string, IList<string>> seedTypes = GenerateTypeTable(distinctSeeds);
+        IReadOnlyDictionary<string, IList<string>> seedTypes = GenerateTypeTable(distinctSeeds, taskEnvironment);
 
         if (OmitTypes != null)
             referenceTypes = referenceTypes.Where(type => !OmitTypes.Contains(type));
 
-        var sourceGenerator = new SourceGenerator(referenceTypes, seedTypes, seedTypePreferences, outputSourcePath, ignoreMissingTypesList, logger);
+        var sourceGenerator = new SourceGenerator(
+            referenceTypes, seedTypes, seedTypePreferences, outputSourcePath, ignoreMissingTypesList, logger, taskEnvironment);
         return sourceGenerator.GenerateSource(compileFiles, ParseDefineConstants(defineConstants), langVersion, ignoreMissingTypes);
     }
 
@@ -92,9 +130,11 @@ public class GenPartialFacadeSourceGenerator
         return dictionary;
     }
 
-    private static IEnumerable<string> GetPublicVisibleTypes(string assembly, bool includeTypeForwards = false)
+    private static IEnumerable<string> GetPublicVisibleTypes(
+        string assembly, TaskEnvironment taskEnvironment, bool includeTypeForwards = false)
     {
-        using (var peReader = new PEReader(new FileStream(assembly, FileMode.Open, FileAccess.Read, FileShare.Delete | FileShare.Read)))
+        using (var peReader = new PEReader(new FileStream(
+            taskEnvironment.GetInputPath(assembly), FileMode.Open, FileAccess.Read, FileShare.Delete | FileShare.Read)))
         {
             if (peReader.HasMetadata)
             {
@@ -139,12 +179,13 @@ public class GenPartialFacadeSourceGenerator
         return (typeDefination.Attributes & TypeAttributes.Public) != 0;
     }
 
-    private static IReadOnlyDictionary<string, IList<string>> GenerateTypeTable(IEnumerable<string> seedAssemblies)
+    private static IReadOnlyDictionary<string, IList<string>> GenerateTypeTable(
+        IEnumerable<string> seedAssemblies, TaskEnvironment taskEnvironment)
     {
         var typeTable = new Dictionary<string, IList<string>>();
         foreach(string assembly in seedAssemblies)
         {                
-            IEnumerable<string> types = GetPublicVisibleTypes(assembly);
+            IEnumerable<string> types = GetPublicVisibleTypes(assembly, taskEnvironment);
             foreach (string type in types)
             {
                 AddTypeToTable(typeTable, type, Path.GetFileName(assembly));

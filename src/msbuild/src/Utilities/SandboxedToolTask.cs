@@ -40,19 +40,26 @@ public abstract class SandboxedToolTask : ToolTask
     public ITaskItem[] DeclaredOutputs { get; set; } = [];
 
     /// <summary>Gets whether a private staging context is active.</summary>
-    protected bool IsSandboxed => _context is not null;
+    protected bool IsSandboxed => _context is not null || TaskEnvironment.IsSandboxed;
 
     /// <summary>Gets the private scratch directory while staging is active.</summary>
-    protected string SandboxTemporaryDirectory => Context.Scratch;
+    protected string SandboxTemporaryDirectory => _context?.Scratch
+        ?? (TaskEnvironment.IsSandboxed ? TaskEnvironment.GetEnvironmentVariable("TMPDIR")! : Context.Scratch);
 
     /// <summary>Maps an exact declared input, or returns the original path when staging is disabled.</summary>
-    protected string MapInputPath(string path) => _context is null ? path : _context.MapFile(path, input: true);
+    protected string MapInputPath(string path) => _context is null
+        ? TaskEnvironment.IsSandboxed ? TaskEnvironment.GetInputPath(path).Value : path
+        : _context.MapFile(path, input: true);
 
     /// <summary>Maps an exact declared output, or returns the original path when staging is disabled.</summary>
-    protected string MapOutputPath(string path) => _context is null ? path : _context.MapFile(path, input: false);
+    protected string MapOutputPath(string path) => _context is null
+        ? TaskEnvironment.IsSandboxed ? TaskEnvironment.GetOutputPath(path).Value : path
+        : _context.MapFile(path, input: false);
 
     /// <summary>Maps a structural directory without discovering files, or returns the original path when disabled.</summary>
-    protected string MapDirectory(string path) => _context is null ? path : _context.MapDirectory(path);
+    protected string MapDirectory(string path) => _context is null
+        ? TaskEnvironment.IsSandboxed ? TaskEnvironment.GetExecutionDirectory(path).Value : path
+        : _context.MapDirectory(path);
 
     /// <summary>Gets the declared files produced by the tool, excluding outputs finalized by the task host.</summary>
     protected virtual ITaskItem[] GetToolOutputs() => DeclaredOutputs;
@@ -62,7 +69,13 @@ public abstract class SandboxedToolTask : ToolTask
     /// <inheritdoc />
     public override bool Execute()
     {
-        if (!UseSandbox)
+        if (TaskEnvironment.IsSandboxed && UseCommandProcessor)
+        {
+            Log.LogError("Staged execution does not support UseCommandProcessor.");
+            return false;
+        }
+
+        if (!UseSandbox || TaskEnvironment.IsSandboxed)
         {
             return base.Execute();
         }
@@ -112,14 +125,14 @@ public abstract class SandboxedToolTask : ToolTask
     /// <inheritdoc />
     protected override int ExecuteTool(string pathToTool, string responseFileCommands, string commandLineCommands)
     {
-        if (_context is null)
+        if (!IsSandboxed)
         {
             return base.ExecuteTool(pathToTool, responseFileCommands, commandLineCommands);
         }
 
         if (!string.IsNullOrEmpty(responseFileCommands))
         {
-            string responseFile = Path.Combine(Context.Scratch, Guid.NewGuid().ToString("N") + ".rsp");
+            string responseFile = Path.Combine(SandboxTemporaryDirectory, Guid.NewGuid().ToString("N") + ".rsp");
             using (var stream = new FileStream(responseFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             using (var writer = new StreamWriter(stream, ResponseFileEncoding))
             {
@@ -136,11 +149,12 @@ public abstract class SandboxedToolTask : ToolTask
     protected override ProcessStartInfo GetProcessStartInfo(string pathToTool, string commandLineCommands, string responseFileSwitch)
     {
         ProcessStartInfo info = base.GetProcessStartInfo(pathToTool, commandLineCommands, responseFileSwitch);
-        if (_context is not null)
+        if (IsSandboxed)
         {
-            info.WorkingDirectory = Context.WorkingDirectory;
+            info.WorkingDirectory = _context?.WorkingDirectory
+                ?? TaskEnvironment.GetExecutionDirectory(TaskEnvironment.ProjectDirectory.Value).Value;
             info.Environment.Clear();
-            foreach (KeyValuePair<string, string> pair in Context.Environment)
+            foreach (KeyValuePair<string, string> pair in _context is null ? TaskEnvironment.GetEnvironmentVariables() : Context.Environment)
             {
                 info.Environment[pair.Key] = pair.Value;
             }
@@ -159,9 +173,9 @@ public abstract class SandboxedToolTask : ToolTask
                 }
             }
 
-            info.Environment["TMPDIR"] = Context.Scratch;
-            info.Environment["TMP"] = Context.Scratch;
-            info.Environment["TEMP"] = Context.Scratch;
+            info.Environment["TMPDIR"] = SandboxTemporaryDirectory;
+            info.Environment["TMP"] = SandboxTemporaryDirectory;
+            info.Environment["TEMP"] = SandboxTemporaryDirectory;
         }
 
         return info;

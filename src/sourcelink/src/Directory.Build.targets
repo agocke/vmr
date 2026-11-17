@@ -3,6 +3,17 @@
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
   <Import Project="$(RepositoryEngineeringDir)BuildTask.targets" Condition="'$(IsBuildTaskProject)' == 'true'" />
 
+  <PropertyGroup Condition="'$(IsBuildTaskProject)' == 'true'">
+    <GenBuildMSBuildFrameworkAssembly Condition="'$(GenBuildMSBuildFrameworkAssembly)' == ''">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../msbuild/artifacts/bin/Microsoft.Build.Framework/$(Configuration)/netstandard2.0/Microsoft.Build.Framework.dll'))</GenBuildMSBuildFrameworkAssembly>
+  </PropertyGroup>
+  <Target Name="UseGenBuildMSBuildFramework" BeforeTargets="ResolveAssemblyReferences" DependsOnTargets="ResolvePackageAssets" Condition="'$(IsBuildTaskProject)' == 'true'">
+    <Error Condition="!Exists('$(GenBuildMSBuildFrameworkAssembly)')" Text="Build the source MSBuild Framework component first, or set GenBuildMSBuildFrameworkAssembly to a reference containing the staged file-access APIs." />
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Build.Framework'" />
+      <Reference Include="Microsoft.Build.Framework" HintPath="$(GenBuildMSBuildFrameworkAssembly)" Private="false" />
+    </ItemGroup>
+  </Target>
+
   <!-- 
     Workaround for https://github.com/Microsoft/msbuild/issues/2527.
   -->

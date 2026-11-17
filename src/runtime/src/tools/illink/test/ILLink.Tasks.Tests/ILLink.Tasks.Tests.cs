@@ -20,6 +20,144 @@ namespace ILLink.Tasks.Tests
     public class TaskArgumentTests
     {
         [Theory]
+        [InlineData(typeof(ILLink))]
+        [InlineData(typeof(CombineLinkerXmlFiles))]
+        [InlineData(typeof(CreateRuntimeRootILLinkDescriptorFile))]
+        public void DeclaredIoTasksUseStagedFileContract(Type taskType)
+        {
+            object attribute = taskType.GetCustomAttributes(inherit: false)
+                .Single(attribute => attribute.GetType().FullName == "Microsoft.Build.Framework.MSBuildDeclaredIOTaskAttribute");
+            PropertyInfo sandboxVersion = attribute.GetType().GetProperty("SandboxVersion");
+
+            Assert.NotNull(sandboxVersion);
+            Assert.Equal(1, (int)sandboxVersion.GetValue(attribute));
+            Assert.Contains(typeof(IMultiThreadableTask), taskType.GetInterfaces());
+        }
+
+        [Fact]
+        public void TypedFileParametersProduceTypedLinkerOptions()
+        {
+            var task = new MockTask
+            {
+                RootDescriptorFiles = new ITaskItem[] { new TaskItem("root.xml") },
+                LinkAttributesFiles = new ITaskItem[] { new TaskItem("attributes.xml") },
+                SubstitutionsFiles = new ITaskItem[] { new TaskItem("substitutions.xml") }
+            };
+
+            string responseFile = task.GetResponseFileCommands();
+
+            Assert.Contains("-x \"root.xml\"", responseFile);
+            Assert.Contains("--link-attributes \"attributes.xml\"", responseFile);
+            Assert.Contains("--substitutions \"substitutions.xml\"", responseFile);
+        }
+
+        [Fact]
+        public void SandboxedILLinkMapsDeclaredPathsAndRejectsFreeFormPaths()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "illink-staged-task-" + Guid.NewGuid());
+            string logicalDirectory = Path.Combine(root, "logical");
+            string stagedInputDirectory = Path.Combine(root, "staged-input");
+            string stagedOutputDirectory = Path.Combine(root, "staged-output");
+            Directory.CreateDirectory(logicalDirectory);
+            Directory.CreateDirectory(stagedInputDirectory);
+            Directory.CreateDirectory(stagedOutputDirectory);
+
+            try
+            {
+                string[] inputs = { "dotnet", "illink.dll", "assembly.dll", "reference.dll", "root.xml", "attributes.xml", "substitutions.xml" };
+                foreach (string input in inputs)
+                {
+                    File.WriteAllText(Path.Combine(logicalDirectory, input), string.Empty);
+                    File.Copy(Path.Combine(logicalDirectory, input), Path.Combine(stagedInputDirectory, input));
+                }
+
+                string logicalOutputDirectory = Path.Combine(logicalDirectory, "output");
+                string logicalOutput = Path.Combine(logicalOutputDirectory, "linked.dll");
+                Directory.CreateDirectory(Path.Combine(stagedOutputDirectory, "output"));
+                string executionDirectory = Path.Combine(root, "execution");
+                var task = new MockTask
+                {
+                    DotNetHostPath = Path.Combine(logicalDirectory, "dotnet"),
+                    ILLinkPath = Path.Combine(logicalDirectory, "illink.dll"),
+                    AssemblyPaths = new ITaskItem[] { new TaskItem(Path.Combine(logicalDirectory, "assembly.dll")) },
+                    ReferenceAssemblyPaths = new ITaskItem[] { new TaskItem(Path.Combine(logicalDirectory, "reference.dll")) },
+                    RootAssemblyNames = new ITaskItem[] { new TaskItem("assembly") },
+                    RootDescriptorFiles = new ITaskItem[] { new TaskItem(Path.Combine(logicalDirectory, "root.xml")) },
+                    LinkAttributesFiles = new ITaskItem[] { new TaskItem(Path.Combine(logicalDirectory, "attributes.xml")) },
+                    SubstitutionsFiles = new ITaskItem[] { new TaskItem(Path.Combine(logicalDirectory, "substitutions.xml")) },
+                    OutputDirectory = new TaskItem(logicalOutputDirectory),
+                    DeclaredInputs = inputs.Select(input => (ITaskItem)new TaskItem(Path.Combine(logicalDirectory, input))).ToArray(),
+                    DeclaredOutputs = new ITaskItem[] { new TaskItem(logicalOutput) },
+                    TaskEnvironment = CreateMappedEnvironment(
+                        root,
+                        path => Path.Combine(stagedInputDirectory, Path.GetRelativePath(logicalDirectory, path)),
+                        path =>
+                        {
+                            if (!string.Equals(Path.GetFullPath(path), Path.GetFullPath(logicalOutput), StringComparison.Ordinal))
+                                throw new InvalidOperationException("Only declared output files may be mapped.");
+
+                            return Path.Combine(stagedOutputDirectory, Path.GetRelativePath(logicalDirectory, path));
+                        },
+                        executionDirectory,
+                        path => string.Equals(Path.GetFullPath(path), Path.GetFullPath(logicalOutputDirectory), StringComparison.Ordinal)
+                            ? Path.Combine(stagedOutputDirectory, "output")
+                            : Path.Combine(executionDirectory, Path.GetFileName(path)))
+                };
+                task.BuildEngine = new MockBuildEngine();
+
+                (string commandLine, string responseFilePath) = task.GenerateSandboxInvocation();
+                string responseFile = File.ReadAllText(responseFilePath);
+
+                Assert.Equal(Path.Combine(stagedInputDirectory, "dotnet"), task.GetFullPathToTool());
+                Assert.Contains(Path.Combine(stagedInputDirectory, "illink.dll"), commandLine);
+                Assert.Contains(Path.Combine(stagedInputDirectory, "assembly.dll"), responseFile);
+                Assert.Contains(Path.Combine(stagedInputDirectory, "reference.dll"), responseFile);
+                Assert.Contains(Path.Combine(stagedInputDirectory, "root.xml"), responseFile);
+                Assert.Contains(Path.Combine(stagedInputDirectory, "attributes.xml"), responseFile);
+                Assert.Contains(Path.Combine(stagedInputDirectory, "substitutions.xml"), responseFile);
+                Assert.Contains(Path.Combine(stagedOutputDirectory, "output"), responseFile);
+                Assert.Contains(Path.Combine(stagedOutputDirectory, "output", "linked.dll"), responseFile);
+                Assert.DoesNotContain(logicalDirectory, responseFile);
+
+                var unsupportedTask = new MockTask
+                {
+                    DotNetHostPath = Path.Combine(logicalDirectory, "dotnet"),
+                    ILLinkPath = Path.Combine(logicalDirectory, "illink.dll"),
+                    DeclaredInputs = Array.Empty<ITaskItem>(),
+                    DeclaredOutputs = Array.Empty<ITaskItem>(),
+                    OutputDirectory = new TaskItem(logicalOutputDirectory),
+                    ExtraArgs = "-x \"unmapped.xml\"",
+                    TaskEnvironment = task.TaskEnvironment
+                };
+                Assert.Throws<ArgumentException>(() => unsupportedTask.GetResponseFileCommands());
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        private static TaskEnvironment CreateMappedEnvironment(
+            string projectDirectory,
+            Func<string, string> inputPath,
+            Func<string, string> outputPath,
+            string executionDirectory,
+            Func<string, string> directoryPath = null)
+        {
+            var environmentVariables = new Dictionary<string, string>();
+            TaskEnvironment environment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(projectDirectory, environmentVariables);
+            MethodInfo setFilePathResolvers = typeof(TaskEnvironment).GetMethod(
+                "SetFilePathResolvers",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(setFilePathResolvers);
+            Func<string, string> defaultDirectoryPath = path => Path.Combine(executionDirectory, Path.GetFileName(path));
+            setFilePathResolvers.Invoke(
+                environment,
+                new object[] { inputPath, outputPath, executionDirectory, directoryPath ?? defaultDirectoryPath });
+            return environment;
+        }
+
+        [Theory]
         [InlineData("-d references")]
         [InlineData("\"-d\" \"references with spaces\"")]
         [InlineData("@inputs.rsp")]

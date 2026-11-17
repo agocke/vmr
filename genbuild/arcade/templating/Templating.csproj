@@ -1,4 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <PropertyGroup>
+    <TargetFramework Condition="'$(TargetFramework)' == ''">net11.0</TargetFramework>
+    <BaseOutputPath Condition="'$(GenBuildArcadeArtifactsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(GenBuildArcadeArtifactsDirectory)', 'templating', 'bin'))</BaseOutputPath>
+    <BaseIntermediateOutputPath Condition="'$(GenBuildArcadeArtifactsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(GenBuildArcadeArtifactsDirectory)', 'templating', 'obj'))</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
   <PropertyGroup>
     <AssemblyName>Microsoft.DotNet.Build.Tasks.Templating</AssemblyName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
@@ -12,12 +19,16 @@
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetTaskPackageFiles</TargetsForTfmSpecificContentInPackage>
     <_TemplatingSource>$(MSBuildThisFileDirectory)../../../src/arcade/src/Microsoft.DotNet.Build.Tasks.Templating/src/</_TemplatingSource>
     <_Engine>$(MSBuildThisFileDirectory)../../../src/msbuild/artifacts/bin/MSBuild/$(Configuration)/net11.0/</_Engine>
+    <_MSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' == ''">$(_Engine)Microsoft.Build.Utilities.Core.dll</_MSBuildUtilitiesAssembly>
+    <_MSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' != ''">$(GenBuildMSBuildUtilitiesAssembly)</_MSBuildUtilitiesAssembly>
+    <_MSBuildFrameworkAssembly Condition="'$(GenBuildMSBuildFrameworkAssembly)' != ''">$(GenBuildMSBuildFrameworkAssembly)</_MSBuildFrameworkAssembly>
+    <_MSBuildFrameworkAssembly Condition="'$(GenBuildMSBuildFrameworkAssembly)' == ''">$([System.IO.Path]::GetDirectoryName('$(_MSBuildUtilitiesAssembly)'))/Microsoft.Build.Framework.dll</_MSBuildFrameworkAssembly>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(_TemplatingSource)*.cs" Exclude="$(_TemplatingSource)MSBuildDeclaredIOTaskAttribute.cs" />
     <Compile Include="$(_TemplatingSource)../../Common/Internal/AbsolutePathExtensions.cs" />
-    <Reference Include="Microsoft.Build.Framework" HintPath="$(_Engine)Microsoft.Build.Framework.dll" Private="false" />
-    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(_Engine)Microsoft.Build.Utilities.Core.dll" Private="false" />
+    <Reference Include="Microsoft.Build.Framework" HintPath="$(_MSBuildFrameworkAssembly)" Private="false" />
+    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(_MSBuildUtilitiesAssembly)" Private="false" />
     <None Include="$(_TemplatingSource)build/**/*" Pack="true" PackagePath="build/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <Target Name="GetTaskPackageFiles">
@@ -25,4 +36,5 @@
       <TfmSpecificPackageFile Include="$(TargetDir)**/*" PackagePath="tools/net/%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
   </Target>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

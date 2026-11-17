@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Build.Utilities;
+using Microsoft.Build.Framework;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,6 +18,7 @@ internal class SourceGenerator
     private readonly string _outputSourcePath;
     private readonly HashSet<string> _ignoreMissingTypesList = new HashSet<string>();
     private readonly TaskLoggingHelper _logger;
+    private readonly TaskEnvironment _taskEnvironment;
 
     public SourceGenerator(
         IEnumerable<string> referenceTypes,
@@ -24,7 +26,8 @@ internal class SourceGenerator
         IReadOnlyDictionary<string, string> seedTypePreferences,
         string outputSourcePath,
         string[] ignoreMissingTypesList,
-        TaskLoggingHelper logger
+        TaskLoggingHelper logger,
+        TaskEnvironment taskEnvironment
         )
     {
         _referenceTypes = referenceTypes;
@@ -32,6 +35,7 @@ internal class SourceGenerator
         _seedTypePreferences = seedTypePreferences;
         _outputSourcePath = outputSourcePath;
         _logger = logger;
+        _taskEnvironment = taskEnvironment;
         _ignoreMissingTypesList = ignoreMissingTypesList != null 
                                     ? new HashSet<string>(ignoreMissingTypesList)
                                     : new HashSet<string>();
@@ -51,7 +55,9 @@ internal class SourceGenerator
 
         bool result = true;
 
-        HashSet<string> existingTypes = compileFiles != null ? TypeParser.GetAllPublicTypes(compileFiles, constants, langVersion) : null;
+        HashSet<string> existingTypes = compileFiles != null
+            ? TypeParser.GetAllPublicTypes(compileFiles, constants, langVersion, _taskEnvironment)
+            : null;
         IEnumerable<string> typesToForward = compileFiles == null ? _referenceTypes : _referenceTypes.Where(id => !existingTypes.Contains(id));
 
         foreach (string type in typesToForward.OrderBy(s => s))
@@ -87,7 +93,11 @@ internal class SourceGenerator
 
         sb.AppendLine("#pragma warning restore CS0618");
         if (result)
-            File.WriteAllText(_outputSourcePath, BuildAliasDeclarations(externAliases) + sb.ToString());
+        {
+            File.WriteAllText(
+                _taskEnvironment.GetOutputPath(_outputSourcePath),
+                BuildAliasDeclarations(externAliases) + sb.ToString());
+        }
 
         return result;
     }

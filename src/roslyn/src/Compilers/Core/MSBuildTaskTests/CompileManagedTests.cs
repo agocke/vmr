@@ -87,8 +87,10 @@ namespace Microsoft.CodeAnalysis.BuildTasks.UnitTests
             }
             Assert.True(compiler.Execute(), ((MockEngine)compiler.BuildEngine).Log);
             Assert.Equal(original, visualBasic ? ((FormatVbc)compiler).CompilerArguments : ((FormatCsc)compiler).CompilerArguments);
-            Assert.Empty(visualBasic ? ((FormatVbc)compiler).SandboxArguments : ((FormatCsc)compiler).SandboxArguments);
-            Assert.Empty(visualBasic ? ((FormatVbc)compiler).ArgumentPaths : ((FormatCsc)compiler).ArgumentPaths);
+            Assert.Equal(template, visualBasic ? ((FormatVbc)compiler).SandboxArguments : ((FormatCsc)compiler).SandboxArguments);
+            Assert.Equal(paths.Select(item => (item.ItemSpec, item.GetMetadata("Role"), item.GetMetadata("Token"))),
+                (visualBasic ? ((FormatVbc)compiler).ArgumentPaths : ((FormatCsc)compiler).ArgumentPaths)
+                    .Select(item => (item.ItemSpec, item.GetMetadata("Role"), item.GetMetadata("Token"))));
             Assert.False(Directory.Exists(directory));
         }
 

@@ -3,6 +3,7 @@
 <Project>
   <PropertyGroup>
     <GenBuildMSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' == ''">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../../../../msbuild/artifacts/bin/Microsoft.Build.Utilities/$(Configuration)/netstandard2.0/Microsoft.Build.Utilities.Core.dll'))</GenBuildMSBuildUtilitiesAssembly>
+    <GenBuildMSBuildFrameworkAssembly Condition="'$(GenBuildMSBuildFrameworkAssembly)' == ''">$([System.IO.Path]::Combine($([System.IO.Path]::GetDirectoryName('$(GenBuildMSBuildUtilitiesAssembly)')), 'Microsoft.Build.Framework.dll'))</GenBuildMSBuildFrameworkAssembly>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="Runtime" />
@@ -13,7 +14,10 @@
   </ItemGroup>
   <Target Name="UseGenBuildMSBuildUtilities" BeforeTargets="ResolveAssemblyReferences" DependsOnTargets="ResolvePackageAssets">
     <Error Condition="!Exists('$(GenBuildMSBuildUtilitiesAssembly)')" Text="Build the source MSBuild Utilities netstandard2.0 component first, or set GenBuildMSBuildUtilitiesAssembly to a reference containing SandboxedToolTask." />
+    <Error Condition="!Exists('$(GenBuildMSBuildFrameworkAssembly)')" Text="Build the source MSBuild Framework component first, or set GenBuildMSBuildFrameworkAssembly to a reference containing the staged file-access APIs." />
     <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Build.Framework'" />
+      <Reference Include="Microsoft.Build.Framework" HintPath="$(GenBuildMSBuildFrameworkAssembly)" Private="false" />
       <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Build.Utilities.Core'" />
       <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(GenBuildMSBuildUtilitiesAssembly)" Private="false" />
     </ItemGroup>

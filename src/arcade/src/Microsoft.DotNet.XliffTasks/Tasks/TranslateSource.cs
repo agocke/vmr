@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Microsoft.Build.Framework;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +10,7 @@ using XliffTasks.Model;
 namespace XliffTasks.Tasks;
 
 [MSBuildMultiThreadableTask]
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 public sealed class TranslateSource : XlfTask
 {
     [Required]
@@ -22,10 +23,23 @@ public sealed class TranslateSource : XlfTask
         string language = XlfFile.GetMetadataOrThrow(MetadataKey.XlfLanguage);
         string translatedFullPath = XlfFile.GetMetadataOrThrow(MetadataKey.XlfTranslatedFullPath);
 
-        AbsolutePath sourceAbsolutePath = TaskEnvironment.GetAbsolutePath(sourcePath);
-        AbsolutePath translatedAbsolutePath = TaskEnvironment.GetAbsolutePath(translatedFullPath);
-        TranslatableDocument sourceDocument = XlfTask.LoadSourceDocument(sourceAbsolutePath, XlfFile.GetMetadata(MetadataKey.XlfSourceFormat));
-        XlfDocument xlfDocument = XlfTask.LoadXlfDocument(TaskEnvironment.GetAbsolutePath(XlfFile.ItemSpec));
+        AbsolutePath logicalSourcePath = TaskEnvironment.GetAbsolutePath(sourcePath);
+        AbsolutePath logicalTranslatedPath = TaskEnvironment.GetAbsolutePath(translatedFullPath);
+        AbsolutePath logicalXlfPath = TaskEnvironment.GetAbsolutePath(XlfFile.ItemSpec);
+        if (TaskEnvironment.IsSandboxed
+            && (PathComparer.Equals(logicalSourcePath.GetCanonicalForm().Value, logicalTranslatedPath.GetCanonicalForm().Value)
+                || PathComparer.Equals(logicalXlfPath.GetCanonicalForm().Value, logicalTranslatedPath.GetCanonicalForm().Value)))
+        {
+            Log.LogError("Sandboxed source translation requires distinct input and output paths.");
+            return;
+        }
+
+        AbsolutePath sourceAbsolutePath = TaskEnvironment.GetInputPath(sourcePath);
+        AbsolutePath translatedAbsolutePath = TaskEnvironment.GetOutputPath(translatedFullPath);
+        TranslatableDocument sourceDocument = XlfTask.LoadSourceDocument(
+            logicalSourcePath, sourceAbsolutePath, XlfFile.GetMetadata(MetadataKey.XlfSourceFormat));
+        XlfDocument xlfDocument = XlfTask.LoadXlfDocument(
+            logicalXlfPath, TaskEnvironment.GetInputPath(XlfFile.ItemSpec));
 
         bool validationFailed = false;
         xlfDocument.Validate(validationError =>
@@ -40,11 +54,13 @@ public sealed class TranslateSource : XlfTask
 
         sourceDocument.Translate(translations);
 
-        Directory.CreateDirectory(Path.GetDirectoryName(translatedAbsolutePath));
+        Directory.CreateDirectory(TaskEnvironment.GetExecutionDirectory(
+            Path.GetDirectoryName(TaskEnvironment.GetAbsolutePath(translatedFullPath))));
 
-        // These paths are written into the translated document, and Path.GetFullPath canonicalized
-        // them before they were embedded.
-        sourceDocument.RewriteRelativePathsToAbsolute(sourceAbsolutePath.GetCanonicalForm());
+        sourceDocument.RewriteRelativePathsToAbsolute(logicalSourcePath.GetCanonicalForm());
         sourceDocument.Save(new FileInfo(translatedAbsolutePath));
     }
+
+    private static StringComparer PathComparer =>
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 }

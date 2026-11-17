@@ -18,6 +18,12 @@ public sealed class SortXlf : XlfTask
 
     protected override void ExecuteCore()
     {
+        if (TaskEnvironment.IsSandboxed)
+        {
+            Log.LogError("SortXlf is not supported in sandboxed execution because it modifies XLF files in place.");
+            return;
+        }
+
         foreach (ITaskItem item in Sources)
         {
             string sourceDocumentPath = item.GetMetadataOrDefault(MetadataKey.SourceDocumentPath, item.ItemSpec);

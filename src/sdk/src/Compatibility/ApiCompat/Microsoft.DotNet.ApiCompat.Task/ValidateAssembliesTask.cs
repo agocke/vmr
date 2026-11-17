@@ -10,10 +10,13 @@ namespace Microsoft.DotNet.ApiCompat.Task
     /// <summary>
     /// ApiCompat's ValidateAssemblies MSBuild frontend.
     /// </summary>
-    [MSBuildDeclaredIOTask]
-    public class ValidateAssembliesTask : TaskBase
+    [MSBuildDeclaredIOTask(SandboxVersion = 1)]
+    [MSBuildMultiThreadableTask]
+    public class ValidateAssembliesTask : TaskBase, IMultiThreadableTask
     {
         // Important: Keep properties exposed in sync with the CLI frontend.
+
+        public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
 
         public ITaskItem[]? DeclaredInputs { get; set; }
         public ITaskItem[]? DeclaredOutputs { get; set; }
@@ -125,7 +128,7 @@ namespace Microsoft.DotNet.ApiCompat.Task
         public override bool Execute()
         {
             ValidateDeclarations();
-            RoslynResolver roslynResolver = RoslynResolver.Register(RoslynAssembliesPath!);
+            RoslynResolver roslynResolver = RoslynResolver.Register(TaskEnvironment.GetExecutionDirectory(RoslynAssembliesPath!).Value);
             try
             {
                 return base.Execute();
@@ -141,50 +144,57 @@ namespace Microsoft.DotNet.ApiCompat.Task
             if (LeftAssemblies is null) throw new ArgumentNullException(nameof(LeftAssemblies));
             if (RightAssemblies is null) throw new ArgumentNullException(nameof(RightAssemblies));
 
+            HashSet<string> referenceDirectories = new(
+                DeclaredReferenceDirectories.Select(item => FullPath(item.ItemSpec)),
+                ApiCompatInputPaths.Comparer);
             SuppressibleMSBuildLog logFactory(ISuppressionEngine suppressionEngine) => new(Log, suppressionEngine, NoWarn);
             ValidateAssemblies.Run(logFactory,
-                new ValidateAssembliesOptions(LeftAssemblies, RightAssemblies)
+                new ValidateAssembliesOptions(MapInputs(LeftAssemblies!), MapInputs(RightAssemblies!))
                 {
                     GenerateSuppressionFile = GenerateSuppressionFile,
                     PreserveUnnecessarySuppressions = PreserveUnnecessarySuppressions,
                     PermitUnnecessarySuppressions = PermitUnnecessarySuppressions,
-                    SuppressionFiles = SuppressionFiles,
-                    SuppressionOutputFile = SuppressionOutputFile,
+                    SuppressionFiles = SuppressionFiles is null ? null : MapInputs(SuppressionFiles),
+                    SuppressionOutputFile = SuppressionOutputFile is null ? null : TaskEnvironment.GetOutputPath(SuppressionOutputFile).Value,
                     NoWarn = NoWarn,
                     RespectInternals = RespectInternals,
                     EnableRuleAttributesMustMatch = EnableRuleAttributesMustMatch,
-                    ExcludeAttributesFiles = ExcludeAttributesFiles,
+                    ExcludeAttributesFiles = ExcludeAttributesFiles is null ? null : MapInputs(ExcludeAttributesFiles),
                     EnableRuleCannotChangeParameterName = EnableRuleCannotChangeParameterName,
                     EnableStrictMode = EnableStrictMode,
-                    LeftAssembliesReferences = ParseAssembliesReferences(LeftAssembliesReferences),
-                    RightAssembliesReferences = ParseAssembliesReferences(RightAssembliesReferences),
+                    LeftAssembliesReferences = MapAssembliesReferences(LeftAssembliesReferences, referenceDirectories),
+                    RightAssembliesReferences = MapAssembliesReferences(RightAssembliesReferences, referenceDirectories),
                     ReferenceFilePaths = DeclaredInputs is null ? null : new HashSet<string>(
-                        DeclaredInputs.Select(item => FullPath(item.ItemSpec)), ApiCompatInputPaths.Comparer),
+                        DeclaredInputs.Select(item => TaskEnvironment.GetInputPath(item.ItemSpec).Value), ApiCompatInputPaths.Comparer),
                     CreateWorkItemPerAssembly = CreateWorkItemPerAssembly,
                     LeftAssembliesTransformationPatterns = ParseTransformationPattern(LeftAssembliesTransformationPattern),
                     RightAssembliesTransformationPatterns = ParseTransformationPattern(RightAssembliesTransformationPattern),
                 });
 
-            if (SemaphoreFile != null)
+            if (SemaphoreFile is not null)
             {
+                string semaphoreFile = TaskEnvironment.GetOutputPath(SemaphoreFile).Value;
                 if (Log.HasLoggedErrors)
                 {
                     // To force incremental builds to show failures again, delete the passed in semaphore file.
-                    if (DeclaredInputs is null && File.Exists(SemaphoreFile))
-                        File.Delete(SemaphoreFile);
+                    if (DeclaredInputs is null && File.Exists(semaphoreFile))
+                        File.Delete(semaphoreFile);
                 }
                 else
                 {
                     // If ValidateAssemblies was successful, create/update the semaphore file.
-                    File.Create(SemaphoreFile).Dispose();
+                    File.Create(semaphoreFile).Dispose();
                     if (DeclaredInputs is null)
-                        File.SetLastWriteTimeUtc(SemaphoreFile, DateTime.UtcNow);
+                        File.SetLastWriteTimeUtc(semaphoreFile, DateTime.UtcNow);
                 }
             }
         }
 
         private void ValidateDeclarations()
         {
+            if (TaskEnvironment.IsSandboxed && (DeclaredInputs is null || DeclaredOutputs is null))
+                throw ApiCompatInputPaths.Invalid(SemaphoreFile ?? nameof(DeclaredInputs));
+
             if (DeclaredInputs is null && DeclaredOutputs is null)
                 return;
 
@@ -204,7 +214,7 @@ namespace Microsoft.DotNet.ApiCompat.Task
                 .Concat([Path.Combine(RoslynAssembliesPath!, "Microsoft.CodeAnalysis.dll"),
                     Path.Combine(RoslynAssembliesPath!, "Microsoft.CodeAnalysis.CSharp.dll")]))
             {
-                if (path.IndexOfAny(['*', '?']) >= 0 || !inputs.Contains(FullPath(path)) || Directory.Exists(path))
+                if (path.IndexOfAny(['*', '?']) >= 0 || !inputs.Contains(FullPath(path)))
                     throw ApiCompatInputPaths.Invalid(path);
             }
             foreach (string group in (LeftAssembliesReferences ?? []).Concat(RightAssembliesReferences ?? []))
@@ -218,20 +228,33 @@ namespace Microsoft.DotNet.ApiCompat.Task
             }
         }
 
-        private static string FullPath(string path) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        private string FullPath(string path) => Path.TrimEndingDirectorySeparator(TaskEnvironment.GetAbsolutePath(path).Value);
 
-        private static string[][]? ParseAssembliesReferences(string[]? assembliesReferences)
+        private string[] MapInputs(string[] paths) =>
+            paths.Select(path => TaskEnvironment.GetInputPath(path).Value).ToArray();
+
+        private string[][]? MapAssembliesReferences(string[]? groups, HashSet<string> referenceDirectories)
         {
-            if (assembliesReferences == null || assembliesReferences.Length == 0)
+            if (groups is null || groups.Length == 0)
                 return null;
 
-            string[][] assembliesReferencesArray = new string[assembliesReferences.Length][];
-            for (int i = 0; i < assembliesReferences.Length; i++)
+            string[][] result = new string[groups.Length][];
+            for (int i = 0; i < groups.Length; i++)
             {
-                assembliesReferencesArray[i] = assembliesReferences[i].Split(',');
+                string[] paths = groups[i].Split(',');
+                for (int j = 0; j < paths.Length; j++)
+                {
+                    if (paths[j].Length == 0)
+                        continue;
+
+                    paths[j] = referenceDirectories.Contains(FullPath(paths[j]))
+                        ? TaskEnvironment.GetExecutionDirectory(paths[j]).Value
+                        : TaskEnvironment.GetInputPath(paths[j]).Value;
+                }
+                result[i] = paths;
             }
 
-            return assembliesReferencesArray;
+            return result;
         }
 
         private static (string CaptureGroupPattern, string ReplacementString)[]? ParseTransformationPattern(ITaskItem[]? transformationPatterns)

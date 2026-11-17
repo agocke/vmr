@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.Build.Tasks.Templating;
 /// </example>
 /// </summary>
 [MSBuildMultiThreadableTask]
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 public class GenerateFileFromTemplate : Task, IMultiThreadableTask
 {
     /// <summary>Injected by MSBuild so paths resolve against the project directory in multithreaded builds.</summary>
@@ -79,16 +79,19 @@ public class GenerateFileFromTemplate : Task, IMultiThreadableTask
         // GetAbsolutePath deliberately does not canonicalize, but this output property was
         // produced by Path.GetFullPath, which also resolved "." and ".." and turned the forward
         // slashes substituted just above back into the platform separator.
-        AbsolutePath resolvedOutputPath = TaskEnvironment.GetAbsolutePath(OutputPath.Replace('\\', '/')).GetCanonicalForm();
-        ResolvedOutputPath = resolvedOutputPath;
+        AbsolutePath logicalOutputPath = TaskEnvironment.GetAbsolutePath(OutputPath.Replace('\\', '/')).GetCanonicalForm();
+        AbsolutePath outputPath = TaskEnvironment.GetOutputPath(OutputPath.Replace('\\', '/')).GetCanonicalForm();
+        ResolvedOutputPath = logicalOutputPath;
 
-        AbsolutePath templateFile = TaskEnvironment.GetAbsolutePath(TemplateFile);
-        if (DeclaredInputs is not null || DeclaredOutputs is not null)
+        AbsolutePath logicalTemplateFile = TaskEnvironment.GetAbsolutePath(TemplateFile).GetCanonicalForm();
+        AbsolutePath templateFile = TaskEnvironment.GetInputPath(TemplateFile);
+        if (TaskEnvironment.IsSandboxed && PathComparer.Equals(logicalTemplateFile.Value, logicalOutputPath.Value))
         {
-            templateFile = templateFile.GetCanonicalForm();
+            Log.LogError("Sandboxed template generation requires distinct input and output paths.");
+            return false;
         }
 
-        if (!ValidateDeclaredFiles(templateFile, resolvedOutputPath))
+        if (!ValidateDeclaredFiles(logicalTemplateFile, logicalOutputPath))
         {
             return false;
         }
@@ -108,22 +111,25 @@ public class GenerateFileFromTemplate : Task, IMultiThreadableTask
         // to determine whether the on-disk bytes would actually change.
         byte[] resultBytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(result);
 
-        if (SkipUnchanged && FileContentsMatch(resolvedOutputPath, resultBytes))
+        if (SkipUnchanged && FileContentsMatch(outputPath, resultBytes))
         {
             Log.LogMessage(MessageImportance.Low, $"Skipping unchanged file {ResolvedOutputPath}");
             return !Log.HasLoggedErrors;
         }
 
-        string directory = Path.GetDirectoryName(resolvedOutputPath);
+        string directory = Path.GetDirectoryName(logicalOutputPath);
         if (!string.IsNullOrEmpty(directory))
         {
-            Directory.CreateDirectory(directory);
+            Directory.CreateDirectory(TaskEnvironment.GetExecutionDirectory(directory));
         }
 
-        File.WriteAllBytes(resolvedOutputPath, resultBytes);
+        File.WriteAllBytes(outputPath, resultBytes);
 
         return !Log.HasLoggedErrors;
     }
+
+    private static StringComparer PathComparer =>
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     private bool ValidateDeclaredFiles(AbsolutePath templateFile, AbsolutePath outputPath)
     {
@@ -132,7 +138,7 @@ public class GenerateFileFromTemplate : Task, IMultiThreadableTask
             return true;
         }
 
-        StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        StringComparer comparer = PathComparer;
         if (DeclaredInputs is null || DeclaredInputs.Length != 1
             || !comparer.Equals(templateFile.Value, TaskEnvironment.GetAbsolutePath(DeclaredInputs[0].ItemSpec).GetCanonicalForm().Value))
         {

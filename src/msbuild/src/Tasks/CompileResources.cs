@@ -16,7 +16,7 @@ namespace Microsoft.Build.Tasks;
 /// <summary>
 /// Compiles inline string resources between explicitly declared paths without an incremental cache.
 /// </summary>
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildMultiThreadableTask]
 public sealed class CompileResources : TaskExtension, IMultiThreadableTask
 {
@@ -54,7 +54,7 @@ public sealed class CompileResources : TaskExtension, IMultiThreadableTask
         IReadOnlyList<IResource> resources;
         try
         {
-            resources = MSBuildResXReader.GetResourcesFromFile(source, pathsRelativeToBasePath: true,
+            resources = MSBuildResXReader.GetResourcesFromFile(TaskEnvironment.GetInputPath(source), pathsRelativeToBasePath: true,
                 Log, logWarningForBinaryFormatter: false, stringsOnly: true);
         }
         catch (Exception e) when (e is MSBuildResXException || ExceptionHandling.IsIoRelatedException(e))
@@ -70,8 +70,9 @@ public sealed class CompileResources : TaskExtension, IMultiThreadableTask
 
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-            using ResourceWriter writer = new(output);
+            string physicalOutput = TaskEnvironment.GetOutputPath(output).Value;
+            Directory.CreateDirectory(Path.GetDirectoryName(physicalOutput)!);
+            using ResourceWriter writer = new(physicalOutput);
             foreach (IResource resource in resources)
             {
                 resource.AddTo(writer);

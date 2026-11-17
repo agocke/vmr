@@ -10,7 +10,7 @@ namespace Microsoft.NET.Build.Tasks;
 /// <summary>
 /// Writes a dependency manifest from explicit metadata and declared file contents.
 /// </summary>
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildMultiThreadableTask]
 public sealed class WriteDepsFile : GenerateDepsFile
 {
@@ -46,13 +46,13 @@ public sealed class WriteDepsFile : GenerateDepsFile
                 throw new BuildErrorException(Strings.UnsupportedDepsFileParameter, nameof(DeclaredInputs), path);
             }
 
-            string fullPath = TaskEnvironment.GetAbsolutePath(path).Value;
-            if (!inputs.Contains(fullPath))
+            string logicalPath = TaskEnvironment.GetAbsolutePath(path).Value;
+            if (!inputs.Contains(logicalPath))
             {
-                throw new BuildErrorException(Strings.UndeclaredDepsFileInput, fullPath);
+                throw new BuildErrorException(Strings.UndeclaredDepsFileInput, logicalPath);
             }
 
-            return fullPath;
+            return TaskEnvironment.GetInputPath(path).Value;
         }
 
         RuntimeFile ResolveRuntimeFile(string path, string sourcePath, string localPath)

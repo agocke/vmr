@@ -147,7 +147,10 @@ def load_graph(path, cwd):
             "workingDirectory": work,
             "contentInputs": sorted(set(absolute(p, cwd) for p in content) | {descriptor_path}),
             "declaredInputs": [absolute(i["itemSpec"], work) for i in items(descriptor, "DeclaredInputs")],
+            "declaredOutputs": [absolute(i["itemSpec"], work) for i in items(descriptor, "DeclaredOutputs")],
             "outputs": sorted(set(output_paths)), "trees": trees,
+            "stagingTempParent": next((environment[n] for n in ("TMPDIR", "TMP", "TEMP")
+                                       if environment.get(n) is not None), None),
             "orderOnly": [absolute(p, cwd) for p in order],
             "scratchRoots": sorted({os.path.normpath(value)
                                     for name, value in environment.items()
@@ -304,14 +307,33 @@ def read_events(prefix):
             except AuditError as error:
                 errors.append({**location, "reason": str(error), "raw": body})
                 continue
+            result = syscall[3]
+            duration = re.search(r"\s+<(\d+\.\d{9})>$", result)
+            timing = {}
+            if duration:
+                nanoseconds = time_ns(duration[1])
+                timing["durationNs"] = nanoseconds
+                completed = ns_time(time_ns(stamp) + nanoseconds)
+                result = result[:duration.start()]
             events.append({**location, "timestamp": stamp, "syscall": syscall[1],
-                           "completedTimestamp": completed, "args": args, "result": syscall[3]})
+                           "completedTimestamp": completed, "args": args, "result": result, **timing})
         if not ended:
             errors.append({"pid": pid, "file": path, "reason": "Missing process exit marker"})
         if pending is not None:
             errors.append({**pending[1], "reason": "Incomplete unfinished syscall", "raw": pending[2]})
     events.sort(key=lambda e: (e["timestamp"], e["pid"], e["line"]))
     return events, errors
+
+
+def time_ns(value):
+    seconds, fraction = value.split(".")
+    if len(fraction) > 9:
+        raise AuditError("Unsupported timestamp precision")
+    return int(seconds) * 10**9 + int(fraction.ljust(9, "0"))
+
+
+def ns_time(value):
+    return f"{value // 10**9}.{value % 10**9:09d}"
 
 
 def exact_catalog(paths):
@@ -477,6 +499,665 @@ IGNORED = {"wait4", "waitid", "exit", "exit_group", "kill", "tgkill", "getpid", 
 FD_LIFECYCLE = {"ftruncate", "ftruncate64", "close", "close_range", "dup", "dup2", "dup3", "fcntl",
                 "fchmod", "fchown"}
 RESPONSE_TRACE = "ftruncate,ftruncate64,close,close_range,dup,dup2,dup3,fcntl,fchmod,fchown"
+FD_ALLOCATE = {
+    "pipe", "pipe2", "socket", "socketpair", "accept", "accept4", "eventfd", "eventfd2",
+    "epoll_create", "epoll_create1", "inotify_init", "inotify_init1", "signalfd", "signalfd4",
+    "timerfd_create", "pidfd_open", "memfd_create", "memfd_secret",
+}
+# These can import/create descriptors or mutate fd tables in ways this profile
+# cannot reconstruct. Capture them and reject successful uses, not silently omit.
+FD_UNSUPPORTED = {
+    "recvmsg", "recvmmsg", "pidfd_getfd", "io_uring_setup", "io_uring_enter", "bpf",
+    "perf_event_open", "fanotify_init", "userfaultfd", "open_by_handle_at",
+    "open_tree", "fsopen", "fsmount", "fspick", "landlock_create_ruleset", "seccomp", "ioctl",
+}
+FD_TRACE = RESPONSE_TRACE + "," + ",".join(sorted(FD_ALLOCATE | FD_UNSUPPORTED))
+TIMING_FLAGS = ["--absolute-timestamps=unix,ns", "--syscall-times=ns"]
+
+
+def fd_lifetimes(events):
+    """Conservative interval proof; annotation equality never selects a generation.
+
+    An allocation is usable only after its observed completion. A successful
+    close consumes the already completed generation at entry. An overlapping
+    ordinary allocation cannot replace that live fd; it may complete after that
+    close frees it. Uses before allocation completion, competing replacements,
+    and close/use overlap are ambiguous and rejected.
+    """
+    errors, timeline, tables, pending, generations = [], [], {}, {}, 0
+    proof = {"version": 2, "allocations": 0, "reusesAfterClose": 0, "verified": False}
+    previous_end = {}
+    for index, event in enumerate(events):
+        if event["syscall"] == "@exit":
+            continue
+        if (("durationNs" not in event or len(event["timestamp"].split(".")[1]) != 9)
+                and event["syscall"] not in ("exit", "exit_group")):
+            errors.append({**HostStaging.evidence(event), "reason": "Missing nanosecond syscall duration"})
+            continue
+        begin, end = time_ns(event["timestamp"]), time_ns(event.get("completedTimestamp", event["timestamp"]))
+        if previous_end.get(event["pid"], 0) > begin:
+            errors.append({**HostStaging.evidence(event),
+                           "reason": "Overlapping same-thread syscall intervals or timing discontinuity"})
+        previous_end[event["pid"]] = end
+        timeline.extend([(begin, 1, index), (end, 0 if end > begin else 2, index)])
+    if errors:
+        return proof, errors
+
+    def fail(event, reason):
+        errors.append({**HostStaging.evidence(event), "reason": "FD lifetime ambiguity: " + reason})
+
+    def number(argument):
+        match = re.match(r"\d+", argument)
+        if not match:
+            raise AuditError("Missing numeric fd")
+        return int(match[0])
+
+    def allocations(event):
+        call, args, result = event["syscall"], event["args"], event["result"]
+        if result.startswith(("-", "?")):
+            return []
+        if call in ("pipe", "pipe2", "socketpair"):
+            value = args[3 if call == "socketpair" else 0]
+            if not value.startswith("[") or not value.endswith("]"):
+                raise AuditError("Missing complete returned descriptor pair")
+            pair = [number(p) for p in split_args(value[1:-1])]
+            if len(pair) != 2 or pair[0] == pair[1]:
+                raise AuditError("Invalid returned descriptor pair")
+            return pair
+        if call in FD_ALLOCATE | {"open", "openat", "openat2", "creat", "dup", "dup2", "dup3"} or (
+                call == "fcntl" and args[1] in ("F_DUPFD", "F_DUPFD_CLOEXEC")):
+            # signalfd can reuse its supplied descriptor without allocation.
+            if call in ("signalfd", "signalfd4") and not args[0].startswith("-1"):
+                raise AuditError("In-place signalfd replacement is unsupported")
+            return [number(result)]
+        return []
+
+    def refs(event):
+        call, args = event["syscall"], event["args"]
+        if call in FD_LIFECYCLE | {"getdents64", "fchdir"} and call != "close_range":
+            return [number(args[0])]
+        if call in (AT_METADATA | {"openat", "openat2", "mkdirat", "unlinkat", "symlinkat",
+                                  "fchmodat", "fchmodat2", "fchownat", "utimensat", "futimesat"}):
+            offset = 2 if call == "symlinkat" else 1
+            base = args[offset - 1]
+            if not os.path.isabs(c_string(args[offset])) and re.match(r"\d+", base):
+                return [number(base)]
+        return []
+
+    for moment, phase, index in sorted(timeline):
+        event = events[index]
+        pid, call, args = event["pid"], event["syscall"], event["args"]
+        success = not event["result"].startswith(("-", "?"))
+        table = tables.setdefault(pid, {"fds": {}, "uses": {}, "closed": {}, "locked": {}, "copies": set()})
+        fds = table["fds"]
+        try:
+            if phase == 1:
+                if call in FD_UNSUPPORTED and success:
+                    # Common ioctl queries do not allocate/import file descriptors.
+                    if call != "ioctl" or args[1] not in ("TCGETS", "TCGETS2", "TIOCGWINSZ", "FIONREAD", "FIONBIO"):
+                        raise AuditError("Unsupported successful descriptor transition: " + call)
+                if call == "close_range" and success:
+                    raise AuditError("close_range needs an explicitly supported interval contract")
+                created = allocations(event)
+                references = refs(event)
+                if table["copies"] and (created or references):
+                    raise AuditError("Descriptor transition overlaps fd-table copy")
+                if call in PROCESS and success:
+                    child = number(event["result"])
+                    if "CLONE_PIDFD" in ",".join(args):
+                        raise AuditError("clone pidfd allocation is unsupported")
+                    if "CLONE_FILES" in ",".join(args):
+                        tables[child] = table
+                    else:
+                        if table["uses"] or any(p["table"] is table and (p["created"] or p["refs"])
+                                                for p in pending.values()):
+                            raise AuditError("Fd-table copy overlaps descriptor transitions")
+                        table["copies"].add(index)
+                        tables[child] = {"fds": {fd: dict(g) for fd, g in fds.items()},
+                                         "uses": {}, "closed": {}, "locked": {}, "copies": set()}
+                if call in ("execve", "execveat") and success:
+                    if table["uses"] or any(p["table"] is table and (p["created"] or p["refs"])
+                                            for p in pending.values()):
+                        raise AuditError("exec fd-table unshare overlaps descriptor transitions")
+                    table = {"fds": {fd: dict(g) for fd, g in fds.items() if not g["cloexec"]},
+                             "uses": {}, "closed": {}, "locked": {}, "copies": set()}
+                    tables[pid], fds = table, table["fds"]
+                event["_fdBindings"] = {fd: fds[fd]["id"] for fd in references if fd in fds}
+                if any(fd in table["locked"] for fd in references + created):
+                    raise AuditError("Descriptor access overlaps atomic target replacement")
+                source = fds.get(references[0]) if references else None
+                if call == "close" and success:
+                    fd = references[0]
+                    if table["uses"].get(fd):
+                        raise AuditError("Close overlaps an unfinished descriptor use")
+                    if fd not in fds:
+                        if any(fd in p["created"] and p["table"] is table for p in pending.values()):
+                            raise AuditError("Close precedes allocation completion")
+                    else:
+                        table["closed"][fd] = {**HostStaging.evidence(event), "generation": fds.pop(fd)["id"]}
+                elif call == "close" and references[0] in fds:
+                    raise AuditError("Failed close of a tracked generation")
+                elif references:
+                    fd = references[0]
+                    if source is None and any(fd in p["created"] and p["table"] is table for p in pending.values()):
+                        raise AuditError("Fd use precedes allocation completion")
+                    table["uses"].setdefault(fd, set()).add(index)
+                replacement = call in ("dup2", "dup3") and success and created[0] != references[0]
+                if replacement:
+                    target = created[0]
+                    if table["uses"].get(target) or any(
+                            target in p["created"] and p["table"] is table for p in pending.values()):
+                        raise AuditError("Atomic replacement overlaps a target transition")
+                    displaced = fds.pop(target, None)
+                    if displaced:
+                        event["_fdDisplaced"] = displaced["id"]
+                    table["locked"][target] = index
+                pending[index] = {"table": table, "created": created, "refs": references,
+                                  "source": source, "replacement": replacement}
+            else:
+                operation = pending.pop(index, None)
+                if operation is None:
+                    continue
+                table, created, references = operation["table"], operation["created"], operation["refs"]
+                table["copies"].discard(index)
+                fds = table["fds"]
+                for fd in references:
+                    table["uses"].get(fd, set()).discard(index)
+                    if not table["uses"].get(fd):
+                        table["uses"].pop(fd, None)
+                if call == "fcntl" and success and references and references[0] in fds:
+                    if args[1] == "F_SETFD":
+                        fds[references[0]]["cloexec"] = "FD_CLOEXEC" in args[2]
+                    elif args[1] not in ("F_GETFD", "F_GETFL", "F_SETFL", "F_DUPFD", "F_DUPFD_CLOEXEC"):
+                        raise AuditError("Unsupported successful fcntl command")
+                event["_fdCreated"] = {}
+                for fd in created:
+                    if call in ("dup2", "dup3") and references and fd == references[0]:
+                        event["_fdCreated"][fd] = event["_fdBindings"].get(fd)
+                        continue
+                    if fd in fds:
+                        raise AuditError("Allocation would overwrite a live generation")
+                    if fd in table["closed"]:
+                        event.setdefault("_fdAfterClose", {})[fd] = table["closed"].pop(fd)
+                        proof["reusesAfterClose"] += 1
+                    generations += 1
+                    flags = ",".join(args)
+                    source = operation["source"]
+                    is_dup = call.startswith("dup") or call == "fcntl"
+                    cloexec = ("CLOEXEC" in flags or
+                               (call == "fcntl" and args[1] == "F_DUPFD_CLOEXEC"))
+                    fds[fd] = {"id": generations, "cloexec": cloexec}
+                    event["_fdCreated"][fd] = generations
+                    if is_dup and source:
+                        event.setdefault("_fdOrigins", {})[generations] = source["id"]
+                    proof["allocations"] += 1
+                    if operation["replacement"]:
+                        table["locked"].pop(fd, None)
+        except (AuditError, ValueError, IndexError, TypeError) as error:
+            fail(event, str(error))
+    proof["verified"] = not errors
+    return proof, errors
+
+
+class HostStaging:
+    """Reconstruct only the namespace born in a common action host's private root."""
+
+    def __init__(self, actions, policies, versioned_fds=False):
+        self.actions, self.policies = actions, policies
+        self.roots, self.active, self.by_family, self.tables, self.families = {}, {}, {}, {}, {}
+        self.reads = []
+        self.executable_aliases = {}
+        self.versioned_fds, self.generations = versioned_fds, {}
+
+    def handle(self, event, fd):
+        if self.versioned_fds:
+            return self.generations.get(event.get("_fdBindings", {}).get(fd))
+        return self.tables.get(event["pid"], {}).get(fd)
+
+    @staticmethod
+    def evidence(event):
+        return {k: event[k] for k in ("pid", "file", "line", "timestamp", "completedTimestamp", "syscall",
+                                      "durationNs")
+                if k in event}
+
+    @staticmethod
+    def done(event):
+        return event.get("completedTimestamp", event["timestamp"])
+
+    def root_for(self, path):
+        if not path.startswith("/"):
+            return None
+        while path:
+            if path in self.roots:
+                return self.roots[path]
+            path = path.rsplit("/", 1)[0]
+        return None
+
+    def fail(self, root, event, reason):
+        root["rejections"].append({**self.evidence(event), "reason": reason})
+
+    def locate(self, path, state, event):
+        root = self.root_for(path)
+        if root is None:
+            return None, os.path.normpath(path), None
+        if ".." in path[len(root["path"]):].split("/"):
+            raise AuditError("Staging dot-dot traversal is unsupported, not normalized into an allowance")
+        path = os.path.normpath(path)
+        if (state["family"] != root["family"] or root["removed"]
+                or root["created"] >= event["timestamp"]):
+            self.fail(root, event, "Foreign, removed or not-yet-established staging namespace")
+        parent = os.path.dirname(path)
+        while within(parent, root["path"]) and parent != path:
+            node = root["nodes"].get(parent)
+            if node is not None and node["kind"] != "directory":
+                raise AuditError("Staging path traverses a non-directory or input alias")
+            if parent == root["path"]:
+                break
+            parent = os.path.dirname(parent)
+        node = root["nodes"].get(path)
+        if node and node["changed"] >= event["timestamp"] and node["event"] != self.evidence(event):
+            self.fail(root, event, "Object lifecycle overlaps this access")
+        return root, path, node
+
+    def change(self, root, path, event, adding):
+        parent = root["nodes"].get(os.path.dirname(path))
+        if not parent or parent["kind"] != "directory" or parent["changed"] >= event["timestamp"]:
+            self.fail(root, event, "Namespace mutation lacks a completed, proven parent directory")
+        for session in root["enumerations"]:
+            if session["path"] == os.path.dirname(path) and not session["eof"]:
+                if adding or os.path.basename(path) not in session["seen"]:
+                    self.fail(root, event, "Directory membership changed before it was enumerated")
+
+    def add(self, root, path, kind, event, **fields):
+        if path in root["nodes"]:
+            self.fail(root, event, "Creation replaces an existing namespace object")
+        self.change(root, path, event, True)
+        if path in root["aliasPaths"]:
+            self.fail(root, event, "Immutable input alias path was recreated")
+        node = {"id": len(root["objects"]), "kind": kind, "path": path, "history": [path],
+                "event": self.evidence(event), "changed": self.done(event), **fields}
+        root["nodes"][path] = node
+        root["objects"].append(node)
+        root["members"].setdefault(os.path.dirname(path), set()).add(os.path.basename(path))
+        if kind == "directory":
+            root["members"][path] = set()
+        if kind == "alias":
+            root["aliasPaths"].add(path)
+        return node
+
+    def remove(self, root, path, event):
+        self.change(root, path, event, False)
+        node = root["nodes"].pop(path, None)
+        if node is None:
+            self.fail(root, event, "Removal of an unobserved object")
+        elif node["kind"] == "directory" and root["members"].get(path):
+            self.fail(root, event, "Directory removal lost unobserved children")
+        root["members"].get(os.path.dirname(path), set()).discard(os.path.basename(path))
+        if node:
+            node["deleted"] = self.evidence(event)
+            node["changed"] = self.done(event)
+        return node
+
+    def observe(self, event, state):
+        call, args, result = event["syscall"], event["args"], event["result"]
+        success = not result.startswith(("-", "?"))
+        table = self.tables.setdefault(event["pid"], {})
+        if state["family"] and state["action"]:
+            self.families.setdefault(state["family"], {"key": state["action"], "exits": set(), "failed": False})
+        if call == "@exit":
+            if state["family"]:
+                family = self.families[state["family"]]
+                family["exits"].add(event["pid"])
+                family["failed"] |= result != "+++ exited with 0 +++"
+            self.tables.pop(event["pid"], None)
+            return
+        if call in PROCESS and success:
+            child = int(re.match(r"\d+", result)[0])
+            self.tables[child] = table if "CLONE_FILES" in ",".join(args) else {
+                fd: dict(handle) for fd, handle in table.items()}
+            return
+        if call in ("execve", "execveat") and success:
+            self.tables[event["pid"]] = {fd: h for fd, h in table.items() if not h["cloexec"]}
+            return
+        if call in FD_LIFECYCLE:
+            displaced = self.generations.get(event.get("_fdDisplaced")) if self.versioned_fds else None
+            if displaced:
+                self.fail(displaced["root"], event, "Atomic replacement of a private fd is unsupported")
+            if call == "close_range":
+                if self.versioned_fds:
+                    return  # The interval pass rejects this unsupported transition.
+                if table:
+                    for root in self.roots.values():
+                        if any(h["root"] is root for h in table.values()):
+                            self.fail(root, event, "Unsupported staging close_range lifecycle")
+                return
+            match = re.match(r"\d+", args[0])
+            handle = self.handle(event, int(match[0])) if match else None
+            if not handle:
+                if call in ("dup2", "dup3") and success:
+                    target = int(re.match(r"\d+", args[1])[0])
+                    displaced = table.pop(target, None)
+                    if displaced:
+                        self.fail(displaced["root"], event, "Untracked fd replaced a staging fd")
+                # An annotated private fd with no captured open must not become evidence.
+                if "<" in args[0]:
+                    annotation = c_bytes(args[0].split("<", 1)[1].removesuffix(">"))
+                    if self.root_for(annotation.removesuffix(" (deleted)")):
+                        raise AuditError("Staging fd operation lacks a captured fd binding")
+                return
+            root, node = handle["root"], handle["node"]
+            if state["family"] != root["family"]:
+                self.fail(root, event, "Foreign-family staging fd lifecycle")
+            annotation = re.match(r"\d+<(.+)>$", args[0])
+            if not annotation:
+                self.fail(root, event, "Staging fd lifecycle lacks -yy identity")
+            else:
+                spelling = c_bytes(annotation[1])
+                deleted = spelling.endswith(" (deleted)")
+                spelling = spelling.removesuffix(" (deleted)")
+                expected = ([node["canonicalTarget"]] if node["kind"] == "alias" else node["history"])
+                if spelling not in expected or (deleted and not node.get("deleted")):
+                    self.fail(root, event, "Staging fd identity disagrees with its object history")
+            if not success:
+                self.fail(root, event, "Failed staging fd lifecycle")
+                return
+            if call == "close":
+                fd = int(match[0])
+                session = handle.get("enumeration")
+                if session and not session["eof"]:
+                    self.fail(root, event, "Directory enumeration closed before EOF")
+                if not self.versioned_fds:
+                    table.pop(fd)
+            elif call.startswith("ftruncate"):
+                if node["kind"] != "file" or not handle["writable"] or int(args[1]) < 0:
+                    self.fail(root, event, "Unsupported staging fd truncation")
+            elif call == "fchmod" and node["kind"] == "file" and re.fullmatch(r"0[0-7]{3}", args[1]):
+                pass
+            elif call in ("fchmod", "fchown"):
+                self.fail(root, event, "Staging permission/ownership mutation is unsupported")
+            elif call == "fcntl" and args[1] in ("F_GETFD", "F_GETFL"):
+                pass
+            elif call == "fcntl" and args[1] == "F_SETFD":
+                handle["cloexec"] = "FD_CLOEXEC" in args[2]
+            elif call in ("dup", "dup2", "dup3") or (call == "fcntl" and "F_DUPFD" in args[1]):
+                target = int(re.match(r"\d+", result)[0])
+                if target != int(match[0]):
+                    duplicate = {**handle, "cloexec": "CLOEXEC" in ",".join(args)}
+                    if self.versioned_fds:
+                        generation = event.get("_fdCreated", {}).get(target)
+                        if generation is None:
+                            self.fail(root, event, "Duplicate lacks a proven fd generation")
+                        else:
+                            self.generations[generation] = duplicate
+                    else:
+                        table[target] = duplicate
+            else:
+                self.fail(root, event, "Unsupported staging fd control")
+            return
+        if call in ("mkdir", "mkdirat"):
+            offset = int(call == "mkdirat")
+            path = resolve_path(args[offset], args[0] if offset else None, state["cwd"][0])
+            parent, name = os.path.dirname(path), os.path.basename(path)
+            if (state["action"] and self.actions[state["action"]]["mode"] == "invocation"
+                    and name.startswith("msbuild-stage-") and self.root_for(path) is None):
+                action = self.actions[state["action"]]
+                root = {"path": path, "family": state["family"], "owner": state["tgid"],
+                        "key": state["action"], "created": self.done(event), "removed": False,
+                        "nodes": {}, "objects": [], "rejections": [], "aliases": set(),
+                        "aliasPaths": set(), "members": {path: set()}, "enumerations": []}
+                self.roots[path] = root
+                self.active[path] = root
+                self.by_family.setdefault(state["family"], []).append(root)
+                expected = action["stagingTempParent"]
+                if (not success or args[offset + 1] != "0700" or
+                        not re.fullmatch(r"msbuild-stage-[0-9a-f]{32}", name) or
+                        not isinstance(expected, str) or not os.path.isabs(expected) or
+                        parent != expected or os.path.realpath(parent) != parent or
+                        state["tgid"] != int(state["family"].split("@")[0])):
+                    self.fail(root, event, "Root lacks exclusive 0700 host creation in effective captured absolute TMP")
+                node = {"id": 0, "kind": "directory", "path": path, "history": [path],
+                        "event": self.evidence(event), "changed": self.done(event)}
+                root["nodes"][path] = node
+                root["objects"].append(node)
+                return
+        operands = []
+        if call in ("open", "openat", "openat2", "mkdir", "mkdirat", "unlink", "unlinkat",
+                    "rmdir", "chdir", "creat"):
+            offset = int(call.endswith("at") or call == "openat2")
+            operands = [(args[offset], args[0] if offset else None)]
+        elif call == "symlink":
+            operands = [(args[1], None)]
+        elif call == "symlinkat":
+            operands = [(args[2], args[1])]
+        elif call in ("rename", "link"):
+            operands = [(args[0], None), (args[1], None)]
+        elif call in ("renameat", "renameat2", "linkat"):
+            operands = [(args[1], args[0]), (args[3], args[2])]
+        elif call in WRITES:
+            offset = int(call in ("fchmodat", "fchmodat2", "fchownat", "utimensat", "futimesat"))
+            operands = [(args[offset], args[0] if offset else None)]
+        resolved = []
+        for raw, base in operands:
+            located = self.locate(resolve_path(raw, base, state["cwd"][0]), state, event)
+            if (self.versioned_fds and located[0] and base and re.match(r"\d+", base)
+                    and not os.path.isabs(c_string(raw))):
+                handle = self.handle(event, int(re.match(r"\d+", base)[0]))
+                if (not handle or handle["node"]["kind"] != "directory"
+                        or fd_path(base) != handle["node"]["path"]):
+                    self.fail(located[0], event, "Relative dirfd access lacks a proven directory generation")
+            resolved.append(located)
+        for root in self.active.values() if any(item[0] is None for item in resolved) else ():
+            if success and call in WRITES | {"link", "linkat"}:
+                for other, path, _ in resolved:
+                    if other is None and within(root["path"], path):
+                        self.fail(root, event, "An ancestor outside the staging namespace was mutated")
+        if not any(root for root, _, _ in resolved):
+            return
+        root, path, node = next(item for item in resolved if item[0])
+        if not success:
+            return
+        if call in ("mkdir", "mkdirat"):
+            self.add(root, path, "directory", event)
+        elif call in ("symlink", "symlinkat"):
+            target = c_string(args[0])
+            action, policy = self.actions[root["key"]], self.policies[root["key"]]
+            mapped = root["path"] + "/execroot/root" + target
+            canonical = os.path.realpath(target)
+            if (state["tgid"] != root["owner"] or path != mapped or
+                    target not in action["declaredInputs"] or
+                    policy.admit(target, canonical, "open") not in ("contentInput", "generatedTreeInput")):
+                self.fail(root, event, "Input alias lacks exact host mapping, DeclaredInputs and Ninja content edge")
+            self.add(root, path, "alias", event, target=target, canonicalTarget=canonical)
+            root["aliases"].add(target)
+        elif call in ("open", "openat", "openat2", "creat"):
+            offset = 0 if call in ("open", "creat") else 1
+            flags = args[offset + 1] if call != "creat" else "O_WRONLY|O_CREAT|O_TRUNC"
+            writable = "O_WRONLY" in flags or "O_RDWR" in flags
+            if node is None and writable and "O_CREAT" in flags and "O_PATH" not in flags:
+                node = self.add(root, path, "file", event, initialization="new-private-file")
+            if node is None:
+                self.fail(root, event, "Open of an old or unobserved private object")
+                return
+            if node["kind"] == "alias" and (writable or "O_TRUNC" in flags):
+                self.fail(root, event, "Write-capable open of a staged input alias")
+            annotation = re.match(r"(\d+)<.*>$", result)
+            identity = fd_path(result) if annotation else None
+            expected = node.get("canonicalTarget", path)
+            if identity != expected:
+                self.fail(root, event, "Open fd identity does not match the trace-born object")
+            if annotation:
+                handle = {"root": root, "node": node, "writable": writable,
+                          "cloexec": "O_CLOEXEC" in flags}
+                if self.versioned_fds:
+                    generation = event.get("_fdCreated", {}).get(int(annotation[1]))
+                    if generation is None:
+                        self.fail(root, event, "Open lacks a proven fd generation")
+                    else:
+                        self.generations[generation] = handle
+                else:
+                    table[int(annotation[1])] = handle
+        elif call in ("unlink", "unlinkat", "rmdir"):
+            if path == root["path"]:
+                if call != "rmdir" or set(root["nodes"]) != {path}:
+                    self.fail(root, event, "Root cleanup is not an observed empty-directory removal")
+                root["nodes"].pop(path, None)
+                root["removed"] = True
+                self.active.pop(path, None)
+            else:
+                self.remove(root, path, event)
+        elif call in ("rename", "renameat", "renameat2"):
+            source, destination = resolved
+            if (source[0] is not root or destination[0] is not root or not source[2]
+                    or source[2]["kind"] != "file" or
+                    (destination[2] and destination[2]["kind"] != "file") or
+                    (call == "renameat2" and args[4] not in ("0", "RENAME_NOREPLACE"))):
+                self.fail(root, event, "Unsupported directory/alias/import/export rename")
+                return
+            if destination[1] in root["aliasPaths"]:
+                self.fail(root, event, "Rename reuses an immutable input alias path")
+            if source[1] == destination[1]:
+                self.fail(root, event, "Ambiguous self rename")
+                return
+            node = self.remove(root, source[1], event)
+            if destination[2]:
+                self.remove(root, destination[1], event)
+            self.change(root, destination[1], event, True)
+            node.pop("deleted", None)
+            node["path"] = destination[1]
+            node["history"].append(destination[1])
+            node["event"] = self.evidence(event)
+            root["nodes"][destination[1]] = node
+            root["members"].setdefault(os.path.dirname(destination[1]), set()).add(
+                os.path.basename(destination[1]))
+        elif call != "chdir":
+            self.fail(root, event, "Unsupported private namespace mutation: " + call)
+
+    def access(self, event, state, logical, kind, canonical):
+        root, path, node = self.locate(logical, state, event)
+        if root is None:
+            return None
+        if node is None:
+            if kind != "negative":
+                self.fail(root, event, "Successful access lacks a trace-born object")
+            return root, node, path, "hostStagingProbe"
+        actual = node.get("canonicalTarget", path)
+        if canonical is not None and canonical != actual:
+            self.fail(root, event, "Access fd canonical identity disagrees with namespace")
+        category = ("hostStagingInputAlias" if node["kind"] == "alias" else
+                    "hostStagingDirectory" if kind == "directory" else
+                    "hostStagingProbe" if kind in ("metadata", "negative", "directoryHandle") else
+                    "hostStagingOutput" if path in {
+                        root["path"] + "/execroot/root" + p
+                        for p in self.actions[root["key"]]["declaredOutputs"]} else "hostStagingScratch")
+        if kind == "readlink":
+            offset = 1 if event["syscall"] == "readlink" else 2
+            if node["kind"] != "alias" or c_string(event["args"][offset]) != node["target"]:
+                self.fail(root, event, "readlink result disagrees with the exact input alias")
+        if kind == "directory":
+            fd = int(re.match(r"\d+", event["args"][0])[0])
+            handle = self.handle(event, fd)
+            if not handle or handle["node"] is not node or node["kind"] != "directory":
+                self.fail(root, event, "Directory enumeration lacks its captured directory fd")
+            else:
+                session = handle.get("enumeration")
+                if session is None or (session["eof"] and event["result"].split()[0] != "0"):
+                    session = {"root": root, "path": path,
+                               "expected": set(root["members"].get(path, ())),
+                        "seen": set(), "eof": False}
+                    if any(root["nodes"][path + "/" + name]["changed"] >= event["timestamp"]
+                           for name in session["expected"]):
+                        self.fail(root, event, "Directory membership overlaps enumeration")
+                    handle["enumeration"] = session
+                    root["enumerations"].append(session)
+                names = directory_names(event["args"][1])
+                if len(names) != len(set(names)) or session["seen"] & set(names):
+                    self.fail(root, event, "Duplicate directory members")
+                session["seen"].update(names)
+                if not set(names) <= session["expected"]:
+                    self.fail(root, event, "Unobserved directory members")
+                if event["result"].split()[0] == "0":
+                    session["eof"] = True
+                    if names or session["seen"] != session["expected"]:
+                        self.fail(root, event, "Directory EOF does not match exact trace-born membership")
+        return root, node, actual, category
+
+    def finish(self, report, profile, complete):
+        report["hostStagingCandidates"], report["hostStagingAllowanceUsage"] = [], []
+        report["hostStagingViolations"] = []
+        for family, facts in self.families.items():
+            if self.actions[facts["key"]]["mode"] == "invocation":
+                owned = self.by_family.get(family, [])
+                if len(owned) != 1:
+                    report["hostStagingViolations"].append({
+                        "actionFamily": family, "reason": "Expected exactly one common-host staging root"})
+                    for root in owned:
+                        root["rejections"].append({"reason": "Multiple staging roots in one action family"})
+        for root in self.roots.values():
+            reasons = root["rejections"]
+            action, facts = self.actions[root["key"]], self.families[root["family"]]
+            directories = {n["path"] for n in root["objects"] if n["kind"] == "directory"}
+            structure = {root["path"] + "/scratch",
+                         os.path.normpath(root["path"] + "/execroot/root" + action["workingDirectory"])}
+            for condition, reason in (
+                    (not profile, "Capture lacks the full fd lifecycle profile"),
+                    (not complete or report["unresolved"] or report["incompleteness"],
+                     "Capture has incomplete, unresolved, failed or changed inputs"),
+                    (facts["failed"] or root["owner"] not in facts["exits"], "Action family did not complete successfully"),
+                    (not root["removed"] or root["nodes"], "Staging cleanup is incomplete"),
+                    (root["aliases"] != set(action["declaredInputs"]), "Incomplete declared-input alias materialization"),
+                    (not structure <= directories, "Missing common-host scratch/working-directory structure"),
+                    (any(not s["eof"] for s in root["enumerations"]),
+                     "Directory enumeration did not reach EOF")):
+                if condition:
+                    reasons.append({"reason": reason})
+            root["eligible"] = not reasons
+            evidence = {"root": root["path"], "created": root["created"],
+                        "action": action["id"], "actionFamily": root["family"],
+                        "ownerProcessId": root["owner"], "eligible": root["eligible"],
+                        "removed": root["removed"], "rejections": reasons,
+                        "objects": [{k: n[k] for k in
+                                     ("id", "kind", "history", "event", "deleted", "target",
+                                      "canonicalTarget", "initialization") if k in n}
+                                    for n in root["objects"]],
+                        "enumerations": [{"path": s["path"], "expected": sorted(s["expected"]),
+                                          "observed": sorted(s["seen"]), "reachedEof": s["eof"]}
+                                         for s in root["enumerations"]]}
+            report["hostStagingCandidates"].append(evidence)
+        counts_by_action = {a["id"]: a["counts"] for a in report["actions"]}
+        for entry, root, node, category in self.reads:
+            # Response files retain their separate, stricter writer/child-reader proof.
+            response = (category == "hostStagingScratch" and node and
+                        any(p.endswith(".rsp") for p in node["history"]))
+            if not root.get("eligible") or response or entry["admission"] is not None:
+                continue
+            counts = counts_by_action[entry["action"]]
+            counts["undeclared"] -= 1
+            counts[category] = counts.get(category, 0) + 1
+            entry.update(admission=category, rule="--allow-host-staging", stagingRoot=root["path"],
+                         objectId=node["id"] if node else None)
+            report["hostStagingAllowanceUsage"].append(entry)
+            if category == "hostStagingInputAlias" and entry["kind"] == "exec":
+                self.executable_aliases[(entry["actionFamily"], entry["pid"],
+                                         entry["timestamp"], entry["path"])] = {
+                    "stagingRoot": root["path"], "objectId": node["id"],
+                    "target": node["target"], "canonicalTarget": node["canonicalTarget"],
+                    "creation": node["event"]}
+        report["undeclaredReads"] = [e for e in report["undeclaredReads"] if e["admission"] is None]
+
+    def response_parent(self, family, parent):
+        return any(r.get("eligible") and r["family"] == family and parent == r["path"] + "/scratch"
+                   and any(n["kind"] == "directory" and parent in n["history"] for n in r["objects"])
+                   for r in self.by_family.get(family, []))
+
+    def response_directory(self, family, directory):
+        for root in self.by_family.get(family, []):
+            if root.get("eligible"):
+                node = next((n for n in root["objects"]
+                             if n["kind"] == "directory" and n["path"] == directory), None)
+                if node:
+                    return {"stagingRoot": root["path"], "directory": directory,
+                            "objectId": node["id"], "creation": node["event"]}
+        return None
 
 
 class ResponseScratch:
@@ -605,7 +1286,13 @@ class ResponseScratch:
             if self.relevant(os.path.normpath(path)):
                 self.mutations.append(self.record(event, state, path, call))
 
-    def finish(self, report, enabled, profile, complete):
+    def finish(self, report, enabled, profile, complete, staging=None):
+        if staging:
+            for execution in self.execs:
+                proof = staging.executable_aliases.get((
+                    execution["family"], execution["pid"], execution["timestamp"], execution["executable"]))
+                if not execution["declared"] and proof:
+                    execution.update(declared=True, declarationProof=proof)
         observations = {(e["pid"], e["timestamp"], e["path"]): e for e in report["undeclaredReads"]
                         if e["kind"] == "open"}
         counts = {a["id"]: a["counts"] for a in report["actions"]}
@@ -646,9 +1333,19 @@ class ResponseScratch:
             directory = os.path.dirname(path)
             creations = self.directories.get(directory, [])
             action = next((a for a in self.actions.values() if a["id"] == writer["action"]), None)
-            if (len(creations) != 1 or not action or os.path.dirname(directory) not in action["scratchRoots"]
+            direct_stage = staging.response_directory(family, directory) if staging else None
+            if direct_stage and (len(creations) != 1 or
+                                 direct_stage["creation"]["file"] != creations[0]["traceFile"] or
+                                 direct_stage["creation"]["line"] != creations[0]["traceLine"]):
+                direct_stage = None
+            parent_allowed = action and (
+                os.path.dirname(directory) in action["scratchRoots"] or
+                (staging and staging.response_parent(family, os.path.dirname(directory))) or direct_stage)
+            if (len(creations) != 1 or not parent_allowed
                     or creations[0]["family"] != family or creations[0]["processId"] != owner
-                    or creations[0]["canonicalPath"] != directory or creations[0]["mode"] != "0700"
+                    or creations[0]["canonicalPath"] != directory
+                    or (creations[0]["mode"] != "0700" and not (
+                        direct_stage and creations[0]["mode"] == "0777"))
                     or creations[0]["completed"] >= writer["timestamp"]):
                 reasons.append("Missing fresh same-host 0700 directory directly inside captured TMPDIR/TMP/TEMP")
             flags = writer["flags"]
@@ -706,6 +1403,7 @@ class ResponseScratch:
                     read_entries.append(entry)
             evidence = {"path": path, "action": writer["action"], "actionFamily": family,
                         "privateDirectory": directory, "initialization": initialization,
+                        "directoryProtection": direct_stage or "fresh-host-0700-temporary-directory",
                         "directoryCreation": creations[0] if len(creations) == 1 else None,
                         "unlink": unlinks[0] if len(unlinks) == 1 else None,
                         "childExecutions": [e for e in self.execs if e["path"] == path and e["family"] == family],
@@ -727,9 +1425,11 @@ class ResponseScratch:
 
 def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), strict=False,
             allow_runtime_proc=False, allow_case_sensitivity_probe=False,
-            allow_response_file_scratch=False, response_file_profile=False, capture_complete=True):
+            allow_response_file_scratch=False, response_file_profile=False, capture_complete=True,
+            allow_host_staging=False, fd_lifetime_profile=False):
     actions = load_graph(graph, cwd)
     events, incomplete = read_events(prefix)
+    fd_proof, fd_errors = fd_lifetimes(events) if fd_lifetime_profile else (None, [])
     runtime = exact_catalog(runtime_catalogs)
     platform = exact_catalog(platform_catalogs)
     runtime_canonical = {real: source for real, source in runtime.values()}
@@ -760,15 +1460,18 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
                                     "requires": "successful O_CREAT|O_EXCL followed by same-family unlink"},
             "responseFileScratch": {"enabled": allow_response_file_scratch,
                                     "traceProfile": response_file_profile,
-                                    "requires": "fresh private 0700 directory; initialized write-only host fd; "
-                                    "writer close; declared child exec @file/read/close; host unlink; complete trace"},
+                                    "requires": "fresh private 0700 directory or exact trace-born directory under "
+                                    "a verified exclusive 0700 host-staging root; initialized write-only host fd; "
+                                    "writer close; content-declared child exec (direct or verified input alias) "
+                                    "@file/read/close; host unlink; complete trace"},
         },
-        "unresolved": [], "incompleteness": incomplete, "controller": {"events": 0, "pids": []},
+        "unresolved": fd_errors, "incompleteness": incomplete, "controller": {"events": 0, "pids": []},
         "limitations": [
             "Observation, not sandbox enforcement; content opens are conservative read candidates.",
             "Only traced path opens, exec, readlink and getdents64 are audited; inherited descriptors, "
             "mmap/read on pre-existing fds, io_uring and network are not covered.",
-            "Canonical fallback uses the analysis-time filesystem; keep symlinks and graph unchanged.",
+            "Canonical fallback uses the analysis-time filesystem except verified host staging; "
+            "keep original input symlinks and graph unchanged.",
             "Generated-tree admissions are dynamic subtrees, not fixed member inventories.",
             "Unmatched/incomplete unfinished syscalls and unknown traced syscalls fail closed.",
             "Fixed directory rules require traced entry names (-v), EOF, and matching analysis-time "
@@ -777,6 +1480,9 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
     }
     states, seen, controller, enumerations, scratch = {}, {}, set(), [], []
     responses = ResponseScratch(actions, policies) if allow_response_file_scratch or response_file_profile else None
+    staging = HostStaging(actions, policies, fd_lifetime_profile) if allow_host_staging else None
+    if fd_proof is not None:
+        report["fdLifetimeProof"] = fd_proof
     children = set()
     for event in events:
         if event["syscall"] in PROCESS and not event["result"].startswith("-"):
@@ -803,6 +1509,9 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
         if key is None:
             return
         action = actions[key]
+        staged = staging.access(event, state, logical, kind, canonical) if staging else None
+        if staged:
+            canonical = staged[2]
         # realpath must see the uncollapsed spelling (symlink/..).
         canonical = (traced_canonical(canonical, state, event["pid"]) if canonical else
                      traced_canonical(logical, state, event["pid"]))
@@ -833,6 +1542,16 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
                  "syscall": event["syscall"], "path": logical, "canonicalPath": canonical,
                  "kind": kind, "admission": category, "result": event["result"],
                  "processId": state["tgid"], "actionFamily": state["family"]}
+        if fd_lifetime_profile:
+            entry["completedTimestamp"] = event.get("completedTimestamp", event["timestamp"])
+            if event["syscall"] in ("open", "openat", "openat2") and not event["result"].startswith("-"):
+                fd = int(re.match(r"\d+", event["result"])[0])
+                entry["fdGeneration"] = event.get("_fdCreated", {}).get(fd)
+            elif event["syscall"] == "getdents64":
+                fd = int(re.match(r"\d+", event["args"][0])[0])
+                entry["fdGeneration"] = event.get("_fdBindings", {}).get(fd)
+        if staged:
+            staging.reads.append((entry, staged[0], staged[1], staged[3]))
         if category in ("runtime", "platform"):
             entry["catalog"] = source
             report[category + "AllowanceUsage"].append(entry)
@@ -865,12 +1584,16 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
             unresolved(event, "Missing fork/clone inheritance")
             continue
         if call == "@exit":
+            if staging:
+                staging.observe(event, state)
             if responses:
                 responses.observe(event, state)
             state["alive"] = False
             continue
         success = not result.startswith(("-", "?"))
         try:
+            if staging:
+                staging.observe(event, state)
             if result.startswith("?") and call not in ("exit", "exit_group"):
                 raise AuditError("Indeterminate syscall result")
             if call in ("execve", "execveat"):
@@ -1000,7 +1723,8 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
                 for other in states.values():
                     if other is state or (call == "exit_group" and other["tgid"] == state["tgid"]):
                         other["alive"] = False
-            elif call not in WRITES | IGNORED | FD_LIFECYCLE:
+            elif call not in WRITES | IGNORED | FD_LIFECYCLE and not (
+                    fd_lifetime_profile and call in FD_ALLOCATE | FD_UNSUPPORTED):
                 raise AuditError("Unsupported traced syscall: " + call)
             if responses:
                 responses.observe(event, state)
@@ -1058,13 +1782,24 @@ def analyze(graph, cwd, prefix, runtime_catalogs=(), platform_catalogs=(), stric
             report["runtimeAllowanceUsage"].append(entry)
     if not seen:
         report["incompleteness"].append({"reason": "No action process observed"})
+    if staging:
+        staging.finish(report, response_file_profile, capture_complete)
+        report["allowanceRules"]["hostStaging"] = {
+            "version": 1, "enabled": True, "requires": "exclusive same-host 0700 root; exact declared-input aliases "
+            "with Ninja content edges; trace-born objects; exact directory membership/EOF; complete cleanup"}
+        report["limitations"].append(
+            "Host staging reconstructs a supported private namespace, not OS confinement. Dot-dot "
+            "staging paths, hardlinks, directory renames and unrecognized mutations fail closed. "
+            "Untraced actors, inherited fds and mount races remain outside the observation contract.")
     if responses:
-        responses.finish(report, allow_response_file_scratch, response_file_profile, capture_complete)
+        responses.finish(report, allow_response_file_scratch, response_file_profile, capture_complete, staging)
     undeclared_probes = any(e["admission"] is None
                             for bucket in ("negativeProbes", "metadataProbes", "directoryHandleOpens")
                             for e in report[bucket])
     report["ok"] = not (report["undeclaredReads"] or report["unresolved"] or
                         report["incompleteness"] or report["directoryCatalogMismatches"]
+                        or report.get("hostStagingViolations") or
+                        any(not r["eligible"] for r in report.get("hostStagingCandidates", []))
                         or (strict and undeclared_probes))
     return report
 
@@ -1086,6 +1821,8 @@ def seccomp_probe(tracer, expression, output, policy):
     argv = [tracer, "-ff", "-ttt", "-yy", "-v", "-s", "65535", "-d", "--seccomp-bpf",
             "-e", "trace=" + expression, "-o", str(directory / "trace"),
             "--", executable, "-I", "-S", "-B", "-c", "pass"]
+    if policy.get("fdLifetimeTraceProfile") == 2:
+        argv[2:3] = TIMING_FLAGS
     evidence = policy["preflight"] = {"argv": argv, "verified": False}
     try:
         with (directory / "diagnostics.log").open("wb") as stream:
@@ -1098,6 +1835,10 @@ def seccomp_probe(tracer, expression, output, policy):
         raise AuditError("Seccomp activation probe exceeded its diagnostic budget; evidence retained")
     diagnostics = (directory / "diagnostics.log").read_text(errors="replace")
     events, errors = read_events(directory / "trace")
+    if policy.get("fdLifetimeTraceProfile") == 2:
+        errors += [{**HostStaging.evidence(e), "reason": "Probe lacks nanosecond timing evidence"}
+                   for e in events if e["syscall"] not in ("@exit", "exit", "exit_group")
+                   and ("durationNs" not in e or len(e["timestamp"].split(".")[1]) != 9)]
     roots = {e["pid"] for e in events if e["syscall"] == "execve"
              and e["args"] and c_string(e["args"][0]) == executable and e["result"] == "0"}
     exits = {e["pid"] for e in events if e["syscall"] == "@exit"
@@ -1122,6 +1863,7 @@ def seccomp_trace(tracer, argv, cwd, output, manifest, expression):
     policy = manifest["seccompBpf"] = {
         "requested": True, "verified": False, "selection": expression,
         "tracerSha256": digest(tracer),
+        "fdLifetimeTraceProfile": manifest.get("fdLifetimeTraceProfile"),
         "sourceContract": "strace v7.3 src/filter_seccomp.c:571-604,679-724; "
                           "src/strace.c:2988-3011,3152-3158",
         "limitations": [
@@ -1184,7 +1926,7 @@ def main(argv=None):
     trace.add_argument("--cwd", default=os.getcwd())
     trace.add_argument("--output", required=True, help="New capture directory (must not exist)")
     trace.add_argument("--response-file-provenance", action="store_true",
-                       help="Also capture fd truncation/close/duplication for transient response-file proofs")
+                       help="Also capture fd lifecycles for response-file and common-host staging proofs")
     trace.add_argument("--seccomp-bpf", action="store_true",
                        help="Require a verified same-filter seccomp probe and reject actual tracer diagnostics")
     trace.add_argument("argv", nargs=argparse.REMAINDER)
@@ -1196,6 +1938,8 @@ def main(argv=None):
     analyze_parser.add_argument("--allow-runtime-proc", action="store_true")
     analyze_parser.add_argument("--allow-case-sensitivity-probe", action="store_true")
     analyze_parser.add_argument("--allow-response-file-scratch", action="store_true")
+    analyze_parser.add_argument("--allow-host-staging", action="store_true",
+                                help="Prove common-host private namespace and exact file-alias lifecycles")
     analyze_parser.add_argument("--report", required=True)
     args = parser.parse_args(argv)
     try:
@@ -1233,14 +1977,18 @@ def main(argv=None):
             manifest = {"schemaVersion": 1, "cwd": cwd, "graph": graph, "argv": command,
                         "files": {p: digest(p) for p in sorted(files)}, "complete": False}
             if args.response_file_provenance:
-                manifest["responseFileTraceProfile"] = 1
+                manifest["responseFileTraceProfile"] = 2
+                manifest["fdLifetimeTraceProfile"] = 2
             write_json(output / "capture.json", manifest)
             expression = "%file,%process,getdents64"
             if args.response_file_provenance:
-                expression += "," + RESPONSE_TRACE
+                expression += "," + FD_TRACE
+                manifest["fdLifetimeSelection"] = expression
             tracer_argv = [args.strace, "-ff", "-ttt", "-yy", "-v", "-s", "65535",
                            "-e", "trace=" + expression,
                            "-o", str(output / "trace"), "--", *command]
+            if args.response_file_provenance:
+                tracer_argv[2:3] = TIMING_FLAGS
             if args.seccomp_bpf:
                 return seccomp_trace(args.strace, tracer_argv, cwd, output, manifest, expression)
             code = subprocess.call(tracer_argv, cwd=cwd)
@@ -1265,11 +2013,14 @@ def main(argv=None):
             and not policy.get("rejectedDiagnostics"))
         complete = bool(manifest.get("complete") and manifest.get("commandExitCode") == 0
                         and not changed and seccomp_ok)
+        fd_profile = manifest.get("fdLifetimeTraceProfile") == 2
+        if fd_profile and manifest.get("fdLifetimeSelection") != "%file,%process,getdents64," + FD_TRACE:
+            raise AuditError("Fd lifetime profile syscall selection differs from the supported contract")
         report = analyze(manifest["graph"], manifest["cwd"], capture / "trace",
                          args.runtime_catalog, args.platform_catalog, args.strict_probes,
                          args.allow_runtime_proc, args.allow_case_sensitivity_probe,
-                         args.allow_response_file_scratch, manifest.get("responseFileTraceProfile") == 1,
-                         complete)
+                         args.allow_response_file_scratch, manifest.get("responseFileTraceProfile") in (1, 2),
+                         complete, args.allow_host_staging, fd_profile)
         for path in changed:
             report["incompleteness"].append({"reason": "Capture input changed", "path": path})
             report["ok"] = False

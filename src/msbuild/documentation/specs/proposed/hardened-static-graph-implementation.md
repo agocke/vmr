@@ -484,17 +484,33 @@ the existing declared footprint. Ordinary execution retains identity resolution.
 - [x] Add explicit task-environment input/output path resolution.
 - [x] Migrate `CopyFiles` and overwrite-only staged `WriteLinesToFile`.
 - [x] Reject unmigrated contracts at host admission rather than execute unstaged.
-- [ ] Migrate compiler typed bindings and host-owned generated-tree finalization.
-- [ ] Migrate the remaining runtime task implementations and repeat full-profile
-  execution/read validation with a new toolset.
+- [x] Migrate compiler typed bindings and host-owned generated-tree finalization.
+- [x] Migrate the remaining runtime execution task implementations and validate
+  their focused contracts with a new toolset.
+- [x] Admit the full managed-libraries graph and execute all actions at eight jobs
+  after correcting a linker directory mapping and resuming the initial failure;
+  verify the repeat reports no work.
+- [x] Complete a cold full-profile staged execution/successful-content-read audit.
 
-The initial host contract requires `SandboxVersion=1` on the declared-I/O marker
+The host contract requires `SandboxVersion=1` on the declared-I/O marker
 and `IMultiThreadableTask`, not `ToolTask` inheritance. Staged line writing rejects
 append and prior-output incremental checking; old output bytes are not inputs.
-Opaque contents and logical identities are not rewritten. Unsupported contracts
-and generated trees currently fail explicitly, so the newer host is not yet a
-replacement for the frozen full-libraries toolset. This remains Linux symlink
-staging, not OS confinement or a portable-cache proof.
+Opaque contents and logical identities are not rewritten. Structural directory
+operands use `GetExecutionDirectory`, not directory-input symlinks or member
+discovery. Compiler formatters produce typed bindings by default on the supported
+Linux execution platform, and tool tasks reuse the host context without nesting
+staging. Generated archives and host-owned dyndep files are finalized before any
+declared output is published; materialization retains its separate ownership
+protocol. Unsupported contracts fail explicitly. The newer toolset admits all
+5,320 actions across 24 execution types, including 500 compilers without opt-in.
+A fresh cold eight-job trace completes all 5,321 steps with zero undeclared
+successful content reads, unresolved/incomplete events, directory-catalog
+mismatches or staging violations. All 614 response-file reads have lifecycle
+proofs; outputs, tree ownership, no-work and frozen-input guards pass. Shared
+file-descriptor lifetimes require duration-backed evidence; the older capture
+remains rejected. Metadata and negative probes remain reported/non-strict, and
+runtime/platform reads use the reviewed execution-image contract. This is Linux
+symlink staging, not OS confinement or a portable-cache proof.
 
 ### Compiler-owned generated-source trees
 

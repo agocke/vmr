@@ -26,32 +26,48 @@ public sealed class UpdateXlf : XlfTask
         + " modify source code during the build.";
 
     protected override void ExecuteCore()
-        => UpdateSources(Sources, Languages, AllowModification, TaskEnvironment);
+    {
+        if (TaskEnvironment.IsSandboxed)
+        {
+            Log.LogError("UpdateXlf is not supported in sandboxed execution because it modifies XLF files in place.");
+            return;
+        }
+
+        UpdateSources(Sources, Languages, AllowModification, TaskEnvironment);
+    }
 
     internal static void UpdateSources(
         ITaskItem[] sources, string[] languages, bool allowModification,
         TaskEnvironment taskEnvironment)
     {
+        if (allowModification && taskEnvironment.IsSandboxed)
+        {
+            throw new BuildErrorException("UpdateXlf cannot modify source XLF files in place during sandboxed execution.");
+        }
+
         foreach (ITaskItem item in sources)
         {
             string sourcePath = item.ItemSpec;
             string sourceDocumentPath = item.GetMetadataOrDefault(MetadataKey.SourceDocumentPath, item.ItemSpec);
             string sourceFormat = item.GetMetadataOrThrow(MetadataKey.XlfSourceFormat);
-            TranslatableDocument sourceDocument = XlfTask.LoadSourceDocument(taskEnvironment.GetAbsolutePath(sourcePath), sourceFormat);
+            AbsolutePath logicalSourcePath = taskEnvironment.GetAbsolutePath(sourcePath);
+            TranslatableDocument sourceDocument = XlfTask.LoadSourceDocument(
+                logicalSourcePath, taskEnvironment.GetInputPath(sourcePath), sourceFormat);
             string sourceDocumentId = XlfTask.GetSourceDocumentId(sourcePath);
 
             foreach (string language in languages)
             {
                 string xlfPath = XlfTask.GetXlfPath(sourceDocumentPath, language);
                 AbsolutePath absoluteXlfPath = taskEnvironment.GetAbsolutePath(xlfPath);
+                AbsolutePath inputXlfPath = taskEnvironment.GetInputPath(xlfPath);
                 XlfDocument xlfDocument;
 
                 try
                 {
-                    xlfDocument = XlfTask.LoadXlfDocument(absoluteXlfPath, language, createIfNonExistent: allowModification);
+                    xlfDocument = XlfTask.LoadXlfDocument(
+                        absoluteXlfPath, inputXlfPath, language, createIfNonExistent: allowModification);
                 }
-                // Document.Load opens the file through FileInfo.FullName, which canonicalizes it,
-                // so compare against the canonical form rather than the raw absolute path.
+                // The helper records the logical path in FileName rather than exposing the staged path.
                 catch (FileNotFoundException fileNotFoundEx) when (fileNotFoundEx.FileName == absoluteXlfPath.GetCanonicalForm().Value)
                 {
                     Release.Assert(!allowModification);
@@ -77,8 +93,9 @@ public sealed class UpdateXlf : XlfTask
                     throw new BuildErrorException($"'{xlfPath}' is out-of-date with '{sourcePath}'. {HowToUpdate}");
                 }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(absoluteXlfPath));
-                xlfDocument.Save(new FileInfo(absoluteXlfPath));
+                Directory.CreateDirectory(taskEnvironment.GetExecutionDirectory(
+                    Path.GetDirectoryName(taskEnvironment.GetAbsolutePath(xlfPath))));
+                xlfDocument.Save(new FileInfo(taskEnvironment.GetOutputPath(xlfPath)));
             }
         }
     }

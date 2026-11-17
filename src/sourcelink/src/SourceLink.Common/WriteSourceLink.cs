@@ -11,10 +11,12 @@ using Microsoft.Build.Utilities;
 
 namespace Microsoft.SourceLink.Common
 {
-    [MSBuildDeclaredIOTask]
+    [MSBuildDeclaredIOTask(SandboxVersion = 1)]
     [MSBuildMultiThreadableTask]
-    public sealed class WriteSourceLink : Task
+    public sealed class WriteSourceLink : Task, IMultiThreadableTask
     {
+        public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+
         [Required]
         public string OutputFile { get; set; } = string.Empty;
 
@@ -33,7 +35,7 @@ namespace Microsoft.SourceLink.Common
                     throw new ArgumentException($"The path '{OutputFile}' must be fully qualified.", nameof(OutputFile));
                 }
 
-                File.WriteAllText(OutputFile, SourceLinkContent);
+                File.WriteAllText(TaskEnvironment.GetOutputPath(OutputFile).Value, SourceLinkContent);
                 return true;
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or SecurityException)

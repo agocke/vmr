@@ -36,6 +36,18 @@ namespace ILLink.Tasks.Tests
             }
         }
 
+        public string GetResponseFileCommands() => GenerateResponseFileCommands();
+
+        public string GetFullPathToTool() => GenerateFullPathToTool();
+
+        public (string CommandLine, string ResponseFilePath) GenerateSandboxInvocation()
+        {
+            string commandLine = GenerateCommandLineCommands();
+            GenerateResponseFileCommands();
+            FieldInfo responseFilePath = typeof(ILLink).GetField("_sandboxResponseFilePath", BindingFlags.Instance | BindingFlags.NonPublic);
+            return (commandLine, (string)responseFilePath.GetValue(this));
+        }
+
         public static string[] OptimizationNames
         {
             get

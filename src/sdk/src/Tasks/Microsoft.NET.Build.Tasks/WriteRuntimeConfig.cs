@@ -9,7 +9,7 @@ namespace Microsoft.NET.Build.Tasks;
 /// <summary>
 /// Writes runtime configuration from explicit metadata and declared JSON inputs.
 /// </summary>
-[MSBuildDeclaredIOTask]
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
 [MSBuildMultiThreadableTask]
 public sealed class WriteRuntimeConfig : GenerateRuntimeConfigurationFiles
 {
@@ -59,13 +59,13 @@ public sealed class WriteRuntimeConfig : GenerateRuntimeConfigurationFiles
             throw new BuildErrorException(Strings.UnsupportedRuntimeConfigParameter, nameof(DeclaredInputs), path);
         }
 
-        string fullPath = TaskEnvironment.GetAbsolutePath(path).Value;
-        if (!DeclaredInputs.Any(item => PathComparer.Equals(TaskEnvironment.GetAbsolutePath(item.ItemSpec).Value, fullPath)))
+        string logicalPath = TaskEnvironment.GetAbsolutePath(path).Value;
+        if (!DeclaredInputs.Any(item => PathComparer.Equals(TaskEnvironment.GetAbsolutePath(item.ItemSpec).Value, logicalPath)))
         {
-            throw new BuildErrorException(Strings.UndeclaredRuntimeConfigInput, fullPath);
+            throw new BuildErrorException(Strings.UndeclaredRuntimeConfigInput, logicalPath);
         }
 
-        return fullPath;
+        return TaskEnvironment.GetInputPath(path).Value;
     }
 
     private static StringComparer PathComparer => Path.DirectorySeparatorChar == '\\' ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;

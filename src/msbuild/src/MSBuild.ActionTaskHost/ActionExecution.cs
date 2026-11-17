@@ -80,7 +80,7 @@ internal static class ActionExecution
         {
             staging.Prepare((ITaskItem[])parameters["DeclaredInputs"], (ITaskItem[])parameters["DeclaredOutputs"]);
             environment.SetFilePathResolvers(path => staging.MapFile(path, input: true),
-                path => staging.MapFile(path, input: false), staging.WorkingDirectory);
+                path => staging.MapFile(path, input: false), staging.WorkingDirectory, staging.MapDirectory);
             Directory.SetCurrentDirectory(staging.WorkingDirectory);
             foreach (string variable in temporaryVariables)
             {
@@ -99,9 +99,9 @@ internal static class ActionExecution
                 return false;
             }
 
+            publish?.Invoke();
             staging.Publish();
             Directory.SetCurrentDirectory(previousDirectory);
-            publish?.Invoke();
             foreach (string output in outputs)
             {
                 RequireRegularFile(output);

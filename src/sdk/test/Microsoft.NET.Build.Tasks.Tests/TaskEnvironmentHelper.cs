@@ -1,7 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.IO;
+using System.Reflection;
 using Microsoft.Build.Framework;
 
 namespace Microsoft.NET.Build.Tasks.UnitTests
@@ -32,5 +34,19 @@ namespace Microsoft.NET.Build.Tasks.UnitTests
         /// </summary>
         public static TaskEnvironment CreateForTest(string projectDirectory) =>
             TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(projectDirectory);
+
+        public static TaskEnvironment CreateForStagedTest(
+            string projectDirectory,
+            string executionDirectory,
+            Func<string, string> inputPath,
+            Func<string, string> outputPath,
+            Func<string, string>? directoryPath = null)
+        {
+            TaskEnvironment environment = CreateForTest(projectDirectory);
+            MethodInfo setter = typeof(TaskEnvironment).GetMethod("SetFilePathResolvers", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("TaskEnvironment does not expose its staged path resolver test seam.");
+            setter.Invoke(environment, [inputPath, outputPath, executionDirectory, directoryPath]);
+            return environment;
+        }
     }
 }

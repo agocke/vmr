@@ -85,6 +85,52 @@ namespace Microsoft.NET.Build.Tasks.UnitTests
         }
 
         [TestMethod]
+        public void DeclaredWriterUsesStagedAssetsBinaryInputsAndOutput()
+        {
+            string directory = CreateTestProjectDirectory();
+            CreateAssetsFile(directory, "assets.json");
+            string assemblyPath = Path.Combine(directory, "Dependency.dll");
+            EmitAssembly(assemblyPath, new Version(1, 2, 3, 4), "5.6.7.8");
+
+            string executionDirectory = Path.Combine(directory, "execution");
+            string stagedAssets = Path.Combine(executionDirectory, "inputs", "assets.json");
+            string stagedAssembly = Path.Combine(executionDirectory, "inputs", "Dependency.dll");
+            string stagedOutput = Path.Combine(executionDirectory, "outputs", "result.deps.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(stagedAssets)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(stagedOutput)!);
+            File.Move(Path.Combine(directory, "assets.json"), stagedAssets);
+            File.Move(assemblyPath, stagedAssembly);
+
+            var inputPaths = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [Path.Combine(directory, "assets.json")] = stagedAssets,
+                [assemblyPath] = stagedAssembly
+            };
+            var task = CreateDeclaredTask(directory);
+            task.TaskEnvironment = TaskEnvironmentHelper.CreateForStagedTest(
+                directory,
+                executionDirectory,
+                path => inputPaths[path],
+                path => path == Path.Combine(directory, "result.deps.json") ? stagedOutput : throw new InvalidOperationException(path));
+            task.IncludeRuntimeFileVersions = true;
+            task.ReferencePaths = task.UserRuntimeAssemblies = [new TaskItem(assemblyPath)];
+            task.DeclaredInputs = [new TaskItem("assets.json"), new TaskItem(assemblyPath)];
+
+            task.Execute().Should().BeTrue();
+
+            var deps = JObject.Parse(File.ReadAllText(stagedOutput));
+            var dependencyFile = deps["targets"][".NETCoreApp,Version=v8.0"]["Dependency/0.0.0.0"]["runtime"]["Dependency.dll"];
+            dependencyFile["assemblyVersion"].Value<string>().Should().Be("1.2.3.4");
+            dependencyFile["fileVersion"].Value<string>().Should().Be("5.6.7.8");
+            File.Exists(Path.Combine(directory, "result.deps.json")).Should().BeFalse();
+
+            File.WriteAllText(stagedOutput, "retain on failure");
+            task.DeclaredInputs = [];
+            task.Execute().Should().BeFalse();
+            File.ReadAllText(stagedOutput).Should().Be("retain on failure");
+        }
+
+        [TestMethod]
         [DataRow(true, true)]
         [DataRow(true, false)]
         [DataRow(false, true)]

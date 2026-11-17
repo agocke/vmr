@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -12,9 +13,12 @@ using Microsoft.Build.Utilities;
 
 namespace ILLink.Tasks
 {
-    [MSBuildDeclaredIOTask]
+    [MSBuildDeclaredIOTask(SandboxVersion = 1)]
     public class ILLink : ToolTask
     {
+        private static readonly string[] _runtimeEnvironmentVariables = new[] { "DOTNET_EnableDiagnostics", "SystemRoot" };
+        private static readonly string[] _temporaryEnvironmentVariables = new[] { "TMPDIR", "TMP", "TEMP" };
+
         public ITaskItem[] DeclaredInputs { get; set; }
 
         public ITaskItem[] DeclaredOutputs { get; set; }
@@ -109,6 +113,18 @@ namespace ILLink.Tasks
         ///   Maps to '-x'.
         /// </summary>
         public ITaskItem[] RootDescriptorFiles { get; set; }
+
+        /// <summary>
+        ///   A list of XML files specifying attributes for ILLink.
+        ///   Maps to '--link-attributes'.
+        /// </summary>
+        public ITaskItem[] LinkAttributesFiles { get; set; }
+
+        /// <summary>
+        ///   A list of XML files specifying substitutions for ILLink.
+        ///   Maps to '--substitutions'.
+        /// </summary>
+        public ITaskItem[] SubstitutionsFiles { get; set; }
 
         /// <summary>
         ///   Boolean specifying whether to enable beforefieldinit optimization globally.
@@ -251,6 +267,9 @@ namespace ILLink.Tasks
                 if (!string.IsNullOrEmpty(DotNetHostPath))
                     return DotNetHostPath;
 
+                if (TaskEnvironment.IsSandboxed)
+                    throw new InvalidOperationException($"{nameof(DotNetHostPath)} is required for sandboxed declared-I/O ILLink.");
+
                 if (!string.IsNullOrEmpty(_dotnetPath))
                     return _dotnetPath;
 
@@ -269,9 +288,12 @@ namespace ILLink.Tasks
 
         protected override string ToolName => Path.GetFileName(DotNetPath);
 
-        protected override string GenerateFullPathToTool() => DotNetPath;
+        protected override string GenerateFullPathToTool() => GetInputPath(DotNetPath);
 
         private string _illinkPath = "";
+        private string _sandboxResponseFilePath;
+        private string _sandboxWorkingDirectory;
+        private string _sandboxTemporaryDirectory;
 
         public string ILLinkPath
         {
@@ -300,12 +322,102 @@ namespace ILLink.Tasks
         protected override string GenerateCommandLineCommands()
         {
             var args = new StringBuilder();
-            var path = ILLinkPath;
+            var path = GetInputPath(ILLinkPath);
             args.Append(Quote(path));
+            if (TaskEnvironment.IsSandboxed)
+            {
+                PrepareSandboxDirectories();
+                _sandboxResponseFilePath = Path.Combine(_sandboxWorkingDirectory, Path.GetRandomFileName() + ".rsp");
+                args.Append(" @").Append(Quote(_sandboxResponseFilePath));
+            }
             Log.LogMessage(MessageImportance.Normal, $"ILLink.Tasks path: {path}");
 
             return args.ToString();
         }
+
+        public override bool Execute()
+        {
+            try
+            {
+                return base.Execute();
+            }
+            finally
+            {
+                if (_sandboxResponseFilePath is not null)
+                    File.Delete(_sandboxResponseFilePath);
+            }
+        }
+
+        protected override bool ValidateParameters()
+        {
+            if (TaskEnvironment.IsSandboxed &&
+                (DeclaredInputs is null || DeclaredOutputs is null ||
+                 string.IsNullOrEmpty(DotNetHostPath) || string.IsNullOrEmpty(_illinkPath) ||
+                 OutputDirectory is null || UseCommandProcessor ||
+                 EnvironmentVariables is { Length: > 0 } ||
+                 !string.IsNullOrEmpty(ToolPath) || ToolExe != ToolName ||
+                 HostObject is not null || CustomSteps is { Length: > 0 } ||
+                 DumpDependencies || DependenciesFileFormat is not null ||
+                 TaskEnvironment.GetEnvironmentVariable("MSBUILDPRESERVETOOLTEMPFILES") == "1"))
+            {
+                Log.LogError("Sandboxed declared-I/O ILLink requires explicit file paths and outputs, and does not support custom steps, dependency dumps, command processors, task environment overrides, or preserved temporary files.");
+                return false;
+            }
+
+            return base.ValidateParameters();
+        }
+
+        protected override ProcessStartInfo GetProcessStartInfo(
+            string pathToTool,
+            string commandLineCommands,
+            string responseFileSwitch)
+        {
+            ProcessStartInfo info = base.GetProcessStartInfo(pathToTool, commandLineCommands, responseFileSwitch);
+            if (!TaskEnvironment.IsSandboxed)
+                return info;
+
+            info.WorkingDirectory = _sandboxWorkingDirectory;
+#if NETFRAMEWORK
+            var environment = info.EnvironmentVariables;
+#else
+            var environment = info.Environment;
+#endif
+            environment.Clear();
+            foreach (string name in _runtimeEnvironmentVariables)
+            {
+                string value = TaskEnvironment.GetEnvironmentVariable(name);
+                if (value is not null)
+                    environment[name] = value;
+            }
+            foreach (string name in _temporaryEnvironmentVariables)
+                environment[name] = _sandboxTemporaryDirectory;
+
+            return info;
+        }
+
+        private void PrepareSandboxDirectories()
+        {
+            _sandboxWorkingDirectory = TaskEnvironment.GetExecutionDirectory("illink-work").Value;
+            _sandboxTemporaryDirectory = TaskEnvironment.GetExecutionDirectory("illink-temp").Value;
+            Directory.CreateDirectory(_sandboxWorkingDirectory);
+            Directory.CreateDirectory(_sandboxTemporaryDirectory);
+        }
+
+        private string GetInputPath(string path)
+            => TaskEnvironment.IsSandboxed ? TaskEnvironment.GetInputPath(path).Value : path;
+
+        private string GetOutputDirectoryPath(string path)
+            => TaskEnvironment.IsSandboxed ? TaskEnvironment.GetExecutionDirectory(path).Value : path;
+
+        private string GetDeclaredInputPath(string path)
+            => TaskEnvironment.IsSandboxed
+                ? TaskEnvironment.GetInputPath(path).Value
+                : TaskEnvironment.GetAbsolutePath(path).Value;
+
+        private string GetDeclaredOutputPath(string path)
+            => TaskEnvironment.IsSandboxed
+                ? TaskEnvironment.GetOutputPath(path).Value
+                : TaskEnvironment.GetAbsolutePath(path).Value;
 
         private static void SetOpt(StringBuilder args, string opt, bool enabled)
         {
@@ -332,15 +444,27 @@ namespace ILLink.Tasks
                 ValidateDeclaredIOArguments();
                 args.AppendLine("--explicit-io");
                 foreach (var input in DeclaredInputs)
-                    args.Append("--explicit-input ").AppendLine(Quote(Path.GetFullPath(input.ItemSpec)));
+                    args.Append("--explicit-input ").AppendLine(Quote(GetDeclaredInputPath(input.ItemSpec)));
                 foreach (var output in DeclaredOutputs)
-                    args.Append("--explicit-output ").AppendLine(Quote(Path.GetFullPath(output.ItemSpec)));
+                    args.Append("--explicit-output ").AppendLine(Quote(GetDeclaredOutputPath(output.ItemSpec)));
             }
 
             if (RootDescriptorFiles != null)
             {
                 foreach (var rootFile in RootDescriptorFiles)
-                    args.Append("-x ").AppendLine(Quote(rootFile.ItemSpec));
+                    args.Append("-x ").AppendLine(Quote(GetInputPath(rootFile.ItemSpec)));
+            }
+
+            if (LinkAttributesFiles != null)
+            {
+                foreach (var linkAttributesFile in LinkAttributesFiles)
+                    args.Append("--link-attributes ").AppendLine(Quote(GetInputPath(linkAttributesFile.ItemSpec)));
+            }
+
+            if (SubstitutionsFiles != null)
+            {
+                foreach (var substitutionsFile in SubstitutionsFiles)
+                    args.Append("--substitutions ").AppendLine(Quote(GetInputPath(substitutionsFile.ItemSpec)));
             }
 
             foreach (var assemblyItem in RootAssemblyNames)
@@ -394,7 +518,7 @@ namespace ILLink.Tasks
                 if (!assemblyNames.Add(assemblyName))
                     continue;
 
-                args.Append("-reference ").AppendLine(Quote(assemblyPath));
+                args.Append("-reference ").AppendLine(Quote(GetInputPath(assemblyPath)));
 
                 string assemblyTrimMode = assembly.GetMetadata("TrimMode");
                 string isTrimmable = assembly.GetMetadata("IsTrimmable");
@@ -459,7 +583,7 @@ namespace ILLink.Tasks
                     if (DeclaredInputs is not null)
                         assemblyNames.Add(assemblyName);
 
-                    args.Append("-reference ").AppendLine(Quote(assemblyPath));
+                    args.Append("-reference ").AppendLine(Quote(GetInputPath(assemblyPath)));
 
                     // Treat reference assemblies as "skip". Ideally we
                     // would not even look at the IL, but only use them to
@@ -469,7 +593,7 @@ namespace ILLink.Tasks
             }
 
             if (OutputDirectory != null)
-                args.Append("-out ").AppendLine(Quote(OutputDirectory.ItemSpec));
+                args.Append("-out ").AppendLine(Quote(GetOutputDirectoryPath(OutputDirectory.ItemSpec)));
 
             if (NoWarn != null)
                 args.Append("--nowarn ").AppendLine(Quote(NoWarn));
@@ -579,6 +703,12 @@ namespace ILLink.Tasks
                 args.Append("--dependencies-file-format ").AppendLine(DependenciesFileFormat);
             }
 
+            if (TaskEnvironment.IsSandboxed)
+            {
+                File.WriteAllText(_sandboxResponseFilePath, args.ToString(), ResponseFileEncoding);
+                return string.Empty;
+            }
+
             return args.ToString();
         }
 
@@ -591,6 +721,10 @@ namespace ILLink.Tasks
             while (arguments.Count > 0)
             {
                 var option = arguments.Dequeue();
+                if (TaskEnvironment.IsSandboxed &&
+                    option is ("-x" or "--substitutions" or "--link-attributes"))
+                    throw new ArgumentException($"Sandboxed declared-I/O ILLink requires '{option}' paths through typed task parameters.");
+
                 switch (option)
                 {
                     case "-x":

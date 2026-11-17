@@ -28,7 +28,7 @@ namespace Microsoft.Build.Tasks
     /// and outputs to screen or specified file.
     /// </summary>
     [MSBuildMultiThreadableTask]
-    [MSBuildDeclaredIOTask]
+    [MSBuildDeclaredIOTask(SandboxVersion = 1)]
     public class XslTransformation : TaskExtension, IMultiThreadableTask
     {
         #region Members
@@ -146,11 +146,11 @@ namespace Microsoft.Build.Tasks
                 }
 
                 AbsolutePath?[] absoluteXmlInputPaths = XmlInputPaths != null
-                    ? Array.ConvertAll(XmlInputPaths, item => item.ItemSpec != null ? TaskEnvironment.GetAbsolutePath(item.ItemSpec) : (AbsolutePath?)null)
+                    ? Array.ConvertAll(XmlInputPaths, item => item.ItemSpec != null ? TaskEnvironment.GetInputPath(item.ItemSpec) : (AbsolutePath?)null)
                     : null;
                 xmlinput = new XmlInput(absoluteXmlInputPaths, XmlContent);
 
-                AbsolutePath? absoluteXslInputPath = XslInputPath?.ItemSpec != null ? TaskEnvironment.GetAbsolutePath(XslInputPath.ItemSpec) : null;
+                AbsolutePath? absoluteXslInputPath = XslInputPath?.ItemSpec != null ? TaskEnvironment.GetInputPath(XslInputPath.ItemSpec) : null;
                 xsltinput = new XsltInput(absoluteXslInputPath, XslContent, XslCompiledDllPath?.ItemSpec, TaskEnvironment, Log, PreserveWhitespace, declaredIO);
             }
             catch (Exception e) when (!ExceptionHandling.IsCriticalException(e))
@@ -225,9 +225,9 @@ namespace Microsoft.Build.Tasks
                     currentXmlInputIndex = i;
                     if (declaredIO)
                     {
-                        Directory.CreateDirectory(Path.GetDirectoryName(TaskEnvironment.GetAbsolutePath(_outputPaths[i].ItemSpec)));
+                        Directory.CreateDirectory(Path.GetDirectoryName(TaskEnvironment.GetOutputPath(_outputPaths[i].ItemSpec)));
                     }
-                    using (XmlWriter xmlWriter = XmlWriter.Create(TaskEnvironment.GetAbsolutePath(_outputPaths[i].ItemSpec), xslct.OutputSettings))
+                    using (XmlWriter xmlWriter = XmlWriter.Create(TaskEnvironment.GetOutputPath(_outputPaths[i].ItemSpec), xslct.OutputSettings))
                     {
                         using (XmlReader xr = xmlinput.CreateReader(i, ProhibitDtd))
                         {
@@ -251,7 +251,7 @@ namespace Microsoft.Build.Tasks
                             string currentInputPath = XmlInputPaths?[currentXmlInputIndex]?.ItemSpec;
                             if (!string.IsNullOrEmpty(currentInputPath))
                             {
-                                currentInputContainsDtd = XmlTaskUtility.ContainsDtd(TaskEnvironment.GetAbsolutePath(currentInputPath));
+                                currentInputContainsDtd = XmlTaskUtility.ContainsDtd(TaskEnvironment.GetInputPath(currentInputPath));
                             }
                         }
                         else

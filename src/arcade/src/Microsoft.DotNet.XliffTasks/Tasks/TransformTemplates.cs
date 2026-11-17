@@ -32,6 +32,12 @@ public sealed class TransformTemplates : XlfTask
 
     protected override void ExecuteCore()
     {
+        if (TaskEnvironment.IsSandboxed)
+        {
+            Log.LogError("TransformTemplates is not declared for sandboxed file access.");
+            return;
+        }
+
         List<ITaskItem> transformedTemplates = new();
         Dictionary<string, ITaskItem> resourceMap = UnstructuredResources.ToDictionary(item => item.GetMetadata("FullPath"));
         foreach (ITaskItem template in Templates)

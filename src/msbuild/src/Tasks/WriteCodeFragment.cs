@@ -30,7 +30,7 @@ namespace Microsoft.Build.Tasks
     /// <comment>
     /// Currently only supports writing .NET attributes.
     /// </comment>
-    [MSBuildDeclaredIOTask]
+    [MSBuildDeclaredIOTask(SandboxVersion = 1)]
     [MSBuildDeclaredIORequiresUnset(nameof(OutputDirectory))]
     [MSBuildMultiThreadableTask]
     public class WriteCodeFragment : TaskExtension, IMultiThreadableTask
@@ -133,7 +133,7 @@ namespace Microsoft.Build.Tasks
 
                 if (OutputFile != null)
                 {
-                    outputFilePath = TaskEnvironment.GetAbsolutePath(OutputFile.ItemSpec);
+                    outputFilePath = TaskEnvironment.GetOutputPath(OutputFile.ItemSpec);
                 }
                 else
                 {

@@ -103,7 +103,7 @@ namespace Microsoft.Build.Tasks
             }
 
             ArgumentException.ThrowIfNullOrEmpty(File.ItemSpec);
-            if (TaskEnvironment.HasFilePathResolvers && (!Overwrite || FailIfNotIncremental))
+            if (TaskEnvironment.IsSandboxed && (!Overwrite || FailIfNotIncremental))
             {
                 throw new InvalidOperationException("Staged WriteLinesToFile requires Overwrite=true and FailIfNotIncremental=false; previous output contents are not inputs.");
             }

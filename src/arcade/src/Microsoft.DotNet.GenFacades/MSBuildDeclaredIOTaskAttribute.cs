@@ -6,4 +6,7 @@ using System;
 namespace Microsoft.Build.Framework;
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-internal sealed class MSBuildDeclaredIOTaskAttribute : Attribute;
+internal sealed class MSBuildDeclaredIOTaskAttribute : Attribute
+{
+    public int SandboxVersion { get; set; }
+}

@@ -14,9 +14,12 @@ namespace Microsoft.DotNet.GenFacades;
 /// <summary>
 /// Rewrites an Assembly's references to be version 0.0.0.0.
 /// </summary>
-[MSBuildDeclaredIOTask]
-public class ClearAssemblyReferenceVersions : Task
+[MSBuildDeclaredIOTask(SandboxVersion = 1)]
+public class ClearAssemblyReferenceVersions : Task, IMultiThreadableTask
 {
+    /// <summary>Injected by MSBuild so paths resolve against the project directory in multithreaded builds.</summary>
+    public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+
     /// <summary>
     /// Assembly to rewrite.
     /// </summary>
@@ -36,16 +39,22 @@ public class ClearAssemblyReferenceVersions : Task
     {
         try
         {
-            string input = Path.GetFullPath(Assembly);
-            string output = Path.GetFullPath(string.IsNullOrEmpty(OutputAssembly) ? Assembly : OutputAssembly);
+            string logicalInput = TaskEnvironment.GetAbsolutePath(Assembly).GetCanonicalForm();
+            string logicalOutput = TaskEnvironment.GetAbsolutePath(string.IsNullOrEmpty(OutputAssembly) ? Assembly : OutputAssembly).GetCanonicalForm();
             StringComparer comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-            bool inPlace = comparer.Equals(input, output);
+            bool inPlace = comparer.Equals(logicalInput, logicalOutput);
+            if (inPlace && TaskEnvironment.IsSandboxed)
+            {
+                Log.LogError("Sandboxed assembly rewriting requires a separate output assembly.");
+                return false;
+            }
+
             if (DeclaredInputs is not null || DeclaredOutputs is not null)
             {
                 if (DeclaredInputs is null || DeclaredInputs.Length != 1
-                    || !comparer.Equals(input, Path.GetFullPath(DeclaredInputs[0].ItemSpec))
+                    || !comparer.Equals(logicalInput, TaskEnvironment.GetAbsolutePath(DeclaredInputs[0].ItemSpec).GetCanonicalForm())
                     || DeclaredOutputs is null || DeclaredOutputs.Length != 1
-                    || !comparer.Equals(output, Path.GetFullPath(DeclaredOutputs[0].ItemSpec))
+                    || !comparer.Equals(logicalOutput, TaskEnvironment.GetAbsolutePath(DeclaredOutputs[0].ItemSpec).GetCanonicalForm())
                     || inPlace)
                 {
                     Log.LogError("Declared I/O requires exactly the input assembly and a different output assembly.");
@@ -53,6 +62,8 @@ public class ClearAssemblyReferenceVersions : Task
                 }
             }
 
+            string input = TaskEnvironment.GetInputPath(Assembly);
+            string output = TaskEnvironment.GetOutputPath(string.IsNullOrEmpty(OutputAssembly) ? Assembly : OutputAssembly);
             if (inPlace)
             {
                 using FileStream stream = File.Open(input, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
@@ -66,7 +77,7 @@ public class ClearAssemblyReferenceVersions : Task
                     Rewrite(stream);
                 }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(output));
+                Directory.CreateDirectory(TaskEnvironment.GetExecutionDirectory(Path.GetDirectoryName(logicalOutput)));
                 File.WriteAllBytes(output, contents);
             }
         }

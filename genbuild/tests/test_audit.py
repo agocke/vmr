@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import shutil
 import subprocess
@@ -130,6 +131,627 @@ class AuditTests(unittest.TestCase):
         self.log(host)
         self.log(child, pid=101, start=1.0055)
         return self.analyze(allow_response_file_scratch=True, response_file_profile=True, **kwargs)
+
+    def staging_fixture(self):
+        temporary = self.root / "private temporary"
+        temporary.mkdir(exist_ok=True)
+        self.descriptor["environment"] = {"TMPDIR": str(temporary)}
+        self.write_graph()
+        root = temporary / ("msbuild-stage-" + "a" * 32)
+        mapped = root / "execroot/root"
+        source = mapped / str(self.source).lstrip("/")
+        output = mapped / str(self.output).lstrip("/")
+        lines = [self.exec(), f"mkdir({quote(root)}, 0700) = 0"]
+        directories = [root]
+
+        def directory(path):
+            if path not in directories:
+                directory(path.parent)
+                lines.append(f"mkdir({quote(path)}, 0777) = 0")
+                directories.append(path)
+
+        directory(root / "scratch")
+        directory(source.parent)
+        lines += [f"symlink({quote(self.source)}, {quote(source)}) = 0",
+                  self.open(source, result=f"6<{quote(self.source)[1:-1]}>"),
+                  f"close(6<{quote(self.source)[1:-1]}>) = 0",
+                  self.open(output, flags="O_WRONLY|O_CREAT", result=f"10<{output}>"),
+                  f"ftruncate(10<{output}>, 0) = 0", f"close(10<{output}>) = 0",
+                  self.open(output, result=f"11<{output}>"), f"close(11<{output}>) = 0"]
+        return root, source, output, lines, directories
+
+    def staging_cleanup(self, root, directories, files):
+        lines = []
+        next_fd = 30
+
+        def clean(directory):
+            nonlocal next_fd
+            fd, next_fd = next_fd, next_fd + 1
+            members = [p for p in directories + files if p.parent == directory and p != directory]
+            lines.extend([self.open(directory, "O_RDONLY|O_DIRECTORY", f"{fd}<{directory}>"),
+                          self.dents(directory, [".", ".."] + [p.name for p in members], fd)])
+            for path in members:
+                if path in directories:
+                    clean(path)
+                else:
+                    lines.append(f"unlink({quote(path)}) = 0")
+            lines.extend([self.dents(directory, [], fd), f"close({fd}<{directory}>) = 0",
+                          f"rmdir({quote(directory)}) = 0"])
+
+        clean(root)
+        return lines
+
+    def staging_report(self, fixture, extra=(), extra_files=(), extra_directories=(), **kwargs):
+        root, source, output, lines, directories = fixture
+        self.log(lines + list(extra) + self.staging_cleanup(
+            root, directories + list(extra_directories), [source, output] + list(extra_files)) +
+                 ["+++ exited with 0 +++"])
+        return self.analyze(allow_host_staging=True, response_file_profile=True, **kwargs)
+
+    def timed_log(self, entries, pid=100):
+        Path(str(self.prefix) + "." + str(pid)).write_text("".join(
+            f"{stamp:.9f} {line}" + ("" if line.startswith("+++") else f" <{duration}>") + "\n"
+            for stamp, line, duration in entries))
+
+    def test_shared_fd_recorded_entry_chronology_requires_duration_and_generation_proof(self):
+        for variant in ("valid", "legacy", "identity-mismatch", "early-close", "missing-duration"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                root, source, output, lines, directories = fixture
+                entries = [(1 + i / 1000, line, "0.000001000") for i, line in enumerate(lines)]
+                entries += [(1.040, "clone(child_stack=NULL, flags=CLONE_FILES|CLONE_THREAD) = 101",
+                             "0.000001000"),
+                            (1.050, self.open(source, result=f"64<{self.source}>"), "0.001000000"),
+                            (1.052, f"close(64<{output if variant == 'identity-mismatch' else self.source}>) = 0",
+                             "0.000500000")]
+                cleanup = self.staging_cleanup(root, directories, [source, output])
+                entries += [(1.080 + i / 1000, line, "0.000001000") for i, line in enumerate(cleanup)]
+                entries += [(1.200, "+++ exited with 0 +++", None)]
+                self.timed_log(entries)
+                # The actual action40 entry chronology: a returned new fd64 is
+                # printed before close64 of its prior object. These durations
+                # are synthetic; the old production capture does not have them.
+                self.timed_log([(1.0515, self.open(output, result=f"64<{output}>"), "0.003000000"),
+                                (1.053 if variant == "early-close" else 1.055,
+                                 f"close(64<{output}>) = 0", "0.000100000"),
+                                (1.060, "+++ exited with 0 +++", None)], pid=101)
+                if variant == "missing-duration":
+                    path = Path(str(self.prefix) + ".101")
+                    path.write_text(path.read_text().replace(" <0.003000000>", ""))
+                report = self.analyze(allow_host_staging=True, response_file_profile=True,
+                                      fd_lifetime_profile=variant != "legacy")
+                self.assertEqual(variant == "valid", report["ok"], report)
+                if variant == "valid":
+                    self.assertTrue(report["fdLifetimeProof"]["verified"])
+                    self.assertGreater(report["fdLifetimeProof"]["reusesAfterClose"], 0)
+                elif variant in ("early-close", "missing-duration"):
+                    self.assertTrue(report["unresolved"], report)
+
+    def test_duration_profile_tracks_pipe_reuse_and_rejects_live_overwrite_and_dup_races(self):
+        for variant in ("pipe", "live-overwrite", "dup", "dup-race", "unknown-fcntl", "fd-import",
+                        "same-thread-overlap"):
+            with self.subTest(variant=variant):
+                entries = [(1., self.exec(), "0.000001000"),
+                           (1.01, self.open(self.source, result=f"8<{self.source}>"), "0.000001000")]
+                if variant in ("pipe", "live-overwrite"):
+                    if variant == "pipe":
+                        entries += [(1.02, f"close(8<{self.source}>) = 0", "0.000001000")]
+                    entries += [(1.03, "pipe2([8<pipe:[1]>, 9<pipe:[1]>], O_CLOEXEC) = 0", "0.000001000"),
+                                (1.04, "close(8<pipe:[1]>) = 0", "0.000001000"),
+                                (1.05, "close(9<pipe:[1]>) = 0", "0.000001000")]
+                elif variant in ("dup", "dup-race"):
+                    entries += [(1.02, f"dup(8<{self.source}>) = 9<{self.source}>", "0.010000000"),
+                                (1.04, f"close(9<{self.source}>) = 0", "0.000001000"),
+                                (1.05, f"close(8<{self.source}>) = 0", "0.000001000")]
+                    if variant == "dup-race":
+                        entries.insert(1, (1.005, "clone(child_stack=NULL, flags=CLONE_FILES|CLONE_THREAD) = 101",
+                                           "0.000001000"))
+                        self.timed_log([(1.025, f"close(8<{self.source}>) = 0", "0.000001000"),
+                                        (1.06, "+++ exited with 0 +++", None)], pid=101)
+                elif variant == "same-thread-overlap":
+                    entries += [(1.02, self.open(self.source, result=f"9<{self.source}>"), "0.010000000"),
+                                (1.025, self.open(self.source, result=f"10<{self.source}>"), "0.000001000")]
+                elif variant == "fd-import":
+                    entries += [(1.02, "pidfd_getfd(5<anon_inode:[pidfd]>, 8, 0) = 9</foreign/file>",
+                                 "0.000001000")]
+                else:
+                    entries += [(1.02, f"fcntl(8<{self.source}>, F_UNSUPPORTED, 0) = 0", "0.000001000")]
+                entries += [(1.1, "+++ exited with 0 +++", None)]
+                self.timed_log(entries)
+                proof, errors = audit.fd_lifetimes(audit.read_events(self.prefix)[0])
+                self.assertEqual(variant in ("pipe", "dup"), proof["verified"], errors)
+                for path in self.root.glob("trace.*"):
+                    path.unlink()
+
+    def test_real_concurrent_fd_reuse_has_complete_interval_proof(self):
+        tracer = os.environ.get("GENBUILD_AUDIT_STRACE")
+        if not tracer:
+            self.skipTest("Set GENBUILD_AUDIT_STRACE for the bounded concurrent fd fixture")
+        program = (
+            "import os,threading\n"
+            "def work():\n"
+            " for i in range(80):\n"
+            "  fd=os.open('source.cs',os.O_RDONLY);os.close(fd)\n"
+            "  a,b=os.pipe();os.close(a);os.close(b)\n"
+            "ts=[threading.Thread(target=work) for _ in range(6)]\n"
+            "[t.start() for t in ts]\n"
+            "[t.join() for t in ts]\n")
+        command = [tracer, "-ff", *audit.TIMING_FLAGS, "-yy", "-v", "-s", "65535",
+                   "-e", "trace=%file,%process,getdents64," + audit.FD_TRACE,
+                   "-o", str(self.prefix), "--", sys.executable, "-I", "-S", "-B", "-c", program]
+        result = subprocess.run(command, cwd=self.root, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, timeout=30)
+        self.assertEqual(0, result.returncode, result.stderr.decode(errors="replace"))
+        events, errors = audit.read_events(self.prefix)
+        self.assertFalse(errors, errors)
+        proof, errors = audit.fd_lifetimes(events)
+        self.assertFalse(errors, errors[:5])
+        self.assertTrue(proof["verified"])
+        self.assertGreater(proof["allocations"], 1400)
+        self.assertGreater(proof["reusesAfterClose"], 1000)
+
+    def test_staging_removed_aliases_and_outputs_require_explicit_provenance(self):
+        fixture = self.staging_fixture()
+        report = self.staging_report(fixture)
+        self.assertTrue(report["ok"], report)
+        root, source, output, _, directories = fixture
+        self.assertFalse(root.exists())
+        self.assertEqual(1, len(report["hostStagingCandidates"]))
+        proof = report["hostStagingCandidates"][0]
+        self.assertTrue(proof["eligible"])
+        self.assertTrue(proof["removed"])
+        self.assertEqual(len(directories), len(proof["enumerations"]))
+        self.assertTrue(all(e["reachedEof"] and e["expected"] == e["observed"] for e in proof["enumerations"]))
+        aliases = [e for e in report["hostStagingAllowanceUsage"] if e["kind"] == "open"
+                   and e["admission"] == "hostStagingInputAlias"]
+        self.assertEqual([str(source)], [e["path"] for e in aliases])
+        self.assertEqual([str(self.source)], [e["canonicalPath"] for e in aliases])
+        self.assertEqual(1, report["actions"][0]["counts"]["hostStagingOutput"])
+        disabled = self.analyze(response_file_profile=True)
+        self.assertFalse(disabled["ok"])
+        self.assertIn(str(source), [e["path"] for e in disabled["undeclaredReads"]])
+        self.assertIn(str(output), [e["path"] for e in disabled["undeclaredReads"]])
+
+    def test_staging_alias_requires_both_exact_declaration_and_ninja_content_edge(self):
+        for variant in ("different-target", "missing-content-edge", "missing-declaration", "canonical-only"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                _, source, _, lines, _ = fixture
+                if variant == "different-target":
+                    secret = self.file("not-declared")
+                    index = next(i for i, line in enumerate(lines) if line.startswith("symlink("))
+                    lines[index] = f"symlink({quote(secret)}, {quote(source)}) = 0"
+                elif variant == "missing-content-edge":
+                    self.write_graph(inputs=[], order=[self.source])
+                elif variant == "missing-declaration":
+                    self.descriptor["parameters"]["DeclaredInputs"]["items"] = []
+                    self.write_graph()
+                else:
+                    index = next(i for i, line in enumerate(lines) if line.startswith("symlink("))
+                    lines[index] = "getpid() = 100"
+                    # The returned fd still names an exact input: canonical identity alone is insufficient.
+                report = self.staging_report(fixture)
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["hostStagingAllowanceUsage"])
+                self.assertFalse(report["hostStagingCandidates"][0]["eligible"])
+                self.descriptor["parameters"]["DeclaredInputs"]["items"] = [{"itemSpec": str(self.source)}]
+
+    def test_staging_rejects_shared_old_or_unowned_roots(self):
+        for variant in ("shared-mode", "already-exists", "wrong-temp-parent", "wrong-priority", "missing-cleanup"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                root, source, output, lines, directories = fixture
+                if variant == "shared-mode":
+                    lines[1] = lines[1].replace("0700", "0777")
+                elif variant == "already-exists":
+                    lines[1] = lines[1].replace("= 0", "= -1 EEXIST (File exists)")
+                elif variant == "wrong-temp-parent":
+                    self.descriptor["environment"]["TMPDIR"] = str(self.root / "elsewhere")
+                    self.write_graph()
+                elif variant == "wrong-priority":
+                    self.descriptor["environment"]["TEMP"] = self.descriptor["environment"]["TMPDIR"]
+                    self.descriptor["environment"]["TMPDIR"] = str(self.root / "preferred")
+                    self.write_graph()
+                if variant == "missing-cleanup":
+                    self.log(lines + ["+++ exited with 0 +++"])
+                    report = self.analyze(allow_host_staging=True, response_file_profile=True)
+                else:
+                    report = self.staging_report(fixture)
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["hostStagingAllowanceUsage"])
+
+    def test_staging_rejects_old_imported_files_and_hardlink_aliases(self):
+        for variant in ("old-open", "hardlink", "linkat", "import-rename", "foreign-symlink", "unseen-parent"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                root, _, _, _, _ = fixture
+                path = root / "scratch/extra"
+                secret = self.file("outside-old-bytes")
+                if variant == "old-open":
+                    extra = []
+                elif variant == "hardlink":
+                    extra = [f"link({quote(secret)}, {quote(path)}) = 0"]
+                elif variant == "linkat":
+                    extra = [f"linkat(AT_FDCWD, {quote(secret)}, AT_FDCWD, {quote(path)}, 0) = 0"]
+                elif variant == "import-rename":
+                    extra = [f"rename({quote(secret)}, {quote(path)}) = 0"]
+                elif variant == "foreign-symlink":
+                    extra = [f"symlink({quote(secret)}, {quote(path)}) = 0"]
+                else:
+                    path = root / "unseen-parent/extra"
+                    extra = [self.open(path, "O_WRONLY|O_CREAT", f"12<{path}>"), f"close(12<{path}>) = 0"]
+                extra += [self.open(path, result=f"13<{path}>"), f"close(13<{path}>) = 0"]
+                report = self.staging_report(fixture, extra, [path])
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["hostStagingAllowanceUsage"])
+
+    def test_staging_tracks_fresh_readwrite_scratch_and_internal_file_rename(self):
+        fixture = self.staging_fixture()
+        root = fixture[0]
+        old, new = root / "scratch/new file", root / "scratch/renamed"
+        extra = [self.open(old, "O_RDWR|O_CREAT", f"12<{old}>"), f"close(12<{old}>) = 0",
+                 f"renameat2(AT_FDCWD, {quote(old)}, AT_FDCWD, {quote(new)}, 0) = 0",
+                 self.open(new, result=f"13<{new}>"), f"close(13<{new}>) = 0"]
+        report = self.staging_report(fixture, extra, [new])
+        self.assertTrue(report["ok"], report)
+        self.assertEqual(2, report["actions"][0]["counts"]["hostStagingScratch"])
+        obj = next(n for n in report["hostStagingCandidates"][0]["objects"] if str(old) in n["history"])
+        self.assertEqual([str(old), str(new)], obj["history"])
+        self.assertEqual("new-private-file", obj["initialization"])
+
+    def test_staging_rejects_alias_mutation_directory_rename_and_parent_escape(self):
+        for variant in ("alias-write", "alias-rename", "directory-rename", "alias-ancestor",
+                        "parent-escape", "permission", "ancestor-replacement"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                root, source, _, _, _ = fixture
+                if variant == "alias-write":
+                    extra = [self.open(source, "O_WRONLY|O_TRUNC", f"12<{self.source}>"),
+                             f"close(12<{self.source}>) = 0"]
+                elif variant == "alias-rename":
+                    extra = [f"rename({quote(source)}, {quote(root / 'scratch/renamed')}) = 0"]
+                elif variant == "directory-rename":
+                    extra = [f"rename({quote(root / 'scratch')}, {quote(root / 'other')}) = 0"]
+                elif variant == "alias-ancestor":
+                    extra = [self.open(str(source) + "/../source.cs", result=f"12<{self.source}>")]
+                elif variant == "parent-escape":
+                    extra = [self.open(str(root) + "/../outside", result=f"12<{self.source}>")]
+                elif variant == "permission":
+                    extra = [f"chmod({quote(root)}, 0777) = 0"]
+                else:
+                    extra = [f"rename({quote(root.parent)}, {quote(root.parent) + '.moved'}) = 0"]
+                report = self.staging_report(fixture, extra)
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["hostStagingAllowanceUsage"])
+
+    def test_staging_foreign_family_and_unowned_child_cannot_create_or_read_aliases(self):
+        for variant in ("foreign-read", "child-created-root"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                root, source, output, lines, directories = fixture
+                if variant == "foreign-read":
+                    lines[1:1] = ["clone(child_stack=NULL, flags=SIGCHLD) = 101"]
+                    host = lines + ["getpid() = 100"] * 8 + self.staging_cleanup(
+                        root, directories, [source, output]) + ["+++ exited with 0 +++"]
+                    self.log(host)
+                    self.log([self.exec(), self.open(source, result=f"12<{self.source}>"),
+                              f"close(12<{self.source}>) = 0", "+++ exited with 0 +++"],
+                             pid=101, start=1 + (len(lines) + 1) / 1000)
+                else:
+                    self.log([self.exec(), "clone(child_stack=NULL, flags=SIGCHLD) = 101",
+                              "wait4(101, NULL, 0, NULL) = 101", "+++ exited with 0 +++"])
+                    self.log(lines[1:] + self.staging_cleanup(root, directories, [source, output]) +
+                             ["+++ exited with 0 +++"], pid=101, start=1.0015)
+                report = self.analyze(allow_host_staging=True, response_file_profile=True)
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["hostStagingAllowanceUsage"])
+
+    def test_staging_child_dirfd_alias_and_escaped_filenames(self):
+        self.source = self.file('a space/$colon:quote"back\\slash.cs')
+        self.descriptor["parameters"]["DeclaredInputs"]["items"] = [{"itemSpec": str(self.source)}]
+        fixture = self.staging_fixture()
+        root, source, output, lines, directories = fixture
+        lines += ["clone(child_stack=NULL, flags=SIGCHLD) = 101"] + ["getpid() = 100"] * 8
+        self.log(lines + self.staging_cleanup(root, directories, [source, output]) + ["+++ exited with 0 +++"])
+        start = 1 + (len(lines) - 7) / 1000
+        self.log([f"execve({quote(self.host)}, [{quote(self.host)}], []) = 0",
+                  self.open(source.name, base=f"8<{source.parent}>", result=f"12<{quote(self.source)[1:-1]}>"),
+                  f"close(12<{quote(self.source)[1:-1]}>) = 0", "+++ exited with 0 +++"], pid=101, start=start)
+        report = self.analyze(allow_host_staging=True, response_file_profile=True)
+        self.assertTrue(report["ok"], report)
+        aliases = [e for e in report["hostStagingAllowanceUsage"]
+                   if e["kind"] == "open" and e["admission"] == "hostStagingInputAlias"]
+        self.assertEqual({100, 101}, {e["pid"] for e in aliases})
+
+    def test_staging_requires_complete_resolved_successful_capture_and_profile(self):
+        for variant in ("missing-profile", "changed-input", "unresolved", "unfinished", "failed-family"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                root, source, output, lines, directories = fixture
+                if variant == "unresolved":
+                    lines.append("unrecognized_syscall() = 0")
+                if variant == "unfinished":
+                    lines.append('openat(AT_FDCWD, "unfinished", O_RDONLY <unfinished ...>')
+                self.log(lines + self.staging_cleanup(root, directories, [source, output]) +
+                         ["+++ exited with " + ("1" if variant == "failed-family" else "0") + " +++"])
+                report = self.analyze(allow_host_staging=True,
+                                      response_file_profile=variant != "missing-profile",
+                                      capture_complete=variant != "changed-input")
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["hostStagingAllowanceUsage"])
+
+    def test_staging_directory_inventory_requires_membership_and_eof_during_cleanup(self):
+        for variant in ("extra-member", "omitted-member", "missing-eof", "abbreviated", "addition"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                root, source, output, lines, directories = fixture
+                cleanup = self.staging_cleanup(root, directories, [source, output])
+                if variant == "extra-member":
+                    cleanup[1] = self.dents(root, ["scratch", "execroot", "foreign"], 30)
+                elif variant == "omitted-member":
+                    cleanup[1] = self.dents(root, ["execroot"], 30)
+                elif variant == "missing-eof":
+                    cleanup[-3] = "getpid() = 100"
+                elif variant == "abbreviated":
+                    cleanup[1] = f"getdents64(30<{root}>, /* 4 entries */, 32768) = 128"
+                else:
+                    transient = root / "transient"
+                    cleanup[2:2] = [self.open(transient, "O_RDWR|O_CREAT", f"12<{transient}>"),
+                                    f"close(12<{transient}>) = 0", f"unlink({quote(transient)}) = 0"]
+                self.log(lines + cleanup + ["+++ exited with 0 +++"])
+                report = self.analyze(allow_host_staging=True, response_file_profile=True)
+                self.assertFalse(report["ok"], report)
+                self.assertEqual([], report["hostStagingAllowanceUsage"])
+
+    def test_staging_response_files_keep_the_separate_stricter_proof(self):
+        for variant in ("valid", "missing-exec-argument", "missing-writer-close"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                root, source, output, lines, directories = fixture
+                temporary = root / "scratch/MSBuildTemp fixture"
+                response = temporary / "compiler.rsp"
+                lines += [f"mkdir({quote(temporary)}, 0700) = 0",
+                          self.open(response, "O_WRONLY|O_CREAT", f"12<{response}>"),
+                          f"ftruncate(12<{response}>, 0) = 0",
+                          f"close(12<{response}>) = 0" if variant != "missing-writer-close" else "getpid() = 100",
+                          "clone(child_stack=NULL, flags=SIGCHLD) = 101"]
+                start = 1 + (len(lines) - 0.5) / 1000
+                lines += ["getpid() = 100"] * 8 + [f"unlink({quote(response)}) = 0"]
+                self.log(lines + self.staging_cleanup(root, directories + [temporary], [source, output]) +
+                         ["+++ exited with 0 +++"])
+                argument = str(response) if variant == "missing-exec-argument" else "@" + str(response)
+                self.log([f"execve({quote(self.host)}, [{quote(self.host)}, {quote(argument)}], []) = 0",
+                          self.open(response, result=f"14<{response}>"),
+                          f"close(14<{response}>) = 0", "+++ exited with 0 +++"], pid=101, start=start)
+                report = self.analyze(allow_host_staging=True, response_file_profile=True,
+                                      allow_response_file_scratch=True)
+                self.assertEqual(variant == "valid", report["ok"], report)
+                self.assertEqual(1 if variant == "valid" else 0,
+                                 len(report["responseFileScratchAllowanceUsage"]), report)
+                self.assertFalse(any(e["path"] == str(response) and e["kind"] == "open"
+                                     for e in report["hostStagingAllowanceUsage"]))
+
+    def test_staging_direct_rsp_and_aliased_child_exec_require_both_complete_proofs(self):
+        for variant in ("valid", "no-stage", "bad-root", "missing-content-edge",
+                        "missing-executable-declaration", "missing-writer-close", "missing-reader-close",
+                        "missing-argument", "uninitialized", "retargeted-executable",
+                        "mapped-valid", "mapped-missing-directory", "mapped-directory-alias",
+                        "mapped-hardlink-import", "mapped-permission-change"):
+            with self.subTest(variant=variant):
+                self.descriptor["parameters"]["DeclaredInputs"]["items"] = [
+                    {"itemSpec": str(self.source)}, {"itemSpec": str(self.host)}]
+                fixture = self.staging_fixture()
+                root, source, output, lines, directories = fixture
+                executable = root / "execroot/root" / str(self.host).lstrip("/")
+                response = root / "scratch/compiler.rsp"
+                lines += [f"symlink({quote(self.host)}, {quote(executable)}) = 0"]
+                mapped = variant.startswith("mapped-")
+                if mapped:
+                    work = source.parent / "illink-work"
+                    response = work / "link.rsp"
+                    if variant == "mapped-directory-alias":
+                        lines += [f"symlink({quote(self.source.parent)}, {quote(work)}) = 0"]
+                    elif variant != "mapped-missing-directory":
+                        lines += [f"mkdir({quote(work)}, 0777) = 0"]
+                        directories.append(work)
+                    if variant == "mapped-permission-change":
+                        lines += [f"chmod({quote(work)}, 0777) = 0"]
+                if variant == "bad-root":
+                    lines[1] = lines[1].replace("0700", "0777")
+                elif variant == "missing-content-edge":
+                    self.graph.write_text("\n".join(
+                        line.replace(escape(self.host), "", 1) if line.startswith("build ") else line
+                        for line in self.graph.read_text().splitlines()) + "\n")
+                elif variant == "missing-executable-declaration":
+                    self.descriptor["parameters"]["DeclaredInputs"]["items"].pop()
+                    self.write_graph()
+                elif variant == "retargeted-executable":
+                    lines[-1] = f"symlink({quote(self.source)}, {quote(executable)}) = 0"
+                if variant == "mapped-hardlink-import":
+                    lines += [f"link({quote(self.source)}, {quote(response)}) = 0"]
+                flags = "O_WRONLY|O_CREAT" + ("" if mapped or variant == "uninitialized" else "|O_EXCL")
+                lines += [self.open(response, flags, f"12<{response}>")]
+                if mapped:
+                    lines += [f"ftruncate(12<{response}>, 0) = 0"]
+                lines += [f"close(12<{response}>) = 0" if variant != "missing-writer-close" else "getpid() = 100",
+                          "clone(child_stack=NULL, flags=SIGCHLD) = 101"]
+                start = 1 + (len(lines) - 0.5) / 1000
+                lines += ["getpid() = 100"] * 8 + [f"unlink({quote(response)}) = 0"]
+                self.log(lines + self.staging_cleanup(root, directories, [source, output, executable]) +
+                         ["+++ exited with 0 +++"])
+                argument = str(response) if variant == "missing-argument" else "@" + str(response)
+                self.log([f"execve({quote(executable)}, [{quote(executable)}, {quote(argument)}], []) = 0",
+                          self.open(response, result=f"14<{response}>"),
+                          f"close(14<{response}>) = 0" if variant != "missing-reader-close" else "getpid() = 101",
+                          "+++ exited with 0 +++"], pid=101, start=start)
+                report = self.analyze(allow_host_staging=variant != "no-stage", response_file_profile=True,
+                                      allow_response_file_scratch=True)
+                valid = variant in ("valid", "mapped-valid")
+                self.assertEqual(valid, report["ok"], report)
+                self.assertEqual(1 if valid else 0,
+                                 len(report["responseFileScratchAllowanceUsage"]), report)
+                if valid:
+                    evidence = report["responseFileScratchCandidates"][0]
+                    self.assertEqual(str(root), evidence["directoryProtection"]["stagingRoot"])
+                    self.assertEqual(str(response.parent), evidence["directoryProtection"]["directory"])
+                    proof = evidence["childExecutions"][0]["declarationProof"]
+                    self.assertEqual(str(self.host), proof["target"])
+                    self.assertEqual(str(root), proof["stagingRoot"])
+
+    def test_staging_deleted_fd_is_accepted_only_with_known_object_history(self):
+        fixture = self.staging_fixture()
+        path = fixture[0] / "scratch/deleted"
+        extra = [self.open(path, "O_RDWR|O_CREAT|O_EXCL", f"12<{path}>"),
+                 f"unlink({quote(path)}) = 0", f"close(12<{path} (deleted)>) = 0"]
+        report = self.staging_report(fixture, extra)
+        self.assertTrue(report["ok"], report)
+        for unknown in (path, fixture[0]):
+            fixture = self.staging_fixture()
+            report = self.staging_report(fixture, [f"close(12<{unknown} (deleted)>) = 0"])
+            self.assertFalse(report["ok"], report)
+            self.assertTrue(report["unresolved"])
+
+    def test_staging_input_alias_cannot_be_recreated_even_with_identical_target(self):
+        fixture = self.staging_fixture()
+        _, source, _, _, _ = fixture
+        report = self.staging_report(fixture, [
+            f"unlink({quote(source)}) = 0",
+            f"symlink({quote(self.source)}, {quote(source)}) = 0",
+            self.open(source, result=f"12<{self.source}>"), f"close(12<{self.source}>) = 0"])
+        self.assertFalse(report["ok"], report)
+        self.assertTrue(any("recreated" in r["reason"]
+                            for r in report["hostStagingCandidates"][0]["rejections"]))
+
+    def test_staging_readlink_and_absent_probes_have_exact_evidence(self):
+        fixture = self.staging_fixture()
+        root, source, _, _, _ = fixture
+        report = self.staging_report(fixture, [
+            f"readlink({quote(source)}, {quote(self.source)}, 65535) = {len(str(self.source))}",
+            self.open(root / "scratch/absent", result="-1 ENOENT (No such file or directory)")],
+            strict=True)
+        self.assertTrue(report["ok"], report)
+        self.assertEqual("hostStagingProbe", report["negativeProbes"][-1]["admission"])
+        self.assertTrue(any(e["kind"] == "readlink" for e in report["hostStagingAllowanceUsage"]))
+        fixture = self.staging_fixture()
+        report = self.staging_report(fixture, [f"readlink({quote(source)}, \"wrong\", 65535) = 5"])
+        self.assertFalse(report["ok"], report)
+
+    def test_staging_fd_duplication_preserves_object_but_unknown_replacement_fails(self):
+        for variant in ("valid", "replacement", "annotation", "range"):
+            with self.subTest(variant=variant):
+                fixture = self.staging_fixture()
+                path = fixture[0] / "scratch/new"
+                extra = [self.open(path, "O_RDWR|O_CREAT|O_EXCL", f"12<{path}>"),
+                         f"ftruncate(12<{path}>, 128) = 0", f"fchmod(12<{path}>, 0644) = 0",
+                         "close(99<pipe:[12345]>) = 0"]
+                if variant == "replacement":
+                    extra += [f"dup2(9</outside>, 12<{path}>) = 12<{path}>"]
+                elif variant == "annotation":
+                    extra += ["close(12</outside>) = 0"]
+                elif variant == "range":
+                    extra += ["close_range(3, 4294967295, 0) = 0"]
+                else:
+                    extra += [f"dup(12<{path}>) = 13<{path}>", f"close(13<{path}>) = 0"]
+                extra += [f"close(12<{path}>) = 0"]
+                report = self.staging_report(fixture, extra, [path])
+                self.assertEqual(variant == "valid", report["ok"], report)
+
+    def test_staging_completed_alias_creation_must_precede_its_use(self):
+        fixture = self.staging_fixture()
+        self.assertTrue(self.staging_report(fixture)["ok"])
+        events, errors = audit.read_events(self.prefix)
+        next(e for e in events if e["syscall"] == "symlink")["completedTimestamp"] = "2.000000"
+        with mock.patch.object(audit, "read_events", return_value=(events, errors)):
+            report = self.analyze(allow_host_staging=True, response_file_profile=True)
+        self.assertFalse(report["ok"], report)
+        self.assertEqual([], report["incompleteness"])
+        self.assertEqual([], report["hostStagingAllowanceUsage"])
+        self.assertTrue(any("overlaps" in r["reason"]
+                            for r in report["hostStagingCandidates"][0]["rejections"]))
+
+    @unittest.skipUnless(os.environ.get("GENBUILD_AUDIT_STRACE"), "Set GENBUILD_AUDIT_STRACE for Linux integration")
+    def test_real_strace_staging_removed_roots_child_reads_and_negative_controls(self):
+        tracer = os.environ["GENBUILD_AUDIT_STRACE"]
+        cat = shutil.which("cat")
+        self.assertIsNotNone(cat)
+        perl, ldd = shutil.which("perl"), shutil.which("ldd")
+        if not perl or not ldd:
+            self.skipTest("Tiny no-build staging integration needs existing perl and ldd")
+        self.host = Path(os.path.realpath(perl))
+        self.app = self.file("staged action.pl")
+        self.descriptor["taskAssembly"] = str(self.app)
+        self.source = self.file('space $colon:quote"back\\slash.cs')
+        self.descriptor["parameters"]["DeclaredInputs"]["items"] = [{"itemSpec": str(self.source)}]
+        temporary = self.root / "private temporary"
+        temporary.mkdir()
+        self.descriptor["environment"] = {"TMPDIR": str(temporary)}
+        self.write_graph(inputs=[self.source, Path(cat)])
+        secret = self.file("not-declared")
+        # Exact interpreter ELF dependencies, never task/source directory snapshots.
+        mapped = {p for p in re.findall(r"/[^\s()]+", subprocess.check_output(
+            [ldd, str(self.host)], text=True)) if Path(p).is_file()}
+        if Path("/etc/ld.so.cache").is_file():
+            mapped.add("/etc/ld.so.cache")
+        mapped.add("/dev/urandom")
+        catalog = self.root / "platform.json"
+        audit.write_json(catalog, {"files": sorted(mapped)})
+
+        def literal(path):
+            return "'" + str(path).replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+        for variant in ("valid", "undeclared-read", "hardlink"):
+            with self.subTest(variant=variant):
+                root = temporary / ("msbuild-stage-" + uuid.uuid4().hex)
+                mapped_root = root / "execroot/root"
+                alias = mapped_root / str(self.source).lstrip("/")
+                output = mapped_root / str(self.output).lstrip("/")
+                directories = []
+                parent = alias.parent
+                while parent != root:
+                    directories.insert(0, parent)
+                    parent = parent.parent
+                self.app.write_text(
+                    f"mkdir({literal(root)}, 0700) or die $!;\n" +
+                    "".join(f"mkdir({literal(p)}, 0777) or die $!;\n"
+                            for p in [root / "scratch"] + directories) +
+                    f"symlink({literal(self.source)}, {literal(alias)}) or die $!;\n"
+                    "my $pid = fork(); defined($pid) or die $!;\n"
+                    "if (!$pid) { open(STDOUT, '>', '/dev/null') or die $!;\n"
+                    f"exec({literal(cat)}, {literal(alias)}) or die $!; }}\n"
+                    "waitpid($pid, 0); $? == 0 or die 'child failed';\n" +
+                    (f"link({literal(secret)}, {literal(output)}) or die $!;\n" if variant == "hardlink" else
+                     f"open(my $w, '>', {literal(output)}) or die $!; print $w 'generated'; close($w) or die $!;\n") +
+                    f"open(my $r, '<', {literal(output)}) or die $!; my $data = <$r>; close($r) or die $!;\n" +
+                    (f"open(my $s, '<', {literal(secret)}) or die $!; my $old = <$s>; close($s) or die $!;\n"
+                     if variant == "undeclared-read" else "") +
+                    "sub clean { my ($path) = @_; opendir(my $d, $path) or die $!;\n"
+                    "my @names = grep { $_ ne '.' && $_ ne '..' } readdir($d); closedir($d) or die $!;\n"
+                    "for my $name (@names) { my $child = \"$path/$name\";\n"
+                    "if (-d $child && !-l $child) { clean($child); } else { unlink($child) or die $!; } }\n"
+                    "rmdir($path) or die $!; }\n" + f"clean({literal(root)});\n")
+                capture = self.root / ("stage-capture-" + variant)
+                with mock.patch.dict(os.environ, {"LC_ALL": "C", "PERL5OPT": "", "PERL5LIB": ""}):
+                    self.assertEqual(0, audit.main([
+                        "trace", "--strace", tracer, "--graph", str(self.graph), "--cwd", str(self.root),
+                        "--response-file-provenance", "--output", str(capture), "--",
+                        str(self.host), "-f", str(self.app), "--invocation", str(self.sidecar)]))
+                self.assertFalse(root.exists())
+                report_path = self.root / ("stage-report-" + variant + ".json")
+                code = audit.main(["analyze", "--capture", str(capture), "--platform-catalog", str(catalog),
+                                   "--allow-host-staging", "--allow-runtime-proc", "--report", str(report_path)])
+                report = json.loads(report_path.read_text())
+                if variant != "hardlink":
+                    self.assertEqual([], report["unresolved"], report)
+                self.assertEqual([], report["incompleteness"], report)
+                self.assertEqual(0 if variant == "valid" else 1, code, report)
+                if variant == "valid":
+                    self.assertEqual(1, sum(e["kind"] == "open" and e["admission"] == "hostStagingInputAlias"
+                                            for e in report["hostStagingAllowanceUsage"]))
+                    self.assertEqual(1, report["actions"][0]["counts"]["hostStagingOutput"])
+                elif variant == "undeclared-read":
+                    self.assertEqual([str(secret)], [e["path"] for e in report["undeclaredReads"]])
+                else:
+                    self.assertFalse(report["hostStagingCandidates"][0]["eligible"])
 
     def test_response_scratch_requires_opt_in_and_records_fd_initialization(self):
         path, host, child = self.response_fixture()
@@ -797,9 +1419,9 @@ class AuditTests(unittest.TestCase):
     def seccomp_tracer(self, mode):
         tracer = self.root / ("strace-" + mode)
         actual = "\n".join([
-            "1.000000 " + self.exec(),
-            "1.001000 " + self.open(self.source),
-            "1.002000 +++ exited with 0 +++", "",
+            "1.000000000 " + self.exec() + " <0.000001000>",
+            "1.001000000 " + self.open(self.source) + " <0.000001000>",
+            "1.002000000 +++ exited with 0 +++", "",
         ])
         tracer.write_text(
             "#!" + sys.executable + "\n"
@@ -811,8 +1433,8 @@ class AuditTests(unittest.TestCase):
             "prefix = pathlib.Path(sys.argv[sys.argv.index('-o') + 1])\n"
             "if '-d' in sys.argv:\n"
             " executable = sys.argv[sys.argv.index('--') + 1]\n"
-            " text = '1.000000 execve(' + json.dumps(executable) + ', [], []) = 0\\n'\n"
-            " text += '1.001000 +++ exited with 0 +++\\n'\n"
+            " text = '1.000000000 execve(' + json.dumps(executable) + ', [], []) = 0 <0.000001000>\\n'\n"
+            " text += '1.001000000 +++ exited with 0 +++\\n'\n"
             " pathlib.Path(str(prefix) + '.700').write_text(text)\n"
             " print(sys.argv[0] + ': seccomp filter ' + ('disabled' if mode == 'disabled' else 'enabled'), file=sys.stderr)\n"
             " if mode != 'no-event':\n"
@@ -842,7 +1464,7 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(manifest["complete"])
         self.assertEqual(1, manifest["seccompBpf"]["preflight"]["liveSeccompStops"])
         calls = [json.loads(line) for line in (self.root / "argv-ok.jsonl").read_text().splitlines()]
-        expected = "trace=%file,%process,getdents64," + audit.RESPONSE_TRACE
+        expected = "trace=%file,%process,getdents64," + audit.FD_TRACE
         self.assertEqual([expected, expected], [c[c.index("-e") + 1] for c in calls])
         self.assertTrue(all("--seccomp-bpf" in c for c in calls))
         self.assertIn("-d", calls[0])

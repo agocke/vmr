@@ -3,6 +3,7 @@
 
 using FluentAssertions;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
 
 namespace Microsoft.NET.Build.Tasks.UnitTests
 {
@@ -39,6 +40,60 @@ namespace Microsoft.NET.Build.Tasks.UnitTests
             finally
             {
                 Directory.Delete(projectDir, true);
+            }
+        }
+
+        [TestMethod]
+        public void SatelliteGeneratorUsesStagedInputsAndOutputs()
+        {
+            string projectDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            string executionDirectory = Path.Combine(projectDirectory, "execution");
+            string stagedTemplate = Path.Combine(executionDirectory, "inputs", "template.dll");
+            string stagedOutput = Path.Combine(executionDirectory, "outputs", "Generated.cs");
+            Directory.CreateDirectory(Path.GetDirectoryName(stagedTemplate)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(stagedOutput)!);
+            try
+            {
+                string logicalTemplate = Path.Combine(projectDirectory, "template.dll");
+                string logicalOutput = Path.Combine(projectDirectory, "Generated.cs");
+                File.Copy(typeof(GivenAGetAssemblyAttributesMultiThreading).Assembly.Location, stagedTemplate);
+
+                var inputPaths = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [logicalTemplate] = stagedTemplate
+                };
+                var outputPaths = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [logicalOutput] = stagedOutput
+                };
+                var task = new GenerateSatelliteAssemblySource
+                {
+                    BuildEngine = new MockBuildEngine(),
+                    TaskEnvironment = TaskEnvironmentHelper.CreateForStagedTest(
+                        projectDirectory,
+                        executionDirectory,
+                        path => inputPaths[path],
+                        path => outputPaths[path]),
+                    PathToTemplateFile = "template.dll",
+                    OutputFile = "Generated.cs",
+                    Culture = "fr",
+                    DeclaredInputs = [new TaskItem("template.dll")],
+                    DeclaredOutputs = [new TaskItem("Generated.cs")]
+                };
+
+                task.Execute().Should().BeTrue();
+
+                File.Exists(stagedOutput).Should().BeTrue();
+                File.Exists(logicalOutput).Should().BeFalse();
+                File.ReadAllText(stagedOutput).Should().Contain("AssemblyCultureAttribute")
+                    .And.Contain("\"fr\"");
+            }
+            finally
+            {
+                if (Directory.Exists(projectDirectory))
+                {
+                    Directory.Delete(projectDirectory, recursive: true);
+                }
             }
         }
     }

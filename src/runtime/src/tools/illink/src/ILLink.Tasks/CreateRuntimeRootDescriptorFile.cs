@@ -11,9 +11,11 @@ using Microsoft.Build.Utilities; // Task
 
 namespace ILLink.Tasks
 {
-    [MSBuildDeclaredIOTask]
-    public class CreateRuntimeRootILLinkDescriptorFile : Task
+    [MSBuildDeclaredIOTask(SandboxVersion = 1)]
+    public class CreateRuntimeRootILLinkDescriptorFile : Task, IMultiThreadableTask
     {
+        public TaskEnvironment TaskEnvironment { get; set; } = TaskEnvironment.Fallback;
+
         /// <summary>
         ///   The path to namespace.h.
         /// </summary>
@@ -104,28 +106,28 @@ namespace ILLink.Tasks
 
         public override bool Execute()
         {
-            var namespaceFilePath = NamespaceFilePath.ItemSpec;
+            var namespaceFilePath = GetInputPath(NamespaceFilePath);
             if (!File.Exists(namespaceFilePath))
             {
                 Log.LogError($"File '{namespaceFilePath}' doesn't exist.");
                 return false;
             }
 
-            var mscorlibFilePath = MscorlibFilePath.ItemSpec;
+            var mscorlibFilePath = GetInputPath(MscorlibFilePath);
             if (!File.Exists(mscorlibFilePath))
             {
                 Log.LogError($"File '{mscorlibFilePath}' doesn't exist.");
                 return false;
             }
 
-            var cortypeFilePath = CortypeFilePath.ItemSpec;
+            var cortypeFilePath = GetInputPath(CortypeFilePath);
             if (!File.Exists(cortypeFilePath))
             {
                 Log.LogError($"File '{cortypeFilePath}' doesn't exist.");
                 return false;
             }
 
-            var rexcepFilePath = RexcepFilePath.ItemSpec;
+            var rexcepFilePath = GetInputPath(RexcepFilePath);
             if (!File.Exists(rexcepFilePath))
             {
                 Log.LogError($"File '{rexcepFilePath}' doesn't exist.");
@@ -134,7 +136,7 @@ namespace ILLink.Tasks
 
             InitializeDefineConstants();
 
-            var iLLinkTrimXmlFilePath = ILLinkTrimXmlFilePath.ItemSpec;
+            var iLLinkTrimXmlFilePath = GetInputPath(ILLinkTrimXmlFilePath);
             if (!File.Exists(iLLinkTrimXmlFilePath))
             {
                 Log.LogError($"File '{iLLinkTrimXmlFilePath}' doesn't exist.");
@@ -149,10 +151,18 @@ namespace ILLink.Tasks
 
             ProcessExceptionTypes(rexcepFilePath);
 
-            OutputXml(iLLinkTrimXmlFilePath, RuntimeRootDescriptorFilePath.ItemSpec);
+            string outputPath = TaskEnvironment.IsSandboxed
+                ? TaskEnvironment.GetOutputPath(RuntimeRootDescriptorFilePath.ItemSpec).Value
+                : RuntimeRootDescriptorFilePath.ItemSpec;
+            OutputXml(iLLinkTrimXmlFilePath, outputPath);
 
             return true;
         }
+
+        string GetInputPath(ITaskItem file)
+            => TaskEnvironment.IsSandboxed
+                ? TaskEnvironment.GetInputPath(file.ItemSpec).Value
+                : file.ItemSpec;
 
         void ProcessNamespaces(string namespaceFile)
         {

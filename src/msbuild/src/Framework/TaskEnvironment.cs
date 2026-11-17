@@ -16,6 +16,7 @@ namespace Microsoft.Build.Framework
         private readonly ITaskEnvironmentDriver _driver;
         private Func<string, string>? _inputPath;
         private Func<string, string>? _outputPath;
+        private Func<string, string>? _directoryPath;
         private string? _executionDirectory;
 
         /// <summary>
@@ -102,12 +103,25 @@ namespace Microsoft.Build.Framework
             return _outputPath is null ? logical : new AbsolutePath(_outputPath(logical.Value));
         }
 
-        internal bool HasFilePathResolvers => _executionDirectory is not null;
+        /// <summary>Gets whether the host owns a private staged execution layout.</summary>
+        public bool IsSandboxed => _executionDirectory is not null;
 
-        internal void SetFilePathResolvers(Func<string, string>? inputPath, Func<string, string>? outputPath, string? executionDirectory)
+        /// <summary>
+        /// Resolves a structural execution directory without exposing any directory contents.
+        /// Ordinary execution returns its logical absolute path.
+        /// </summary>
+        public AbsolutePath GetExecutionDirectory(string path)
+        {
+            AbsolutePath logical = GetAbsolutePath(path);
+            return _directoryPath is null ? logical : new AbsolutePath(_directoryPath(logical.Value));
+        }
+
+        internal void SetFilePathResolvers(Func<string, string>? inputPath, Func<string, string>? outputPath,
+            string? executionDirectory, Func<string, string>? directoryPath = null)
         {
             _inputPath = inputPath;
             _outputPath = outputPath;
+            _directoryPath = directoryPath;
             _executionDirectory = executionDirectory;
         }
 
