@@ -1,0 +1,29 @@
+<Project>
+  <PropertyGroup>
+    <RunAnalyzers>false</RunAnalyzers>
+    <RoslynPackage Condition="'$(RoslynPackage)' == ''">Microsoft.CodeAnalysis.CSharp</RoslynPackage>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="$(RoslynPackage)" Version="4.12.0" Condition="'$(NoRoslyn)' != 'true'" />
+    <PackageReference Include="Microsoft.Net.Compilers.Toolset" Version="5.15.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" ExcludeAssets="runtime" PrivateAssets="all" Condition="'$(ExistingAnalyzer)' == 'true'" />
+  </ItemGroup>
+  <Import Project="$(RuntimeEngineeringDirectory)Analyzers.targets" />
+  <Target Name="Restore" DependsOnTargets="_SelectGenBuildRoslynAnalyzerPackage">
+    <ItemGroup>
+      <_Analyzer Include="@(PackageReference)" Condition="'%(Identity)' == 'Microsoft.CodeAnalysis.Analyzers'" />
+      <_Compiler Include="@(PackageReference)" Condition="'%(Identity)' == 'Microsoft.Net.Compilers.Toolset'" />
+      <_CodeAnalysis Include="@(PackageReference)" Condition="'%(Identity)' == '$(RoslynPackage)'" />
+    </ItemGroup>
+    <Error Condition="'$(GenBuildRoslynAnalyzerPackageVersion)' == '' and '@(_Analyzer)' != ''"
+           Text="Ordinary authoring must not gain an analyzer reference." />
+    <Error Condition="'$(NoRoslyn)' == 'true' and '@(_Analyzer)' != ''"
+           Text="The override must not introduce analyzers into unrelated projects." />
+    <Error Condition="'$(GenBuildRoslynAnalyzerPackageVersion)' != '' and '$(NoRoslyn)' != 'true' and ('@(_Analyzer->Count())' != '1' or '@(_Analyzer->'%(Version)')' != '$(GenBuildRoslynAnalyzerPackageVersion)' or '@(_Analyzer->'%(PrivateAssets)')' != 'all')"
+           Text="Roslyn consumers must select exactly one private source-built analyzer package." />
+    <Error Condition="'$(ExistingAnalyzer)' == 'true' and '@(_Analyzer->'%(ExcludeAssets)')' != 'runtime'"
+           Text="Updating an existing reference must preserve its other metadata." />
+    <Error Condition="'@(_Compiler->'%(Version)')' != '5.15.0' or ('$(NoRoslyn)' != 'true' and '@(_CodeAnalysis->'%(Version)')' != '4.12.0')"
+           Text="The analyzer override must not change unrelated package versions." />
+  </Target>
+</Project>

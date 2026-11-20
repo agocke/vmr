@@ -8,6 +8,9 @@
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <UseAppHost>false</UseAppHost>
     <SelfContained>false</SelfContained>
+    <PackageVersion Condition="'$(GenBuildTaskPackageVersion)' != ''">$(GenBuildTaskPackageVersion)</PackageVersion>
+    <GenBuildMSBuildArtifactsDirectory Condition="'$(GenBuildMSBuildArtifactsDirectory)' == ''">$(MSBuildThisFileDirectory)../src/msbuild/artifacts/</GenBuildMSBuildArtifactsDirectory>
+    <GenBuildRoslynArtifactsDirectory Condition="'$(GenBuildRoslynArtifactsDirectory)' == ''">$(MSBuildThisFileDirectory)../src/roslyn/artifacts/</GenBuildRoslynArtifactsDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(GenBuildAppArtifactsDirectory)' != ''">
     <BaseIntermediateOutputPath>$(GenBuildAppArtifactsDirectory)obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>

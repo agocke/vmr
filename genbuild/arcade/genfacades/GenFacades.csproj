@@ -17,8 +17,8 @@
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetTaskPackageFiles</TargetsForTfmSpecificContentInPackage>
     <_GenFacadesSource>$(MSBuildThisFileDirectory)../../../src/arcade/src/Microsoft.DotNet.GenFacades/</_GenFacadesSource>
-    <_Engine>$(MSBuildThisFileDirectory)../../../src/msbuild/artifacts/bin/MSBuild/$(Configuration)/net11.0/</_Engine>
-    <_Compiler>$(MSBuildThisFileDirectory)../../../src/roslyn/artifacts/bin/csc/$(Configuration)/net10.0/</_Compiler>
+    <_Engine>$([MSBuild]::NormalizeDirectory('$(GenBuildMSBuildArtifactsDirectory)', 'bin', 'MSBuild', '$(Configuration)', 'net11.0'))</_Engine>
+    <_Compiler>$([MSBuild]::NormalizeDirectory('$(GenBuildRoslynArtifactsDirectory)', 'bin', 'csc', '$(Configuration)', 'net10.0'))</_Compiler>
     <_MSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' == ''">$(_Engine)Microsoft.Build.Utilities.Core.dll</_MSBuildUtilitiesAssembly>
     <_MSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' != ''">$(GenBuildMSBuildUtilitiesAssembly)</_MSBuildUtilitiesAssembly>
     <_MSBuildFrameworkAssembly Condition="'$(GenBuildMSBuildFrameworkAssembly)' != ''">$(GenBuildMSBuildFrameworkAssembly)</_MSBuildFrameworkAssembly>

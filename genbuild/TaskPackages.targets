@@ -1,0 +1,40 @@
+<Project>
+  <ItemGroup>
+    <_TaskPackage Include="$(MSBuildThisFileDirectory)arcade/TargetFramework.csproj;$(MSBuildThisFileDirectory)arcade/sdk/ArcadeSdk.csproj;$(MSBuildThisFileDirectory)arcade/xliff/XliffTasks.csproj;$(MSBuildThisFileDirectory)arcade/genfacades/GenFacades.csproj;$(MSBuildThisFileDirectory)arcade/templating/Templating.csproj">
+      <Arguments>-p:GenBuildArcadeArtifactsDirectory=&quot;$(GenBuildArcadeArtifactsDirectory)&quot; -p:GenBuildArcadeNuGetArtifactsDirectory=&quot;$(GenBuildArcadeNuGetArtifactsDirectory)&quot; -p:TargetFramework=net11.0</Arguments>
+    </_TaskPackage>
+    <_TaskPackage Include="$(GenBuildRoot)src/sdk/src/Compatibility/ApiCompat/Microsoft.DotNet.ApiCompat.Task/Microsoft.DotNet.ApiCompat.Task.csproj">
+      <Arguments>-p:ArtifactsDir=&quot;$(GenBuildSdkArtifactsDirectory)&quot;</Arguments>
+    </_TaskPackage>
+    <_TaskPackage Include="$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/NuGet/Microsoft.CodeAnalysis.Analyzers/Microsoft.CodeAnalysis.Analyzers.Package.csproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/NuGet/Microsoft.CodeAnalysis.BannedApiAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers.Package.csproj">
+      <Arguments>-p:ArtifactsDir=&quot;$(GenBuildRoslynArtifactsDirectory)&quot; -p:DotNetRoot=&quot;$([System.IO.Path]::GetDirectoryName('$(GenBuildDotNetHost)'))/&quot; -p:GenerateAnalyzerMdFile=false -p:GenerateAnalyzerSarifFile=false -p:GenerateAnalyzerRulesMissingDocumentationFile=false</Arguments>
+      <NoBuild>false</NoBuild>
+    </_TaskPackage>
+    <_TaskPackage Update="@(_TaskPackage)">
+      <NoBuild Condition="'%(_TaskPackage.NoBuild)' == ''">true</NoBuild>
+    </_TaskPackage>
+  </ItemGroup>
+  <Target Name="ValidateTaskPackageInputs">
+    <Error Condition="'$(GenBuildTaskPackageVersion)' == ''" Text="Set a new GenBuildTaskPackageVersion for each revision to avoid reusing cached prototype packages." />
+  </Target>
+  <Target Name="PackTaskPackages" DependsOnTargets="ValidateTaskPackageInputs;Build">
+    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;%(_TaskPackage.Identity)&quot; -restore -t:Pack -p:NoBuild=%(_TaskPackage.NoBuild) -p:PackageVersion=&quot;$(GenBuildTaskPackageVersion)&quot; -p:PackageOutputPath=&quot;$(GenBuildOutputDirectory)packages/&quot; %(_TaskPackage.Arguments) $(_ComponentBuildArguments) $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/%(_TaskPackage.Filename)-pack-{}.binlog&quot;" />
+    <ItemGroup>
+      <_TaskPackageArgument Include="-p:MicrosoftDotNetBuildTasksTargetFrameworkPackageVersion=$(GenBuildTaskPackageVersion)" />
+      <_TaskPackageArgument Include="-p:MicrosoftDotNetXliffTasksPackageVersion=$(GenBuildTaskPackageVersion)" />
+      <_TaskPackageArgument Include="-p:MicrosoftDotNetApiCompatTaskVersion=$(GenBuildTaskPackageVersion)" />
+      <_TaskPackageArgument Include="-p:MicrosoftDotNetGenFacadesPackageVersion=$(GenBuildTaskPackageVersion)" />
+      <_TaskPackageArgument Include="-p:MicrosoftDotNetBuildTasksTemplatingVersion=$(GenBuildTaskPackageVersion)" />
+      <_TaskPackageArgument Include="-p:MicrosoftCodeAnalysisAnalyzersVersion=$(GenBuildTaskPackageVersion)" />
+      <_TaskPackageArgument Include="-p:MicrosoftCodeAnalysisBannedApiAnalyzersVersion=$(GenBuildTaskPackageVersion)" />
+      <_TaskPackageArgument Include="-p:GenBuildRoslynAnalyzerPackageVersion=$(GenBuildTaskPackageVersion)" />
+      <_TaskPackageArgument Include="-p:RestoreAdditionalProjectSources=&quot;$(GenBuildOutputDirectory)packages&quot;" />
+      <_TaskPackageArgument Include="-p:ArcadeSdkDir=&quot;$(GenBuildToolsetDirectory)Arcade/Sdk/tools/&quot;" />
+      <_TaskPackageArgument Include="-p:CSharpCoreTargetsPath=&quot;$(GenBuildToolsetDirectory)Roslyn/Microsoft.CSharp.Core.targets&quot;" />
+      <_TaskPackageArgument Include="-p:VisualBasicCoreTargetsPath=&quot;$(GenBuildToolsetDirectory)Roslyn/Microsoft.VisualBasic.Core.targets&quot;" />
+      <_TaskPackageArgument Include="-p:GenBuildMSBuildFrameworkAssembly=&quot;$(GenBuildToolsetDirectory)ref/Microsoft.Build.Framework.dll&quot;" />
+      <_TaskPackageArgument Include="-p:GenBuildMSBuildUtilitiesAssembly=&quot;$(GenBuildToolsetDirectory)ref/Microsoft.Build.Utilities.Core.dll&quot;" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(GenBuildOutputDirectory)task-packages.rsp" Lines="@(_TaskPackageArgument)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+  </Target>
+</Project>

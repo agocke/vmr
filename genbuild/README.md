@@ -55,6 +55,44 @@ intermediates. The `GenBuildMSBuildArtifactsDirectory`,
 properties select component build and assembly roots. Standalone Arcade's
 NuGet project references use `GenBuildArcadeNuGetArtifactsDirectory`.
 Changing only the final app directory does not isolate component builds.
+The selected roots also supply analyzer files and the Framework/Utilities
+compile-time contracts shipped under `toolset/ref/`; no manual DLL overlays
+are needed.
+
+To build the app and pack its runtime task integrations together, use a unique
+package version:
+
+```sh
+dotnet msbuild genbuild/genbuild.proj -t:PackTaskPackages \
+  -p:GenBuildTaskPackageVersion=12.0.0-genbuild.1 -m:1 -nr:false -bl:{}
+```
+
+This uses normal NuGet packing for the source-built Arcade SDK, target-framework,
+XLIFF, GenFacades, templating, ApiCompat and two Roslyn analyzer packages. The
+analyzer packages regenerate their graph-compatible integration targets from
+source rather than reusing the authoring in downloaded packages.
+The response file opts runtime's Roslyn consumers into a direct reference to
+that local analyzer package, including consumers that otherwise acquire its old
+authoring transitively. Without this explicit opt-in, ordinary runtime package
+selection is unchanged.
+The app includes the Arcade SDK authoring and generated dependency versions,
+not just its task DLL.
+Packages go under the app's `packages/` directory. The generated
+`task-packages.rsp` binds that feed, package versions, compiler targets, Arcade
+authoring and compile-time contracts. It contains absolute paths: regenerate it
+through this target after changing the app location. Use new versions when task
+package contents change; never edit shared package caches or repack cached
+archives by hand.
+
+The standalone pipeline has been validated for runtime's managed-libraries
+Release/net11.0/linux-x64 profile after deleting normal runtime artifacts, using
+fresh component outputs and an empty private package cache. The runtime-only
+host completed separate Restore, graph generation and direct Ninja execution:
+5,320 actions, 500 compiler actions, 7,208 file outputs and nine generated-tree
+members. Launcher read enforcement was enabled. Both the immediate repeat and
+a fresh-process graph regeneration reported no Ninja work; regenerated graph
+and product bytes were unchanged. This is not a full native-runtime build,
+a new syscall audit or a performance comparison.
 
 For performance measurements, use Release for both the toolchain and the target
 projects, with matching `-p:Configuration=Release` in Restore and Build. Prepare
@@ -77,6 +115,12 @@ Restore and Build must remain separate invocations. `build` generates
 `obj/genbuild/build.ninja` under the project's directory without running actions;
 Ninja executes them. Additional arguments are forwarded to MSBuild.
 Use `-p:MSBuildEmitActionGraph=/absolute/path/build.ninja` to change the graph path.
+Restore accepts an explicit `-m:N` for parallel acquisition. Assembly composes
+the source-built NuGet.Frameworks dependency into its packaged MSBuild manifest,
+so worker nodes can use framework property functions without a manual manifest
+overlay or an inherited `DOTNET_ADDITIONAL_DEPS` that could contaminate child
+tools. This does not change hardened graph construction's current single-node
+limit.
 
 The driver supplies `MSBuildGraphSdkBindingsDirectory`, defaulting to
 `obj/genbuild/sdk-bindings` under the entry project's directory. Restore saves
@@ -149,26 +193,19 @@ an acquisition-visible declaration, not another configured project traversal.
 
 A repository consuming a pinned Arcade target-framework package must explicitly
 select the local package; `ArcadeSdkDir` alone does not replace NuGet imports.
-After building the app, create a local package, using a new version for each
-revision to avoid reusing a cached package:
+For runtime, use the app and bindings produced by `PackTaskPackages` in both
+phases:
 
 ```sh
-dotnet msbuild genbuild/arcade/TargetFramework.csproj -t:Pack \
-  -p:Configuration=Release -p:NoBuild=true \
-  -p:PackageVersion=12.0.0-genbuild.1 \
-  -p:PackageOutputPath=/absolute/path/to/isolated-feed
+dotnet /absolute/path/to/app/genbuild.dll restore path/Project.csproj \
+  @/absolute/path/to/app/task-packages.rsp -p:Configuration=Release -bl:{}
+dotnet /absolute/path/to/app/genbuild.dll build path/Project.csproj \
+  @/absolute/path/to/app/task-packages.rsp -p:Configuration=Release -bl:{}
 ```
 
-For runtime, pass the matching
-`-p:MicrosoftDotNetBuildTasksTargetFrameworkPackageVersion=12.0.0-genbuild.1`
-and `-p:RestoreAdditionalProjectSources=/absolute/path/to/isolated-feed`
-to Restore and Build. Its compiler package also supplies integration targets;
-select the prototype integration explicitly in both commands with
-`-p:CSharpCoreTargetsPath=/absolute/path/to/app/toolset/Roslyn/Microsoft.CSharp.Core.targets`
-and
-`-p:VisualBasicCoreTargetsPath=/absolute/path/to/app/toolset/Roslyn/Microsoft.VisualBasic.Core.targets`.
-This changes the integration authoring, not a permission to prebuild compiler
-or runtime products. Do not patch shared cached package contents.
+The response file selects integration authoring; it does not prebuild runtime
+products or replace the separate direct Ninja execution step. Target/profile
+properties and private runtime artifact/publication paths remain explicit.
 
 ## Action-host staged file access
 
@@ -235,7 +272,7 @@ and executable launches before host startup, closes inherited input descriptors,
 and creates an owned private staging root. Directory-listing grants do not
 grant file-content reads. Startup temporary files also use the private root;
 the host adopts it without changing captured logical parameters. Policies,
-launcher and execution-image files are Ninja inputs. Ownership-checked generated
+launcher and static execution-image files are Ninja inputs. Ownership-checked generated
 tree materialization and cleanup remain trusted operations outside the wrapper.
 Writes, networking and metadata access are not confined.
 
@@ -252,6 +289,8 @@ Raw child processes inherit restrictions; managed subprocesses need the broker
 launch path. Only explicit ordinary read-file grants for the reviewed global
 `/proc/meminfo` and `/proc/sys/vm/overcommit_memory` resources are additionally
 accepted; no other generic procfs files or directory grants are accepted.
+These two global resources remain exact policy grants, not timestamped Ninja
+file inputs: procfs timestamps reflect inode lifetime rather than content changes.
 
 Validation passes 29 native launcher/broker and 88 host/graph/Utilities cases,
 plus nine actual action pilots covering native/managed parity, constructor and

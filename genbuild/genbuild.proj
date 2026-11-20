@@ -27,7 +27,7 @@
     <GenBuildArcadeNuGetArtifactsDirectory Condition="'$(GenBuildArcadeNuGetArtifactsDirectory)' == ''">$(GenBuildArcadeArtifactsDirectory)nuget/</GenBuildArcadeNuGetArtifactsDirectory>
     <GenBuildMSBuildFrameworkAssembly Condition="'$(GenBuildMSBuildFrameworkAssembly)' == ''">$(GenBuildMSBuildArtifactsDirectory)bin/Microsoft.Build.Framework/$(Configuration)/netstandard2.0/Microsoft.Build.Framework.dll</GenBuildMSBuildFrameworkAssembly>
     <GenBuildMSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' == ''">$(GenBuildMSBuildArtifactsDirectory)bin/Microsoft.Build.Utilities/$(Configuration)/netstandard2.0/Microsoft.Build.Utilities.Core.dll</GenBuildMSBuildUtilitiesAssembly>
-    <_ComponentBuildArguments>-p:GenBuildMSBuildFrameworkAssembly=&quot;$(GenBuildMSBuildFrameworkAssembly)&quot; -p:GenBuildMSBuildUtilitiesAssembly=&quot;$(GenBuildMSBuildUtilitiesAssembly)&quot;</_ComponentBuildArguments>
+    <_ComponentBuildArguments>-p:GenBuildMSBuildFrameworkAssembly=&quot;$(GenBuildMSBuildFrameworkAssembly)&quot; -p:GenBuildMSBuildUtilitiesAssembly=&quot;$(GenBuildMSBuildUtilitiesAssembly)&quot; -p:GenBuildMSBuildArtifactsDirectory=&quot;$(GenBuildMSBuildArtifactsDirectory)&quot; -p:GenBuildRoslynArtifactsDirectory=&quot;$(GenBuildRoslynArtifactsDirectory)&quot; -p:GenBuildTaskPackageVersion=&quot;$(GenBuildTaskPackageVersion)&quot;</_ComponentBuildArguments>
     <_AppBuildArguments Condition="'$(GenBuildAppArtifactsDirectory)' != ''">-p:GenBuildAppArtifactsDirectory=&quot;$([MSBuild]::NormalizeDirectory('$(GenBuildAppArtifactsDirectory)'))&quot; -p:ArtifactsDirectory=&quot;$([MSBuild]::NormalizeDirectory('$(GenBuildAppArtifactsDirectory)', 'nuget'))&quot;</_AppBuildArguments>
     <_MSBuildOutput>$(GenBuildMSBuildArtifactsDirectory)bin/MSBuild/$(Configuration)/net11.0/</_MSBuildOutput>
     <_RoslynOutput>$(GenBuildRoslynArtifactsDirectory)bin/</_RoslynOutput>
@@ -49,9 +49,9 @@
     <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/Core/MSBuildTask/MSBuild/Microsoft.Build.Tasks.CodeAnalysis.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/Tools/CodeStyleConfigFileGenerator.csproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Tools/GenerateDocumentationAndConfigFiles/GenerateDocumentationAndConfigFiles.csproj" Tfm="net10.0" ArtifactsDirectory="$(GenBuildRoslynArtifactsDirectory)" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/CSharp/csc/AnyCpu/csc.csproj" Tfm="net10.0" ArtifactsDirectory="$(GenBuildRoslynArtifactsDirectory)" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/Compilers/VisualBasic/vbc/AnyCpu/vbc.csproj" Tfm="net10.0" ArtifactsDirectory="$(GenBuildRoslynArtifactsDirectory)" />
-    <Component Include="$(MSBuildThisFileDirectory)arcade/genfacades/GenFacades.csproj" Tfm="net11.0" />
     <Component Include="$(GenBuildRoot)src/roslyn/src/CodeStyle/CSharp/CodeFixes/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.csproj;$(GenBuildRoot)src/roslyn/src/CodeStyle/VisualBasic/CodeFixes/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes.vbproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Microsoft.CodeAnalysis.Analyzers/Core/Microsoft.CodeAnalysis.Analyzers.csproj;$(GenBuildRoot)src/roslyn/src/RoslynAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers/CSharp/Microsoft.CodeAnalysis.CSharp.BannedApiAnalyzers.csproj" Tfm="netstandard2.0" ArtifactsDirectory="$(GenBuildRoslynArtifactsDirectory)" />
     <Component Include="$(GenBuildRoot)src/sdk/src/Microsoft.CodeAnalysis.NetAnalyzers/src/Microsoft.CodeAnalysis.NetAnalyzers.Package.csproj" ArtifactsDirectory="$(GenBuildSdkArtifactsDirectory)" />
+    <Component Include="$(MSBuildThisFileDirectory)arcade/genfacades/GenFacades.csproj" Tfm="net11.0" />
     <SourceLink Include="Microsoft.Build.Tasks.Git" Source="Microsoft.Build.Tasks.Git" />
     <SourceLink Include="Microsoft.SourceLink.Common" Source="SourceLink.Common" />
     <SourceLink Include="Microsoft.SourceLink.AzureRepos.Git" Source="SourceLink.AzureRepos.Git" />
@@ -84,7 +84,7 @@
     <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)genbuild.csproj&quot; -t:Restore $(_AppBuildArguments) $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/app-restore-{}.binlog&quot;" />
     <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)genbuild.csproj&quot; -t:Build -p:OutputPath=&quot;$(GenBuildOutputDirectory)&quot; $(_AppBuildArguments) $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/app-build-{}.binlog&quot;" />
     <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)toolset/Toolset.csproj&quot; -t:Restore -p:GenBuildTargetingPackVersion=$(GenBuildTargetingPackVersion) $(_AppBuildArguments) $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/tools-restore-{}.binlog&quot;" />
-    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)toolset/Toolset.csproj&quot; -t:Build -p:GenBuildTargetingPackVersion=$(GenBuildTargetingPackVersion) -p:GenBuildToolsetDirectory=&quot;$(GenBuildToolsetDirectory)&quot; $(_AppBuildArguments) $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/tools-build-{}.binlog&quot;" />
+    <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)toolset/Toolset.csproj&quot; -t:Build -p:GenBuildTargetingPackVersion=$(GenBuildTargetingPackVersion) -p:GenBuildMSBuildDepsFile=&quot;$(_MSBuildOutput)MSBuild.deps.json&quot; -p:GenBuildToolsetDirectory=&quot;$(GenBuildToolsetDirectory)&quot; $(_AppBuildArguments) $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/tools-build-{}.binlog&quot;" />
   </Target>
 
   <Target Name="BuildNativeTaskHost" DependsOnTargets="Assemble" Condition="'$(GenBuildNativeTaskHost)' == 'true'">
@@ -104,7 +104,7 @@
   <Target Name="Assemble" DependsOnTargets="BuildComponents;BuildApp;GenerateAnalyzerManifests">
     <Error Condition="!Exists('$(_MSBuildOutput)MSBuild.dll') or !Exists('$(_SdkOutput)tools/net11.0/Microsoft.NET.Build.Tasks.dll')" Text="The locally-built MSBuild or SDK tasks are missing. Run without GenBuildSkipComponentBuild." />
     <ItemGroup>
-      <_Engine Include="$(_MSBuildOutput)**/*" Exclude="$(_MSBuildOutput)MSBuild;$(_MSBuildOutput)MSBuild.exe;$(_MSBuildOutput)Directory.*;$(_MSBuildOutput)**/*.runtimeconfig.dev.json;$(_MSBuildOutput)**/publish/**/*" />
+      <_Engine Include="$(_MSBuildOutput)**/*" Exclude="$(_MSBuildOutput)MSBuild;$(_MSBuildOutput)MSBuild.exe;$(_MSBuildOutput)MSBuild.deps.json;$(_MSBuildOutput)Directory.*;$(_MSBuildOutput)**/*.runtimeconfig.dev.json;$(_MSBuildOutput)**/publish/**/*" />
       <_CommonEntry Include="$(_MSBuildOutput)Microsoft.Common.props;$(_MSBuildOutput)Microsoft.Common.targets;$(_MSBuildOutput)Microsoft.Common.CrossTargeting.targets" />
       <_Host Include="$(GenBuildMSBuildArtifactsDirectory)bin/MSBuild.ActionTaskHost/$(Configuration)/net11.0/**/*" Exclude="**/*.runtimeconfig.dev.json" />
       <_SdkEntry Include="$(_SdkSources)sdk/**/*" />
@@ -132,8 +132,10 @@
       <_ArcadeTask Include="$(GenBuildArcadeArtifactsDirectory)bin/$(Configuration)/net11.0/**/*" />
       <_ArcadeBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/build/**/*" />
       <_ArcadeMultiTargetingBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Build.Tasks.TargetFramework/src/buildMultiTargeting/**/*" />
-      <_ArcadeSdkTask Include="$(GenBuildArcadeArtifactsDirectory)sdk/bin/$(Configuration)/net11.0/**/*" />
-      <_ArcadeSdkTools Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/BuildTasks.props;$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/GenerateResxSource.targets;$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/GenerateInternalsVisibleTo.targets;$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/RepositoryInfo.targets" />
+      <_ArcadeSdkTask Include="$(GenBuildArcadeArtifactsDirectory)sdk/bin/$(Configuration)/net11.0/**/*" Exclude="$(GenBuildArcadeArtifactsDirectory)sdk/bin/$(Configuration)/net11.0/DefaultVersions.Generated.props" />
+      <_ArcadeSdkTools Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/**/*" />
+      <_ArcadeSdkEntry Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.Arcade.Sdk/sdk/**/*" />
+      <_CompileTimeMSBuild Include="$(GenBuildMSBuildFrameworkAssembly);$(GenBuildMSBuildUtilitiesAssembly)" />
       <_XliffTask Include="$(GenBuildArcadeArtifactsDirectory)xliff/bin/$(Configuration)/net11.0/**/*" />
       <_GenFacadesTask Include="$(GenBuildArcadeArtifactsDirectory)genfacades/bin/$(Configuration)/net11.0/**/*" />
       <_GenFacadesBuild Include="$(GenBuildRoot)src/arcade/src/Microsoft.DotNet.GenFacades/build/**/*" />
@@ -171,7 +173,10 @@
     <Copy SourceFiles="@(_ArcadeMultiTargetingBuild)" DestinationFiles="@(_ArcadeMultiTargetingBuild->'$(GenBuildToolsetDirectory)Arcade/TargetFramework/buildMultiTargeting/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Error Condition="!Exists('$(GenBuildArcadeArtifactsDirectory)sdk/bin/$(Configuration)/net11.0/Microsoft.DotNet.Arcade.Sdk.dll')" Text="The locally-built Arcade SDK tasks are missing. Run without GenBuildSkipComponentBuild." />
     <Copy SourceFiles="@(_ArcadeSdkTask)" DestinationFiles="@(_ArcadeSdkTask->'$(GenBuildToolsetDirectory)Arcade/Sdk/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(_ArcadeSdkTools)" DestinationFolder="$(GenBuildToolsetDirectory)Arcade/Sdk/tools/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ArcadeSdkTools)" DestinationFiles="@(_ArcadeSdkTools->'$(GenBuildToolsetDirectory)Arcade/Sdk/tools/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ArcadeSdkEntry)" DestinationFiles="@(_ArcadeSdkEntry->'$(GenBuildToolsetDirectory)Arcade/Sdk/sdk/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(GenBuildArcadeArtifactsDirectory)sdk/bin/$(Configuration)/net11.0/DefaultVersions.Generated.props" DestinationFolder="$(GenBuildToolsetDirectory)Arcade/Sdk/tools/" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_CompileTimeMSBuild)" DestinationFolder="$(GenBuildToolsetDirectory)ref/" SkipUnchangedFiles="true" />
     <Error Condition="'@(_XliffTask)' == ''" Text="The locally-built XLIFF tasks are missing. Run without GenBuildSkipComponentBuild." />
     <Copy SourceFiles="@(_XliffTask)" DestinationFiles="@(_XliffTask->'$(GenBuildToolsetDirectory)Arcade/XliffTasks/tools/net/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Error Condition="'@(_GenFacadesTask)' == ''" Text="The locally-built GenFacades tasks are missing. Run without GenBuildSkipComponentBuild." />
@@ -185,7 +190,7 @@
     <ItemGroup>
       <_NetAnalyzerBuild Include="$(_NetAnalyzers)Build/**/*" />
       <_NetAnalyzerConfig Include="$(_NetAnalyzers)GlobalAnalyzerConfigs/**/*" />
-      <_NetAnalyzerAssembly Include="$(GenBuildRoot)src/sdk/artifacts/bin/Microsoft.CodeAnalysis.NetAnalyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.NetAnalyzers.dll;$(GenBuildRoot)src/sdk/artifacts/bin/Microsoft.CodeAnalysis.CSharp.NetAnalyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll;$(GenBuildRoot)src/sdk/artifacts/bin/Microsoft.CodeAnalysis.VisualBasic.NetAnalyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.NetAnalyzers.dll" />
+      <_NetAnalyzerAssembly Include="$(GenBuildSdkArtifactsDirectory)bin/Microsoft.CodeAnalysis.NetAnalyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.NetAnalyzers.dll;$(GenBuildSdkArtifactsDirectory)bin/Microsoft.CodeAnalysis.CSharp.NetAnalyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll;$(GenBuildSdkArtifactsDirectory)bin/Microsoft.CodeAnalysis.VisualBasic.NetAnalyzers/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.NetAnalyzers.dll" />
       <_CodeStyleCommon Include="$(_RoslynOutput)Microsoft.CodeAnalysis.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.CodeStyle.Fixes/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CodeStyle.Fixes.dll" />
       <_CSharpCodeStyle Include="$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.CSharp.CodeStyle.Fixes.dll" />
       <_VisualBasicCodeStyle Include="$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.dll;$(_RoslynOutput)Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes/$(Configuration)/netstandard2.0/Microsoft.CodeAnalysis.VisualBasic.CodeStyle.Fixes.dll" />
@@ -215,4 +220,5 @@
   </Target>
 
   <Target Name="Build" DependsOnTargets="Assemble;BuildNativeTaskHost;BuildReadSandbox" />
+  <Import Project="TaskPackages.targets" />
 </Project>

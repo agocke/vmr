@@ -30,6 +30,18 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="$(MicrosoftCodeAnalysisAnalyzersVersion)" PrivateAssets="all" />
     <PackageReference Include="StyleCop.Analyzers" Version="$(StyleCopAnalyzersVersion)" PrivateAssets="all" />
   </ItemGroup>
+  <Target Name="_SelectGenBuildRoslynAnalyzerPackage" BeforeTargets="CollectPackageReferences"
+          Condition="'$(GenBuildRoslynAnalyzerPackageVersion)' != ''">
+    <ItemGroup>
+      <_GenBuildRoslynReference Include="@(PackageReference)" Condition="'%(Identity)' == 'Microsoft.CodeAnalysis' or $([System.String]::Copy('%(Identity)').StartsWith('Microsoft.CodeAnalysis.'))" />
+      <_GenBuildAnalyzerReference Include="@(PackageReference)" Condition="'%(Identity)' == 'Microsoft.CodeAnalysis.Analyzers'" />
+      <PackageReference Condition="'%(PackageReference.Identity)' == 'Microsoft.CodeAnalysis.Analyzers'">
+        <Version>$(GenBuildRoslynAnalyzerPackageVersion)</Version>
+      </PackageReference>
+      <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="$(GenBuildRoslynAnalyzerPackageVersion)" PrivateAssets="all"
+                        Condition="'@(_GenBuildRoslynReference)' != '' and '@(_GenBuildAnalyzerReference)' == ''" />
+    </ItemGroup>
+  </Target>
   <ItemGroup Condition="'$(IsTestProject)' == 'true'">
     <EditorConfigFiles Remove="$(RepositoryEngineeringDir)CodeAnalysis.src.globalconfig" />
     <EditorConfigFiles Include="$(RepositoryEngineeringDir)CodeAnalysis.test.globalconfig" />

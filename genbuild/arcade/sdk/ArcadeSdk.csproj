@@ -5,6 +5,7 @@
     <BaseIntermediateOutputPath Condition="'$(GenBuildArcadeArtifactsDirectory)' != ''">$([MSBuild]::NormalizeDirectory('$(GenBuildArcadeArtifactsDirectory)', 'sdk', 'obj'))</BaseIntermediateOutputPath>
   </PropertyGroup>
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="../../../src/arcade/eng/Version.Details.props" />
 
   <PropertyGroup>
     <AssemblyName>Microsoft.DotNet.Arcade.Sdk</AssemblyName>
@@ -12,10 +13,16 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>true</IsPackable>
+    <PackageId>Microsoft.DotNet.Arcade.Sdk</PackageId>
+    <PackageType>MSBuildSdk</PackageType>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);GetTaskPackageFiles</TargetsForTfmSpecificContentInPackage>
     <NoWarn>$(NoWarn);SYSLIB0013</NoWarn>
     <DefineConstants>$(DefineConstants);ARCADE_SDK_BUILD_TASKS_ASSEMBLY</DefineConstants>
     <_ArcadeSource>$(MSBuildThisFileDirectory)../../../src/arcade/src/</_ArcadeSource>
-    <_Engine>$(MSBuildThisFileDirectory)../../../src/msbuild/artifacts/bin/MSBuild/$(Configuration)/net11.0/</_Engine>
+    <_Engine>$([MSBuild]::NormalizeDirectory('$(GenBuildMSBuildArtifactsDirectory)', 'bin', 'MSBuild', '$(Configuration)', 'net11.0'))</_Engine>
     <_MSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' == ''">$(_Engine)Microsoft.Build.Utilities.Core.dll</_MSBuildUtilitiesAssembly>
     <_MSBuildUtilitiesAssembly Condition="'$(GenBuildMSBuildUtilitiesAssembly)' != ''">$(GenBuildMSBuildUtilitiesAssembly)</_MSBuildUtilitiesAssembly>
     <_MSBuildFrameworkAssembly Condition="'$(GenBuildMSBuildFrameworkAssembly)' != ''">$(GenBuildMSBuildFrameworkAssembly)</_MSBuildFrameworkAssembly>
@@ -36,6 +43,28 @@
     <ProjectReference Include="../../../src/nuget-client/src/NuGet.Core/NuGet.Versioning/NuGet.Versioning.csproj"
                       AdditionalProperties="TargetFrameworks=net10.0;ArtifactsDirectory=$([MSBuild]::EnsureTrailingSlash('$(GenBuildArcadeNuGetArtifactsDirectory)'))"
                       Condition="'$(GenBuildArcadeNuGetArtifactsDirectory)' != ''" />
+    <None Include="$(_ArcadeSource)Microsoft.DotNet.Arcade.Sdk/sdk/**/*" Pack="true" PackagePath="sdk/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="$(_ArcadeSource)Microsoft.DotNet.Arcade.Sdk/tools/**/*" Pack="true" PackagePath="tools/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="$(_ArcadeSource)Microsoft.DotNet.Arcade.Sdk/toolset/**/*" Pack="true" PackagePath="toolset/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
+  <Target Name="WriteSdkVersions" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <_SdkVersionLine Include="&lt;Project&gt;;&lt;PropertyGroup&gt;" />
+      <_SdkVersionLine Include="&lt;ArcadeSdkVersion&gt;$(PackageVersion)&lt;/ArcadeSdkVersion&gt;" />
+      <_SdkVersionLine Include="&lt;MicrosoftNetCompilersToolsetVersion&gt;$(MicrosoftNetCompilersToolsetVersion)&lt;/MicrosoftNetCompilersToolsetVersion&gt;" />
+      <_SdkVersionLine Include="&lt;MicrosoftDiaSymReaderPdb2PdbVersion&gt;$(MicrosoftDiaSymReaderPdb2PdbVersion)&lt;/MicrosoftDiaSymReaderPdb2PdbVersion&gt;" />
+      <_SdkVersionLine Include="&lt;MicrosoftDotNetXliffTasksVersion&gt;$(PackageVersion)&lt;/MicrosoftDotNetXliffTasksVersion&gt;" />
+      <_SdkVersionLine Include="&lt;MicrosoftSymbolUploaderBuildTaskVersion&gt;$(MicrosoftSymbolUploaderBuildTaskVersion)&lt;/MicrosoftSymbolUploaderBuildTaskVersion&gt;" />
+      <_SdkVersionLine Include="&lt;MicrosoftTemplateEngineAuthoringTasksVersion&gt;$(MicrosoftTemplateEngineAuthoringTasksVersion)&lt;/MicrosoftTemplateEngineAuthoringTasksVersion&gt;" />
+      <_SdkVersionLine Include="&lt;/PropertyGroup&gt;;&lt;/Project&gt;" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(TargetDir)DefaultVersions.Generated.props" Lines="@(_SdkVersionLine)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+  </Target>
+  <Target Name="GetTaskPackageFiles">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetDir)**/*" Exclude="$(TargetDir)DefaultVersions.Generated.props" PackagePath="tools/net/%(RecursiveDir)%(Filename)%(Extension)" />
+      <TfmSpecificPackageFile Include="$(TargetDir)DefaultVersions.Generated.props" PackagePath="tools/DefaultVersions.Generated.props" />
+    </ItemGroup>
+  </Target>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

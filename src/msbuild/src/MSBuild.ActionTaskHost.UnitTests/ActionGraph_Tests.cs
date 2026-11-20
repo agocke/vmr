@@ -34,7 +34,7 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         string first = Path.Combine(directory, "first.txt");
         File.WriteAllText(image, "explicit execution image");
         string arguments = "-p:MSBuildActionSandboxLauncher=/bin/true"
-            + $" -p:MSBuildActionSandboxReadFiles=\"{image}\""
+            + $" -p:MSBuildActionSandboxReadFiles=\"{image}%3B/proc/meminfo%3B/proc/sys/vm/overcommit_memory\""
             + " -p:MSBuildActionSandboxProcessFiles=/proc/self/maps%3B/proc/self/mountinfo"
             + $" -p:MSBuildActionSandboxReadDirectories=\"{directory}\" -p:MSBuildActionEnvironment=TMPDIR";
         Generate(project, graph, out string log, arguments, new() { ["TMPDIR"] = directory }).ShouldBeTrue(log);
@@ -58,6 +58,8 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
             grants["/bin/true"].ShouldBe("execute-file");
             grants["/proc/self/maps"].ShouldBe("read-self-file");
             grants["/proc/self/mountinfo"].ShouldBe("read-self-file");
+            grants["/proc/meminfo"].ShouldBe("read-file");
+            grants["/proc/sys/vm/overcommit_memory"].ShouldBe("read-file");
             records[1].ShouldBe("scratch-parent");
             records[2].ShouldBe(directory);
             if (grants.TryGetValue(first, out string? access))
@@ -72,7 +74,7 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
             && line.Contains(": action_", StringComparison.Ordinal)).ToArray();
         builds.Length.ShouldBe(2);
         builds.All(line => line.Contains(image, StringComparison.Ordinal)).ShouldBeTrue();
-        builds.All(line => !line.Contains("/proc/self/", StringComparison.Ordinal)).ShouldBeTrue();
+        builds.All(line => !line.Contains("/proc/", StringComparison.Ordinal)).ShouldBeTrue();
         builds.Single(line => line.StartsWith("build " + first + ":", StringComparison.Ordinal))
             .ShouldNotContain(" " + first + " ");
         builds.Single(line => line.StartsWith("build " + Path.Combine(directory, "second.txt") + ":", StringComparison.Ordinal))

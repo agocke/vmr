@@ -7,6 +7,30 @@
     <_App>&quot;$(GenBuildTestHost)&quot; &quot;$(GenBuildApp)&quot;</_App>
     <_AppDirectory>$([System.IO.Path]::GetDirectoryName('$(GenBuildApp)'))</_AppDirectory>
   </PropertyGroup>
+  <Target Name="TestRuntimeAnalyzerPackages">
+    <PropertyGroup>
+      <_RuntimeEngineeringDirectory>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '../../src/runtime/eng'))</_RuntimeEngineeringDirectory>
+    </PropertyGroup>
+    <ItemGroup>
+      <_RuntimeAnalyzerCase Include="ordinary" Arguments="" />
+      <_RuntimeAnalyzerCase Include="transitive" Arguments="-p:GenBuildRoslynAnalyzerPackageVersion=12.0.0-genbuild.test" />
+      <_RuntimeAnalyzerCase Include="metapackage" Arguments="-p:GenBuildRoslynAnalyzerPackageVersion=12.0.0-genbuild.test -p:RoslynPackage=Microsoft.CodeAnalysis" />
+      <_RuntimeAnalyzerCase Include="existing" Arguments="-p:GenBuildRoslynAnalyzerPackageVersion=12.0.0-genbuild.test -p:ExistingAnalyzer=true" />
+      <_RuntimeAnalyzerCase Include="unrelated" Arguments="-p:GenBuildRoslynAnalyzerPackageVersion=12.0.0-genbuild.test -p:NoRoslyn=true" />
+    </ItemGroup>
+    <Exec Command="$(_App) restore &quot;$(MSBuildThisFileDirectory)RuntimeAnalyzerPackages.proj&quot; -p:RuntimeEngineeringDirectory=&quot;$(_RuntimeEngineeringDirectory)&quot; %(_RuntimeAnalyzerCase.Arguments)" />
+  </Target>
+  <Target Name="TestWorkerDependencies">
+    <PropertyGroup>
+      <_WorkerDependenciesRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'worker-dependencies'))</_WorkerDependenciesRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_WorkerDependenciesRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)WorkerDependencies.proj" DestinationFolder="$(_WorkerDependenciesRoot)" />
+    <Exec EnvironmentVariables="MSBUILDNOINPROCNODE=1"
+          Command="$(_App) restore &quot;$(_WorkerDependenciesRoot)WorkerDependencies.proj&quot; -m:2 -bl:&quot;$(_WorkerDependenciesRoot)workers.binlog&quot;" />
+    <Error Condition="!Exists('$(_WorkerDependenciesRoot)worker-one.txt') or !Exists('$(_WorkerDependenciesRoot)worker-two.txt')"
+           Text="Both out-of-process worker requests must complete." />
+  </Target>
   <Target Name="TestNuGetAcquisitionInputs">
     <PropertyGroup>
       <_NuGetAcquisitionRoot>$([MSBuild]::NormalizeDirectory('$(_TestDirectory)', 'nuget-acquisition-inputs'))</_NuGetAcquisitionRoot>
@@ -96,6 +120,8 @@
       <Output TaskParameter="ExitCode" PropertyName="_InvalidExitCode" />
     </Exec>
     <Error Condition="'$(_InvalidExitCode)' == '0'" Text="Invalid commands must fail." />
+    <CallTarget Targets="TestWorkerDependencies" />
+    <CallTarget Targets="TestRuntimeAnalyzerPackages" />
     <CallTarget Targets="TestNuGetSdkResolution" />
     <CallTarget Targets="TestRestoreRequests" />
     <CallTarget Targets="TestNuGetAcquisitionInputs" />

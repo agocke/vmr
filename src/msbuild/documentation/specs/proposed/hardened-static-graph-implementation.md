@@ -172,6 +172,16 @@ the component pipeline builds its `netstandard2.0` assembly first and ships the
 modern implementation containing `SandboxedToolTask`. Separate compiler-task
 builds can override `GenBuildMSBuildUtilitiesAssembly` explicitly.
 
+For an isolated build, select the component, app, NuGet and native-intermediate
+roots described in the [app build instructions](../../../../../genbuild/README.md#build).
+Those roots supply assembly inputs, including analyzers and compile-time
+contracts; do not overlay DLLs from another build.
+`-t:PackTaskPackages -p:GenBuildTaskPackageVersion=<unique-version>` builds the
+app and normally packs its eight task/analyzer integrations into the app's `packages/`
+directory. Pass the generated `@/absolute/app/task-packages.rsp` to both Restore
+and Build instead of manually editing packages or copying an old Arcade SDK.
+The response file contains location-specific absolute bindings.
+
 An optional NativeAOT action host accelerates `CopyFiles` and `WriteLinesToFile`:
 
 ```sh
@@ -206,6 +216,12 @@ ninja -C path -f obj/genbuild/build.ninja
 `restore` performs ordinary preparation. `build` starts a separate hardened
 MSBuild process and emits the graph, not product files. Extra arguments are
 forwarded to MSBuild; `MSBuildEmitActionGraph` changes the graph destination.
+Assembly composes the acquired source-built NuGet.Frameworks runtime binding
+into the packaged MSBuild manifest for out-of-process Restore nodes selected by
+`-m:N`; no manual worker-manifest overlay or inherited additional-deps
+environment is required. Hardened construction still uses one node. The
+`TestWorkerDependencies` smoke forces out-of-process execution to check this
+without an installed SDK.
 Explicit directory-import paths and `MSBuildGraphHostOS` must be consistent
 between preparation and construction where the profile requires them.
 Performance profiles also pass `Configuration=Release` to both invocations, use
@@ -539,7 +555,9 @@ each child before exec. `MSBuildActionSandboxProcessFiles` admits only
 `/proc/self/maps` and `/proc/self/mountinfo`; these records are separate from
 static execution-image dependencies. Only explicitly declared ordinary reads of
 the reviewed global `/proc/meminfo` and `/proc/sys/vm/overcommit_memory` resources
-are additionally accepted. Raw children inherit restrictions; managed tools use
+are additionally accepted. These two global resources remain exact policy grants,
+not timestamped Ninja file inputs: procfs timestamps reflect inode lifetime rather
+than content changes. Raw children inherit restrictions; managed tools use
 the broker through common `ToolTask` execution. No recursive procfs allowance or
 staging-only fallback is used.
 

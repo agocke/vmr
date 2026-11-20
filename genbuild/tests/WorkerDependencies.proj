@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <_Compatible>$([MSBuild]::IsTargetFrameworkCompatible('net11.0', 'netstandard2.1'))</_Compatible>
+  </PropertyGroup>
+  <Target Name="Restore">
+    <ItemGroup>
+      <_Worker Include="$(MSBuildProjectFullPath)" AdditionalProperties="Worker=one" />
+      <_Worker Include="$(MSBuildProjectFullPath)" AdditionalProperties="Worker=two" />
+    </ItemGroup>
+    <MSBuild Projects="@(_Worker)" Targets="CheckFramework" BuildInParallel="true" />
+  </Target>
+  <Target Name="CheckFramework">
+    <Error Condition="'$(_Compatible)' != 'True'" Text="A worker could not evaluate NuGet-backed framework property functions." />
+    <GetAssemblyIdentity AssemblyFiles="$(MSBuildBinPath)/NuGet.Frameworks.dll">
+      <Output TaskParameter="Assemblies" ItemName="_FrameworkAssembly" />
+    </GetAssemblyIdentity>
+    <Error Condition="'@(_FrameworkAssembly)' == ''" Text="The worker's packaged NuGet.Frameworks assembly is missing." />
+    <WriteLinesToFile File="$(MSBuildThisFileDirectory)worker-$(Worker).txt" Lines="$(_Compatible)" Overwrite="true" />
+  </Target>
+</Project>

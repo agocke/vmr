@@ -20,7 +20,25 @@ internal sealed class ActionReadSandbox
     private readonly string _scratchParent;
     internal string Launcher { get; }
     internal string Configuration { get; }
-    internal IEnumerable<string> ImageFiles => [.. _readFiles, .. _executables];
+    internal IEnumerable<string> ImageFiles
+    {
+        get
+        {
+            foreach (string file in _readFiles)
+            {
+                // These exact runtime grants have inode-lifetime, not content-change, timestamps.
+                if (file is not ("/proc/meminfo" or "/proc/sys/vm/overcommit_memory"))
+                {
+                    yield return file;
+                }
+            }
+
+            foreach (string file in _executables)
+            {
+                yield return file;
+            }
+        }
+    }
 
     private ActionReadSandbox(ProjectInstance project, IReadOnlyDictionary<string, string> environment)
     {

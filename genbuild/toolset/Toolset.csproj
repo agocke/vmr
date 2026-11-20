@@ -4,8 +4,10 @@
     <RestoreConfigFile>$(MSBuildThisFileDirectory)../../src/sdk/NuGet.config</RestoreConfigFile>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ComposeDependencies.cs" />
     <ProjectReference Include="../../src/nuget-client/src/NuGet.Core/NuGet.Build.Tasks/NuGet.Build.Tasks.csproj"
                       AdditionalProperties="TargetFrameworks=net10.0" />
     <ProjectReference Include="../../src/nuget-client/src/NuGet.Core/Microsoft.Build.NuGetSdkResolver/Microsoft.Build.NuGetSdkResolver.csproj"
@@ -17,6 +19,8 @@
     <PackageDownload Include="Microsoft.NETCore.App.Ref" Version="[$(GenBuildTargetingPackVersion)]" Condition="'$(GenBuildTargetingPackVersion)' != ''" />
   </ItemGroup>
   <Target Name="StageToolDependencies" AfterTargets="Build" Condition="'$(GenBuildToolsetDirectory)' != ''">
+    <Error Condition="'$(GenBuildMSBuildDepsFile)' == ''" Text="Use genbuild.proj to supply the source-built MSBuild dependency manifest." />
+    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; &quot;$(TargetPath)&quot; &quot;$(GenBuildMSBuildDepsFile)&quot; &quot;$(ProjectDepsFilePath)&quot; &quot;$(TargetDir)MSBuild.deps.json&quot;" />
     <ItemGroup>
       <_Dependency Include="@(ReferenceCopyLocalPaths)" Exclude="@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Framework'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Utilities.Core'));@(ReferenceCopyLocalPaths->WithMetadataValue('NuGetPackageId', 'Microsoft.Build.Tasks.Core'))" />
       <_NuGetSdkResolver Include="@(_Dependency->WithMetadataValue('Filename', 'Microsoft.Build.NuGetSdkResolver')->WithMetadataValue('Extension', '.dll'))" />
@@ -29,6 +33,7 @@
     <Copy SourceFiles="@(_Dependency)" DestinationFiles="@(_Dependency->'$(GenBuildToolsetDirectory)Sdks/Microsoft.NET.Sdk/tools/$(TargetFramework)/%(DestinationSubDirectory)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(_NuGetTarget)" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(TargetPath);$(ProjectDepsFilePath)" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)MSBuild.deps.json" DestinationFolder="$(GenBuildToolsetDirectory)" SkipUnchangedFiles="true" />
     <Error Condition="'$(GenBuildTargetingPackVersion)' == ''" Text="Use genbuild.proj to select the targeting-pack metadata matching its bundled framework definitions." />
     <Copy SourceFiles="$(NuGetPackageRoot)microsoft.netcore.app.ref/$(GenBuildTargetingPackVersion)/data/PackageOverrides.txt" DestinationFolder="$(GenBuildToolsetDirectory)PrunePackageData/$(TargetFrameworkVersion.TrimStart('v'))/Microsoft.NETCore.App/" SkipUnchangedFiles="true" />
   </Target>
