@@ -18,6 +18,61 @@ namespace Microsoft.Build.UnitTests;
 public sealed class SandboxedToolTask_Tests
 {
     [LinuxOnlyFact]
+    public void RoutesFinalDerivedProcessStartInfoThroughBroker()
+    {
+        using var fixture = new Fixture();
+        string launcher = Path.Combine(fixture.Root, "broker launcher.sh");
+        File.WriteAllText(launcher, "#!/bin/sh\n[ \"$1\" = --broker ] && [ \"$2\" = @test-broker ] && [ \"$3\" = -- ] || exit 91\nshift 3\nexec \"$@\"\n");
+        File.SetUnixFileMode(launcher, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        Probe task = fixture.Create("success");
+        task.TaskEnvironment.ProcessLaunchBroker = (launcher, "@test-broker");
+        task.Execute().ShouldBeTrue(fixture.Engine.Log);
+        task.StartInfo!.FileName.ShouldBe(launcher);
+        task.StartInfo.Environment["TMPDIR"].ShouldBe(task.Scratch);
+        File.ReadAllText(fixture.Output).ShouldStartWith("input contents\n");
+        Directory.Exists(task.OwnedRoot).ShouldBeFalse();
+    }
+
+    [LinuxOnlyTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BrokerPreservesArgumentBoundariesWorkingDirectoryAndExplicitEnvironment(bool argumentList)
+    {
+        using var fixture = new Fixture();
+        string launcher = Path.Combine(fixture.Root, "argument broker.sh");
+        File.WriteAllText(launcher, "#!/bin/sh\nprintf '%s\\n' \"$@\"\nprintf '%s\\n' \"$EXPLICIT_VALUE\"\n/bin/pwd\n");
+        File.SetUnixFileMode(launcher, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        string executable = "/tool with \"quotes\" and \\\\slashes\\";
+        ProcessStartInfo info = new(executable)
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            WorkingDirectory = fixture.Root,
+        };
+        info.Environment.Clear();
+        info.Environment["EXPLICIT_VALUE"] = "explicit contents";
+        if (argumentList)
+        {
+            info.ArgumentList.Add("space and \"quote\"");
+            info.ArgumentList.Add("back\\slash");
+        }
+        else
+        {
+            info.Arguments = "\"space and \\\"quote\\\"\" back\\slash";
+        }
+
+        TaskEnvironment environment = TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(fixture.Root, new Dictionary<string, string>());
+        environment.ProcessLaunchBroker = (launcher, "@test-broker");
+        ToolTask.ApplyProcessLaunchBroker(info, environment);
+        using Process process = Process.Start(info)!;
+        string output = process.StandardOutput.ReadToEnd();
+        process.WaitForExit(5_000).ShouldBeTrue();
+        process.ExitCode.ShouldBe(0);
+        output.Split('\n').ShouldBe(["--broker", "@test-broker", "--", executable,
+            "space and \"quote\"", "back\\slash", "explicit contents", fixture.Root, ""]);
+    }
+
+    [LinuxOnlyFact]
     public void StagesRelativeLayoutResponseFileAndEnvironmentAndPublishesOnlyDeclaredFiles()
     {
         using var fixture = new Fixture();

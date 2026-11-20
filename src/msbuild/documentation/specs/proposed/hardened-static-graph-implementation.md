@@ -512,6 +512,48 @@ remains rejected. Metadata and negative probes remain reported/non-strict, and
 runtime/platform reads use the reviewed execution-image contract. This is Linux
 symlink staging, not OS confinement or a portable-cache proof.
 
+### Launcher read enforcement
+
+- [x] Add an unprivileged Linux launcher with fail-closed Landlock capability
+  checks, inherited-descriptor closure and owned-root cleanup.
+- [x] Emit explicit exact-file/execute/directory-listing policies for all task
+  actions; preserve content/producer edges and leave trusted materialization
+  and cleanup separate.
+- [x] Adopt the launcher's private root in the common managed/native host,
+  including temporary files used during startup and task construction.
+- [x] Execute an actual native AOT action with read enforcement.
+- [x] Carry internal broker context independently of captured task environment
+  and wrap final common `ToolTask` process launches; defer broker-root cleanup
+  to the supervisor. Focused host/graph/Utilities and compatibility checks pass.
+- [x] Resolve managed startup and brokered managed subprocesses without broad
+  procfs read permission.
+- [x] Verify managed/child denials, full libraries output parity and no-work
+  under enforcement.
+
+The current native launcher queries Landlock before executing restricted code;
+it does not silently revert to staging. Its initial rights cover file reads,
+directory listing and executable launches, not writes, networking or metadata.
+The trusted supervisor forks the host and brokered workers with the same
+immutable policy and staging root, binding explicit own-process proc files in
+each child before exec. `MSBuildActionSandboxProcessFiles` admits only
+`/proc/self/maps` and `/proc/self/mountinfo`; these records are separate from
+static execution-image dependencies. Only explicitly declared ordinary reads of
+the reviewed global `/proc/meminfo` and `/proc/sys/vm/overcommit_memory` resources
+are additionally accepted. Raw children inherit restrictions; managed tools use
+the broker through common `ToolTask` execution. No recursive procfs allowance or
+staging-only fallback is used.
+
+Validation passes 29 native and 88 host/graph/Utilities cases, supported
+Utilities compatibility builds, and nine real action pilots including constructor
+and child denials, managed-child success and timeout cleanup. Fresh same-path
+staging/enforced graphs have identical 5,320 invocation payloads. Both cold
+`-j8` runs complete all 5,321 steps, including 500 compilers; all 7,208 file outputs
+and nine generated-tree members match byte-for-byte, with valid tree ownership,
+observed eight-action/eight-compiler concurrency and successful no-work repeats.
+Frozen toolsets/products pass their guards. This is separate from the earlier
+complete staging-only syscall audit: no new full syscall audit, write/network/
+metadata confinement, adversarial boundary or performance comparison is claimed.
+
 ### Compiler-owned generated-source trees
 
 - [x] Preserve logical generator paths and ordinary source encodings while the

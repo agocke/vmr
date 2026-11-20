@@ -39,6 +39,10 @@ internal sealed class TaskInvocation
 
     public required Dictionary<string, JsonElement> Parameters { get; init; }
 
+    internal string? StagingRoot { get; set; }
+
+    internal (string Launcher, string Socket)? ProcessLaunchBroker { get; set; }
+
     internal static TaskInvocation Read(string path)
     {
         using FileStream stream = File.OpenRead(path);

@@ -214,6 +214,56 @@ universal host staging.
 Symlink staging is not filesystem/network confinement or read-only input
 enforcement.
 
+### Experimental launcher read enforcement
+
+The Linux app build also compiles `toolset/read-sandbox/genbuild-landlock`
+using `GenBuildCCompiler` (default `cc`). The experimental
+`genbuild build <project> --enforce-reads` option wraps every managed/native task
+command with this launcher. It requires explicit global construction inputs
+`MSBuildActionSandboxReadFiles`, `MSBuildActionSandboxExecutableFiles` and,
+where enumeration is needed, `MSBuildActionSandboxReadDirectories`. These are
+absolute, semicolon-separated execution-image paths, not task-directory
+discovery; escape semicolons as `%3B` in command-line property values.
+`MSBuildActionEnvironment` must capture an absolute `TMPDIR`, `TMP` or `TEMP`.
+Direct MSBuild callers additionally supply `MSBuildActionSandboxLauncher`.
+`MSBuildActionSandboxProcessFiles` names explicitly approved process-runtime
+files; currently only `/proc/self/maps` and `/proc/self/mountinfo` are accepted.
+These are per-process policy records, not stable physical Ninja file inputs.
+
+The launcher fails closed if Landlock is unavailable. It restricts file reads
+and executable launches before host startup, closes inherited input descriptors,
+and creates an owned private staging root. Directory-listing grants do not
+grant file-content reads. Startup temporary files also use the private root;
+the host adopts it without changing captured logical parameters. Policies,
+launcher and execution-image files are Ninja inputs. Ownership-checked generated
+tree materialization and cleanup remain trusted operations outside the wrapper.
+Writes, networking and metadata access are not confined.
+
+CoreCLR needs process-local procfs reads, which cannot be covered by pinning
+the supervisor's proc inodes. The trusted per-process supervisor/broker launches
+the host and brokered tools with fresh copies of the same immutable action policy
+and staging root, binding approved self-files in each child before exec.
+No recursive `/proc` grant or staging-only fallback is used. The host captures
+broker controls outside the logical task
+environment; common `ToolTask` execution wraps the final process start info,
+after task-specific environment changes. In broker mode, the trusted supervisor
+owns cleanup until workers are reaped. Ordinary execution is unchanged.
+Raw child processes inherit restrictions; managed subprocesses need the broker
+launch path. Only explicit ordinary read-file grants for the reviewed global
+`/proc/meminfo` and `/proc/sys/vm/overcommit_memory` resources are additionally
+accepted; no other generic procfs files or directory grants are accepted.
+
+Validation passes 29 native launcher/broker and 88 host/graph/Utilities cases,
+plus nine actual action pilots covering native/managed parity, constructor and
+child read denials, brokered managed children and timeout cleanup. A fresh
+managed-libraries graph preserves all 5,320 invocation payloads when enforcement
+is enabled. Both cold executions complete at `-j8` with 500 compiler actions;
+all 7,208 file outputs and nine generated-tree members are byte-identical at the
+same logical paths, and repeats report no work. Frozen toolsets/products remain
+unchanged. This is experimental Linux read/execute enforcement, not write,
+network, metadata or adversarial confinement, and not a new complete syscall
+audit or performance comparison.
+
 ## Opt-in staged compiler execution
 
 In the earlier compiler-only toolset, Linux with modern .NET supports

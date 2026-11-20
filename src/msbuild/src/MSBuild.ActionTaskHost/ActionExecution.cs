@@ -17,6 +17,32 @@ internal static class ActionExecution
 {
     internal static void Prepare(TaskInvocation invocation)
     {
+        const string stagingRootVariable = "MSBUILD_ACTION_STAGING_ROOT";
+        const string brokerLauncherVariable = "MSBUILD_ACTION_BROKER_LAUNCHER";
+        const string brokerSocketVariable = "MSBUILD_ACTION_BROKER_SOCKET";
+        foreach (string variable in new[] { stagingRootVariable, brokerLauncherVariable, brokerSocketVariable })
+        {
+            if (invocation.Environment.ContainsKey(variable))
+            {
+                throw new InvalidDataException("Launcher control variables cannot be captured as task environment.");
+            }
+        }
+
+        invocation.StagingRoot = Environment.GetEnvironmentVariable(stagingRootVariable);
+        string? brokerLauncher = Environment.GetEnvironmentVariable(brokerLauncherVariable);
+        string? brokerSocket = Environment.GetEnvironmentVariable(brokerSocketVariable);
+        if (brokerLauncher is not null || brokerSocket is not null)
+        {
+            if (invocation.StagingRoot is null || string.IsNullOrEmpty(brokerLauncher) ||
+                string.IsNullOrEmpty(brokerSocket) || brokerSocket[0] != '@')
+            {
+                throw new InvalidDataException("An action launch broker requires a staging root, launcher and abstract socket.");
+            }
+
+            RequireAbsolutePath(brokerLauncher);
+            invocation.ProcessLaunchBroker = (brokerLauncher, brokerSocket);
+        }
+
         ArgumentException.ThrowIfNullOrWhiteSpace(invocation.TaskType);
         RequireAbsolutePath(invocation.TaskAssembly);
         RequireAbsolutePath(invocation.WorkingDirectory);
@@ -41,6 +67,15 @@ internal static class ActionExecution
             Environment.SetEnvironmentVariable(variable.Key, variable.Value);
         }
 
+        if (invocation.StagingRoot is not null)
+        {
+            // Runtime/task initialization can use temporary files before staging is installed.
+            foreach (string variable in new[] { "TMPDIR", "TMP", "TEMP" })
+            {
+                Environment.SetEnvironmentVariable(variable, invocation.StagingRoot);
+            }
+        }
+
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
     }
@@ -53,6 +88,7 @@ internal static class ActionExecution
         {
             multiThreadableTask.TaskEnvironment = environment
                 ?? TaskEnvironment.CreateWithProjectDirectoryAndEnvironment(invocation.WorkingDirectory, invocation.Environment);
+            multiThreadableTask.TaskEnvironment.ProcessLaunchBroker = invocation.ProcessLaunchBroker;
         }
 
         return engine;
@@ -67,7 +103,7 @@ internal static class ActionExecution
         }
 
         TaskEnvironment environment = isolatedTask.TaskEnvironment;
-        FileStagingContext staging = new(environment);
+        FileStagingContext staging = new(environment, invocation.StagingRoot);
         string previousDirectory = Environment.CurrentDirectory;
         string[] temporaryVariables = ["TMPDIR", "TMP", "TEMP"];
         string?[] previousTemporaryValues = new string?[temporaryVariables.Length];
@@ -119,7 +155,10 @@ internal static class ActionExecution
                 Environment.SetEnvironmentVariable(temporaryVariables[i], previousTemporaryValues[i]);
             }
 
-            staging.Cleanup();
+            if (invocation.ProcessLaunchBroker is null)
+            {
+                staging.Cleanup();
+            }
         }
     }
 

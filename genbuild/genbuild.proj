@@ -11,6 +11,7 @@
     <GenBuildDotNetHost Condition="'$(GenBuildDotNetHost)' == ''">$([MSBuild]::NormalizePath('$(GenBuildBootstrapSdk)', '../../dotnet.exe'))</GenBuildDotNetHost>
     <_MSBuild>&quot;$(GenBuildDotNetHost)&quot; &quot;$(GenBuildBootstrapSdk)MSBuild.dll&quot;</_MSBuild>
     <_BuildArguments>-p:Configuration=$(Configuration) -m:1 -nr:false -v:minimal</_BuildArguments>
+    <GenBuildCCompiler Condition="'$(GenBuildCCompiler)' == ''">cc</GenBuildCCompiler>
     <GenBuildMSBuildArtifactsDirectory Condition="'$(GenBuildMSBuildArtifactsDirectory)' == ''">$(GenBuildRoot)src/msbuild/artifacts/</GenBuildMSBuildArtifactsDirectory>
     <GenBuildRoslynArtifactsDirectory Condition="'$(GenBuildRoslynArtifactsDirectory)' == ''">$(GenBuildRoot)src/roslyn/artifacts/</GenBuildRoslynArtifactsDirectory>
     <GenBuildSdkArtifactsDirectory Condition="'$(GenBuildSdkArtifactsDirectory)' == ''">$(GenBuildRoot)src/sdk/artifacts/</GenBuildSdkArtifactsDirectory>
@@ -88,6 +89,11 @@
 
   <Target Name="BuildNativeTaskHost" DependsOnTargets="Assemble" Condition="'$(GenBuildNativeTaskHost)' == 'true'">
     <Exec EnvironmentVariables="DOTNET_HOST_PATH=$(GenBuildDotNetHost)" Command="$(_MSBuild) &quot;$(MSBuildThisFileDirectory)native-host/NativeTaskHost.csproj&quot; -restore -t:Publish -p:GenBuildToolsetDirectory=&quot;$(GenBuildToolsetDirectory)&quot; -p:BaseIntermediateOutputPath=&quot;$(GenBuildNativeHostArtifactsDirectory)obj/&quot; -p:OutputPath=&quot;$(GenBuildNativeHostArtifactsDirectory)bin/$(Configuration)/&quot; -p:DefaultItemExcludes=**/obj/** -p:PublishDir=&quot;$(GenBuildToolsetDirectory)native-action-host/&quot; $(_BuildArguments) -bl:&quot;$(GenBuildRoot)artifacts/log/genbuild/$(Configuration)/native-host-{}.binlog&quot;" />
+  </Target>
+
+  <Target Name="BuildReadSandbox" DependsOnTargets="Assemble" Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <MakeDir Directories="$(GenBuildToolsetDirectory)read-sandbox" />
+    <Exec Command="&quot;$(GenBuildCCompiler)&quot; -std=c11 -O2 -Wall -Wextra -Werror -Wformat=2 -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wpedantic &quot;$(MSBuildThisFileDirectory)landlock-launcher/launcher.c&quot; -o &quot;$(GenBuildToolsetDirectory)read-sandbox/genbuild-landlock&quot;" />
   </Target>
 
   <Target Name="GenerateAnalyzerManifests" DependsOnTargets="BuildComponents">
@@ -208,5 +214,5 @@
     <Message Importance="high" Text="genbuild app: $(GenBuildOutputDirectory)genbuild.dll (external .NET runtime required; no SDK redist)" />
   </Target>
 
-  <Target Name="Build" DependsOnTargets="Assemble;BuildNativeTaskHost" />
+  <Target Name="Build" DependsOnTargets="Assemble;BuildNativeTaskHost;BuildReadSandbox" />
 </Project>

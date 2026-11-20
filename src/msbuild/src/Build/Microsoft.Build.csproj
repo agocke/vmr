@@ -254,6 +254,7 @@
     <Compile Include="Graph\Hardened\SdkImportBindings.cs" />
     <Compile Include="Graph\Hardened\HardenedExpressionDescriptor.cs" />
     <Compile Include="Graph\Hardened\HardenedActionGraph.cs" />
+    <Compile Include="Graph\Hardened\ActionReadSandbox.cs" />
     <Compile Include="Graph\Hardened\NativeTaskHostCatalog.cs" />
     <Compile Include="Graph\Hardened\HardenedGlobPolicy.cs" />
     <Compile Include="Graph\Hardened\HardenedItemOperationPlan.cs" />

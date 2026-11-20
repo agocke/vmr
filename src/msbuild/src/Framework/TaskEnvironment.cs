@@ -19,6 +19,8 @@ namespace Microsoft.Build.Framework
         private Func<string, string>? _directoryPath;
         private string? _executionDirectory;
 
+        internal (string Launcher, string Socket)? ProcessLaunchBroker { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the TaskEnvironment class.
         /// </summary>

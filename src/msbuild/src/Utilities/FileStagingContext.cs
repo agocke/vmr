@@ -23,7 +23,7 @@ internal sealed class FileStagingContext
     internal string WorkingDirectory { get; }
     internal Dictionary<string, string> Environment { get; } = new(StringComparer.Ordinal);
 
-    internal FileStagingContext(TaskEnvironment environment)
+    internal FileStagingContext(TaskEnvironment environment, string? existingRoot = null)
     {
 #if NET8_0_OR_GREATER
         if (!OperatingSystem.IsLinux())
@@ -37,11 +37,34 @@ internal sealed class FileStagingContext
             ?? environment.GetEnvironmentVariable("TEMP")
             ?? Path.GetTempPath();
         parent = Path.GetFullPath(Path.Combine(_projectDirectory, parent));
-        _root = Path.Combine(parent, "msbuild-stage-" + Guid.NewGuid().ToString("N"));
-        // mkdir is exclusive and establishes 0700 before any staged content is created.
-        if (Mkdir(_root, 448) != 0)
+        if (existingRoot is null)
         {
-            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "Cannot create private staging root: " + _root);
+            _root = Path.Combine(parent, "msbuild-stage-" + Guid.NewGuid().ToString("N"));
+            // mkdir is exclusive and establishes 0700 before any staged content is created.
+            if (Mkdir(_root, 448) != 0)
+            {
+                throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "Cannot create private staging root: " + _root);
+            }
+        }
+        else
+        {
+            if (!Path.IsPathFullyQualified(existingRoot) || Path.GetFullPath(existingRoot) != existingRoot)
+            {
+                throw new InvalidOperationException("Launcher staging root must be a canonical absolute path.");
+            }
+
+            _root = existingRoot;
+            RejectLinks(_root, "/");
+            if (Statx(-100, _root, 0, 0x10F, out FileIdentity identity) != 0 ||
+                (identity.Mode & 0xFFFF) != 0x41C0 || identity.UserId != GetEffectiveUserId())
+            {
+                throw new InvalidOperationException("Launcher staging root must be an owned mode-0700 directory.");
+            }
+
+            foreach (string entry in Directory.EnumerateFileSystemEntries(_root))
+            {
+                throw new InvalidOperationException("Launcher staging root must be empty: " + entry);
+            }
         }
 
         _executionRoot = Path.Combine(_root, "execroot", "root");
@@ -284,6 +307,8 @@ internal sealed class FileStagingContext
     [StructLayout(LayoutKind.Explicit, Size = 256)]
     private struct FileIdentity
     {
+        [FieldOffset(20)]
+        internal uint UserId;
         [FieldOffset(28)]
         internal ushort Mode;
         [FieldOffset(32)]
@@ -295,6 +320,9 @@ internal sealed class FileStagingContext
     }
 
 #if NET8_0_OR_GREATER
+    [DllImport("libc", EntryPoint = "geteuid")]
+    private static extern uint GetEffectiveUserId();
+
     [DllImport("libc", EntryPoint = "mkdir", SetLastError = true)]
     private static extern int Mkdir([MarshalAs(UnmanagedType.LPUTF8Str)] string path, uint mode);
 

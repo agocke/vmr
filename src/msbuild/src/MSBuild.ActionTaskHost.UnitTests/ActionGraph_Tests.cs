@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
 using Microsoft.Build.Framework;
@@ -21,6 +22,104 @@ namespace Microsoft.Build.ActionTaskHost.UnitTests;
 public sealed class ActionGraph_Tests(ITestOutputHelper output)
 {
     private readonly ITestOutputHelper _output = output;
+
+    [LinuxOnlyFact]
+    public void ReadSandboxPoliciesPreserveExactInputsAndProducerEdges()
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        string graph = Path.Combine(directory, "build.ninja");
+        string image = Path.Combine(directory, "image.txt");
+        string first = Path.Combine(directory, "first.txt");
+        File.WriteAllText(image, "explicit execution image");
+        string arguments = "-p:MSBuildActionSandboxLauncher=/bin/true"
+            + $" -p:MSBuildActionSandboxReadFiles=\"{image}\""
+            + " -p:MSBuildActionSandboxProcessFiles=/proc/self/maps%3B/proc/self/mountinfo"
+            + $" -p:MSBuildActionSandboxReadDirectories=\"{directory}\" -p:MSBuildActionEnvironment=TMPDIR";
+        Generate(project, graph, out string log, arguments, new() { ["TMPDIR"] = directory }).ShouldBeTrue(log);
+
+        string[] policies = Directory.GetFiles(directory, "*.landlock", SearchOption.AllDirectories);
+        policies.Length.ShouldBe(2);
+        int consumers = 0;
+        foreach (string policy in policies)
+        {
+            string[] records = Encoding.UTF8.GetString(File.ReadAllBytes(policy)).Split('\0');
+            records[0].ShouldBe("genbuild-landlock-v1");
+            records[^1].ShouldBeEmpty();
+            Dictionary<string, string> grants = [];
+            for (int i = 3; i < records.Length - 1; i += 2)
+            {
+                grants.Add(records[i + 1], records[i]);
+            }
+
+            grants[image].ShouldBe("read-file");
+            grants[directory].ShouldBe("read-directory");
+            grants["/bin/true"].ShouldBe("execute-file");
+            grants["/proc/self/maps"].ShouldBe("read-self-file");
+            grants["/proc/self/mountinfo"].ShouldBe("read-self-file");
+            records[1].ShouldBe("scratch-parent");
+            records[2].ShouldBe(directory);
+            if (grants.TryGetValue(first, out string? access))
+            {
+                access.ShouldBe("read-file");
+                consumers++;
+            }
+        }
+
+        consumers.ShouldBe(1);
+        string[] builds = File.ReadAllLines(graph).Where(line => line.StartsWith("build ", StringComparison.Ordinal)
+            && line.Contains(": action_", StringComparison.Ordinal)).ToArray();
+        builds.Length.ShouldBe(2);
+        builds.All(line => line.Contains(image, StringComparison.Ordinal)).ShouldBeTrue();
+        builds.All(line => !line.Contains("/proc/self/", StringComparison.Ordinal)).ShouldBeTrue();
+        builds.Single(line => line.StartsWith("build " + first + ":", StringComparison.Ordinal))
+            .ShouldNotContain(" " + first + " ");
+        builds.Single(line => line.StartsWith("build " + Path.Combine(directory, "second.txt") + ":", StringComparison.Ordinal))
+            .ShouldContain(" " + first + " ");
+        string[] commands = File.ReadAllLines(graph).Where(line => line.StartsWith("  command = ", StringComparison.Ordinal)
+            && line.Contains("--invocation", StringComparison.Ordinal)).ToArray();
+        commands.Length.ShouldBe(2);
+        commands.All(line => line.Contains("/bin/true", StringComparison.Ordinal)
+            && line.Contains(" --policy ", StringComparison.Ordinal)).ShouldBeTrue();
+    }
+
+    [LinuxOnlyTheory]
+    [InlineData("missing-image")]
+    [InlineData("root-directory")]
+    [InlineData("missing-launcher")]
+    [InlineData("other-process-file")]
+    [InlineData("process-directory")]
+    [InlineData("process-without-launcher")]
+    public void RejectsIncompleteReadSandboxConfiguration(string kind)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string project = WriteProject(directory);
+        string graph = Path.Combine(directory, "build.ninja");
+        string arguments = kind is "missing-launcher" or "process-without-launcher" ? "" : "-p:MSBuildActionSandboxLauncher=/bin/true";
+        if (kind is not ("missing-image" or "process-without-launcher"))
+        {
+            arguments += $" -p:MSBuildActionSandboxReadFiles=\"{project}\"";
+        }
+        if (kind == "root-directory")
+        {
+            arguments += " -p:MSBuildActionSandboxReadDirectories=/";
+        }
+        if (kind is "other-process-file" or "process-directory" or "process-without-launcher")
+        {
+            arguments += " -p:MSBuildActionSandboxProcessFiles=" + (kind switch
+            {
+                "other-process-file" => "/proc/1/maps",
+                "process-directory" => "/proc/self",
+                _ => "/proc/self/maps",
+            });
+        }
+        arguments += " -p:MSBuildActionEnvironment=TMPDIR";
+        Generate(project, graph, out string log, arguments, new() { ["TMPDIR"] = directory }).ShouldBeFalse(log);
+        log.ShouldContain("MSB4286");
+        File.Exists(graph).ShouldBeFalse();
+    }
 
     [UnixOnlyFact]
     public void IndependentActionsBuildOnlyTheirRequestedDependencyClosure()
@@ -2744,7 +2843,8 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
     private bool Generate(string project, string graph, string arguments = "")
         => Generate(project, graph, out _, arguments);
 
-    private bool Generate(string project, string graph, out string log, string arguments = "")
+    private bool Generate(string project, string graph, out string log, string arguments = "",
+        Dictionary<string, string>? environment = null)
     {
         string testDirectory = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
         string framework = Path.GetFileName(testDirectory);
@@ -2752,11 +2852,19 @@ public sealed class ActionGraph_Tests(ITestOutputHelper output)
         string host = Path.GetFullPath(Path.Combine(testDirectory, "..", "..", "..",
             "MSBuild.ActionTaskHost", configuration, framework, "MSBuild.ActionTaskHost.dll"));
         string dotnet = RunnerUtilities.BootstrapDotnetHostPath;
-        log = RunnerUtilities.ExecBootstrapedMSBuild(
+        Dictionary<string, string> variables = RunnerUtilities.GetBootstrapMSBuildEnvironmentVariables();
+        if (environment is not null)
+        {
+            foreach (KeyValuePair<string, string> variable in environment)
+            {
+                variables[variable.Key] = variable.Value;
+            }
+        }
+        log = RunnerUtilities.RunProcessAndGetOutput(RunnerUtilities.BootstrapMSBuildExecutablePath,
             $"\"{project}\" --hardened-graph -nr:false -v:minimal {arguments}"
                 + $" -p:MSBuildEmitActionGraph=\"{graph}\" -p:MSBuildActionTaskHost=\"{host}\""
                 + $" -p:MSBuildActionDotNetHost=\"{dotnet}\"",
-            out bool succeeded, outputHelper: _output);
+            out bool succeeded, outputHelper: _output, attachProcessId: true, environmentVariables: variables);
         return succeeded;
     }
 

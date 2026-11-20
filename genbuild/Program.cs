@@ -6,6 +6,7 @@ if (args is ["--help"] or ["-h"] or [])
     Console.WriteLine("Usage: dotnet genbuild.dll <restore|build> <project> [MSBuild arguments]");
     Console.WriteLine("restore: prepare dependencies and capture graph inputs.");
     Console.WriteLine("build: emit obj/genbuild/build.ninja without executing its actions.");
+    Console.WriteLine("build <project> --enforce-reads: require the packaged Linux read sandbox and explicit execution-image properties.");
     return args.Length == 0 ? 1 : 0;
 }
 
@@ -17,6 +18,12 @@ if (args.Length < 2 || args[0] is not ("restore" or "build"))
 
 try
 {
+    bool enforceReads = Array.IndexOf(args, "--enforce-reads", 2) >= 0;
+    if (enforceReads && args[0] != "build")
+    {
+        throw new ArgumentException("--enforce-reads is only valid for build.");
+    }
+
     string toolset = Path.Combine(AppContext.BaseDirectory, "toolset");
     string engine = Path.Combine(toolset, "MSBuild.dll");
     string host = Environment.ProcessPath
@@ -66,7 +73,21 @@ try
 
     foreach (string argument in args.AsSpan(2))
     {
-        start.ArgumentList.Add(argument);
+        if (argument != "--enforce-reads")
+        {
+            start.ArgumentList.Add(argument);
+        }
+    }
+
+    if (enforceReads)
+    {
+        string launcher = Path.Combine(toolset, "read-sandbox", "genbuild-landlock");
+        if (!OperatingSystem.IsLinux() || !File.Exists(launcher))
+        {
+            throw new InvalidOperationException("Read enforcement requires the packaged Linux Landlock launcher.");
+        }
+
+        start.ArgumentList.Add($"-p:MSBuildActionSandboxLauncher={launcher}");
     }
 
     start.Environment["DOTNET_HOST_PATH"] = host;

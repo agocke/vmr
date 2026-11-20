@@ -22,6 +22,96 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
 {
     private readonly ITestOutputHelper _output = output;
 
+    [LinuxOnlyTheory]
+    [InlineData("private", true)]
+    [InlineData("public", false)]
+    [InlineData("nonempty", false)]
+    public void ValidatesAndAdoptsLauncherOwnedStagingRoot(string kind, bool expected)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string staging = Path.Combine(directory, "launcher-root");
+        Directory.CreateDirectory(staging, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        if (kind == "public")
+        {
+            File.SetUnixFileMode(staging, UnixFileMode.UserRead | UnixFileMode.UserWrite |
+                UnixFileMode.UserExecute | UnixFileMode.OtherRead);
+        }
+        else if (kind == "nonempty")
+        {
+            File.WriteAllText(Path.Combine(staging, "untrusted"), "not a fresh root");
+        }
+
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), ProbeParameters());
+        Run(manifest, out string log, staging).ShouldBe(expected, log);
+        if (expected)
+        {
+            using JsonDocument result = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "probe.json")));
+            result.RootElement.GetProperty("workingDirectory").GetString()!.ShouldStartWith(staging + "/execroot/");
+            result.RootElement.GetProperty("constructorTemporaryDirectory").GetString().ShouldBe(staging);
+            Directory.Exists(staging).ShouldBeFalse();
+        }
+        else
+        {
+            Directory.Exists(staging).ShouldBeTrue();
+            File.Exists(Path.Combine(directory, "probe.json")).ShouldBeFalse();
+        }
+    }
+
+    [LinuxOnlyTheory]
+    [InlineData("MSBUILD_ACTION_STAGING_ROOT")]
+    [InlineData("MSBUILD_ACTION_BROKER_LAUNCHER")]
+    [InlineData("MSBUILD_ACTION_BROKER_SOCKET")]
+    public void RejectsCapturedLauncherControlVariable(string variable)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), ProbeParameters(),
+            new() { [variable] = directory });
+        Run(manifest, out string log).ShouldBeFalse();
+        log.ShouldContain("cannot be captured");
+        File.Exists(Path.Combine(directory, "probe.json")).ShouldBeFalse();
+    }
+
+    [LinuxOnlyTheory]
+    [InlineData(true, true, true, true)]
+    [InlineData(true, false, true, false)]
+    [InlineData(false, true, true, false)]
+    [InlineData(true, true, false, false)]
+    public void CapturesCompleteBrokerContextOutsideLogicalEnvironment(bool launcher, bool socket, bool root, bool expected)
+    {
+        using TestEnvironment env = TestEnvironment.Create(_output);
+        string directory = env.CreateFolder().Path;
+        string staging = Path.Combine(directory, "launcher-root");
+        Directory.CreateDirectory(staging, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        Dictionary<string, string> controls = [];
+        if (launcher)
+        {
+            controls["MSBUILD_ACTION_BROKER_LAUNCHER"] = "/bin/true";
+        }
+        if (socket)
+        {
+            controls["MSBUILD_ACTION_BROKER_SOCKET"] = "@test-broker";
+        }
+
+        string manifest = WriteInvocation(directory, typeof(ManifestProbeTask), ProbeParameters());
+        Run(manifest, out string log, root ? staging : null, controls).ShouldBe(expected, log);
+        if (expected)
+        {
+            using JsonDocument result = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "probe.json")));
+            result.RootElement.GetProperty("brokerLauncher").GetString().ShouldBe("/bin/true");
+            result.RootElement.GetProperty("brokerSocket").GetString().ShouldBe("@test-broker");
+            result.RootElement.GetProperty("logicalBrokerVariable").ValueKind.ShouldBe(JsonValueKind.Null);
+            result.RootElement.GetProperty("ambientBrokerVariable").ValueKind.ShouldBe(JsonValueKind.Null);
+            Directory.Exists(staging).ShouldBeTrue();
+        }
+        else
+        {
+            log.ShouldContain("requires a staging root");
+            File.Exists(Path.Combine(directory, "probe.json")).ShouldBeFalse();
+        }
+    }
+
     [LinuxOnlyFact]
     public void ExecutesWriteLinesToFileFromInvocationFile()
     {
@@ -688,8 +778,14 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
         return path;
     }
 
-    private bool Run(string manifest, out string log)
+    private bool Run(string manifest, out string log, string? stagingRoot = null, Dictionary<string, string>? controls = null)
     {
+        Dictionary<string, string> environment = controls is null ? [] : new(controls);
+        if (stagingRoot is not null)
+        {
+            environment["MSBUILD_ACTION_STAGING_ROOT"] = stagingRoot;
+        }
+
         string host = Path.Combine(AppContext.BaseDirectory, "MSBuild.ActionTaskHost.dll");
         string tests = typeof(TaskHost_Tests).Assembly.Location;
         string arguments = $"exec --runtimeconfig \"{Path.ChangeExtension(tests, ".runtimeconfig.json")}\""
@@ -699,7 +795,8 @@ public sealed class TaskHost_Tests(ITestOutputHelper output)
             arguments,
             out bool succeeded,
             outputHelper: _output,
-            timeoutMilliseconds: 30_000);
+            timeoutMilliseconds: 30_000,
+            environmentVariables: environment);
         return succeeded;
     }
 }
@@ -714,6 +811,8 @@ public enum ProbeMode
 [MSBuildDeclaredIORequiresUnset(nameof(Forbidden))]
 public sealed class ManifestProbeTask : Utilities.Task, IMultiThreadableTask
 {
+    private readonly string? _constructorTemporaryDirectory = Environment.GetEnvironmentVariable("TMPDIR");
+
     public ManifestProbeTask()
     {
     }
@@ -796,6 +895,11 @@ public sealed class ManifestProbeTask : Utilities.Task, IMultiThreadableTask
                 declaredOutputs = DeclaredOutputs.Select(item => item.ItemSpec).ToArray(),
                 projectDirectory = TaskEnvironment.ProjectDirectory.Value,
                 workingDirectory = Environment.CurrentDirectory,
+                constructorTemporaryDirectory = _constructorTemporaryDirectory,
+                brokerLauncher = TaskEnvironment.ProcessLaunchBroker?.Launcher,
+                brokerSocket = TaskEnvironment.ProcessLaunchBroker?.Socket,
+                logicalBrokerVariable = TaskEnvironment.GetEnvironmentVariable("MSBUILD_ACTION_BROKER_SOCKET"),
+                ambientBrokerVariable = Environment.GetEnvironmentVariable("MSBUILD_ACTION_BROKER_SOCKET"),
                 outputPath = TaskEnvironment.GetOutputPath(File.ItemSpec).Value,
                 logicalInput = InputFile.Length == 0 ? null : TaskEnvironment.GetAbsolutePath(InputFile).Value,
                 inputPath = InputFile.Length == 0 ? null : TaskEnvironment.GetInputPath(InputFile).Value,

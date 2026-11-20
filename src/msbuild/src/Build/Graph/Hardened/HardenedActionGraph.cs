@@ -133,6 +133,7 @@ internal sealed class HardenedActionGraph
     private readonly string _dotnet;
     private readonly string _nativeHost;
     private readonly NativeTaskHostCatalog? _nativeCatalog;
+    private readonly ActionReadSandbox? _readSandbox;
     private readonly string _directory;
     private readonly string _hostOS;
     private readonly Architecture _hostArchitecture;
@@ -173,6 +174,13 @@ internal sealed class HardenedActionGraph
         }
 
         _environment = actionEnvironment;
+        foreach (string variable in new[] { "MSBUILD_ACTION_STAGING_ROOT",
+            "MSBUILD_ACTION_BROKER_LAUNCHER", "MSBUILD_ACTION_BROKER_SOCKET" })
+        {
+            Require(!_environment.ContainsKey(variable),
+                $"the launcher-owned {variable} in the captured task environment");
+        }
+        _readSandbox = ActionReadSandbox.Create(project, _environment);
         if (parent is not null)
         {
             Require(FileUtilities.PathsEqual(_destination, parent._destination) &&
@@ -183,6 +191,8 @@ internal sealed class HardenedActionGraph
                 _hostArchitecture == parent._hostArchitecture &&
                 _hostRuntimeIdentifier == parent._hostRuntimeIdentifier,
                 "a child project changing action graph destination, hosts, or host context");
+            Require(_readSandbox?.Configuration == parent._readSandbox?.Configuration,
+                "a child project changing the action read sandbox");
             Require(_environment.Count == parent._environment.Count,
                 "a child project changing the action environment");
             foreach (KeyValuePair<string, string> variable in _environment)
@@ -469,6 +479,12 @@ internal sealed class HardenedActionGraph
                 _nativeCatalog?.Supports(action.TaskType, action.Assembly, producers) == true;
             string rule = "action_" + i.ToString(CultureInfo.InvariantCulture);
             ninja.Append("rule ").Append(rule).Append("\n  command = ");
+            string policy = manifest + ".landlock";
+            if (_readSandbox is not null)
+            {
+                ninja.Append(Command(_readSandbox.Launcher)).Append(" --policy ")
+                    .Append(Command(policy)).Append(" -- ");
+            }
             if (native)
             {
                 ninja.Append(Command(_nativeHost));
@@ -501,6 +517,20 @@ internal sealed class HardenedActionGraph
             }
             List<string> sortedTools = [.. tools];
             sortedTools.Sort(StringComparer.Ordinal);
+            if (_readSandbox is not null)
+            {
+                manifests.Add((policy, _readSandbox.Policy(action.ContentInputs(producers), sortedTools,
+                    manifest, native ? _nativeHost : _dotnet)));
+                tools.Add(_readSandbox.Launcher);
+                foreach (string image in _readSandbox.ImageFiles)
+                {
+                    tools.Add(image);
+                }
+
+                tools.Add(policy);
+                sortedTools = [.. tools];
+                sortedTools.Sort(StringComparer.Ordinal);
+            }
             AppendPaths(ninja, sortedTools);
             ninja.Append("\n\n");
             foreach (TreeOutput tree in action.Trees)

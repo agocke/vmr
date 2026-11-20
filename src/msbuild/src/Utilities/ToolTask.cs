@@ -735,6 +735,59 @@ namespace Microsoft.Build.Utilities
             return proc;
         }
 
+        internal static void ApplyProcessLaunchBroker(ProcessStartInfo info, TaskEnvironment environment)
+        {
+            if (environment.ProcessLaunchBroker is not { } broker)
+            {
+                return;
+            }
+
+            if (info.UseShellExecute)
+            {
+                throw new NotSupportedException("Action launch brokers require direct process execution.");
+            }
+
+#if NET
+            if (info.ArgumentList.Count != 0)
+            {
+                info.ArgumentList.Insert(0, info.FileName);
+                info.ArgumentList.Insert(0, "--");
+                info.ArgumentList.Insert(0, broker.Socket);
+                info.ArgumentList.Insert(0, "--broker");
+                info.FileName = broker.Launcher;
+                return;
+            }
+#endif
+
+            StringBuilder command = new("--broker ");
+            AppendArgument(broker.Socket);
+            command.Append(" -- ");
+            AppendArgument(info.FileName);
+            command.Append(' ').Append(info.Arguments);
+            info.FileName = broker.Launcher;
+            info.Arguments = command.ToString();
+
+            void AppendArgument(string value)
+            {
+                command.Append('"');
+                int backslashes = 0;
+                foreach (char character in value)
+                {
+                    if (character == '\\')
+                    {
+                        backslashes++;
+                        continue;
+                    }
+
+                    command.Append('\\', character == '"' ? backslashes * 2 + 1 : backslashes);
+                    command.Append(character);
+                    backslashes = 0;
+                }
+
+                command.Append('\\', backslashes * 2).Append('"');
+            }
+        }
+
         /// <summary>
         /// Writes out a temporary response file and shell-executes the tool requested.  Enables concurrent
         /// logging of the output of the tool.
@@ -781,6 +834,7 @@ namespace Microsoft.Build.Utilities
                 // create/initialize the process to run the tool
                 proc = new Process();
                 proc.StartInfo = GetProcessStartInfo(pathToTool, commandLineCommands, responseFileSwitch);
+                ApplyProcessLaunchBroker(proc.StartInfo, TaskEnvironment);
 
                 // turn on the Process.Exited event
                 proc.EnableRaisingEvents = true;
